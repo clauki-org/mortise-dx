@@ -34,3 +34,5 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - `make up` chờ tới khi cổng APISIX đã nạp xong tuyến đường (healthcheck), không chỉ tới khi container chạy.
 - CI bỏ qua bước dựng lõi khi pull request chỉ đổi tài liệu, chỉ chạy vòng sao lưu và khôi phục khi đổi phần nó
   phụ thuộc; push lên `main` luôn chạy đủ. Tên job và bước bằng tiếng Anh.
+- Lược đồ CSDL của lõi quản lý bằng migration dbmate: `make up` áp migration chưa chạy, bản cài đã có dữ liệu nâng
+  cấp không cần `make reset`; `make migrate-new`, `make migrate-status`. Tenant demo chuyển sang `make seed`.

@@ -103,6 +103,7 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | CSDL | PostgreSQL + pgvector | 17 + 0.8.7 | PostgreSQL License |
 | API dữ liệu tự sinh | Hasura GraphQL Engine CE | 2.51.4 | Apache-2.0 |
 | Lưu trữ đối tượng | SeaweedFS | 4.52 | Apache-2.0 |
+| Migration lược đồ CSDL | dbmate | 2.37.0 | MIT |
 | Động cơ quy trình | Flowable REST | 7.2.0 | Apache-2.0 |
 | Lớp kiểm quyền quy trình (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT | khóa trong `core/workflow-api/uv.lock` | MIT / BSD-3-Clause |
 
@@ -115,9 +116,10 @@ compose.yaml          các dịch vụ lõi và cách nối với nhau
 Makefile              lối vào duy nhất: dựng, kiểm tra, sao lưu
 core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết của lõi
   apisix/ keycloak/ postgres/
+  postgres/migrations/  migration lược đồ của lõi (dbmate)
   workflow-api/       kiểm quyền trước Flowable (Python)
   workflow/           quy trình BPMN dùng chung của lõi
-scripts/              tạo .env, seed, smoke, sao lưu, khôi phục, hook pre-push
+scripts/              tạo .env, seed, smoke, tạo migration, sao lưu, khôi phục, hook pre-push
 docs/                 quyết định kiến trúc (adr/), API của lõi (api.md), công cụ (tools.md)
 .github/              CI, mẫu issue và pull request
 ```

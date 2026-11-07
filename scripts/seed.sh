@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Nạp dữ liệu demo: tài khoản Keycloak cho 2 tenant và metadata Hasura
+# Nạp dữ liệu demo: 2 tenant, tài khoản Keycloak cho từng tenant, metadata Hasura
 # (track bảng + quyền theo tenant). Chạy lại nhiều lần không lỗi.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -44,6 +44,16 @@ for entry in "${users[@]}"; do
   fi
   echo "keycloak: $username, tenant $tenant, vai trò thêm: $role"
 done
+
+# Tenant demo là dữ liệu, không phải lược đồ, nên nằm ở seed chứ không nằm trong migration:
+# bản cài thật không được tự có hai tenant demo. Tên trùng tên group trong realm.
+docker compose exec -T postgres psql -qX -v ON_ERROR_STOP=1 --username hasura --dbname dxos <<'SQL'
+INSERT INTO core.tenants (id, name) VALUES
+    ('xuong-a', 'Tenant A (demo)'),
+    ('xuong-b', 'Tenant B (demo)')
+ON CONFLICT (id) DO NOTHING;
+SQL
+echo "postgres: tenant demo xuong-a, xuong-b"
 
 hasura() {
   curl -fsS -X POST "http://127.0.0.1:${HASURA_PORT:-8082}/v1/metadata" \

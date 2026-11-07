@@ -22,9 +22,20 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   `dxos` (dữ liệu của nền tảng, Hasura cũng lưu metadata ở đây). Lược đồ `core` có bảng `core.tenants`, mỗi dòng
   là một đơn vị dùng chung lõi. Phần mở rộng `vector` (pgvector) và `pgcrypto` đã được bật trong CSDL `dxos`
   nhưng chưa có bảng nào dùng; `vector` dành cho trợ lý AI (kế hoạch).
-- **Cấu hình:** `core/postgres/init/` chạy một lần khi volume còn trống: tạo vai trò, CSDL và lược đồ `core`. Đổi
-  các tệp này thì phải `make reset` để chạy lại.
+- **Cấu hình:** `core/postgres/init/` chạy một lần khi volume còn trống: tạo vai trò, CSDL và bật phần mở rộng.
+  Đổi tệp này thì phải `make reset` để chạy lại. Bảng và lược đồ do migration tạo (mục dbmate bên dưới).
 - **Xem:** `127.0.0.1:55432`, tài khoản `postgres`, mật khẩu `POSTGRES_PASSWORD`.
+
+### dbmate: migration lược đồ CSDL
+
+- **Làm gì:** áp các thay đổi lược đồ CSDL theo thứ tự, ghi lại thay đổi nào đã áp, để bản cài đã có dữ liệu nhận
+  được thay đổi mới mà không mất dữ liệu ([ADR 0005](adr/0005-schema-migrations.md)).
+- **Trong dự án:** dịch vụ `migrate` chạy một lần mỗi khi `make up`, trước khi Hasura khởi động; áp các migration
+  chưa chạy rồi thoát. Chạy bằng vai trò `hasura`, chủ sở hữu CSDL `dxos`. Lịch sử của lõi ghi trong bảng
+  `core.schema_migrations`; mỗi gói nghiệp vụ sẽ có thư mục và bảng theo dõi riêng.
+- **Cấu hình:** tệp migration ở `core/postgres/migrations/`, tên `YYYYMMDDHHMMSS_mo_ta.sql`, có phần
+  `-- migrate:up` và `-- migrate:down`. Tạo tệp mới bằng `make migrate-new NAME=<ten_ngan>`.
+- **Xem:** `make migrate-status`; log của lần chạy gần nhất bằng `docker compose logs migrate`.
 
 ### Keycloak: định danh và đăng nhập một lần
 
@@ -115,6 +126,7 @@ hưởng tới mã Apache-2.0 của dự án. Những công cụ chạy qua `uvx
 | GNU Make | Lối vào chung cho mọi lệnh | `make help` | GPL-3.0-or-later |
 | uv | Quản lý Python và thư viện của workflow-api; chạy công cụ không cần cài | `make test`, `make check-fast` | MIT / Apache-2.0 |
 | REUSE | Kiểm mọi tệp có header bản quyền và giấy phép | `make lint` | GPL-3.0-or-later |
+| dbmate | Áp migration lược đồ CSDL (chạy như dịch vụ một lần trong compose) | `make up`, `make migrate-status` | MIT |
 | ShellCheck | Bắt lỗi trong script shell | `make check-fast` | GPL-3.0 |
 | yamllint | Kiểm cú pháp và định dạng YAML | `make check-fast` | GPL-3.0 |
 | Ruff | Kiểm lỗi và định dạng mã Python | `make check-fast` | MIT |

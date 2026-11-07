@@ -27,6 +27,7 @@ compose.yaml          dịch vụ lõi; dịch vụ tùy chọn tách theo profi
 Makefile              lối vào duy nhất cho mọi lệnh
 core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp vụ
   apisix/ keycloak/ postgres/   cấu hình của từng thành phần bên thứ ba
+  postgres/migrations/          migration lược đồ của lõi (ADR 0005)
   workflow-api/       dịch vụ tự viết: kiểm quyền trước Flowable (Python, uv)
   workflow/           quy trình BPMN dùng chung của lõi
   clamav/ mosquitto/ scorpio/ ollama/ observability/      kế hoạch
