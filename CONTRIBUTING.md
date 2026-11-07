@@ -41,8 +41,9 @@ make help         # mọi lệnh
 - Tiêu đề bằng tiếng Anh theo Conventional Commits: `type(scope): description`, ví dụ
   `feat(workflow): add BPMN engine to the core`. Type: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`.
   Scope: `core`, `gateway`, `identity`, `data`, `workflow`, `iot`, `ai`, `app`, `ci`.
-- Thân bằng tiếng Việt: thay đổi gì, vì sao, đã kiểm tra thế nào, `Closes #<issue>`. Thân trở thành thân commit trên
-  `main`.
+- Thân bằng tiếng Việt, theo mẫu: Tóm tắt (1–3 câu, đọc riêng vẫn hiểu pull request làm gì và được gì), thay đổi
+  gì, vì sao, đã kiểm tra thế nào, `Closes #<issue>`. Thân trở thành thân commit trên `main`, nên người đọc
+  `git log` không phải mở issue mới hiểu.
 - Không trailer AI (xem AGENTS.md mục 4).
 - Một pull request, một thay đổi. Nhắm dưới khoảng 500 dòng thay đổi, không tính tệp sinh tự động, test và dữ liệu.
 - Người dùng thấy được thay đổi thì thêm một dòng vào `Unreleased` trong `CHANGELOG.md`.
