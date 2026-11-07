@@ -9,9 +9,6 @@ Nền tảng chuyển đổi số nguồn mở theo kiến trúc DX-OS Open-Core
 danh, cổng API, dữ liệu và quy trình dùng chung; phía trên là các thành phần cấu hình được, để mỗi tổ chức tự lắp
 thành hệ thống của mình mà không phải viết lại phần nền.
 
-Tên dự án lấy từ *mortise*, lỗ mộng trong nghề mộc: khung gỗ có sẵn lỗ, thanh gỗ có chốt vừa lỗ được cắm vào hay
-rút ra mà khung vẫn đứng, không cần đinh. Nền tảng là khung, gói nghiệp vụ là thanh gỗ.
-
 > **Trạng thái:** mới dựng khung repo, chưa có mã nguồn chạy được. Mục [Trạng thái](#trạng-thái) chỉ ghi những gì
 > đã chạy thật và đã có kiểm tra tự động.
 
