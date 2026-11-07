@@ -20,8 +20,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   dùng cho tìm kiếm ngữ nghĩa.
 - **Trong dự án:** một máy chủ Postgres chứa ba CSDL tách quyền: `keycloak` (định danh), `flowable` (quy trình) và
   `dxos` (dữ liệu của nền tảng, Hasura cũng lưu metadata ở đây). Lược đồ `core` có bảng `core.tenants`, mỗi dòng
-  là một đơn vị dùng chung lõi. pgvector đã có sẵn trong image nhưng chưa được dùng; nó dành cho trợ lý AI (kế
-  hoạch).
+  là một đơn vị dùng chung lõi. Phần mở rộng `vector` (pgvector) và `pgcrypto` đã được bật trong CSDL `dxos`
+  nhưng chưa có bảng nào dùng; `vector` dành cho trợ lý AI (kế hoạch).
 - **Cấu hình:** `core/postgres/init/` chạy một lần khi volume còn trống: tạo vai trò, CSDL và lược đồ `core`. Đổi
   các tệp này thì phải `make reset` để chạy lại.
 - **Xem:** `127.0.0.1:55432`, tài khoản `postgres`, mật khẩu `POSTGRES_PASSWORD`.
