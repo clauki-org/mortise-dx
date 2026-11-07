@@ -9,7 +9,7 @@ SHELL := /bin/sh
 # git đã bỏ qua nó.
 export UV_PROJECT_ENVIRONMENT ?= $(HOME)/.cache/mortise-dx/workflow-api-venv
 
-.PHONY: help env up down reset ps logs seed smoke lint test check-fast hooks
+.PHONY: help env up down reset ps logs seed smoke backup restore lint test check-fast hooks
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-11s %s\n", $$1, $$2}'
@@ -37,6 +37,12 @@ seed: ## Nạp tài khoản demo, metadata Hasura và quy trình mẫu
 
 smoke: ## Kiểm tra đầu-cuối qua cổng (cần lõi đang chạy và đã seed)
 	@scripts/smoke.sh
+
+backup: ## Sao lưu CSDL, tệp và .env ra ngoài repo (BACKUP_DIR để đổi nơi lưu)
+	@scripts/backup.sh
+
+restore: ## Khôi phục từ bản sao lưu, GHI ĐÈ dữ liệu: make restore FROM=<thư mục> CONFIRM=yes
+	@scripts/restore.sh "$(FROM)"
 
 lint: ## Kiểm tra giấy phép từng tệp (REUSE)
 	uvx reuse lint

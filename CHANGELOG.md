@@ -29,3 +29,6 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   chạy kiểm thử đơn vị; ADR 0004 về lớp kiểm soát quyền trước Flowable.
 - Tài liệu công cụ sử dụng (`docs/tools.md`): vai trò, cấu hình và cách xem của từng thành phần lõi và công cụ
   phát triển.
+- `make backup` và `make restore`: sao lưu PostgreSQL (mọi CSDL và vai trò), SeaweedFS và `.env` kèm checksum;
+  khôi phục ghi đè có xác nhận. CI kiểm cả vòng sao lưu, xóa sạch, khôi phục.
+- `make up` chờ tới khi cổng APISIX đã nạp xong tuyến đường (healthcheck), không chỉ tới khi container chạy.

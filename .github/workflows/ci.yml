@@ -39,6 +39,13 @@ jobs:
       - run: make up
       - run: make seed
       - run: make smoke
+      # Vòng khôi phục: sao lưu, xóa sạch, dựng lõi trắng, khôi phục, rồi smoke lại.
+      - run: make backup
+        env:
+          BACKUP_DIR: ${{ runner.temp }}/backups
+      - run: make reset && make up
+      - run: make restore FROM="$(ls -d "$RUNNER_TEMP"/backups/*/ | head -1)" CONFIRM=yes
+      - run: make smoke
       - if: failure()
         run: docker compose logs --tail=200
       - if: always()
