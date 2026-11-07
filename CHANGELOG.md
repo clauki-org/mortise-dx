@@ -32,3 +32,5 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - `make backup` và `make restore`: sao lưu PostgreSQL (mọi CSDL và vai trò), SeaweedFS và `.env` kèm checksum;
   khôi phục ghi đè có xác nhận. CI kiểm cả vòng sao lưu, xóa sạch, khôi phục.
 - `make up` chờ tới khi cổng APISIX đã nạp xong tuyến đường (healthcheck), không chỉ tới khi container chạy.
+- CI bỏ qua bước dựng lõi khi pull request chỉ đổi tài liệu, chỉ chạy vòng sao lưu và khôi phục khi đổi phần nó
+  phụ thuộc; push lên `main` luôn chạy đủ. Tên job và bước bằng tiếng Anh.
