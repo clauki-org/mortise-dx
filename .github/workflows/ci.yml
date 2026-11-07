@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Chạy với mọi pull request và mọi push lên main. Chỉ gọi Makefile, nên kết quả ở máy
+# và trên CI giống nhau.
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Workflow chỉ đọc repo; không bước nào push hay đổi cấu hình được.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Kiểm tra nhanh
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: make check-fast
