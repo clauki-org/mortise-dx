@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Hook pre-push: chạy đúng các kiểm tra nhanh của CI trước mỗi lần push.
+# Cài bằng `make hooks`. Không bỏ qua bằng --no-verify (AGENTS.md mục 5).
+set -eu
+make check-fast
