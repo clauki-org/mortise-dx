@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Chạy với mọi pull request và mọi push lên main. Chỉ gọi Makefile, nên kết quả ở máy
-# và trên CI giống nhau. Job e2e dựng lõi trên máy trắng, đúng như người dùng dựng
-# từ mã nguồn.
+# Chạy với mọi pull request và mọi push lên main. Các bước kiểm tra chỉ gọi Makefile,
+# nên kết quả ở máy và trên CI giống nhau. Job e2e dựng lõi trên máy trắng, đúng như
+# người dùng dựng từ mã nguồn; nó mất vài phút nên chỉ chạy khi pull request đổi thứ
+# ảnh hưởng tới lõi. Push lên main luôn chạy đủ.
 
 name: ci
 
@@ -22,31 +23,82 @@ concurrency:
 
 jobs:
   check:
-    name: Kiểm tra nhanh
+    name: Fast checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: make check-fast
-      - run: make test
+      - name: Licenses, compose, shell, YAML, Python
+        run: make check-fast
+      - name: Unit tests
+        run: make test
 
-  e2e:
-    name: Dựng lõi trên máy trắng và kiểm tra đầu-cuối
+  changes:
+    name: Detect changed areas
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    outputs:
+      core: ${{ steps.diff.outputs.core }}
+      backup: ${{ steps.diff.outputs.backup }}
     steps:
       - uses: actions/checkout@v4
-      - run: make up
-      - run: make seed
-      - run: make smoke
+        with:
+          fetch-depth: 0
+      # core: có tệp nào ngoài tài liệu, giấy phép và mẫu issue không. backup: có đụng tới
+      # phần mà sao lưu và khôi phục phụ thuộc không. Không phải pull request thì chạy đủ.
+      - id: diff
+        name: Compare with the base branch
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" != pull_request ]; then
+            echo "core=true" >> "$GITHUB_OUTPUT"; echo "backup=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          files=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          printf '%s\n' "$files"
+          docs='(\.md$|^docs/|^LICENSES?|^\.github/ISSUE_TEMPLATE/|^\.editorconfig$|^REUSE\.toml$)'
+          backup='(^compose\.yaml$|^core/postgres/|^scripts/(backup|restore)\.sh$'
+          backup="$backup"'|^Makefile$|^\.env\.example$|^\.github/workflows/)'
+          core=false; restore=false
+          if printf '%s\n' "$files" | grep -Evq "$docs"; then core=true; fi
+          if printf '%s\n' "$files" | grep -Eq "$backup"; then restore=true; fi
+          echo "core=$core" >> "$GITHUB_OUTPUT"
+          echo "backup=$restore" >> "$GITHUB_OUTPUT"
+
+  e2e:
+    name: End-to-end on a clean machine
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RESTORE_CYCLE: ${{ needs.changes.outputs.backup }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the core
+        run: make up
+      - name: Seed demo accounts and permissions
+        run: make seed
+      - name: Smoke test through the gateway
+        run: make smoke
       # Vòng khôi phục: sao lưu, xóa sạch, dựng lõi trắng, khôi phục, rồi smoke lại.
-      - run: make backup
+      - name: Back up
+        if: env.RESTORE_CYCLE == 'true'
+        run: make backup
         env:
           BACKUP_DIR: ${{ runner.temp }}/backups
-      - run: make reset && make up
-      - run: make restore FROM="$(ls -d "$RUNNER_TEMP"/backups/*/ | head -1)" CONFIRM=yes
-      - run: make smoke
-      - if: failure()
+      - name: Wipe and start a clean core
+        if: env.RESTORE_CYCLE == 'true'
+        run: make reset && make up
+      - name: Restore
+        if: env.RESTORE_CYCLE == 'true'
+        run: make restore FROM="$(ls -d "$RUNNER_TEMP"/backups/*/ | head -1)" CONFIRM=yes
+      - name: Smoke test after restore
+        if: env.RESTORE_CYCLE == 'true'
+        run: make smoke
+      - name: Service logs
+        if: failure()
         run: docker compose logs --tail=200
-      - if: always()
+      - name: Remove containers and data
+        if: always()
         run: make reset
