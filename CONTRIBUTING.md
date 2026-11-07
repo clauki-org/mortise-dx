@@ -29,6 +29,9 @@ make check-fast   # giấy phép, cú pháp compose, shell, YAML, Python; CI ch�
 make help         # mọi lệnh
 ```
 
+Đổi lược đồ CSDL của lõi: `make migrate-new NAME=<ten_ngan>`, viết cả phần `up` và `down`, rồi `make up`. Không sửa
+migration đã merge vào `main`; muốn đổi thì viết migration mới ([ADR 0005](docs/adr/0005-schema-migrations.md)).
+
 ## Nhánh và commit
 
 - Tạo nhánh từ `main`: `<type>/<mô-tả-ngắn>` hoặc `<type>/<issue>-<mô-tả>`, ví dụ `feat/12-workflow-gateway`,

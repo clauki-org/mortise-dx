@@ -66,6 +66,22 @@ services:
       retries: 30
       start_period: 30s
 
+  migrate:
+    # Chạy một lần mỗi khi `make up`: áp các migration của lõi chưa chạy rồi thoát (ADR 0005).
+    # Chạy bằng vai trò hasura, chủ sở hữu CSDL dxos, để bảng thuộc đúng chủ mà Hasura đọc.
+    image: ghcr.io/amacneil/dbmate:2.37.0
+    restart: "no"
+    environment:
+      DATABASE_URL: postgres://hasura:${HASURA_DB_PASSWORD}@postgres:5432/dxos?sslmode=disable
+      DBMATE_MIGRATIONS_DIR: /migrations
+      DBMATE_MIGRATIONS_TABLE: core.schema_migrations
+    command: ["--wait", "--no-dump-schema", "--migration-lock", "up", "--strict"]
+    volumes:
+      - ./core/postgres/migrations:/migrations:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   hasura:
     # Bản -ce là Community Edition (Apache-2.0); bản không có -ce chứa mã EE.
     image: hasura/graphql-engine:v2.51.4-ce
@@ -90,6 +106,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       keycloak:
         condition: service_healthy
     healthcheck:

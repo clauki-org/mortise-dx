@@ -9,15 +9,15 @@ SHELL := /bin/sh
 # git đã bỏ qua nó.
 export UV_PROJECT_ENVIRONMENT ?= $(HOME)/.cache/mortise-dx/workflow-api-venv
 
-.PHONY: help env up down reset ps logs seed smoke backup restore lint test check-fast hooks
+.PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test check-fast hooks
 
 help: ## Liệt kê các lệnh
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-11s %s\n", $$1, $$2}'
+	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
 
 env: ## Tạo .env với bí mật ngẫu nhiên (chỉ khi chưa có)
 	@scripts/make-env.sh
 
-up: env ## Dựng lõi và chờ tới khi mọi dịch vụ sẵn sàng
+up: env ## Dựng lõi, áp migration chưa chạy, chờ tới khi mọi dịch vụ sẵn sàng
 	docker compose up -d --wait
 
 down: ## Dừng lõi, giữ dữ liệu
@@ -37,6 +37,12 @@ seed: ## Nạp tài khoản demo, metadata Hasura và quy trình mẫu
 
 smoke: ## Kiểm tra đầu-cuối qua cổng (cần lõi đang chạy và đã seed)
 	@scripts/smoke.sh
+
+migrate-new: ## Tạo tệp migration mới cho lõi: make migrate-new NAME=<ten_ngan>
+	@scripts/migration-new.sh "$(NAME)"
+
+migrate-status: ## Migration nào của lõi đã áp, nào còn chờ (cần lõi đang chạy)
+	docker compose run --rm --no-deps migrate status
 
 backup: ## Sao lưu CSDL, tệp và .env ra ngoài repo (BACKUP_DIR để đổi nơi lưu)
 	@scripts/backup.sh
