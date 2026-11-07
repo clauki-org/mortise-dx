@@ -25,7 +25,7 @@ số thành phần phổ biến cho các vai trò này đã đổi sang giấy p
 | API tự sinh | Hasura GraphQL Engine **Community Edition** (`-ce`) | Apache-2.0 |
 | Lưu trữ đối tượng | SeaweedFS | Apache-2.0 |
 | Workflow | Flowable (`flowable-rest`, chỉ engine và REST API) | Apache-2.0 |
-| Dịch vụ tự viết (workflow-api, [ADR 0004](0004-workflow-sau-lop-kiem-soat-quyen.md)) | FastAPI, Uvicorn, HTTPX, PyJWT | MIT / BSD-3-Clause / BSD-3-Clause / MIT |
+| Dịch vụ tự viết (workflow-api, [ADR 0004](0004-workflow-access-control.md)) | FastAPI, Uvicorn, HTTPX, PyJWT | MIT / BSD-3-Clause / BSD-3-Clause / MIT |
 | NGSI-LD (dự kiến) | Scorpio Broker (chạy trên PostgreSQL) | BSD-3-Clause |
 | MQTT (dự kiến) | Eclipse Mosquitto | EPL-2.0 / EDL-1.0 |
 | Quét mã độc (dự kiến) | ClamAV | GPL-2.0 (chạy như dịch vụ riêng) |

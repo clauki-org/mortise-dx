@@ -83,9 +83,9 @@ Tầng 1  APISIX (cổng duy nhất, kiểm JWT, giới hạn tần suất)
           └─ SeaweedFS  dữ liệu phi cấu trúc (S3)
 ```
 
-Lý do chọn từng thành phần và kiểm tra giấy phép: [ADR 0002](docs/adr/0002-chon-thanh-phan-loi.md). Bố cục ba tầng
-trong repo: [ADR 0003](docs/adr/0003-bo-cuc-ba-tang-va-goi-nghiep-vu.md) và [AGENTS.md](AGENTS.md#2-bố-cục). Vì sao Flowable
-đứng sau một lớp kiểm soát quyền: [ADR 0004](docs/adr/0004-workflow-sau-lop-kiem-soat-quyen.md).
+Lý do chọn từng thành phần và kiểm tra giấy phép: [ADR 0002](docs/adr/0002-core-components.md). Bố cục ba tầng
+trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENTS.md#2-bố-cục). Vì sao Flowable
+đứng sau một lớp kiểm soát quyền: [ADR 0004](docs/adr/0004-workflow-access-control.md).
 
 ### Thành phần đang chạy
 
@@ -99,6 +99,8 @@ trong repo: [ADR 0003](docs/adr/0003-bo-cuc-ba-tang-va-goi-nghiep-vu.md) và [AG
 | Động cơ quy trình | Flowable REST | 7.2.0 | Apache-2.0 |
 | Lớp kiểm quyền quy trình (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT | khóa trong `core/workflow-api/uv.lock` | MIT / BSD-3-Clause |
 
+Từng thành phần và công cụ phát triển làm gì, cấu hình ở đâu, xem thế nào: [docs/tools.md](docs/tools.md).
+
 ## Bố cục repo hiện tại
 
 ```
@@ -109,7 +111,7 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   workflow-api/       kiểm quyền trước Flowable (Python)
   workflow/           quy trình BPMN dùng chung của lõi
 scripts/              tạo .env, seed, smoke, hook pre-push
-docs/                 quyết định kiến trúc (adr/), API của lõi (api.md)
+docs/                 quyết định kiến trúc (adr/), API của lõi (api.md), công cụ (tools.md)
 .github/              CI, mẫu issue và pull request
 ```
 

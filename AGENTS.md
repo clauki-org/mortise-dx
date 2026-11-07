@@ -19,7 +19,7 @@ nguồn duy nhất của quy tắc làm việc; tài liệu khác trỏ về đ�
 
 ## 2. Bố cục
 
-Lý do của bố cục: [ADR 0003](docs/adr/0003-bo-cuc-ba-tang-va-goi-nghiep-vu.md). Thư mục ghi "kế hoạch" chỉ được
+Lý do của bố cục: [ADR 0003](docs/adr/0003-three-tier-layout.md). Thư mục ghi "kế hoạch" chỉ được
 tạo khi có mã nguồn thật đầu tiên.
 
 ```
@@ -40,7 +40,8 @@ apps/<gói>/           TẦNG 3 (kế hoạch): gói nghiệp vụ; `app.yaml` k
 devices/              kế hoạch: firmware thiết bị và bộ giả lập
 deploy/               kế hoạch: triển khai lên máy chủ
 scripts/              lệnh hỗ trợ, gọi từ Makefile
-docs/                 adr/ quyết định kiến trúc, api.md API của lõi; kế hoạch: huong-dan/ hướng dẫn
+docs/                 adr/ quyết định kiến trúc, api.md API của lõi, tools.md công cụ sử dụng
+  guides/             kế hoạch: hướng dẫn
 ```
 
 Ranh giới bắt buộc:
