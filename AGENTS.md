@@ -91,8 +91,9 @@ Ranh giới bắt buộc:
 - Nhánh: `<type>/<mô-tả-ngắn>` hoặc `<type>/<issue>-<mô-tả>`. `git pull --rebase` trước khi push. Không force push
   `main`.
 - Repo chỉ bật squash merge. Tiêu đề pull request thành tiêu đề commit trên `main`, tiếng Anh theo Conventional
-  Commits (`type(scope): description`); thân pull request thành thân commit, tiếng Việt: mỗi thay đổi một gạch đầu dòng, lý do, cách đã kiểm tra, và
-  `Closes #<issue>`.
+  Commits (`type(scope): description`); thân pull request thành thân commit, tiếng Việt, theo mẫu pull request: Tóm
+  tắt (1–3 câu: làm gì và được gì, đọc riêng vẫn hiểu, không cần mở issue), Thay đổi (mỗi thay đổi một gạch đầu
+  dòng), Lý do, Đã kiểm tra, và `Closes #<issue>`.
 - Một pull request, một thay đổi, một issue. Nhắm dưới khoảng 500 dòng thay đổi, không tính tệp sinh tự động, test và
   dữ liệu. Việc lớn tách theo tầng: core, app, dữ liệu, AI.
 - Thay đổi người dùng thấy được thì thêm một dòng vào `Unreleased` trong `CHANGELOG.md` ở cùng pull request.

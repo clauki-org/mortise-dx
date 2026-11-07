@@ -6,11 +6,17 @@ Tiêu đề: tiếng Anh, Conventional Commits, ví dụ feat(workflow): add Flo
 Thân: tiếng Việt. Không trailer AI (AGENTS.md mục 4).
 -->
 
+## Tóm tắt
+
+<!-- 1–3 câu: pull request làm gì và được gì. Chỉ đọc mục này vẫn hiểu, không cần mở issue. -->
+
 ## Thay đổi
 
 -
 
 ## Lý do
+
+<!-- Vì sao làm cách này, các cách đã cân nhắc. -->
 
 ## Đã kiểm tra
 
