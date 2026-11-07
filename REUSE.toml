@@ -5,7 +5,7 @@ version = 1
 
 # Tệp không chứa được chú thích, hoặc chú thích làm hỏng định dạng của nó.
 [[annotations]]
-path = ["CLAUDE.md"]
+path = ["**/*.json", "CLAUDE.md"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Mortise DX contributors"
 SPDX-License-Identifier = "Apache-2.0"

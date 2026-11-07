@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# APISIX chạy chế độ standalone: tuyến đường khai báo trong apisix.yaml,
+# không cần etcd và không mở Admin API.
+
+apisix:
+  node_listen: 9080
+  enable_admin: false
+
+deployment:
+  role: data_plane
+  role_data_plane:
+    config_provider: yaml
+
+nginx_config:
+  error_log_level: warn

@@ -23,12 +23,12 @@ Lý do của bố cục: [ADR 0003](docs/adr/0003-bo-cuc-ba-tang-va-goi-nghiep-v
 tạo khi có mã nguồn thật đầu tiên.
 
 ```
-compose.yaml          kế hoạch: dịch vụ lõi; dịch vụ tùy chọn tách theo profile
+compose.yaml          dịch vụ lõi; dịch vụ tùy chọn tách theo profile
 Makefile              lối vào duy nhất cho mọi lệnh
-core/                 TẦNG 1 (kế hoạch): lõi không giao diện, không chứa nghiệp vụ
-  <thành phần>/       cấu hình của từng thành phần bên thứ ba (apisix/, keycloak/, postgres/, ...)
-  <dịch vụ>/          dịch vụ tự viết của lõi, khi thành phần bên thứ ba không làm được
-  workflow/           quy trình BPMN dùng chung của lõi
+core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp vụ
+  apisix/ keycloak/ postgres/   cấu hình của từng thành phần bên thứ ba
+  <dịch vụ>/          kế hoạch: dịch vụ tự viết của lõi, khi thành phần bên thứ ba không làm được
+  workflow/           kế hoạch: quy trình BPMN dùng chung của lõi
 platform/             TẦNG 2 (kế hoạch): thành phần dùng chung, không chứa từ nghiệp vụ
   web/                khung giao diện: đăng nhập, menu, thương hiệu theo tenant, nạp thành phần và gói
   components/<tên>/   một thành phần: giao diện và schema cấu hình
@@ -39,7 +39,7 @@ apps/<gói>/           TẦNG 3 (kế hoạch): gói nghiệp vụ; `app.yaml` k
 devices/              kế hoạch: firmware thiết bị và bộ giả lập
 deploy/               kế hoạch: triển khai lên máy chủ
 scripts/              lệnh hỗ trợ, gọi từ Makefile
-docs/                 adr/ quyết định kiến trúc; kế hoạch: api.md API của lõi, huong-dan/ hướng dẫn
+docs/                 adr/ quyết định kiến trúc, api.md API của lõi; kế hoạch: huong-dan/ hướng dẫn
 ```
 
 Ranh giới bắt buộc:
