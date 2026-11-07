@@ -9,7 +9,7 @@ Nền tảng chuyển đổi số nguồn mở theo kiến trúc DX-OS Open-Core
 danh, cổng API, dữ liệu và quy trình dùng chung; phía trên là các thành phần cấu hình được, để mỗi tổ chức tự lắp
 thành hệ thống của mình mà không phải viết lại phần nền.
 
-> **Trạng thái:** mới dựng khung repo, chưa có mã nguồn chạy được. Mục [Trạng thái](#trạng-thái) chỉ ghi những gì
+> **Trạng thái:** đang phát triển. Mục [Trạng thái](#trạng-thái) chỉ ghi những gì
 > đã chạy thật và đã có kiểm tra tự động.
 
 ## Giới thiệu
@@ -30,16 +30,44 @@ biệt.
 | Năng lực | Trạng thái | Kiểm chứng |
 |---|---|---|
 | Giấy phép từng tệp, kiểm tra shell và YAML | Đã chạy | `make check-fast`, CI |
-| Định danh / SSO (Keycloak, OIDC) | Kế hoạch | |
-| Cổng API duy nhất (APISIX) | Kế hoạch | |
-| API dữ liệu tự sinh (Hasura CE), phân quyền theo tenant | Kế hoạch | |
-| Lưu trữ đối tượng tương thích S3 (SeaweedFS) | Kế hoạch | |
+| Định danh / SSO (Keycloak, OIDC) | Đã chạy | `make smoke` |
+| Cổng API duy nhất (APISIX), chặn yêu cầu không token hoặc token giả | Đã chạy | `make smoke` |
+| Console quản trị không lộ qua cổng | Đã chạy | `make smoke` |
+| API dữ liệu tự sinh (Hasura CE), cách ly dữ liệu theo tenant | Đã chạy | `make smoke` |
+| Lưu trữ đối tượng tương thích S3 (SeaweedFS) | Dịch vụ chạy, chưa nối vào ứng dụng | |
+| Xác thực đa yếu tố, cơ chế đăng nhập theo chính sách từng tenant | Kế hoạch | |
+| Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
+| Nhật ký thay đổi, sổ cái chống sửa, kiểm dữ liệu theo schema | Kế hoạch | |
 | Workflow BPMN (Flowable) | Kế hoạch | |
 | Sao lưu và khôi phục toàn bộ lõi | Kế hoạch | |
 | Thành phần Tầng 2 và giao diện | Kế hoạch | |
 | Gói minh họa: vận hành cơ sở vật chất công cấp xã | Kế hoạch | |
 
-## Kiến trúc dự kiến
+## Chạy từ mã nguồn
+
+Yêu cầu: Linux hoặc macOS, Docker Engine 24+ với Compose v2, `make`, `curl`, `jq`, `openssl`. Khuyến nghị 8 GB RAM
+trở lên.
+
+```bash
+make up      # tạo .env với bí mật ngẫu nhiên, dựng lõi, chờ sẵn sàng
+make seed    # tài khoản demo cho 2 tenant và quyền dữ liệu
+make smoke   # kiểm tra đầu-cuối qua cổng
+```
+
+| Địa chỉ | Dịch vụ |
+|---|---|
+| `http://localhost:9080/auth/...` | Đăng nhập, cấp token (qua cổng) |
+| `http://localhost:9080/v1/graphql` | API dữ liệu, bắt buộc token |
+| `http://127.0.0.1:8081/auth/admin` | Quản trị Keycloak (chỉ máy chủ) |
+| `http://127.0.0.1:8082/console` | Quản trị Hasura (chỉ máy chủ) |
+
+Trang quản trị Keycloak và Hasura là công cụ kỹ thuật cho người vận hành, chỉ mở trong máy chủ; lõi không có giao
+diện cho người dùng nghiệp vụ. Cách gọi API kèm ví dụ và ý nghĩa mã lỗi: [docs/api.md](docs/api.md).
+
+Tài khoản demo: `user.a`, `manager.a` (tenant `xuong-a`), `user.b` (tenant `xuong-b`); mật khẩu là
+`DEMO_USER_PASSWORD` trong `.env`. Mọi lệnh khác: `make help`.
+
+## Kiến trúc
 
 ```
 Tầng 3  gói nghiệp vụ (cấu hình + mở rộng)    ── cài vào / gỡ ra
@@ -48,7 +76,7 @@ Tầng 2  thành phần dùng chung + giao diện      ── chỉ gọi lõi q
 Tầng 1  APISIX (cổng duy nhất, kiểm JWT, giới hạn tần suất)
           ├─ Keycloak   định danh, SSO, vai trò, tenant
           ├─ Hasura CE  API GraphQL tự sinh, quyền theo dòng
-          ├─ Flowable   quy trình BPMN theo tenant và vai trò
+          ├─ Flowable   quy trình BPMN theo tenant và vai trò     (kế hoạch)
           ├─ PostgreSQL dữ liệu có cấu trúc (+ pgvector)
           └─ SeaweedFS  dữ liệu phi cấu trúc (S3)
 ```
@@ -56,20 +84,32 @@ Tầng 1  APISIX (cổng duy nhất, kiểm JWT, giới hạn tần suất)
 Lý do chọn từng thành phần và kiểm tra giấy phép: [ADR 0002](docs/adr/0002-chon-thanh-phan-loi.md). Bố cục ba tầng
 trong repo: [ADR 0003](docs/adr/0003-bo-cuc-ba-tang-va-goi-nghiep-vu.md) và [AGENTS.md](AGENTS.md#2-bố-cục).
 
+### Thành phần đang chạy
+
+| Vai trò | Thành phần | Phiên bản | Giấy phép |
+|---|---|---|---|
+| Định danh, SSO | Keycloak | 26.7.5 | Apache-2.0 |
+| Cổng API | Apache APISIX (standalone) | 3.19.0 | Apache-2.0 |
+| CSDL | PostgreSQL + pgvector | 17 + 0.8.7 | PostgreSQL License |
+| API dữ liệu tự sinh | Hasura GraphQL Engine CE | 2.51.4 | Apache-2.0 |
+| Lưu trữ đối tượng | SeaweedFS | 4.52 | Apache-2.0 |
+
 ## Bố cục repo hiện tại
 
 ```
-Makefile              lối vào duy nhất cho mọi lệnh
-scripts/              lệnh hỗ trợ (hook pre-push)
-docs/adr/             quyết định kiến trúc
+compose.yaml          các dịch vụ lõi và cách nối với nhau
+Makefile              lối vào duy nhất: dựng, kiểm tra
+core/                 Tầng 1: cấu hình lõi (apisix/, keycloak/, postgres/)
+scripts/              tạo .env, seed, smoke, hook pre-push
+docs/                 quyết định kiến trúc (adr/), API của lõi (api.md)
 .github/              CI, mẫu issue và pull request
 ```
 
 ## Giấy phép
 
 Mã nguồn của dự án phát hành theo [Apache-2.0](LICENSE). Mỗi tệp có header SPDX; kiểm tra bằng `make check-fast`
-(công cụ [REUSE](https://reuse.software)). Thành phần bên thứ ba sẽ chạy dưới dạng container chính thức, không sửa
-mã, và giữ giấy phép riêng (ADR 0002).
+(công cụ [REUSE](https://reuse.software)). Thành phần bên thứ ba chạy dưới dạng container chính thức, không sửa mã,
+và giữ giấy phép riêng (bảng trên và ADR 0002).
 
 ## Đóng góp
 

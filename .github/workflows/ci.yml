@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Chạy với mọi pull request và mọi push lên main. Chỉ gọi Makefile, nên kết quả ở máy
-# và trên CI giống nhau.
+# và trên CI giống nhau. Job e2e dựng lõi trên máy trắng, đúng như người dùng dựng
+# từ mã nguồn.
 
 name: ci
 
@@ -27,3 +28,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: make check-fast
+
+  e2e:
+    name: Dựng lõi trên máy trắng và kiểm tra đầu-cuối
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: make up
+      - run: make seed
+      - run: make smoke
+      - if: failure()
+        run: docker compose logs --tail=200
+      - if: always()
+        run: make reset

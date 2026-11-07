@@ -16,15 +16,17 @@ Mỗi pull request ứng với một issue. Việc lớn tách thành nhiều is
 
 ## Làm việc ở máy
 
-Cần GNU Make và [`uv`](https://docs.astral.sh/uv/) (để chạy REUSE, shellcheck, yamllint mà không phải cài
-riêng). Sau khi clone, chạy `make hooks` một lần để lỗi bị chặn trước khi push.
+Cần Docker Engine 24+ với Compose v2, GNU Make, `curl`, `jq`, `openssl`, và [`uv`](https://docs.astral.sh/uv/)
+(để chạy REUSE, shellcheck, yamllint mà không phải cài riêng). Sau khi clone, chạy `make hooks` một lần để lỗi bị
+chặn trước khi push.
 
 ```bash
-make check-fast   # giấy phép từng tệp, shell, YAML; CI chạy đúng lệnh này
+make up           # dựng lõi
+make seed         # tài khoản demo và quyền dữ liệu
+make smoke        # kiểm tra đầu-cuối qua cổng
+make check-fast   # giấy phép, cú pháp compose, shell, YAML; CI chạy đúng lệnh này
 make help         # mọi lệnh
 ```
-
-Lệnh dựng và kiểm tra lõi (`make up`, `make smoke`) được thêm cùng mã nguồn của lõi.
 
 ## Nhánh và commit
 
