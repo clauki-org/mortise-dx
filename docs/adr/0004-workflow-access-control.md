@@ -10,7 +10,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Bối cảnh
 
-Workflow là một trong bốn dịch vụ lõi ([ADR 0002](0002-chon-thanh-phan-loi.md)).
+Workflow là một trong bốn dịch vụ lõi ([ADR 0002](0002-core-components.md)).
 Flowable (Apache-2.0) chạy được BPMN và có REST API, nhưng REST API
 xác thực bằng tài khoản riêng của Flowable (basic auth), không hiểu token Keycloak, tenant hay vai trò của lõi. Nếu
 mở thẳng REST API qua APISIX với một tài khoản kỹ thuật, mọi người dùng đã đăng nhập đều có toàn quyền trên Flowable:

@@ -31,8 +31,8 @@ make help         # mọi lệnh
 
 ## Nhánh và commit
 
-- Tạo nhánh từ `main`: `<type>/<mô-tả-ngắn>` hoặc `<type>/<issue>-<mô-tả>`, ví dụ `feat/12-cong-workflow`,
-  `fix/20-token-het-han`, `docs/kien-truc`.
+- Tạo nhánh từ `main`: `<type>/<mô-tả-ngắn>` hoặc `<type>/<issue>-<mô-tả>`, ví dụ `feat/12-workflow-gateway`,
+  `fix/20-expired-token`, `docs/architecture`.
 - Commit trong nhánh viết thế nào cũng được; chúng được squash khi merge.
 - `git pull --rebase` trước khi push. Không force push `main`.
 
@@ -57,4 +57,4 @@ pull request. Câu hỏi còn mở là issue gắn nhãn `needs-decision`.
 
 Đóng góp của bạn phát hành theo [Apache License 2.0](LICENSE), như phần còn lại của dự án. Thành phần bên thứ ba mới
 phải có giấy phép OSI và được ghi vào bảng giấy phép
-([ADR 0002](docs/adr/0002-chon-thanh-phan-loi.md)).
+([ADR 0002](docs/adr/0002-core-components.md)).

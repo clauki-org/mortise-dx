@@ -27,3 +27,5 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Workflow BPMN tại `/v1/workflow/*`: Flowable đứng sau `workflow-api`, cách ly tenant, chỉ vai trò ứng viên được
   hoàn thành task, quy tắc bốn mắt; quy trình mẫu `core-approval` deploy theo tenant bằng `make seed`. `make test`
   chạy kiểm thử đơn vị; ADR 0004 về lớp kiểm soát quyền trước Flowable.
+- Tài liệu công cụ sử dụng (`docs/tools.md`): vai trò, cấu hình và cách xem của từng thành phần lõi và công cụ
+  phát triển.

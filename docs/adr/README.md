@@ -11,7 +11,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 
 ## Quy tắc
 
-- Mỗi tệp một quyết định, tên `NNNN-tieu-de-ngan.md`, đánh số theo thứ tự. Sao chép từ [template.md](template.md).
+- Mỗi tệp một quyết định, tên `NNNN-short-title.md`, đánh số theo thứ tự. Sao chép từ [template.md](template.md).
 - Quyết định thay đổi kiến trúc, phạm vi, thành phần hay quy ước có bản ghi trong cùng pull request.
 - Bản ghi đã chấp nhận không sửa, trừ lỗi chính tả hoặc thêm liên kết. Quyết định thay đổi là một bản ghi mới thay
   thế bản cũ; trạng thái bản cũ đổi thành `Bị thay thế bởi NNNN`.
@@ -21,10 +21,10 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 
 | Số | Quyết định | Trạng thái |
 |---|---|---|
-| [0001](0001-quy-uoc-du-an.md) | Tiếng Việt, Apache-2.0 và quy ước làm việc | Chấp nhận |
-| [0002](0002-chon-thanh-phan-loi.md) | Chọn thành phần lõi và kiểm tra giấy phép | Chấp nhận |
-| [0003](0003-bo-cuc-ba-tang-va-goi-nghiep-vu.md) | Bố cục ba tầng: thành phần dùng chung và gói nghiệp vụ khai báo | Chấp nhận |
-| [0004](0004-workflow-sau-lop-kiem-soat-quyen.md) | Workflow: Flowable REST đứng sau lớp kiểm soát quyền workflow-api | Chấp nhận |
+| [0001](0001-project-conventions.md) | Tiếng Việt, Apache-2.0 và quy ước làm việc | Chấp nhận |
+| [0002](0002-core-components.md) | Chọn thành phần lõi và kiểm tra giấy phép | Chấp nhận |
+| [0003](0003-three-tier-layout.md) | Bố cục ba tầng: thành phần dùng chung và gói nghiệp vụ khai báo | Chấp nhận |
+| [0004](0004-workflow-access-control.md) | Workflow: Flowable REST đứng sau lớp kiểm soát quyền workflow-api | Chấp nhận |
 
 ## Quyết định còn mở
 
