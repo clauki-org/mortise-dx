@@ -28,6 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: make check-fast
+      - run: make test
 
   e2e:
     name: Dựng lõi trên máy trắng và kiểm tra đầu-cuối

@@ -5,8 +5,11 @@
 # nên `make check-fast` xanh ở máy thì CI cũng xanh.
 
 SHELL := /bin/sh
+# Môi trường ảo Python đặt ngoài repo: REUSE 4.0.3 quét cả .venv lồng trong repo dù
+# git đã bỏ qua nó.
+export UV_PROJECT_ENVIRONMENT ?= $(HOME)/.cache/mortise-dx/workflow-api-venv
 
-.PHONY: help env up down reset ps logs seed smoke lint check-fast hooks
+.PHONY: help env up down reset ps logs seed smoke lint test check-fast hooks
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-11s %s\n", $$1, $$2}'
@@ -29,7 +32,7 @@ ps: ## Trạng thái các dịch vụ
 logs: ## Theo dõi log
 	docker compose logs -f --tail=100
 
-seed: ## Nạp tài khoản demo và metadata Hasura
+seed: ## Nạp tài khoản demo, metadata Hasura và quy trình mẫu
 	@scripts/seed.sh
 
 smoke: ## Kiểm tra đầu-cuối qua cổng (cần lõi đang chạy và đã seed)
@@ -38,13 +41,18 @@ smoke: ## Kiểm tra đầu-cuối qua cổng (cần lõi đang chạy và đã 
 lint: ## Kiểm tra giấy phép từng tệp (REUSE)
 	uvx reuse lint
 
-# shellcheck và yamllint chạy qua uvx để không phải cài sẵn; chỉ cần uv.
-check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML; không cần dựng lõi
+test: ## Kiểm thử đơn vị các dịch vụ tự viết của lõi
+	cd core/workflow-api && PYTHONDONTWRITEBYTECODE=1 uv run --frozen pytest -q -p no:cacheprovider
+
+# shellcheck, yamllint và ruff chạy qua uvx để không phải cài sẵn; chỉ cần uv.
+check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python; không cần dựng lõi
 	@test -f .env || cp .env.example .env.check-fast
 	@if [ -f .env.check-fast ]; then docker compose --env-file .env.check-fast config -q; rm -f .env.check-fast; \
 	  else docker compose config -q; fi
 	uvx --from shellcheck-py shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh
 	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core .github
+	uvx ruff check --no-cache core/workflow-api
+	uvx ruff format --no-cache --check core/workflow-api
 
 hooks: ## Cài hook pre-push chạy check-fast
 	install -m 755 scripts/pre-push "$$(git rev-parse --git-path hooks)/pre-push"

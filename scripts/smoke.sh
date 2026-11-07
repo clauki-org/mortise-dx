@@ -42,4 +42,53 @@ for pair in "user.a xuong-a" "user.b xuong-b"; do
   check "$user chỉ thấy dữ liệu tenant của mình" "$tenants" "[\"$tenant\"]"
 done
 
+# Quy trình (Flowable sau workflow-api).
+wf="$base/v1/workflow"
+user_a=$(token user.a)
+manager_a=$(token manager.a)
+user_b=$(token user.b)
+
+# api METHOD TOKEN PATH [JSON]: in "mã trạng thái<TAB>thân phản hồi".
+api() {
+  curl -s -X "$1" -H "Authorization: Bearer $2" -H 'Content-Type: application/json' \
+    ${4:+-d "$4"} -w '\t%{http_code}' "$wf$3" | awk -F'\t' '{print $NF "\t" $1}'
+}
+
+status=$(curl -s -o /dev/null -w '%{http_code}' "$wf/tasks")
+check "API quy trình không token bị chặn tại cổng" "$status" 401
+
+IFS=$'\t' read -r status body < <(api POST "$user_a" /processes/core-approval/instances \
+  '{"variables":{"title":"Kiểm thử đầu-cuối"}}')
+check "user.a khởi tạo quy trình duyệt" "$status" 201
+instance=$(jq -r .id <<<"$body")
+
+task_of() { api GET "$1" /tasks | cut -f2 | jq -r --arg p "$instance" '.[] | select(.processInstanceId == $p) | .id'; }
+
+check "user.b (tenant khác) không thấy task" "$(task_of "$user_b")" ""
+task=$(task_of "$manager_a")
+check "manager.a thấy task cần duyệt" "$([[ -n "$task" ]] && echo yes)" yes
+
+IFS=$'\t' read -r status _ < <(api POST "$user_a" "/tasks/$task/complete" '{"variables":{"approved":true}}')
+check "user.a (không có vai trò manager) không duyệt được" "$status" 403
+
+IFS=$'\t' read -r status _ < <(api POST "$user_b" "/tasks/$task/complete" '{"variables":{"approved":true}}')
+check "user.b (tenant khác) không duyệt được" "$status" 404
+
+IFS=$'\t' read -r status _ < <(api POST "$manager_a" "/tasks/$task/complete" '{"variables":{"approved":true}}')
+check "manager.a duyệt yêu cầu" "$status" 204
+
+IFS=$'\t' read -r status body < <(api GET "$user_a" "/instances/$instance")
+check "Quy trình kết thúc ở nhánh đã duyệt" "$(jq -r '.outcome' <<<"$body")" approved
+
+IFS=$'\t' read -r _ body < <(api POST "$manager_a" /processes/core-approval/instances \
+  '{"variables":{"title":"Tự gửi tự duyệt"}}')
+instance=$(jq -r .id <<<"$body")
+IFS=$'\t' read -r status body < <(api POST "$manager_a" "/tasks/$(task_of "$manager_a")/complete" \
+  '{"variables":{"approved":true}}')
+check "Quy tắc bốn mắt: người gửi không tự duyệt được" "$status" 403
+
+IFS=$'\t' read -r status _ < <(api POST "$user_a" /processes/core-approval/instances \
+  '{"variables":{"initiator":"gia-mao"}}')
+check "Không ghi đè được biến dành riêng của lõi" "$status" 400
+
 exit $fail

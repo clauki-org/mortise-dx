@@ -34,11 +34,11 @@ biệt.
 | Cổng API duy nhất (APISIX), chặn yêu cầu không token hoặc token giả | Đã chạy | `make smoke` |
 | Console quản trị không lộ qua cổng | Đã chạy | `make smoke` |
 | API dữ liệu tự sinh (Hasura CE), cách ly dữ liệu theo tenant | Đã chạy | `make smoke` |
+| Workflow BPMN (Flowable sau lớp workflow-api): cách ly tenant, phân quyền theo vai trò, quy tắc bốn mắt | Đã chạy | `make smoke`, `make test` |
 | Lưu trữ đối tượng tương thích S3 (SeaweedFS) | Dịch vụ chạy, chưa nối vào ứng dụng | |
 | Xác thực đa yếu tố, cơ chế đăng nhập theo chính sách từng tenant | Kế hoạch | |
 | Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
 | Nhật ký thay đổi, sổ cái chống sửa, kiểm dữ liệu theo schema | Kế hoạch | |
-| Workflow BPMN (Flowable) | Kế hoạch | |
 | Sao lưu và khôi phục toàn bộ lõi | Kế hoạch | |
 | Thành phần Tầng 2 và giao diện | Kế hoạch | |
 | Gói minh họa: vận hành cơ sở vật chất công cấp xã | Kế hoạch | |
@@ -58,10 +58,12 @@ make smoke   # kiểm tra đầu-cuối qua cổng
 |---|---|
 | `http://localhost:9080/auth/...` | Đăng nhập, cấp token (qua cổng) |
 | `http://localhost:9080/v1/graphql` | API dữ liệu, bắt buộc token |
+| `http://localhost:9080/v1/workflow/...` | API quy trình, bắt buộc token |
 | `http://127.0.0.1:8081/auth/admin` | Quản trị Keycloak (chỉ máy chủ) |
 | `http://127.0.0.1:8082/console` | Quản trị Hasura (chỉ máy chủ) |
+| `http://127.0.0.1:8083/flowable-rest/docs` | REST API của Flowable (chỉ máy chủ) |
 
-Trang quản trị Keycloak và Hasura là công cụ kỹ thuật cho người vận hành, chỉ mở trong máy chủ; lõi không có giao
+Trang quản trị Keycloak, Hasura và Flowable là công cụ kỹ thuật cho người vận hành, chỉ mở trong máy chủ; lõi không có giao
 diện cho người dùng nghiệp vụ. Cách gọi API kèm ví dụ và ý nghĩa mã lỗi: [docs/api.md](docs/api.md).
 
 Tài khoản demo: `user.a`, `manager.a` (tenant `xuong-a`), `user.b` (tenant `xuong-b`); mật khẩu là
@@ -76,13 +78,14 @@ Tầng 2  thành phần dùng chung + giao diện      ── chỉ gọi lõi q
 Tầng 1  APISIX (cổng duy nhất, kiểm JWT, giới hạn tần suất)
           ├─ Keycloak   định danh, SSO, vai trò, tenant
           ├─ Hasura CE  API GraphQL tự sinh, quyền theo dòng
-          ├─ Flowable   quy trình BPMN theo tenant và vai trò     (kế hoạch)
+          ├─ workflow-api → Flowable  quy trình BPMN theo tenant và vai trò
           ├─ PostgreSQL dữ liệu có cấu trúc (+ pgvector)
           └─ SeaweedFS  dữ liệu phi cấu trúc (S3)
 ```
 
 Lý do chọn từng thành phần và kiểm tra giấy phép: [ADR 0002](docs/adr/0002-chon-thanh-phan-loi.md). Bố cục ba tầng
-trong repo: [ADR 0003](docs/adr/0003-bo-cuc-ba-tang-va-goi-nghiep-vu.md) và [AGENTS.md](AGENTS.md#2-bố-cục).
+trong repo: [ADR 0003](docs/adr/0003-bo-cuc-ba-tang-va-goi-nghiep-vu.md) và [AGENTS.md](AGENTS.md#2-bố-cục). Vì sao Flowable
+đứng sau một lớp kiểm soát quyền: [ADR 0004](docs/adr/0004-workflow-sau-lop-kiem-soat-quyen.md).
 
 ### Thành phần đang chạy
 
@@ -93,13 +96,18 @@ trong repo: [ADR 0003](docs/adr/0003-bo-cuc-ba-tang-va-goi-nghiep-vu.md) và [AG
 | CSDL | PostgreSQL + pgvector | 17 + 0.8.7 | PostgreSQL License |
 | API dữ liệu tự sinh | Hasura GraphQL Engine CE | 2.51.4 | Apache-2.0 |
 | Lưu trữ đối tượng | SeaweedFS | 4.52 | Apache-2.0 |
+| Động cơ quy trình | Flowable REST | 7.2.0 | Apache-2.0 |
+| Lớp kiểm quyền quy trình (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT | khóa trong `core/workflow-api/uv.lock` | MIT / BSD-3-Clause |
 
 ## Bố cục repo hiện tại
 
 ```
 compose.yaml          các dịch vụ lõi và cách nối với nhau
 Makefile              lối vào duy nhất: dựng, kiểm tra
-core/                 Tầng 1: cấu hình lõi (apisix/, keycloak/, postgres/)
+core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết của lõi
+  apisix/ keycloak/ postgres/
+  workflow-api/       kiểm quyền trước Flowable (Python)
+  workflow/           quy trình BPMN dùng chung của lõi
 scripts/              tạo .env, seed, smoke, hook pre-push
 docs/                 quyết định kiến trúc (adr/), API của lõi (api.md)
 .github/              CI, mẫu issue và pull request

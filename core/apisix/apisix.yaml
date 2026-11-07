@@ -13,6 +13,10 @@ upstreams:
     type: roundrobin
     nodes:
       "hasura:8080": 1
+  - id: workflow-api
+    type: roundrobin
+    nodes:
+      "workflow-api:8000": 1
 
 routes:
   # Chặn console quản trị Keycloak từ bên ngoài (zero-trust).
@@ -52,6 +56,25 @@ routes:
         # Giới hạn theo token, không theo IP: đi qua tunnel hay NAT thì mọi người dùng
         # có cùng một IP, giới hạn theo IP sẽ chặn nhầm cả nhóm. Plugin openid-connect
         # chạy trước nên yêu cầu không token đã bị chặn từ trước.
+        key_type: var
+        key: http_authorization
+        rejected_code: 429
+
+  # API quy trình của lõi (workflow-api trước Flowable). Flowable không có route công khai.
+  - id: workflow
+    uri: /v1/workflow/*
+    methods: ["POST", "GET", "OPTIONS"]
+    upstream_id: workflow-api
+    plugins:
+      openid-connect:
+        client_id: dxos-web
+        client_secret: not-used-bearer-only-jwks
+        discovery: http://keycloak:8080/auth/realms/dxos/.well-known/openid-configuration
+        bearer_only: true
+        use_jwks: true
+      limit-count:
+        count: 300
+        time_window: 60
         key_type: var
         key: http_authorization
         rejected_code: 429

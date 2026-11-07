@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Mortise DX contributors
+SPDX-License-Identifier: Apache-2.0
+
+Quy trình duyệt mẫu của lõi: một người gửi yêu cầu, một người có vai trò manager
+trong cùng tenant duyệt hoặc từ chối. Task duyệt có category "four-eyes": lớp
+workflow-api không cho người gửi tự duyệt yêu cầu của mình.
+-->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="https://mortise-dx/workflow">
+  <process id="core-approval" name="Duyệt yêu cầu" isExecutable="true">
+    <!-- Biến initiator do workflow-api đặt bằng `sub` của token, không lấy từ tài khoản kỹ thuật của Flowable. -->
+    <startEvent id="submitted"/>
+    <sequenceFlow id="toReview" sourceRef="submitted" targetRef="review"/>
+
+    <userTask id="review" name="Duyệt yêu cầu" flowable:candidateGroups="manager" flowable:category="four-eyes"/>
+    <sequenceFlow id="toDecision" sourceRef="review" targetRef="decision"/>
+
+    <exclusiveGateway id="decision" default="toRejected"/>
+    <sequenceFlow id="toApproved" sourceRef="decision" targetRef="approved">
+      <conditionExpression xsi:type="tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${execution.getVariable("approved") == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="toRejected" sourceRef="decision" targetRef="rejected"/>
+
+    <endEvent id="approved" name="Đã duyệt"/>
+    <endEvent id="rejected" name="Từ chối"/>
+  </process>
+</definitions>

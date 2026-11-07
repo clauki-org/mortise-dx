@@ -24,6 +24,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0001](0001-quy-uoc-du-an.md) | Tiếng Việt, Apache-2.0 và quy ước làm việc | Chấp nhận |
 | [0002](0002-chon-thanh-phan-loi.md) | Chọn thành phần lõi và kiểm tra giấy phép | Chấp nhận |
 | [0003](0003-bo-cuc-ba-tang-va-goi-nghiep-vu.md) | Bố cục ba tầng: thành phần dùng chung và gói nghiệp vụ khai báo | Chấp nhận |
+| [0004](0004-workflow-sau-lop-kiem-soat-quyen.md) | Workflow: Flowable REST đứng sau lớp kiểm soát quyền workflow-api | Chấp nhận |
 
 ## Quyết định còn mở
 
