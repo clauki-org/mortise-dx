@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+
+.venv
+tests
+__pycache__
+.pytest_cache
+.ruff_cache

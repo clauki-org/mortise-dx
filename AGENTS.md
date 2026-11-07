@@ -27,8 +27,9 @@ compose.yaml          dịch vụ lõi; dịch vụ tùy chọn tách theo profi
 Makefile              lối vào duy nhất cho mọi lệnh
 core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp vụ
   apisix/ keycloak/ postgres/   cấu hình của từng thành phần bên thứ ba
-  <dịch vụ>/          kế hoạch: dịch vụ tự viết của lõi, khi thành phần bên thứ ba không làm được
-  workflow/           kế hoạch: quy trình BPMN dùng chung của lõi
+  workflow-api/       dịch vụ tự viết: kiểm quyền trước Flowable (Python, uv)
+  workflow/           quy trình BPMN dùng chung của lõi
+  clamav/ mosquitto/ scorpio/ ollama/ observability/      kế hoạch
 platform/             TẦNG 2 (kế hoạch): thành phần dùng chung, không chứa từ nghiệp vụ
   web/                khung giao diện: đăng nhập, menu, thương hiệu theo tenant, nạp thành phần và gói
   components/<tên>/   một thành phần: giao diện và schema cấu hình

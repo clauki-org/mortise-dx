@@ -21,6 +21,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Cổng APISIX chặn yêu cầu không token hoặc token giả, chặn console quản trị Keycloak, giới hạn tần suất API theo
   token (không theo IP, để người dùng sau cùng một NAT hay tunnel không chặn lẫn nhau).
 - Hai tenant demo cách ly dữ liệu bằng claim `tenant` và quyền Hasura theo dòng.
-- `make up`, `make seed`, `make smoke` (5 bài kiểm tra đầu-cuối); CI dựng lõi trên máy trắng và chạy smoke.
+- `make up`, `make seed`, `make smoke` (kiểm tra đầu-cuối); CI dựng lõi trên máy trắng và chạy smoke.
   `make env` tự thêm biến mới từ `.env.example` vào `.env` đã có.
 - Tài liệu API của lõi (`docs/api.md`) kèm ví dụ và ý nghĩa mã lỗi.
+- Workflow BPMN tại `/v1/workflow/*`: Flowable đứng sau `workflow-api`, cách ly tenant, chỉ vai trò ứng viên được
+  hoàn thành task, quy tắc bốn mắt; quy trình mẫu `core-approval` deploy theo tenant bằng `make seed`. `make test`
+  chạy kiểm thử đơn vị; ADR 0004 về lớp kiểm soát quyền trước Flowable.

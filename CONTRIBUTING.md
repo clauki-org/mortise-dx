@@ -24,7 +24,8 @@ chặn trước khi push.
 make up           # dựng lõi
 make seed         # tài khoản demo và quyền dữ liệu
 make smoke        # kiểm tra đầu-cuối qua cổng
-make check-fast   # giấy phép, cú pháp compose, shell, YAML; CI chạy đúng lệnh này
+make test         # kiểm thử đơn vị dịch vụ tự viết
+make check-fast   # giấy phép, cú pháp compose, shell, YAML, Python; CI chạy đúng lệnh này
 make help         # mọi lệnh
 ```
 

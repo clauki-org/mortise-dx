@@ -15,6 +15,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run make env}
       KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?run make env}
       HASURA_DB_PASSWORD: ${HASURA_DB_PASSWORD:?run make env}
+      FLOWABLE_DB_PASSWORD: ${FLOWABLE_DB_PASSWORD:?run make env}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./core/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -97,6 +98,60 @@ services:
       timeout: 5s
       retries: 30
 
+  flowable:
+    # Chỉ engine và REST API (Apache-2.0); không dùng giao diện modeler. Sơ đồ BPMN nằm
+    # trong repo dưới dạng XML và được deploy theo từng tenant bằng `make seed`.
+    image: flowable/flowable-rest:7.2.0
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_DRIVERCLASSNAME: org.postgresql.Driver
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/flowable
+      SPRING_DATASOURCE_USERNAME: flowable
+      SPRING_DATASOURCE_PASSWORD: ${FLOWABLE_DB_PASSWORD}
+      FLOWABLE_REST_APP_ADMIN_USERID: rest-admin
+      FLOWABLE_REST_APP_ADMIN_PASSWORD: ${FLOWABLE_ADMIN_PASSWORD:?run make env}
+    ports:
+      - "127.0.0.1:${FLOWABLE_PORT:-8083}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # Endpoint health của Flowable cũng đòi đăng nhập.
+      test:
+        - CMD-SHELL
+        - >-
+          wget -qO- "http://rest-admin:$${FLOWABLE_REST_APP_ADMIN_PASSWORD}@127.0.0.1:8080/flowable-rest/actuator/health"
+          | grep -q '"UP"'
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  workflow-api:
+    # Lớp kiểm soát quyền trước Flowable: tenant, vai trò, quy tắc bốn mắt.
+    build: core/workflow-api
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/dxos/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER: ${DXOS_PUBLIC_URL:-http://localhost:9080}/auth/realms/dxos
+      FLOWABLE_URL: http://flowable:8080/flowable-rest
+      FLOWABLE_USER: rest-admin
+      FLOWABLE_PASSWORD: ${FLOWABLE_ADMIN_PASSWORD}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      flowable:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   apisix:
     image: apache/apisix:3.19.0-debian
     restart: unless-stopped
@@ -109,6 +164,8 @@ services:
       keycloak:
         condition: service_healthy
       hasura:
+        condition: service_healthy
+      workflow-api:
         condition: service_healthy
 
   seaweedfs:

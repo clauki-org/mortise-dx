@@ -56,3 +56,24 @@ hasura '{"type":"bulk_keep_going","args":[
     "role":"user","permission":{"columns":["id","name","created_at"],"filter":{"id":{"_eq":"X-Hasura-Tenant-Id"}}}}}
 ]}' >/dev/null
 echo "hasura: metadata đã áp dụng"
+
+# Deploy mọi quy trình lõi cho từng tenant có trong core.tenants. Flowable đặt tên
+# deployment theo tên tệp tải lên (bỏ qua trường deploymentName), nên băm của tệp được
+# gắn vào tên tệp: chạy lại seed không tạo phiên bản mới nếu tệp BPMN không đổi.
+flowable="http://127.0.0.1:${FLOWABLE_PORT:-8083}/flowable-rest/service"
+tenants=$(curl -fsS -X POST "http://127.0.0.1:${HASURA_PORT:-8082}/v1/graphql" \
+  -H "X-Hasura-Admin-Secret: $HASURA_ADMIN_SECRET" -H 'Content-Type: application/json' \
+  -d '{"query":"{ core_tenants { id } }"}' | jq -r '.data.core_tenants[].id')
+for file in core/workflow/processes/*.bpmn20.xml; do
+  name="$(basename "$file" .bpmn20.xml)-$(sha256sum "$file" | cut -c1-12)"
+  for tenant in $tenants; do
+    existing=$(curl -fsS -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" \
+      "$flowable/repository/deployments?name=$name&tenantId=$tenant" | jq '.total')
+    if [[ "$existing" == "0" ]]; then
+      curl -fsS -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" -F "file=@$file;filename=$name.bpmn20.xml" \
+        -F "tenantId=$tenant" "$flowable/repository/deployments" >/dev/null
+      echo "flowable: deploy $name cho $tenant"
+    fi
+  done
+done
+echo "flowable: quy trình đã sẵn sàng"

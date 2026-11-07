@@ -45,6 +45,37 @@ curl -fsS -X POST http://localhost:9080/v1/graphql \
 | `401` | Thiếu hoặc sai token |
 | `429` | Vượt giới hạn 600 yêu cầu mỗi phút cho mỗi token |
 
+## Quy trình: `/v1/workflow/*`
+
+Lớp `workflow-api` đứng trước Flowable: kiểm token, giới hạn theo tenant và vai trò, áp quy tắc bốn mắt. Flowable
+không có đường vào trực tiếp từ bên ngoài.
+
+| Phương thức | Đường dẫn | Việc |
+|---|---|---|
+| `POST` | `/v1/workflow/processes/{key}/instances` | Khởi tạo một quy trình của tenant mình; thân `{"variables": {...}}` |
+| `GET` | `/v1/workflow/tasks` | Các task giao cho mình hoặc cho vai trò của mình, trong tenant mình |
+| `POST` | `/v1/workflow/tasks/{id}/complete` | Hoàn thành task; thân `{"variables": {...}}` |
+| `GET` | `/v1/workflow/instances/{id}` | Trạng thái một quy trình của tenant mình |
+
+Ví dụ với quy trình mẫu `core-approval` (do `make seed` deploy cho từng tenant):
+
+```bash
+curl -fsS -X POST http://localhost:9080/v1/workflow/processes/core-approval/instances \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"variables":{"title":"Yêu cầu mẫu"}}'
+```
+
+| Mã trả về | Khi nào |
+|---|---|
+| `201` / `204` | Khởi tạo / hoàn thành thành công |
+| `400` | Ghi đè biến dành riêng của lõi (`initiator`, `initiatorName`, `tenant`) |
+| `401` | Thiếu hoặc sai token |
+| `403` | Tài khoản không thuộc đúng một tenant; task đã giao cho người khác; không có vai trò ứng viên; người gửi tự duyệt yêu cầu của mình |
+| `404` | Task hay quy trình không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại); tenant chưa có quy trình đó |
+| `409` | Task vừa được người khác nhận |
+| `422` | Thân yêu cầu sai định dạng |
+| `502` / `503` | Flowable trả lỗi (thông điệp được chuyển lại) / không kết nối được Flowable |
+
 ## Lưu trữ đối tượng (S3)
 
 SeaweedFS cung cấp API tương thích S3 tại `http://127.0.0.1:8333`, hiện chỉ mở trong máy chủ. Khóa truy cập là
