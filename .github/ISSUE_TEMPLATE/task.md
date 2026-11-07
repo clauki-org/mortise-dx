@@ -8,6 +8,8 @@ SPDX-FileCopyrightText: 2026 Mortise DX contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
+**Hạn:** YYYY-MM-DD
+
 ## Mục tiêu
 
 <!-- Một hai câu: người dùng hoặc hệ thống được gì khi xong việc này. -->

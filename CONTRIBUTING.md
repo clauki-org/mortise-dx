@@ -12,7 +12,8 @@ Tài liệu này nói cách làm việc trong repo; quy tắc code chi tiết �
 - Lỗi: mở issue từ mẫu Báo lỗi, ghi commit, hệ điều hành, lệnh đã chạy và nguyên văn kết quả.
 - Tính năng: mở issue từ mẫu Tính năng; việc đã lên kế hoạch dùng mẫu Công việc.
 
-Mỗi pull request ứng với một issue. Việc lớn tách thành nhiều issue.
+Mỗi issue có hạn (dòng **Hạn** ở đầu thân) và thuộc một milestone; hạn của issue không muộn hơn hạn milestone.
+Việc lớn là một epic (nhãn `epic`) gồm nhiều issue con. Mỗi pull request ứng với một issue.
 
 ## Làm việc ở máy
 

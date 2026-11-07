@@ -9,6 +9,8 @@ SPDX-FileCopyrightText: 2026 Mortise DX contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
+**Hạn:** YYYY-MM-DD
+
 ## Tình huống
 
 <!-- Ai gặp vấn đề gì, hiện đang làm thế nào. -->
