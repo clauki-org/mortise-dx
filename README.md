@@ -39,7 +39,7 @@ biệt.
 | Xác thực đa yếu tố, cơ chế đăng nhập theo chính sách từng tenant | Kế hoạch | |
 | Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
 | Nhật ký thay đổi, sổ cái chống sửa, kiểm dữ liệu theo schema | Kế hoạch | |
-| Sao lưu và khôi phục toàn bộ lõi | Kế hoạch | |
+| Sao lưu và khôi phục toàn bộ lõi | Đã chạy | CI: sao lưu → xóa → khôi phục → `make smoke` |
 | Thành phần Tầng 2 và giao diện | Kế hoạch | |
 | Gói minh họa: vận hành cơ sở vật chất công cấp xã | Kế hoạch | |
 
@@ -65,6 +65,13 @@ make smoke   # kiểm tra đầu-cuối qua cổng
 
 Trang quản trị Keycloak, Hasura và Flowable là công cụ kỹ thuật cho người vận hành, chỉ mở trong máy chủ; lõi không có giao
 diện cho người dùng nghiệp vụ. Cách gọi API kèm ví dụ và ý nghĩa mã lỗi: [docs/api.md](docs/api.md).
+
+Sao lưu và khôi phục (đã kiểm: sao lưu, xóa sạch lõi, dựng lại, khôi phục, `make smoke` qua):
+
+```bash
+make backup                                       # CSDL, tệp, .env → ~/.local/share/mortise-dx/backups/<thời điểm>
+make restore FROM=<thư mục sao lưu> CONFIRM=yes   # GHI ĐÈ dữ liệu hiện tại
+```
 
 Tài khoản demo: `user.a`, `manager.a` (tenant `xuong-a`), `user.b` (tenant `xuong-b`); mật khẩu là
 `DEMO_USER_PASSWORD` trong `.env`. Mọi lệnh khác: `make help`.
@@ -105,12 +112,12 @@ Từng thành phần và công cụ phát triển làm gì, cấu hình ở đâ
 
 ```
 compose.yaml          các dịch vụ lõi và cách nối với nhau
-Makefile              lối vào duy nhất: dựng, kiểm tra
+Makefile              lối vào duy nhất: dựng, kiểm tra, sao lưu
 core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết của lõi
   apisix/ keycloak/ postgres/
   workflow-api/       kiểm quyền trước Flowable (Python)
   workflow/           quy trình BPMN dùng chung của lõi
-scripts/              tạo .env, seed, smoke, hook pre-push
+scripts/              tạo .env, seed, smoke, sao lưu, khôi phục, hook pre-push
 docs/                 quyết định kiến trúc (adr/), API của lõi (api.md), công cụ (tools.md)
 .github/              CI, mẫu issue và pull request
 ```

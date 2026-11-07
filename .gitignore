@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 .env
+.env.before-restore
 *.log
 .DS_Store
 .idea/
