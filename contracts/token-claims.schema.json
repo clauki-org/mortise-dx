@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/clauki-org/mortise-dx/contracts/token-claims.schema.json",
   "title": "Claim trong access token",
-  "description": "Các claim mà cổng, Hasura, workflow-api, giao diện và trợ lý AI dùng để xác định người gọi. Keycloak cấp token; các claim khác của Keycloak có thể có nhưng không được dùng để phân quyền.",
+  "description": "Các claim mà cổng, Hasura, workflow-api, giao diện và trợ lý AI dùng để xác định người gọi. Keycloak cấp token; các claim khác của Keycloak có thể có nhưng không được dùng để phân quyền. Claim đơn vị (tỉnh, xã) thêm cùng ADR của epic #23.",
   "type": "object",
   "required": ["iss", "sub", "exp", "tenant", "realm_access"],
   "properties": {
@@ -42,11 +42,6 @@
           "contains": { "const": "user" }
         }
       }
-    },
-    "unit": {
-      "description": "Đơn vị trong tenant, dạng đường dẫn từ cấp cao nhất xuống, ví dụ `tinh-a/xa-1`. Cấp trên thấy dữ liệu tổng hợp của mọi đơn vị bắt đầu bằng đường dẫn của mình. Chưa cấp trong token: thêm ở epic #23; trước khi có, bên dùng coi người dùng thuộc cấp cao nhất của tenant.",
-      "type": "string",
-      "pattern": "^[a-z0-9-]+(/[a-z0-9-]+)*$"
     }
   },
   "$defs": {
