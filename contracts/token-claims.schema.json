@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/token-claims.schema.json",
+  "title": "Claim trong access token",
+  "description": "Các claim mà cổng, Hasura, workflow-api, giao diện và trợ lý AI dùng để xác định người gọi. Keycloak cấp token; các claim khác của Keycloak có thể có nhưng không được dùng để phân quyền.",
+  "type": "object",
+  "required": ["iss", "sub", "exp", "tenant", "realm_access"],
+  "properties": {
+    "iss": {
+      "description": "Issuer: URL công khai của realm, ví dụ http://localhost:9080/auth/realms/dxos",
+      "type": "string",
+      "pattern": "/auth/realms/dxos$"
+    },
+    "sub": {
+      "description": "Mã người dùng, ổn định; dùng làm người khởi tạo, người được giao, người ghi nhật ký",
+      "type": "string",
+      "minLength": 1
+    },
+    "exp": {
+      "description": "Thời điểm hết hạn, giây kể từ epoch",
+      "type": "integer"
+    },
+    "preferred_username": {
+      "description": "Tên đăng nhập; chỉ để hiển thị, không dùng để phân quyền",
+      "type": "string"
+    },
+    "tenant": {
+      "description": "Tenant của người dùng, lấy từ group Keycloak. Đúng một phần tử; khác một thì workflow-api trả 403 và Hasura coi như không có tenant.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": { "$ref": "#/$defs/slug" }
+    },
+    "realm_access": {
+      "type": "object",
+      "required": ["roles"],
+      "properties": {
+        "roles": {
+          "description": "Vai trò. Mọi người dùng có `user`; `manager` duyệt được trong quy trình; `tenant_admin` quản trị một tenant. Keycloak thêm các vai trò mặc định của nó, bên dùng bỏ qua vai trò không biết.",
+          "type": "array",
+          "items": { "type": "string" },
+          "contains": { "const": "user" }
+        }
+      }
+    },
+    "unit": {
+      "description": "Đơn vị trong tenant, dạng đường dẫn từ cấp cao nhất xuống, ví dụ `tinh-a/xa-1`. Cấp trên thấy dữ liệu tổng hợp của mọi đơn vị bắt đầu bằng đường dẫn của mình. Chưa cấp trong token: thêm ở epic #23; trước khi có, bên dùng coi người dùng thuộc cấp cao nhất của tenant.",
+      "type": "string",
+      "pattern": "^[a-z0-9-]+(/[a-z0-9-]+)*$"
+    }
+  },
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    }
+  }
+}

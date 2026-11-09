@@ -94,6 +94,16 @@ for pair in "user.a xuong-a" "user.b xuong-b"; do
   check "$user chỉ thấy dữ liệu tenant của mình" "$tenants" "[\"$tenant\"]"
 done
 
+# Token thật do Keycloak cấp phải khớp hợp đồng mà các tầng dựa vào.
+claims_file=$(mktemp)
+trap 'rm -f "$claims_file"' EXIT
+payload=$(token manager.a | cut -d. -f2 | tr '_-' '/+')
+while (( ${#payload} % 4 )); do payload+="="; done
+base64 -d <<<"$payload" > "$claims_file"
+if uvx --from check-jsonschema==0.29.4 check-jsonschema -q \
+  --schemafile contracts/token-claims.schema.json "$claims_file"; then status=ok; else status=lệch; fi
+check "Token khớp contracts/token-claims.schema.json" "$status" ok
+
 # Quy trình (Flowable sau workflow-api).
 wf="$base/v1/workflow"
 user_a=$(token user.a)

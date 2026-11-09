@@ -75,6 +75,8 @@ jobs:
       RESTORE_CYCLE: ${{ needs.changes.outputs.backup }}
     steps:
       - uses: actions/checkout@v4
+      # smoke kiểm token thật theo contracts/ bằng check-jsonschema qua uvx.
+      - uses: astral-sh/setup-uv@v6
       - name: Start the core
         run: make up
       - name: Seed demo accounts and permissions

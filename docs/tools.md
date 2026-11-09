@@ -135,6 +135,7 @@ hưởng tới mã Apache-2.0 của dự án. Những công cụ chạy qua `uvx
 | ShellCheck | Bắt lỗi trong script shell | `make check-fast` | GPL-3.0 |
 | yamllint | Kiểm cú pháp và định dạng YAML | `make check-fast` | GPL-3.0 |
 | Ruff | Kiểm lỗi và định dạng mã Python | `make check-fast` | MIT |
+| check-jsonschema | Kiểm hợp đồng trong `contracts/` và token thật theo JSON Schema | `make check-fast`, `make smoke` | Apache-2.0 |
 | pytest | Kiểm thử đơn vị workflow-api | `make test` | MIT |
 | curl, jq, openssl | Gọi API trong seed và smoke, đọc JSON, sinh bí mật ngẫu nhiên | `scripts/` | curl / MIT / Apache-2.0 |
 | GitHub Actions | CI: `make check-fast` và `make test` với mọi thay đổi; dựng lõi trên máy trắng và `make smoke` khi pull request đổi thứ ngoài tài liệu; vòng sao lưu và khôi phục khi đổi phần nó phụ thuộc; push lên `main` chạy đủ | `.github/workflows/ci.yml` | dịch vụ của GitHub |

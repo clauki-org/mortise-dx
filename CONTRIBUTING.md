@@ -25,7 +25,8 @@ make up           # dựng lõi
 make seed         # tài khoản demo và quyền dữ liệu
 make smoke        # kiểm tra đầu-cuối qua cổng
 make test         # kiểm thử đơn vị dịch vụ tự viết
-make check-fast   # giấy phép, cú pháp compose, shell, YAML, Python; CI chạy đúng lệnh này
+make check-fast   # giấy phép, cú pháp compose, shell, YAML, Python, hợp đồng API; CI chạy đúng lệnh này
+make contracts    # xuất lại OpenAPI sau khi đổi route hay model của workflow-api
 make help         # mọi lệnh
 ```
 
