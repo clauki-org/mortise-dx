@@ -18,7 +18,7 @@ TOKEN=$(curl -fsS http://localhost:9080/auth/realms/dxos/protocol/openid-connect
   -d username=user.a -d "password=$DEMO_USER_PASSWORD" | jq -r .access_token)
 ```
 
-Token mang các claim lõi dùng để phân quyền:
+Token mang các claim lõi dùng để phân quyền (hợp đồng: [`contracts/token-claims.schema.json`](../contracts/token-claims.schema.json)):
 
 | Claim | Ý nghĩa |
 |---|---|
@@ -46,6 +46,8 @@ curl -fsS -X POST http://localhost:9080/v1/graphql \
 | `429` | Vượt giới hạn 600 yêu cầu mỗi phút cho mỗi token |
 
 ## Quy trình: `/v1/workflow/*`
+
+Hợp đồng đầy đủ (OpenAPI, có schema phản hồi và lỗi): [`contracts/workflow-api.openapi.json`](../contracts/workflow-api.openapi.json).
 
 Lớp `workflow-api` đứng trước Flowable: kiểm token, giới hạn theo tenant và vai trò, áp quy tắc bốn mắt. Flowable
 không có đường vào trực tiếp từ bên ngoài.

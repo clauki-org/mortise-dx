@@ -25,6 +25,7 @@ tạo khi có mã nguồn thật đầu tiên.
 ```
 compose.yaml          dịch vụ lõi; dịch vụ tùy chọn tách theo profile
 Makefile              lối vào duy nhất cho mọi lệnh
+contracts/            hợp đồng API dùng chung giữa các tầng: JSON Schema, OpenAPI; CI kiểm
 core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp vụ
   apisix/ keycloak/ postgres/   cấu hình của từng thành phần bên thứ ba
   postgres/migrations/          migration lược đồ của lõi (ADR 0005)
@@ -54,6 +55,8 @@ Ranh giới bắt buộc:
 - Gói ưu tiên khai báo; chỉ viết giao diện riêng khi thành phần dùng chung không đáp ứng được, và ghi lý do.
 - Gỡ một gói thì lõi và các gói khác vẫn chạy, `make smoke` vẫn qua.
 - Không commit tệp mô hình AI, dữ liệu lớn hay bản sao lưu; chúng được tải hoặc sinh ra khi chạy.
+- Hợp đồng giữa các tầng nằm trong `contracts/`. Đổi claim token, định dạng `app.yaml` hay API của dịch vụ thì sửa
+  hợp đồng trong cùng pull request; đổi route hay model của workflow-api thì chạy `make contracts`.
 
 ## 3. Code
 
