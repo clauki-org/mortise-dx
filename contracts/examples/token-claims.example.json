@@ -4,6 +4,5 @@
   "exp": 1794221726,
   "preferred_username": "manager.a",
   "tenant": ["xuong-a"],
-  "realm_access": { "roles": ["default-roles-dxos", "manager", "offline_access", "uma_authorization", "user"] },
-  "unit": "tinh-a/xa-1"
+  "realm_access": { "roles": ["default-roles-dxos", "manager", "offline_access", "uma_authorization", "user"] }
 }
