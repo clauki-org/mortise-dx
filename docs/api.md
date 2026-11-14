@@ -11,10 +11,13 @@ phải có access token của Keycloak; không có hoặc sai token thì cổng 
 
 ## Lấy token
 
+Trên bản cài phát triển, lấy token bằng lệnh qua client `mortise-test` do `make seed` tạo. Ứng dụng web dùng client
+`mortise-web` với Authorization Code + PKCE; client này không nhận mật khẩu trực tiếp.
+
 ```bash
 set -a; . ./.env; set +a
 TOKEN=$(curl -fsS http://localhost:9080/auth/realms/mortise/protocol/openid-connect/token \
-  -d grant_type=password -d client_id=mortise-web \
+  -d grant_type=password -d client_id=mortise-test \
   -d username=user.a -d "password=$DEMO_USER_PASSWORD" | jq -r .access_token)
 ```
 
@@ -25,9 +28,6 @@ Token mang các claim lõi dùng để phân quyền:
 | `sub` | Mã người dùng |
 | `tenant` | Đơn vị (tenant) của người dùng, đúng một giá trị |
 | `realm_access.roles` | Vai trò, ví dụ `user`, `manager` |
-
-Luồng mật khẩu (`grant_type=password`) chỉ dùng cho demo và kiểm thử. Ứng dụng web dùng luồng Authorization Code
-với PKCE.
 
 ## Dữ liệu: `POST /v1/graphql`
 

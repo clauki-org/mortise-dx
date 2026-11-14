@@ -47,6 +47,9 @@ services:
       KC_HEALTH_ENABLED: "true"
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?run make env}
+      # Keycloak thay ${MORTISE_PUBLIC_URL} trong tệp realm khi import: redirect URI và web origin của client
+      # giao diện theo URL công khai của bản cài, không dùng ký tự đại diện rộng.
+      MORTISE_PUBLIC_URL: ${MORTISE_PUBLIC_URL:-http://localhost:9080}
     volumes:
       - ./core/keycloak/realm-mortise.json:/opt/keycloak/data/import/realm-mortise.json:ro
     ports:

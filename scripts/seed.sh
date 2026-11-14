@@ -21,6 +21,19 @@ kc config credentials --server http://localhost:8080/auth --realm master \
 # Keycloak bỏ qua defaultRole khi import realm nên gán ở đây.
 kc add-roles -r mortise --rname default-roles-mortise --rolename user >/dev/null
 
+# Client chỉ dùng cho smoke và CI: còn bật password grant để lấy token bằng lệnh, không có redirect URI nên không
+# dùng được cho đăng nhập qua trình duyệt. Tạo ở seed chứ không nằm trong tệp realm, để bản cài thật không có client
+# nào nhận mật khẩu trực tiếp (ADR 0006). Mapper chép từ client giao diện để token mang cùng claim `tenant`; tạo
+# lại mỗi lần seed để luôn khớp khi mapper của client giao diện đổi.
+test_client=$(kc get clients -r mortise -q clientId=mortise-test --fields id --format csv --noquotes)
+[[ -z "$test_client" ]] || kc delete "clients/$test_client" -r mortise
+kc get clients -r mortise -q clientId=mortise-web | jq '.[0] | {
+    clientId: "mortise-test", name: "Mortise DX smoke and CI", enabled: true, publicClient: true,
+    standardFlowEnabled: false, implicitFlowEnabled: false, directAccessGrantsEnabled: true,
+    redirectUris: [], webOrigins: [], protocolMappers: (.protocolMappers | map(del(.id)))
+  }' | kc create clients -r mortise -f - -i >/dev/null
+echo "keycloak: client kiểm thử mortise-test"
+
 # username  tenant   vai trò thêm
 users=(
   "user.a  xuong-a  -"
