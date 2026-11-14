@@ -29,7 +29,7 @@ core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp 
   apisix/ keycloak/ postgres/   cấu hình của từng thành phần bên thứ ba
   postgres/migrations/          migration lược đồ của lõi (ADR 0005)
   workflow-api/       dịch vụ tự viết: kiểm quyền trước Flowable (Python, uv)
-  workflow/           quy trình BPMN dùng chung của lõi
+  workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
   clamav/ mosquitto/ scorpio/ ollama/ observability/      kế hoạch
 platform/             TẦNG 2 (kế hoạch): thành phần dùng chung, không chứa từ nghiệp vụ
   web/                khung giao diện: đăng nhập, menu, thương hiệu theo tenant, nạp thành phần và gói

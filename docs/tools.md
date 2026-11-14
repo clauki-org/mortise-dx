@@ -19,8 +19,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Làm gì:** CSDL quan hệ lưu dữ liệu có cấu trúc. pgvector là phần mở rộng lưu vector và tìm kiếm theo độ gần,
   dùng cho tìm kiếm ngữ nghĩa.
 - **Trong dự án:** một máy chủ Postgres chứa ba CSDL tách quyền: `keycloak` (định danh), `flowable` (quy trình) và
-  `dxos` (dữ liệu của nền tảng, Hasura cũng lưu metadata ở đây). Lược đồ `core` có bảng `core.tenants`, mỗi dòng
-  là một đơn vị dùng chung lõi. Phần mở rộng `vector` (pgvector) và `pgcrypto` đã được bật trong CSDL `dxos`
+  `mortise` (dữ liệu của nền tảng, Hasura cũng lưu metadata ở đây). Lược đồ `core` có bảng `core.tenants`, mỗi dòng
+  là một đơn vị dùng chung lõi. Phần mở rộng `vector` (pgvector) và `pgcrypto` đã được bật trong CSDL `mortise`
   nhưng chưa có bảng nào dùng; `vector` dành cho trợ lý AI (kế hoạch).
 - **Cấu hình:** `core/postgres/init/` chạy một lần khi volume còn trống: tạo vai trò, CSDL và bật phần mở rộng.
   Đổi tệp này thì phải `make reset` để chạy lại. Bảng và lược đồ do migration tạo (mục dbmate bên dưới).
@@ -31,7 +31,7 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Làm gì:** áp các thay đổi lược đồ CSDL theo thứ tự, ghi lại thay đổi nào đã áp, để bản cài đã có dữ liệu nhận
   được thay đổi mới mà không mất dữ liệu ([ADR 0005](adr/0005-schema-migrations.md)).
 - **Trong dự án:** dịch vụ `migrate` chạy một lần mỗi khi `make up`, trước khi Hasura khởi động; áp các migration
-  chưa chạy rồi thoát. Chạy bằng vai trò `hasura`, chủ sở hữu CSDL `dxos`. Lịch sử của lõi ghi trong bảng
+  chưa chạy rồi thoát. Chạy bằng vai trò `hasura`, chủ sở hữu CSDL `mortise`. Lịch sử của lõi ghi trong bảng
   `core.schema_migrations`; mỗi gói nghiệp vụ sẽ có thư mục và bảng theo dõi riêng.
 - **Cấu hình:** tệp migration ở `core/postgres/migrations/`, tên `YYYYMMDDHHMMSS_mo_ta.sql`, có phần
   `-- migrate:up` và `-- migrate:down`. Tạo tệp mới bằng `make migrate-new NAME=<ten_ngan>`.
@@ -42,13 +42,13 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Làm gì:** quản lý người dùng, đăng nhập, cấp token theo chuẩn OpenID Connect (OIDC), vai trò và nhóm. Mọi
   ứng dụng đăng nhập ở một chỗ.
 - **Trong dự án:**
-  - Realm `dxos` chứa toàn bộ người dùng của nền tảng.
+  - Realm `mortise` chứa toàn bộ người dùng của nền tảng.
   - Mỗi tenant là một nhóm (`xuong-a`, `xuong-b`); bộ ánh xạ đưa tên nhóm vào claim `tenant` của token. Các thành
     phần khác dựa vào claim này để tách dữ liệu.
   - Vai trò realm: `user`, `manager`, `tenant_admin`.
-  - Client `dxos-web` là client công khai, dùng luồng Authorization Code với PKCE cho ứng dụng web.
+  - Client `mortise-web` là client công khai, dùng luồng Authorization Code với PKCE cho ứng dụng web.
   - Access token sống 15 phút; bật chống dò mật khẩu; tắt tự đăng ký.
-- **Cấu hình:** `core/keycloak/realm-dxos.json`, được nạp khi Keycloak khởi động lần đầu. Tài khoản demo do
+- **Cấu hình:** `core/keycloak/realm-mortise.json`, được nạp khi Keycloak khởi động lần đầu. Tài khoản demo do
   `scripts/seed.sh` tạo, không nằm trong tệp realm.
 - **Xem:** `http://127.0.0.1:8081/auth/admin`, tài khoản `admin`, mật khẩu `KEYCLOAK_ADMIN_PASSWORD`. Đường dẫn này
   bị chặn khi đi qua cổng. Keycloak đang chạy chế độ `start-dev`, chỉ dành cho phát triển.
@@ -89,8 +89,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Trong dự án:** chỉ dùng engine và REST API, không dùng công cụ vẽ quy trình. Flowable không có đường vào từ bên
   ngoài; mọi lời gọi đi qua workflow-api ([ADR 0004](adr/0004-workflow-access-control.md)). Mỗi quy trình
   được deploy riêng cho từng tenant.
-- **Cấu hình:** sơ đồ BPMN là tệp XML trong `core/workflow/processes/`; `make seed` deploy cho mọi tenant, chạy lại
-  không tạo phiên bản mới nếu tệp không đổi.
+- **Cấu hình:** lõi chỉ có quy trình mẫu để kiểm thử, ở `core/workflow/fixtures/`; quy trình nghiệp vụ nằm trong gói
+  ở `apps/`. `make seed` deploy quy trình mẫu cho mọi tenant, chạy lại không tạo phiên bản mới nếu tệp không đổi.
 - **Xem:** tài liệu REST tại `http://127.0.0.1:8083/flowable-rest/docs`, tài khoản `rest-admin`, mật khẩu
   `FLOWABLE_ADMIN_PASSWORD`.
 

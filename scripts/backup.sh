@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Sao lưu toàn bộ trạng thái của lõi vào một thư mục có dấu thời gian:
-#   postgres.sql.gz  mọi CSDL và vai trò (Keycloak, Flowable, dxos kèm metadata Hasura)
+#   postgres.sql.gz  mọi CSDL và vai trò (Keycloak, Flowable, mortise kèm metadata Hasura)
 #   seaweed.tar.gz   dữ liệu lưu trữ đối tượng
 #   env              bản sao .env (mật khẩu vai trò CSDL trong bản dump khớp với tệp này)
 #   MANIFEST, SHA256SUMS

@@ -4,7 +4,7 @@
 # Tầng 1 – lõi headless của DX-OS. Chỉ APISIX mở ra ngoài (cổng 9080);
 # các cổng còn lại chỉ bind 127.0.0.1 để quản trị khi phát triển.
 
-name: dxos
+name: mortise
 
 services:
   postgres:
@@ -22,7 +22,7 @@ services:
     ports:
       - "127.0.0.1:${PG_PORT:-55432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d dxos"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mortise"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -41,14 +41,14 @@ services:
       KC_HTTP_RELATIVE_PATH: /auth
       # Issuer của token luôn là URL công khai (qua APISIX); dịch vụ nội bộ
       # gọi thẳng keycloak:8080 nhờ backchannel động.
-      KC_HOSTNAME: ${DXOS_PUBLIC_URL:-http://localhost:9080}/auth
+      KC_HOSTNAME: ${MORTISE_PUBLIC_URL:-http://localhost:9080}/auth
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_PROXY_HEADERS: xforwarded
       KC_HEALTH_ENABLED: "true"
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?run make env}
     volumes:
-      - ./core/keycloak/realm-dxos.json:/opt/keycloak/data/import/realm-dxos.json:ro
+      - ./core/keycloak/realm-mortise.json:/opt/keycloak/data/import/realm-mortise.json:ro
     ports:
       - "127.0.0.1:${KEYCLOAK_ADMIN_PORT:-8081}:8080"
     depends_on:
@@ -68,11 +68,11 @@ services:
 
   migrate:
     # Chạy một lần mỗi khi `make up`: áp các migration của lõi chưa chạy rồi thoát (ADR 0005).
-    # Chạy bằng vai trò hasura, chủ sở hữu CSDL dxos, để bảng thuộc đúng chủ mà Hasura đọc.
+    # Chạy bằng vai trò hasura, chủ sở hữu CSDL mortise, để bảng thuộc đúng chủ mà Hasura đọc.
     image: ghcr.io/amacneil/dbmate:2.37.0
     restart: "no"
     environment:
-      DATABASE_URL: postgres://hasura:${HASURA_DB_PASSWORD}@postgres:5432/dxos?sslmode=disable
+      DATABASE_URL: postgres://hasura:${HASURA_DB_PASSWORD}@postgres:5432/mortise?sslmode=disable
       DBMATE_MIGRATIONS_DIR: /migrations
       DBMATE_MIGRATIONS_TABLE: core.schema_migrations
     command: ["--wait", "--no-dump-schema", "--migration-lock", "up", "--strict"]
@@ -87,18 +87,18 @@ services:
     image: hasura/graphql-engine:v2.51.4-ce
     restart: unless-stopped
     environment:
-      HASURA_GRAPHQL_DATABASE_URL: postgres://hasura:${HASURA_DB_PASSWORD}@postgres:5432/dxos
+      HASURA_GRAPHQL_DATABASE_URL: postgres://hasura:${HASURA_DB_PASSWORD}@postgres:5432/mortise
       HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_ADMIN_SECRET:?run make env}
       HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
       HASURA_GRAPHQL_DEV_MODE: "false"
       HASURA_GRAPHQL_ENABLE_TELEMETRY: "false"
       # Hasura tự kiểm JWT lần nữa sau APISIX (phòng thủ nhiều lớp).
       HASURA_GRAPHQL_JWT_SECRET: >-
-        {"jwk_url":"http://keycloak:8080/auth/realms/dxos/protocol/openid-connect/certs",
-        "issuer":"${DXOS_PUBLIC_URL:-http://localhost:9080}/auth/realms/dxos",
+        {"jwk_url":"http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/certs",
+        "issuer":"${MORTISE_PUBLIC_URL:-http://localhost:9080}/auth/realms/mortise",
         "claims_map":{
         "x-hasura-allowed-roles":{"path":"$$.realm_access.roles"},
-        "x-hasura-default-role":{"path":"$$.dxos_default_role","default":"user"},
+        "x-hasura-default-role":{"path":"$$.mortise_default_role","default":"user"},
         "x-hasura-user-id":{"path":"$$.sub"},
         "x-hasura-tenant-id":{"path":"$$.tenant[0]","default":"unassigned"}}}
     ports:
@@ -150,8 +150,8 @@ services:
     build: core/workflow-api
     restart: unless-stopped
     environment:
-      KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/dxos/protocol/openid-connect/certs
-      KEYCLOAK_ISSUER: ${DXOS_PUBLIC_URL:-http://localhost:9080}/auth/realms/dxos
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER: ${MORTISE_PUBLIC_URL:-http://localhost:9080}/auth/realms/mortise
       FLOWABLE_URL: http://flowable:8080/flowable-rest
       FLOWABLE_USER: rest-admin
       FLOWABLE_PASSWORD: ${FLOWABLE_ADMIN_PASSWORD}
@@ -177,7 +177,7 @@ services:
       - ./core/apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro
       - ./core/apisix/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
     ports:
-      - "${DXOS_BIND:-127.0.0.1}:9080:9080"
+      - "${MORTISE_BIND:-127.0.0.1}:9080:9080"
     depends_on:
       keycloak:
         condition: service_healthy
@@ -212,7 +212,7 @@ services:
     command:
       - |
         cat > /tmp/s3.json <<EOF
-        {"identities":[{"name":"dxos","credentials":[{"accessKey":"$$S3_ACCESS_KEY","secretKey":"$$S3_SECRET_KEY"}],"actions":["Admin","Read","Write","List","Tagging"]}]}
+        {"identities":[{"name":"mortise","credentials":[{"accessKey":"$$S3_ACCESS_KEY","secretKey":"$$S3_SECRET_KEY"}],"actions":["Admin","Read","Write","List","Tagging"]}]}
         EOF
         exec weed server -dir=/data -s3 -s3.config=/tmp/s3.json
     volumes:

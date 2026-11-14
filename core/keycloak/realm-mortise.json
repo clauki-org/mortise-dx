@@ -1,5 +1,5 @@
 {
-  "realm": "dxos",
+  "realm": "mortise",
   "displayName": "Mortise DX",
   "enabled": true,
   "sslRequired": "external",
@@ -20,8 +20,8 @@
   ],
   "clients": [
     {
-      "clientId": "dxos-web",
-      "name": "DX-OS web apps",
+      "clientId": "mortise-web",
+      "name": "Mortise DX web",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 [project]
-name = "dxos-workflow-api"
+name = "mortise-workflow-api"
 version = "0.1.0"
 description = "Lớp kiểm soát quyền giữa ứng dụng và Flowable: tenant, vai trò, quy tắc bốn mắt"
 license = "Apache-2.0"

@@ -36,3 +36,24 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   phụ thuộc; push lên `main` luôn chạy đủ. Tên job và bước bằng tiếng Anh.
 - Lược đồ CSDL của lõi quản lý bằng migration dbmate: `make up` áp migration chưa chạy, bản cài đã có dữ liệu nâng
   cấp không cần `make reset`; `make migrate-new`, `make migrate-status`. Tenant demo chuyển sang `make seed`.
+
+### Changed
+
+- Định danh kỹ thuật đổi từ `dxos` sang `mortise` cho khớp tên sản phẩm: realm Keycloak `mortise`, client
+  `mortise-web`, CSDL `mortise`, project compose `mortise`, biến `MORTISE_PUBLIC_URL` và `MORTISE_BIND` (thay
+  `DXOS_PUBLIC_URL`, `DXOS_BIND`). **Không tương thích với bản cài cũ**, xem hướng dẫn nâng cấp bên dưới.
+- Quy trình mẫu của lõi chuyển từ `core/workflow/processes/` sang `core/workflow/fixtures/` và ghi rõ chỉ dùng để
+  kiểm thử lõi; quy trình nghiệp vụ nằm trong gói ở `apps/`.
+
+#### Nâng cấp bản cài đã dựng trước khi đổi tên
+
+Tên CSDL, realm và project compose đều đổi, nên dữ liệu cũ không tự chuyển sang. Bản sao lưu làm trước khi đổi tên
+vẫn nạp được, nhưng tạo lại CSDL và realm tên cũ mà bản cài mới không dùng tới, nên hệ thống sẽ không chạy.
+
+```bash
+docker compose -p dxos down -v   # xóa container và dữ liệu của project cũ
+make up seed smoke               # dựng lại với tên mới
+```
+
+Trong `.env` đã có, đổi tên `DXOS_PUBLIC_URL` thành `MORTISE_PUBLIC_URL` và `DXOS_BIND` thành `MORTISE_BIND` nếu
+từng đặt giá trị khác mặc định; `make env` tự thêm hai biến mới với giá trị mặc định.
