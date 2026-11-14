@@ -45,9 +45,9 @@ routes:
         # bearer_only + use_jwks: cổng tự kiểm chữ ký token bằng JWKS của
         # Keycloak, không gọi introspection nên client_secret không được dùng
         # (schema của plugin vẫn bắt buộc khai báo).
-        client_id: dxos-web
+        client_id: mortise-web
         client_secret: not-used-bearer-only-jwks
-        discovery: http://keycloak:8080/auth/realms/dxos/.well-known/openid-configuration
+        discovery: http://keycloak:8080/auth/realms/mortise/.well-known/openid-configuration
         bearer_only: true
         use_jwks: true
       limit-count:
@@ -67,9 +67,9 @@ routes:
     upstream_id: workflow-api
     plugins:
       openid-connect:
-        client_id: dxos-web
+        client_id: mortise-web
         client_secret: not-used-bearer-only-jwks
-        discovery: http://keycloak:8080/auth/realms/dxos/.well-known/openid-configuration
+        discovery: http://keycloak:8080/auth/realms/mortise/.well-known/openid-configuration
         bearer_only: true
         use_jwks: true
       limit-count:

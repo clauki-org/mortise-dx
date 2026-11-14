@@ -3,9 +3,11 @@
 SPDX-FileCopyrightText: 2026 Mortise DX contributors
 SPDX-License-Identifier: Apache-2.0
 
-Quy trình duyệt mẫu của lõi: một người gửi yêu cầu, một người có vai trò manager
+Quy trình mẫu chỉ dùng để kiểm thử lõi, không phải quy trình nghiệp vụ; quy trình
+nghiệp vụ nằm trong gói ở apps/. Một người gửi yêu cầu, một người có vai trò manager
 trong cùng tenant duyệt hoặc từ chối. Task duyệt có category "four-eyes": lớp
-workflow-api không cho người gửi tự duyệt yêu cầu của mình.
+workflow-api không cho người gửi tự duyệt yêu cầu của mình. `make smoke` dựa vào quy
+trình này để kiểm cách ly tenant, phân quyền theo vai trò và quy tắc bốn mắt.
 -->
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
              xmlns:flowable="http://flowable.org/bpmn"

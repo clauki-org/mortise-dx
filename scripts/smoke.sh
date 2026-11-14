@@ -11,7 +11,7 @@ set -a
 source .env
 set +a
 
-base="${DXOS_PUBLIC_URL:-http://localhost:9080}"
+base="${MORTISE_PUBLIC_URL:-http://localhost:9080}"
 query='{"query":"{ core_tenants { id } }"}'
 fail=0
 
@@ -20,8 +20,8 @@ check() {
 }
 
 token() {
-  curl -fsS "$base/auth/realms/dxos/protocol/openid-connect/token" \
-    -d grant_type=password -d client_id=dxos-web \
+  curl -fsS "$base/auth/realms/mortise/protocol/openid-connect/token" \
+    -d grant_type=password -d client_id=mortise-web \
     -d "username=$1" -d "password=$DEMO_USER_PASSWORD" | jq -r .access_token
 }
 

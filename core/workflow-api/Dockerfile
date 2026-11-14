@@ -15,10 +15,10 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY app ./app
 
 FROM python:3.13-slim-trixie
-RUN useradd --system --uid 10001 dxos
+RUN useradd --system --uid 10001 mortise
 WORKDIR /srv
 COPY --from=build /srv /srv
 ENV PATH="/srv/.venv/bin:$PATH"
-USER dxos
+USER mortise
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

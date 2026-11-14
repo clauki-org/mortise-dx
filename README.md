@@ -18,8 +18,8 @@ Tổ chức chuyển đổi số hay rơi vào một trong hai cực: mua nhiề
 một hệ thống nguyên khối và phụ thuộc một nhà cung cấp. Mortise DX tách ba tầng:
 
 1. **Lõi (Tầng 1):** dịch vụ dùng chung cho mọi ứng dụng, chỉ có API.
-2. **Thành phần dùng chung (Tầng 2):** danh mục, biểu mẫu, quy trình, hồ sơ tài liệu, bản đồ, báo cáo, trợ lý AI;
-   cấu hình bằng khai báo, không chứa nghiệp vụ của ngành nào.
+2. **Thành phần dùng chung (Tầng 2):** danh mục, biểu mẫu, bảng việc, theo dõi hồ sơ, lưu trữ tài liệu, bản đồ, báo
+   cáo, trợ lý AI; cấu hình bằng khai báo, không chứa nghiệp vụ của ngành nào.
 3. **Gói nghiệp vụ (Tầng 3):** cấu hình và phần mở rộng cho một lĩnh vực; cài vào hoặc gỡ ra mà lõi vẫn chạy.
 
 Mã nguồn mở và dữ liệu nằm trên máy chủ của tổ chức. Một bản cài phục vụ nhiều đơn vị (tenant) với dữ liệu tách
@@ -118,7 +118,7 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   apisix/ keycloak/ postgres/
   postgres/migrations/  migration lược đồ của lõi (dbmate)
   workflow-api/       kiểm quyền trước Flowable (Python)
-  workflow/           quy trình BPMN dùng chung của lõi
+  workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
 scripts/              tạo .env, seed, smoke, tạo migration, sao lưu, khôi phục, hook pre-push
 docs/                 quyết định kiến trúc (adr/), API của lõi (api.md), công cụ (tools.md)
 .github/              CI, mẫu issue và pull request

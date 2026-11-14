@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # API của lõi
 
-Mọi API đi qua cổng APISIX tại `http://localhost:9080` (đổi bằng `DXOS_PUBLIC_URL`). Trừ đăng nhập, mọi lời gọi
+Mọi API đi qua cổng APISIX tại `http://localhost:9080` (đổi bằng `MORTISE_PUBLIC_URL`). Trừ đăng nhập, mọi lời gọi
 phải có access token của Keycloak; không có hoặc sai token thì cổng trả `401`. Các ví dụ dưới đây chạy được sau
 `make up && make seed`, và cũng là những gì `make smoke` kiểm tra.
 
@@ -13,8 +13,8 @@ phải có access token của Keycloak; không có hoặc sai token thì cổng 
 
 ```bash
 set -a; . ./.env; set +a
-TOKEN=$(curl -fsS http://localhost:9080/auth/realms/dxos/protocol/openid-connect/token \
-  -d grant_type=password -d client_id=dxos-web \
+TOKEN=$(curl -fsS http://localhost:9080/auth/realms/mortise/protocol/openid-connect/token \
+  -d grant_type=password -d client_id=mortise-web \
   -d username=user.a -d "password=$DEMO_USER_PASSWORD" | jq -r .access_token)
 ```
 
