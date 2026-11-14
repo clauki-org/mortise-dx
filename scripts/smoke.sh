@@ -19,9 +19,10 @@ check() {
   if [[ "$2" == "$3" ]]; then echo "PASS  $1"; else echo "FAIL  $1 (muốn: $3, nhận: $2)"; fail=1; fi
 }
 
+# Token cho kiểm thử lấy qua client mortise-test do `make seed` tạo; client giao diện không nhận mật khẩu trực tiếp.
 token() {
   curl -fsS "$base/auth/realms/mortise/protocol/openid-connect/token" \
-    -d grant_type=password -d client_id=mortise-web \
+    -d grant_type=password -d client_id=mortise-test \
     -d "username=$1" -d "password=$DEMO_USER_PASSWORD" | jq -r .access_token
 }
 
@@ -34,6 +35,15 @@ check "Token giả bị chặn tại cổng" "$status" 401
 
 status=$(curl -s -o /dev/null -w '%{http_code}' "$base/auth/admin/")
 check "Console quản trị Keycloak không lộ qua cổng" "$status" 403
+
+error=$(curl -s "$base/auth/realms/mortise/protocol/openid-connect/token" -d grant_type=password \
+  -d client_id=mortise-web -d username=user.a -d "password=$DEMO_USER_PASSWORD" | jq -r .error)
+check "Client giao diện không nhận mật khẩu trực tiếp" "$error" unauthorized_client
+
+# Yêu cầu đăng nhập thiếu code_challenge bị Keycloak trả về redirect URI kèm lỗi, không hiện trang đăng nhập.
+location=$(curl -s -o /dev/null -w '%{redirect_url}' "$base/auth/realms/mortise/protocol/openid-connect/auth\
+?client_id=mortise-web&response_type=code&scope=openid&redirect_uri=$base/callback")
+check "Client giao diện bắt buộc PKCE" "$(grep -o 'error=invalid_request' <<<"$location")" error=invalid_request
 
 for pair in "user.a xuong-a" "user.b xuong-b"; do
   read -r user tenant <<<"$pair"

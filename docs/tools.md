@@ -46,10 +46,13 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - Mỗi tenant là một nhóm (`xuong-a`, `xuong-b`); bộ ánh xạ đưa tên nhóm vào claim `tenant` của token. Các thành
     phần khác dựa vào claim này để tách dữ liệu.
   - Vai trò realm: `user`, `manager`, `tenant_admin`.
-  - Client `mortise-web` là client công khai, dùng luồng Authorization Code với PKCE cho ứng dụng web.
+  - Client `mortise-web` là client công khai cho ứng dụng web: chỉ Authorization Code với PKCE, không nhận mật khẩu
+    trực tiếp; redirect URI và web origin theo `MORTISE_PUBLIC_URL` ([ADR 0006](adr/0006-frontend-stack.md)).
+  - Client `mortise-test` chỉ dùng cho smoke và CI, lấy token bằng mật khẩu; do `make seed` tạo, không có trong tệp
+    realm nên bản cài thật không có, trừ khi khôi phục từ bản sao lưu của bản cài đã seed.
   - Access token sống 15 phút; bật chống dò mật khẩu; tắt tự đăng ký.
-- **Cấu hình:** `core/keycloak/realm-mortise.json`, được nạp khi Keycloak khởi động lần đầu. Tài khoản demo do
-  `scripts/seed.sh` tạo, không nằm trong tệp realm.
+- **Cấu hình:** `core/keycloak/realm-mortise.json`, được nạp khi Keycloak khởi động lần đầu. Tài khoản demo và client
+  `mortise-test` do `scripts/seed.sh` tạo, không nằm trong tệp realm.
 - **Xem:** `http://127.0.0.1:8081/auth/admin`, tài khoản `admin`, mật khẩu `KEYCLOAK_ADMIN_PASSWORD`. Đường dẫn này
   bị chặn khi đi qua cổng. Keycloak đang chạy chế độ `start-dev`, chỉ dành cho phát triển.
 

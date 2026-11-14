@@ -39,6 +39,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Changed
 
+- Client giao diện `mortise-web` chỉ còn Authorization Code + PKCE, không nhận mật khẩu trực tiếp; redirect URI và
+  web origin theo `MORTISE_PUBLIC_URL`. Smoke và ví dụ lấy token bằng lệnh dùng client `mortise-test` do `make seed`
+  tạo. Bản cài đã dựng cần `make reset` để nạp lại realm.
 - Định danh kỹ thuật đổi từ `dxos` sang `mortise` cho khớp tên sản phẩm: realm Keycloak `mortise`, client
   `mortise-web`, CSDL `mortise`, project compose `mortise`, biến `MORTISE_PUBLIC_URL` và `MORTISE_BIND` (thay
   `DXOS_PUBLIC_URL`, `DXOS_BIND`). **Không tương thích với bản cài cũ**, xem hướng dẫn nâng cấp bên dưới.

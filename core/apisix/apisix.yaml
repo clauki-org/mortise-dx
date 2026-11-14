@@ -44,7 +44,9 @@ routes:
       openid-connect:
         # bearer_only + use_jwks: cổng tự kiểm chữ ký token bằng JWKS của
         # Keycloak, không gọi introspection nên client_secret không được dùng
-        # (schema của plugin vẫn bắt buộc khai báo).
+        # (schema của plugin vẫn bắt buộc khai báo). client_id cũng không ràng
+        # buộc token: token của mọi client trong realm (kể cả mortise-test) đều
+        # qua cổng nếu chữ ký và issuer đúng.
         client_id: mortise-web
         client_secret: not-used-bearer-only-jwks
         discovery: http://keycloak:8080/auth/realms/mortise/.well-known/openid-configuration
