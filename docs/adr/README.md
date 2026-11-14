@@ -27,6 +27,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0004](0004-workflow-access-control.md) | Workflow: Flowable REST đứng sau lớp kiểm soát quyền workflow-api | Chấp nhận |
 | [0005](0005-schema-migrations.md) | Thay đổi lược đồ CSDL bằng migration dbmate, mỗi gói một lịch sử riêng | Chấp nhận |
 | [0006](0006-frontend-stack.md) | Giao diện Tầng 2: React, Mantine và component đọc cấu hình gói | Chấp nhận |
+| [0007](0007-login-page-exception.md) | Trang đăng nhập là bề mặt giao diện duy nhất của lõi | Chấp nhận |
 
 ## Quyết định còn mở
 

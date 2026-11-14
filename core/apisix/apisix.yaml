@@ -19,21 +19,33 @@ upstreams:
       "workflow-api:8000": 1
 
 routes:
-  # Chặn console quản trị Keycloak từ bên ngoài (zero-trust).
-  - id: keycloak-admin-blocked
-    uris: ["/auth/admin", "/auth/admin/*"]
-    priority: 10
+  # Chỉ mở các đường OIDC mà ứng dụng và trình duyệt cần của realm mortise (ADR 0007): cấu hình, đăng nhập, token,
+  # đăng xuất, khóa công khai, thông tin người dùng, thu hồi token, các bước của form đăng nhập (gồm nhập OTP) và tài
+  # nguyên tĩnh của trang đăng nhập. Không mở introspection (cần client có secret), đăng ký client động, device, CIBA,
+  # PAR, iframe kiểm phiên, trang tài khoản và realm master. APISIX khớp đường dài nhất trước, nên các đường này
+  # thắng route chặn `/auth/*` bên dưới; không cần priority vì không có hai route trùng đường.
+  - id: keycloak-oidc
+    uris:
+      - /auth/realms/mortise/.well-known/openid-configuration
+      - /auth/realms/mortise/protocol/openid-connect/auth
+      - /auth/realms/mortise/protocol/openid-connect/token
+      - /auth/realms/mortise/protocol/openid-connect/logout
+      - /auth/realms/mortise/protocol/openid-connect/logout/*
+      - /auth/realms/mortise/protocol/openid-connect/certs
+      - /auth/realms/mortise/protocol/openid-connect/userinfo
+      - /auth/realms/mortise/protocol/openid-connect/revoke
+      - /auth/realms/mortise/login-actions/*
+      - /auth/resources/*
+    upstream_id: keycloak
+
+  # Mọi đường khác của Keycloak (console quản trị, realm master, trang tài khoản...) không lộ qua cổng (zero-trust).
+  - id: keycloak-blocked
+    uris: ["/auth", "/auth/*"]
     plugins:
       fault-injection:
         abort:
           http_status: 403
-          body: "{\"error\":\"forbidden\",\"reason\":\"admin console is not exposed through the gateway\"}\n"
-
-  # Đăng nhập, cấp token, trang xác thực OIDC.
-  - id: keycloak-public
-    uri: /auth/*
-    priority: 0
-    upstream_id: keycloak
+          body: "{\"error\":\"forbidden\",\"reason\":\"this identity endpoint is not exposed through the gateway\"}\n"
 
   # API dữ liệu tự sinh (Hasura). Không token -> 401 tại cổng.
   - id: graphql

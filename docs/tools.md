@@ -62,7 +62,9 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Trong dự án:**
   - Chế độ standalone: tuyến đường khai báo trong tệp YAML, không cần etcd, không mở Admin API, nên không ai đổi
     được cấu hình cổng khi đang chạy.
-  - `/auth/*` chuyển tới Keycloak để đăng nhập; `/auth/admin` bị chặn (403).
+  - Chỉ các đường OIDC của realm `mortise` (đăng nhập, token, đăng xuất, khóa công khai, các bước của form đăng nhập)
+    được chuyển tới Keycloak; mọi đường khác dưới `/auth`, gồm console quản trị, realm `master` và trang tài khoản, bị
+    chặn (403) ([ADR 0007](adr/0007-login-page-exception.md)).
   - `/v1/graphql` (Hasura) và `/v1/workflow/*` (workflow-api) bắt buộc access token. Cổng tự kiểm chữ ký token bằng
     khóa công khai (JWKS) của Keycloak; không token hoặc token giả thì trả 401.
   - Giới hạn tần suất theo token: 600 yêu cầu mỗi phút cho API dữ liệu, 300 cho API quy trình. Đếm theo token, không
