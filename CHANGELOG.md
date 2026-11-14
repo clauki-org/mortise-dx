@@ -39,6 +39,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Changed
 
+- Cổng chỉ mở các đường đăng nhập OIDC của realm `mortise`; console quản trị, realm `master`, trang tài khoản và
+  các endpoint không dùng của Keycloak trả 403. Smoke kiểm các đường bị chặn và một lần đăng nhập PKCE đi trọn qua
+  cổng. ADR 0007 ghi trang đăng nhập là bề mặt giao diện duy nhất của lõi.
 - Client giao diện `mortise-web` chỉ còn Authorization Code + PKCE, không nhận mật khẩu trực tiếp; redirect URI và
   web origin theo `MORTISE_PUBLIC_URL`. Smoke và ví dụ lấy token bằng lệnh dùng client `mortise-test` do `make seed`
   tạo. Bản cài đã dựng cần `make reset` để nạp lại realm.

@@ -36,6 +36,48 @@ check "Token giả bị chặn tại cổng" "$status" 401
 status=$(curl -s -o /dev/null -w '%{http_code}' "$base/auth/admin/")
 check "Console quản trị Keycloak không lộ qua cổng" "$status" 403
 
+# Cổng chỉ mở các đường OIDC của realm mortise (ADR 0007); mọi đường khác của Keycloak trả 403.
+for path in /auth/realms/master/protocol/openid-connect/token /auth/realms/mortise/account/ \
+  /auth/realms/mortise/clients-registrations/openid-connect; do
+  check "Không lộ qua cổng: $path" "$(curl -s -o /dev/null -w '%{http_code}' "$base$path")" 403
+done
+
+check "Khóa công khai (JWKS) của realm lấy được qua cổng" \
+  "$(curl -s "$base/auth/realms/mortise/protocol/openid-connect/certs" | jq -r 'has("keys")')" true
+
+# Đăng nhập như trình duyệt (Authorization Code + PKCE) đi trọn qua cổng: trang đăng nhập và tài nguyên của nó,
+# gửi form, đổi mã lấy token. Bài này hỏng khi danh sách đường mở ở cổng thiếu một trong các bước đó.
+pkce_login() {
+  local jar verifier challenge page action assets asset location code
+  jar=$(mktemp)
+  verifier=$(openssl rand -hex 32)
+  challenge=$(printf '%s' "$verifier" | openssl dgst -sha256 -binary | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+  page=$(curl -s -c "$jar" -b "$jar" "$base/auth/realms/mortise/protocol/openid-connect/auth?client_id=mortise-web\
+&response_type=code&scope=openid&redirect_uri=$base/callback&code_challenge=$challenge&code_challenge_method=S256")
+  action=$(grep -o 'action="[^"]*"' <<<"$page" | head -1 | sed -e 's/^action="//' -e 's/"$//' -e 's/&amp;/\&/g')
+  # Thiếu tài nguyên (CSS, JS) thì trình duyệt thấy trang đăng nhập vỡ dù form vẫn gửi được.
+  assets=$(grep -oE '"/auth/resources/[^"]+\.(css|js)"' <<<"$page" | tr -d '"' || true)
+  [[ -n "$assets" ]] || { rm -f "$jar"; return 0; }
+  for asset in $assets; do
+    [[ "$(curl -s -o /dev/null -w '%{http_code}' "$base$asset")" == 200 ]] || { rm -f "$jar"; return 0; }
+  done
+  location=$(curl -s -o /dev/null -c "$jar" -b "$jar" -w '%{redirect_url}' --data-urlencode "username=$1" \
+    --data-urlencode "password=$DEMO_USER_PASSWORD" "$action")
+  rm -f "$jar"
+  code=$(sed -n 's/.*[?&]code=\([^&]*\).*/\1/p' <<<"$location")
+  curl -s "$base/auth/realms/mortise/protocol/openid-connect/token" -d grant_type=authorization_code \
+    -d client_id=mortise-web -d "code=$code" -d "redirect_uri=$base/callback" -d "code_verifier=$verifier" |
+    jq -r '.access_token // empty'
+}
+browser_token=$(pkce_login user.a)
+if [[ -n "$browser_token" ]]; then
+  tenants=$(curl -s -X POST "$base/v1/graphql" -H "Authorization: Bearer $browser_token" \
+    -H 'Content-Type: application/json' -d "$query" | jq -c '[.data.core_tenants[]?.id]')
+else
+  tenants="không lấy được token"
+fi
+check "Đăng nhập PKCE qua cổng đi trọn và gọi được API" "$tenants" '["xuong-a"]'
+
 error=$(curl -s "$base/auth/realms/mortise/protocol/openid-connect/token" -d grant_type=password \
   -d client_id=mortise-web -d username=user.a -d "password=$DEMO_USER_PASSWORD" | jq -r .error)
 check "Client giao diện không nhận mật khẩu trực tiếp" "$error" unauthorized_client
