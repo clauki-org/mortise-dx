@@ -26,9 +26,8 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0003](0003-three-tier-layout.md) | Bố cục ba tầng: thành phần dùng chung và gói nghiệp vụ khai báo | Chấp nhận |
 | [0004](0004-workflow-access-control.md) | Workflow: Flowable REST đứng sau lớp kiểm soát quyền workflow-api | Chấp nhận |
 | [0005](0005-schema-migrations.md) | Thay đổi lược đồ CSDL bằng migration dbmate, mỗi gói một lịch sử riêng | Chấp nhận |
+| [0006](0006-frontend-stack.md) | Giao diện Tầng 2: React, Mantine và component đọc cấu hình gói | Chấp nhận |
 
 ## Quyết định còn mở
 
-| Câu hỏi | Issue |
-|---|---|
-| Công nghệ giao diện và thư viện bản đồ cho Tầng 2 | chưa mở |
+Hiện không có.

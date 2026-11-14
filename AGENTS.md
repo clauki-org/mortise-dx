@@ -32,7 +32,7 @@ core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp 
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
   clamav/ mosquitto/ scorpio/ ollama/ observability/      kế hoạch
 platform/             TẦNG 2 (kế hoạch): thành phần dùng chung, không chứa từ nghiệp vụ
-  web/                khung giao diện: đăng nhập, menu, thương hiệu theo tenant, nạp thành phần và gói
+  web/                khung giao diện: đăng nhập, menu, thương hiệu theo bản cài, nạp thành phần và gói
   components/<tên>/   một thành phần: giao diện và schema cấu hình
   services/<tên>/     dịch vụ dùng chung tự viết (trợ lý AI, OCR, lưu trữ lạnh, cầu nối IoT)
   schema/             lược đồ CSDL và metadata Hasura của Tầng 2
