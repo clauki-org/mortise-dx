@@ -32,11 +32,11 @@ core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp 
   workflow-api/       dịch vụ tự viết: kiểm quyền trước Flowable (Python, uv)
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
   clamav/ mosquitto/ scorpio/ ollama/ observability/      kế hoạch
-platform/             TẦNG 2 (kế hoạch): thành phần dùng chung, không chứa từ nghiệp vụ
+platform/             TẦNG 2: thành phần dùng chung, không chứa từ nghiệp vụ
   web/                khung giao diện: đăng nhập, menu, thương hiệu theo bản cài, nạp thành phần và gói
-  components/<tên>/   một thành phần: giao diện và schema cấu hình
-  services/<tên>/     dịch vụ dùng chung tự viết (trợ lý AI, OCR, lưu trữ lạnh, cầu nối IoT)
-  schema/             lược đồ CSDL và metadata Hasura của Tầng 2
+  components/<tên>/   kế hoạch: một thành phần, gồm giao diện và schema cấu hình
+  services/<tên>/     kế hoạch: dịch vụ dùng chung tự viết (trợ lý AI, OCR, lưu trữ lạnh, cầu nối IoT)
+  schema/             kế hoạch: lược đồ CSDL và metadata Hasura của Tầng 2
 apps/<gói>/           TẦNG 3 (kế hoạch): gói nghiệp vụ; `app.yaml` khai báo gói, phần còn lại ưu tiên là khai
                       báo (schema/, hasura/, bpmn/, forms/, rules/, map-layers/, dashboards/, knowledge/, seed/, tests/)
 devices/              kế hoạch: firmware thiết bị và bộ giả lập

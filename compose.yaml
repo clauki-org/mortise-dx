@@ -173,6 +173,16 @@ services:
       timeout: 5s
       retries: 20
 
+  web:
+    # Tầng 2: giao diện dựng sẵn thành tệp tĩnh, chỉ vào được qua cổng tại `/` (ADR 0006). Không mở cổng ra máy chủ.
+    build: platform/web
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   apisix:
     image: apache/apisix:3.19.0-debian
     restart: unless-stopped
@@ -187,6 +197,8 @@ services:
       hasura:
         condition: service_healthy
       workflow-api:
+        condition: service_healthy
+      web:
         condition: service_healthy
     # Không có healthcheck thì `docker compose up --wait` trả về ngay khi container vừa
     # chạy, trước khi cổng nạp xong tuyến đường, và lệnh gọi đầu tiên bị ngắt kết nối.

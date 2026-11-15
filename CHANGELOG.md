@@ -12,6 +12,10 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Khung giao diện Tầng 2 tại `/` của cổng (`platform/web/`, React, Mantine): đăng nhập Authorization Code + PKCE
+  qua Keycloak, đăng xuất, tự làm mới token, đọc đơn vị của người dùng qua GraphQL. nginx phục vụ tệp tĩnh kèm
+  Content-Security-Policy; đường sai dưới `/v1` trả 404. `make web-check` (Biome, kiểu, build, giấy phép phụ thuộc)
+  chạy trong CI; `make seed` cho máy chủ phát triển giao diện (`localhost:5173`) đăng nhập được.
 - Giấy phép Apache-2.0 và header SPDX cho mọi tệp, kiểm bằng `make check-fast`; hook pre-push qua `make hooks`;
   CI chạy đúng lệnh này với mọi pull request.
 - Quy tắc làm việc (`AGENTS.md`), hướng dẫn đóng góp, quy tắc ứng xử, chính sách bảo mật, mẫu issue và pull

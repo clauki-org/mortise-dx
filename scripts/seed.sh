@@ -34,6 +34,21 @@ kc get clients -r mortise -q clientId=mortise-web | jq '.[0] | {
   }' | kc create clients -r mortise -f - -i >/dev/null
 echo "keycloak: client kiểm thử mortise-test"
 
+# Máy chủ phát triển giao diện (Vite) chạy ở địa chỉ khác URL công khai, nên client giao diện nhận thêm địa chỉ đó làm
+# redirect URI, địa chỉ sau đăng xuất và web origin. Chỉ làm khi bản cài chạy trên máy cục bộ (URL công khai là
+# localhost), để seed chạy nhầm trên máy chủ thật không mở thêm địa chỉ đăng nhập; realm trong tệp không đổi.
+public_url="${MORTISE_PUBLIC_URL:-http://localhost:9080}"
+if [[ "$public_url" =~ ^http://(localhost|127\.0\.0\.1)(:|/|$) ]]; then
+  web_dev_url="${WEB_DEV_URL:-http://localhost:5173}"
+  web_client=$(kc get clients -r mortise -q clientId=mortise-web --fields id --format csv --noquotes)
+  kc get "clients/$web_client" -r mortise | jq --arg u "$web_dev_url" \
+    '{redirectUris: ((.redirectUris + [$u + "/*"]) | unique), webOrigins: ((.webOrigins + [$u]) | unique),
+      attributes: (.attributes + {"post.logout.redirect.uris": (((.attributes["post.logout.redirect.uris"] // "")
+        | split("##") | map(select(. != ""))) + [$u + "/*"] | unique | join("##"))})}' |
+    kc update "clients/$web_client" -r mortise -f - >/dev/null
+  echo "keycloak: mortise-web nhận thêm $web_dev_url cho máy chủ phát triển giao diện"
+fi
+
 # username  tenant   vai trò thêm
 users=(
   "user.a  xuong-a  -"
