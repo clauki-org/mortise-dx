@@ -39,6 +39,16 @@ curl -fsS -X POST http://localhost:9080/v1/graphql \
   -d '{"query":"{ core_tenants { id name } }"}'
 ```
 
+Khai báo bước của quy trình (`contracts/workflow.schema.json`) nằm ở `platform_workflow_steps`, một dòng mỗi bước:
+`process` và `step` khớp với hai trường cùng tên của task trong API quy trình, `config` là phần khai báo của bước
+(biểu mẫu, nút, hồ sơ). `make seed` nạp khai báo của quy trình mẫu `core-approval`.
+
+```bash
+curl -fsS -X POST http://localhost:9080/v1/graphql \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"query":"{ platform_workflow_steps { process step config } }"}'
+```
+
 | Mã trả về | Khi nào |
 |---|---|
 | `200` | Truy vấn hợp lệ; lỗi nghiệp vụ nằm trong trường `errors` của GraphQL |

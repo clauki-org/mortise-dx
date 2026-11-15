@@ -47,6 +47,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   nào; khởi tạo quy trình nhận header `Idempotency-Key`, gửi lặp không tạo quy trình thứ hai.
 - Định dạng khai báo bước của quy trình (`contracts/workflow.schema.json`): biểu mẫu, nút quyết định và hồ sơ
   liên quan của từng bước người làm; `make check-fast` kiểm mọi userTask trong BPMN của gói đều có khai báo.
+- Bảng `platform.workflow_steps` (Tầng 2, lịch sử migration riêng): khai báo bước của quy trình theo tenant, đọc
+  qua GraphQL; `make seed` nạp khai báo của quy trình mẫu.
 
 ### Changed
 

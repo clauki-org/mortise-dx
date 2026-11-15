@@ -127,6 +127,7 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
 platform/             Tầng 2
   web/                khung giao diện (React, Vite), phục vụ bằng nginx sau cổng
+  schema/migrations/  migration lược đồ `platform` (dbmate): khai báo bước của quy trình
 scripts/              tạo .env, seed, smoke, tạo migration, sao lưu, khôi phục, hook pre-push
 docs/                 quyết định kiến trúc (adr/), API của lõi (api.md), công cụ (tools.md)
 .github/              CI, mẫu issue và pull request

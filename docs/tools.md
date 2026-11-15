@@ -30,12 +30,14 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 
 - **Làm gì:** áp các thay đổi lược đồ CSDL theo thứ tự, ghi lại thay đổi nào đã áp, để bản cài đã có dữ liệu nhận
   được thay đổi mới mà không mất dữ liệu ([ADR 0005](adr/0005-schema-migrations.md)).
-- **Trong dự án:** dịch vụ `migrate` chạy một lần mỗi khi `make up`, trước khi Hasura khởi động; áp các migration
-  chưa chạy rồi thoát. Chạy bằng vai trò `hasura`, chủ sở hữu CSDL `mortise`. Lịch sử của lõi ghi trong bảng
-  `core.schema_migrations`; mỗi gói nghiệp vụ sẽ có thư mục và bảng theo dõi riêng.
-- **Cấu hình:** tệp migration ở `core/postgres/migrations/`, tên `YYYYMMDDHHMMSS_mo_ta.sql`, có phần
-  `-- migrate:up` và `-- migrate:down`. Tạo tệp mới bằng `make migrate-new NAME=<ten_ngan>`.
-- **Xem:** `make migrate-status`; log của lần chạy gần nhất bằng `docker compose logs migrate`.
+- **Trong dự án:** dịch vụ `migrate` (lõi) rồi `migrate-platform` (Tầng 2) chạy một lần mỗi khi `make up`, trước
+  khi Hasura khởi động; áp các migration chưa chạy rồi thoát. Chạy bằng vai trò `hasura`, chủ sở hữu CSDL
+  `mortise`. Lịch sử của lõi ghi trong bảng `core.schema_migrations`, của Tầng 2 trong
+  `platform.schema_migrations`; mỗi gói nghiệp vụ sẽ có thư mục và bảng theo dõi riêng.
+- **Cấu hình:** tệp migration ở `core/postgres/migrations/` và `platform/schema/migrations/`, tên
+  `YYYYMMDDHHMMSS_mo_ta.sql`, có phần `-- migrate:up` và `-- migrate:down`. `make migrate-new NAME=<ten_ngan>`
+  tạo tệp mới cho lõi.
+- **Xem:** `make migrate-status` (lõi); log của lần chạy gần nhất bằng `docker compose logs migrate migrate-platform`.
 
 ### Keycloak: định danh và đăng nhập một lần
 
