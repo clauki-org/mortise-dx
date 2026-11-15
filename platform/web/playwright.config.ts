@@ -1,0 +1,24 @@
+// SPDX-FileCopyrightText: 2026 Mortise DX contributors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Kiểm thử trên trình duyệt (Playwright) chạy qua cổng của một bản cài đang chạy, đúng đường người dùng đi: giao diện
+// do nginx phục vụ kèm CSP thật, đăng nhập qua Keycloak, dữ liệu qua /v1. Gọi bằng `make e2e` sau `make up seed`.
+
+import { defineConfig, devices } from "@playwright/test";
+
+export default defineConfig({
+  testDir: "e2e",
+  // Các bài dùng chung tài khoản demo và quy trình của cùng tenant; chạy lần lượt để không giành việc của nhau.
+  workers: 1,
+  // Không tự chạy lại bài hỏng: bài chập chờn phải lộ ra để sửa, không bị che bằng lần chạy thứ hai.
+  retries: 0,
+  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
+  use: {
+    baseURL: process.env.MORTISE_PUBLIC_URL || "http://localhost:9080",
+    locale: "vi-VN",
+    // Bài hỏng để lại ảnh chụp và dấu vết từng bước, CI tải lên làm artifact để xem hỏng ở đâu.
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+  },
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+});

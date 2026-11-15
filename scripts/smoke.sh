@@ -132,6 +132,8 @@ wf="$base/v1/workflow"
 user_a=$(token user.a)
 manager_a=$(token manager.a)
 user_b=$(token user.b)
+# Người duyệt của tenant khác: cùng vai trò manager, nên không thấy task chỉ có thể vì cách ly tenant.
+manager_b=$(token manager.b)
 
 # api METHOD TOKEN PATH [JSON]: in "mã trạng thái<TAB>thân phản hồi".
 api() {
@@ -158,7 +160,7 @@ instance=$(jq -r .id <<<"$body")
 
 task_of() { api GET "$1" /tasks | cut -f2 | jq -r --arg p "$instance" '.[] | select(.processInstanceId == $p) | .id'; }
 
-check "user.b (tenant khác) không thấy task" "$(task_of "$user_b")" ""
+check "manager.b (tenant khác, cùng vai trò) không thấy task" "$(task_of "$manager_b")" ""
 task=$(task_of "$manager_a")
 check "manager.a thấy task cần duyệt" "$([[ -n "$task" ]] && echo yes)" yes
 fields=$(api GET "$manager_a" /tasks | cut -f2 \
