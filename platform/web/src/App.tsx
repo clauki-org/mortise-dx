@@ -11,15 +11,23 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 import { Provider } from "urql";
 import { ApiError } from "./api";
-import { userManager } from "./auth";
+import { CALLBACK_PATH, userManager } from "./auth";
 import { NotFound, RouteError } from "./Errors";
 import { createGraphqlClient } from "./graphql";
 import { Shell } from "./Shell";
 import { type Session, SessionContext } from "./session";
 import { TaskList } from "./TaskList";
+import { TaskScreen } from "./TaskScreen";
 import { useAuth } from "./useAuth";
 
-const signIn = () => userManager.signinRedirect();
+// Nhớ trang đang mở (ví dụ đường dẫn tới một việc được gửi qua tin nhắn) để đăng nhập xong quay lại đúng trang đó.
+// Đang ở /callback (đăng nhập vừa lỗi) thì không nhớ: quay lại đó sẽ xử lý lại mã đăng nhập đã dùng.
+const signIn = () =>
+  userManager.signinRedirect(
+    window.location.pathname === CALLBACK_PATH
+      ? {}
+      : { url_state: `${window.location.pathname}${window.location.search}` },
+  );
 
 // Tạo router sau khi đăng nhập xong, không tạo lúc nạp module: lúc đó địa chỉ còn là /callback, và router đọc địa chỉ
 // một lần khi tạo nên không thấy lần useAuth thay địa chỉ thành /.
@@ -36,6 +44,7 @@ const createRouter = () =>
           children: [
             { index: true, element: <Navigate to="/tasks" replace /> },
             { path: "tasks", element: <TaskList /> },
+            { path: "tasks/:taskId", element: <TaskScreen /> },
             { path: "*", element: <NotFound /> },
           ],
         },

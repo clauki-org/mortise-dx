@@ -26,6 +26,13 @@ export type Task = {
 
 export const fetchTasks = (token: string | undefined) => callApi<Task[]>("/v1/workflow/tasks", token);
 
+/** Hoàn thành task; variables là dữ liệu biểu mẫu gộp với biến của nút được bấm. */
+export const completeTask = (token: string | undefined, taskId: string, variables: Record<string, unknown>) =>
+  callApi<void>(`/v1/workflow/tasks/${encodeURIComponent(taskId)}/complete`, token, {
+    method: "POST",
+    body: JSON.stringify({ variables }),
+  });
+
 /** Khai báo của một bước (contracts/workflow.schema.json, $defs.step), đọc từ platform_workflow_steps. */
 export type StepConfig = {
   /** Biến chứa tên hồ sơ */

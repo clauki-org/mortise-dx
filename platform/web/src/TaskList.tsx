@@ -5,9 +5,23 @@
 // (workflow-api đã lọc theo tenant và vai trò). Mỗi dòng hiện tên hồ sơ theo khai báo của bước; việc gần hạn nhất
 // đứng đầu, lọc được theo hạn.
 
-import { Alert, Badge, Button, Group, Loader, Paper, SegmentedControl, Stack, Table, Text, Title } from "@mantine/core";
+import {
+  Alert,
+  Anchor,
+  Badge,
+  Button,
+  Group,
+  Loader,
+  Paper,
+  SegmentedControl,
+  Stack,
+  Table,
+  Text,
+  Title,
+} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { Link, useLocation } from "react-router";
 import { useSession } from "./session";
 import { dateTime, dueText, recordTitle, stepOf, useSteps } from "./steps";
 import { fetchTasks, type Task } from "./workflow";
@@ -42,7 +56,7 @@ function byDue(a: Task, b: Task): number {
   return dueA - dueB || Date.parse(a.created) - Date.parse(b.created);
 }
 
-function DueBadge({ due, now }: { due: string | null; now: number }) {
+export function DueBadge({ due, now }: { due: string | null; now: number }) {
   if (due === null) {
     return (
       <Badge variant="light" color="gray" tt="none">
@@ -61,6 +75,8 @@ function DueBadge({ due, now }: { due: string | null; now: number }) {
 export function TaskList() {
   const { getToken } = useSession();
   const [filter, setFilter] = useState<Filter>("all");
+  // Màn hình xử lý chuyển về đây kèm tên việc vừa xong, để người dùng biết lần gửi đã thành công.
+  const done = (useLocation().state as { done?: string } | null)?.done;
   const tasks = useQuery({ queryKey: ["tasks"], queryFn: () => fetchTasks(getToken()) });
   const { steps, error: stepsError } = useSteps();
   const now = Date.now();
@@ -83,6 +99,11 @@ export function TaskList() {
 
   return (
     <Stack>
+      {done && (
+        <Alert color="teal" title="Đã gửi">
+          {done}: đã xử lý xong.
+        </Alert>
+      )}
       <Group justify="space-between" align="flex-end">
         <div>
           <Title order={1} size="h2">
@@ -124,7 +145,9 @@ export function TaskList() {
                 {shown.map((task) => (
                   <Table.Tr key={task.id}>
                     <Table.Td>
-                      <Text fw={500}>{recordTitle(task, stepOf(steps, task))}</Text>
+                      <Anchor component={Link} to={`/tasks/${encodeURIComponent(task.id)}`} fw={500}>
+                        {recordTitle(task, stepOf(steps, task))}
+                      </Anchor>
                       <Group gap={6}>
                         <Text size="xs" c="dimmed">
                           {task.name}

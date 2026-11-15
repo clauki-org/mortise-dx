@@ -49,7 +49,8 @@ Mã giao diện nằm ở `platform/web/`, là ứng dụng trang đơn (SPA) bu
 | GraphQL tới Hasura | urql, graphql | 5, 17 | MIT |
 | REST tới `/v1/*` | TanStack Query | 5 | MIT |
 | Điều hướng | React Router | 8 | MIT |
-| Biểu mẫu từ JSON Schema | rjsf (`core`, `utils`, `validator-ajv8`, `mantine`) | 6 | Apache-2.0 |
+| Biểu mẫu từ JSON Schema | rjsf (`core`, `utils`, `mantine`) | 6 | Apache-2.0 |
+| Kiểm dữ liệu biểu mẫu | `@cfworker/json-schema` | 4 | MIT |
 | Bản đồ | MapLibre GL JS, react-map-gl | 6, 8 | BSD-3-Clause, MIT |
 | Kiểm lỗi và định dạng mã | Biome (`@biomejs/biome`) | 2 | MIT hoặc Apache-2.0 |
 | Kiểm thử đơn vị | Vitest | 5 | MIT |
@@ -82,6 +83,10 @@ Cách dùng:
   mã component không chứa từ nghiệp vụ.
 - Biểu mẫu dùng theme Mantine của rjsf để cùng giao diện với phần còn lại; trường đặc thù (chọn đơn vị, chọn vị trí trên
   bản đồ, đính kèm tệp) viết thành widget riêng của rjsf.
+- Dữ liệu biểu mẫu kiểm bằng `@cfworker/json-schema` qua một bộ nối nhỏ (`platform/web/src/formValidator.ts`), không
+  dùng bộ kiểm AJV đi kèm rjsf. AJV dịch schema thành mã bằng `new Function`, mà CSP ở trên (không có `'unsafe-eval'`)
+  chặn; cfworker diễn giải schema trực tiếp. Bổ sung ngày 2026-11-15, khi làm màn hình xử lý việc: bản build không chứa
+  `new Function`, và biểu mẫu chạy đúng dưới CSP của nginx (kiểm bằng Playwright).
 - CI kiểm giấy phép mọi phụ thuộc theo danh sách cho phép (MIT, Apache-2.0, BSD, ISC, 0BSD và tương đương); gặp giấy
   phép ngoài danh sách thì CI đỏ.
 

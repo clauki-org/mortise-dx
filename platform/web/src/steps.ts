@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Khai báo bước của mọi quy trình trong tenant (platform_workflow_steps, contracts/workflow.schema.json) và những gì
-// suy ra từ nó cho một task: tên hồ sơ, hạn còn bao lâu. Một truy vấn cho mọi bước vì số bước nhỏ; urql giữ kết quả
-// nên quay lại bảng việc không tải lại.
+// suy ra từ nó cho một task: tên hồ sơ, hạn còn bao lâu. Một truy vấn cho mọi bước vì số bước nhỏ; bảng việc và màn
+// hình xử lý dùng chung, urql giữ kết quả nên chuyển giữa hai màn hình không tải lại.
 
 import { useMemo } from "react";
 import { useQuery } from "urql";

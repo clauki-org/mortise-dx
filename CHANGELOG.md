@@ -53,6 +53,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   lọc quá hạn, còn hạn hoặc không đặt hạn.
 - Bảng việc hiện tên hồ sơ (trường `title` mới của khai báo bước), người gửi, hạn dạng "còn 3 ngày", "quá hạn 1
   ngày", và số việc của từng bộ lọc; trang đăng nhập và khung trang có nền và khung tách phần.
+- Màn hình xử lý một việc: thông tin hồ sơ, biểu mẫu và các nút quyết định theo khai báo của bước; lỗi như quy tắc
+  bốn mắt hiện đúng lý do. Mở đường dẫn tới một việc khi chưa đăng nhập thì đăng nhập xong quay lại đúng việc đó.
 
 ### Changed
 
