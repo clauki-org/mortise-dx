@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bảng của lõi mà Hasura đăng ký, và quyền của từng vai trò trên bảng đó, theo đúng định dạng `tables` mà
+# Hasura xuất ra (export_metadata). Đây là bản gốc: `make seed` áp tệp này theo kiểu ghi đè, `make smoke` báo lỗi
+# khi Hasura đang chạy lệch khỏi tệp, `make check-fast` báo lỗi khi một quyền không lọc theo tenant
+# (scripts/hasura-metadata.py). Đổi quyền thì sửa ở đây, không sửa trên trang quản trị Hasura.
+
+- table: { schema: core, name: tenants }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [id, name, created_at]
+        filter: { id: { _eq: X-Hasura-Tenant-Id } }

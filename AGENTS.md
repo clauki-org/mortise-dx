@@ -28,6 +28,7 @@ Makefile              lối vào duy nhất cho mọi lệnh
 contracts/            hợp đồng API dùng chung giữa các tầng: JSON Schema, OpenAPI; CI kiểm
 core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp vụ
   apisix/ keycloak/ postgres/   cấu hình của từng thành phần bên thứ ba
+  hasura/                       bảng Hasura đăng ký và quyền theo vai trò của lõi (khai báo, bản gốc)
   postgres/migrations/          migration lược đồ của lõi (ADR 0005)
   workflow-api/       dịch vụ tự viết: kiểm quyền trước Flowable (Python, uv)
   files-api/          dịch vụ tự viết: tải lên, tải xuống tệp theo tenant trước SeaweedFS (Python, uv)
@@ -37,7 +38,7 @@ platform/             TẦNG 2: thành phần dùng chung, không chứa từ ng
   web/                khung giao diện: đăng nhập, menu, thương hiệu theo bản cài, nạp thành phần và gói
   components/<tên>/   kế hoạch: một thành phần, gồm giao diện và schema cấu hình
   services/<tên>/     kế hoạch: dịch vụ dùng chung tự viết (trợ lý AI, OCR, lưu trữ lạnh, cầu nối IoT)
-  schema/             lược đồ CSDL của Tầng 2 (migration dbmate riêng); metadata Hasura đang áp trong seed
+  schema/             lược đồ CSDL của Tầng 2 (migration dbmate riêng) và quyền Hasura (`schema/hasura/`)
 apps/<gói>/           TẦNG 3 (kế hoạch): gói nghiệp vụ; `app.yaml` khai báo gói, phần còn lại ưu tiên là khai
                       báo (schema/, hasura/, bpmn/, forms/, rules/, map-layers/, dashboards/, knowledge/, seed/, tests/)
 devices/              kế hoạch: firmware thiết bị và bộ giả lập
@@ -56,6 +57,8 @@ Ranh giới bắt buộc:
 - Gói ưu tiên khai báo; chỉ viết giao diện riêng khi thành phần dùng chung không đáp ứng được, và ghi lý do.
 - Gỡ một gói thì lõi và các gói khác vẫn chạy, `make smoke` vẫn qua.
 - Không commit tệp mô hình AI, dữ liệu lớn hay bản sao lưu; chúng được tải hoặc sinh ra khi chạy.
+- Quyền dữ liệu của Hasura chỉ sửa trong tệp khai báo (`core/hasura/`, `platform/schema/hasura/`), không sửa trên
+  trang quản trị; mọi quyền phải lọc theo tenant trong token, `make check-fast` kiểm.
 - Hợp đồng giữa các tầng nằm trong `contracts/`. Đổi claim token, định dạng `app.yaml` hay API của dịch vụ thì sửa
   hợp đồng trong cùng pull request; đổi route hay model của workflow-api hay files-api thì chạy `make contracts`.
   Lý do: [ADR 0008](docs/adr/0008-shared-api-contracts.md).

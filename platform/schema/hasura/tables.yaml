@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bảng của Tầng 2 mà Hasura đăng ký và quyền trên chúng; cùng định dạng và cùng cách áp như
+# core/hasura/tables.yaml.
+
+- table: { schema: platform, name: workflow_steps }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [tenant_id, process, step, config]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }

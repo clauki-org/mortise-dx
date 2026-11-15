@@ -111,6 +111,15 @@ for pair in "user.a xuong-a" "user.b xuong-b"; do
   check "$user đọc được khai báo bước của tenant mình" "$steps" "[[\"$tenant\",\"review\",2]]"
 done
 
+# Quyền Hasura đang chạy phải khớp tệp khai báo (core/hasura/, platform/schema/hasura/); ai sửa tay trên trang quản
+# trị thì báo ở đây. Quyền sai thì `make seed` đưa về đúng; bảng hay quan hệ tạo thừa thì thông báo chỉ cách gỡ.
+if uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py check; then
+  status=khớp
+else
+  status=lệch
+fi
+check "Quyền Hasura khớp tệp khai báo" "$status" khớp
+
 # Token thật do Keycloak cấp phải khớp hợp đồng mà các tầng dựa vào.
 claims_file=$(mktemp)
 trap 'rm -f "$claims_file"' EXIT

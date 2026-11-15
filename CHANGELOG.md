@@ -64,6 +64,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Changed
 
+- Quyền dữ liệu của Hasura khai báo trong repo (`core/hasura/`, `platform/schema/hasura/`) thay cho lệnh gọi API
+  trong seed. `make seed` ghi đè quyền đã bị sửa sai, `make smoke` báo lỗi khi Hasura lệch khỏi tệp,
+  `make check-fast` báo lỗi khi một quyền không lọc theo tenant.
 - Cổng chỉ mở các đường đăng nhập OIDC của realm `mortise`; console quản trị, realm `master`, trang tài khoản và
   các endpoint không dùng của Keycloak trả 403. Smoke kiểm các đường bị chặn và một lần đăng nhập PKCE đi trọn qua
   cổng. ADR 0007 ghi trang đăng nhập là bề mặt giao diện duy nhất của lõi.
