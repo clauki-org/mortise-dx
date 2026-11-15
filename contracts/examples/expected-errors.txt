@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Lỗi mà từng ví dụ sai trong invalid/ phải gây ra: tên tệp, vị trí lỗi trong tệp (đường JSONPath mà
+# check-jsonschema báo) và toàn văn thông điệp lỗi, viết như bộ lọc @tsv của jq in ra. scripts/contracts.sh so
+# đúng từng ký tự: thông điệp chứa giá trị của luật (mẫu, độ dài, danh sách cho phép), nên đổi luật mà ví dụ vẫn bị
+# từ chối, kể cả ở cùng vị trí, cũng làm lệnh báo lỗi. Các cột cách nhau bằng tab.
+app.blank-menu-label.yaml	$.menu[0].label	'   ' does not match '\\\\S'
+app.blank-name.yaml	$.name	'   ' does not match '\\\\S'
+app.database-schema-too-long.yaml	$.database.schema	'app_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' is too long
+app.duplicate-workflow.yaml	$.workflows	['bpmn/approval.bpmn20.xml', 'bpmn/approval.bpmn20.xml'] has non-unique elements
+app.id-too-long.yaml	$.id	'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' is too long
+app.missing-id.yaml	$	'id' is a required property
+app.path-escapes-package.yaml	$.menu[0].config	'../../core/keycloak/realm.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
+app.path-is-url.yaml	$.menu[0].config	'http://no-such-host.invalid/items.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
+app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'documents', 'dashboard', 'rules', 'assistant']
+app.unknown-field.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
+app.version-leading-zero.yaml	$.version	'01.0.0' does not match '^(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)$'
+token-claims.missing-tenant.json	$	'tenant' is a required property
+token-claims.missing-user-role.json	$.realm_access.roles	['default-roles-mortise', 'manager', 'offline_access', 'uma_authorization'] does not contain items matching the given schema
+token-claims.two-tenants.json	$.tenant	['xuong-a', 'xuong-b'] is too long
+workflow.blank-action-label.yaml	$.steps.review.actions[0].label	' ' does not match '\\\\S'
+workflow.due-outside-bpmn.yaml	$.steps.review	Additional properties are not allowed ('due' was unexpected)
+workflow.form-not-object.yaml	$.steps.review.form.type	'object' was expected
+workflow.form-reserved-variable.yaml	$.steps.review.form.properties	'tenant' should not be valid under {'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}
+workflow.missing-process.yaml	$	'process' is a required property
+workflow.no-actions.yaml	$.steps.review.actions	[] should be non-empty
+workflow.no-steps.yaml	$.steps	{} should be non-empty
+workflow.reserved-variable.yaml	$.steps.review.actions[0].variables	'initiator' should not be valid under {'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}

@@ -4,7 +4,8 @@
 #
 # Hợp đồng API trong contracts/: kiểm schema và ví dụ, và giữ OpenAPI của workflow-api
 # khớp với mã. `check` (gọi từ make check-fast) báo lỗi khi lệch; `write` (make contracts)
-# xuất lại OpenAPI sau khi đổi route hay model.
+# xuất lại OpenAPI sau khi đổi route hay model; `token <tệp>` (gọi từ make smoke) kiểm claim
+# của một token thật, để phiên bản công cụ kiểm chỉ ghim ở tệp này.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -12,6 +13,21 @@ mode="${1:-check}"
 checker=(uvx --from check-jsonschema==0.29.4 check-jsonschema)
 steps=(uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/check-workflow-steps.py)
 openapi=contracts/workflow-api.openapi.json
+
+case "$mode" in
+  check | write) ;;
+  token)
+    if [[ ! -f "${2:-}" ]]; then
+      echo "Cách dùng: $0 token <tệp claim>; không thấy tệp '${2:-}'." >&2
+      exit 2
+    fi
+    exec "${checker[@]}" -q --schemafile contracts/token-claims.schema.json "$2"
+    ;;
+  *)
+    echo "Cách dùng: $0 [check | write | token <tệp claim>]" >&2
+    exit 2
+    ;;
+esac
 
 "${checker[@]}" --check-metaschema contracts/*.schema.json
 "${checker[@]}" --schemafile contracts/token-claims.schema.json contracts/examples/token-claims.example.json
@@ -35,24 +51,34 @@ done
 # Ví dụ sai trong contracts/examples/invalid/ phải bị từ chối. Thiếu bước này, một schema
 # bị nới lỏng vẫn qua mọi ví dụ đúng mà không ai biết nó không còn chặn được gì.
 # Mỗi tệp phải phạm đúng một luật: nếu chỉ đòi "bị từ chối", tệp hỏng cú pháp hay tệp sai
-# hai chỗ vẫn qua, và sửa một chỗ sai thành đúng sẽ không làm bước kiểm này báo lỗi.
+# hai chỗ vẫn qua, và sửa một chỗ sai thành đúng sẽ không làm bước kiểm này báo lỗi. Lỗi phải
+# đúng từng ký tự với lỗi ghi trong contracts/examples/expected-errors.txt: đếm số lỗi thôi thì
+# tệp bị từ chối vì một lý do khác, sau khi schema đổi, vẫn qua.
+expected=contracts/examples/expected-errors.txt
 reject() {
-  local schema="$1" file violations
+  local schema="$1" file result want_path want_message
   shift
   if (($# == 0)); then
     echo "Không có ví dụ sai nào cho $schema trong contracts/examples/invalid/." >&2
     exit 1
   fi
   for file in "$@"; do
-    violations=$("${checker[@]}" --output-format json --schemafile "$schema" "$file" |
-      jq 'if (.parse_errors // []) == [] then .errors | length else -1 end') || true
-    if [[ "$violations" != 1 ]]; then
-      echo "$file phải phạm đúng một luật của $schema (đang phạm: ${violations:-không đọc được})." >&2
-      echo "0: tệp hợp lệ, hoặc schema đã bị nới lỏng. -1: tệp hỏng cú pháp. Từ 2: tách thành nhiều tệp." >&2
+    if ! IFS=$'\t' read -r _ want_path want_message \
+      < <(awk -F'\t' -v name="${file##*/}" '$1 == name { print; found = 1 } END { exit !found }' "$expected"); then
+      echo "$file chưa có dòng lỗi mong đợi trong $expected." >&2
+      exit 1
+    fi
+    result=$("${checker[@]}" --output-format json --schemafile "$schema" "$file" |
+      jq -r 'if (.parse_errors // []) != [] then "hỏng cú pháp"
+        elif (.errors | length) != 1 then "\(.errors | length) lỗi"
+        else .errors[0] | [.path, .message] | @tsv end') || true
+    if [[ "$result" != "$want_path"$'\t'"$want_message" ]]; then
+      echo "$file phải gây đúng lỗi: $want_path, $want_message." >&2
+      echo "Đang nhận: ${result:-không đọc được}." >&2
       exit 1
     fi
   done
-  echo "ok -- $# ví dụ sai bị $schema từ chối"
+  echo "ok -- $# ví dụ sai bị $schema từ chối đúng luật"
 }
 reject contracts/token-claims.schema.json contracts/examples/invalid/token-claims.*.json
 reject contracts/app.schema.json contracts/examples/invalid/app.*.yaml
@@ -68,6 +94,12 @@ for file in contracts/examples/invalid/*; do
       ;;
   esac
 done
+# Chiều ngược: dòng của tệp đã xóa hay đổi tên nằm im trong expected-errors.txt mà không ai biết.
+while IFS=$'\t' read -r name _; do
+  [[ -z "$name" || "$name" == \#* || -f "contracts/examples/invalid/$name" ]] && continue
+  echo "$expected có dòng cho $name, nhưng tệp này không có trong contracts/examples/invalid/." >&2
+  exit 1
+done <"$expected"
 
 # Nhập app.main cần biến môi trường của config.py; giá trị không được dùng vì không gọi mạng.
 generated=$(cd core/workflow-api && KEYCLOAK_JWKS_URL=http://unused KEYCLOAK_ISSUER=http://unused \

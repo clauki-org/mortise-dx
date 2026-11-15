@@ -60,7 +60,7 @@
           },
           "config": { "description": "Tệp cấu hình của thành phần", "$ref": "#/$defs/path" },
           "roles": {
-            "description": "Vai trò thấy mục này; bỏ trống thì mọi người dùng của tenant đều thấy",
+            "description": "Vai trò thấy mục này",
             "type": "array",
             "items": { "type": "string" }
           }
