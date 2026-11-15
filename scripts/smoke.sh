@@ -129,6 +129,9 @@ task_of() { api GET "$1" /tasks | cut -f2 | jq -r --arg p "$instance" '.[] | sel
 check "user.b (tenant khác) không thấy task" "$(task_of "$user_b")" ""
 task=$(task_of "$manager_a")
 check "manager.a thấy task cần duyệt" "$([[ -n "$task" ]] && echo yes)" yes
+fields=$(api GET "$manager_a" /tasks | cut -f2 \
+  | jq -r --arg t "$task" '.[] | select(.id == $t) | "\(.process) \(.step) \(.due != null)"')
+check "Task cho biết quy trình, bước và hạn" "$fields" "core-approval review true"
 
 IFS=$'\t' read -r status _ < <(api POST "$user_a" "/tasks/$task/complete" '{"variables":{"approved":true}}')
 check "user.a (không có vai trò manager) không duyệt được" "$status" 403
@@ -152,5 +155,23 @@ check "Quy tắc bốn mắt: người gửi không tự duyệt được" "$sta
 IFS=$'\t' read -r status _ < <(api POST "$user_a" /processes/core-approval/instances \
   '{"variables":{"initiator":"gia-mao"}}')
 check "Không ghi đè được biến dành riêng của lõi" "$status" 400
+
+# Bấm gửi hai lần gần như cùng lúc với cùng Idempotency-Key: chỉ một quy trình được tạo.
+idempotency_key=$(openssl rand -hex 16)
+start_once() {
+  curl -s -X POST -H "Authorization: Bearer $1" -H 'Content-Type: application/json' \
+    -H "Idempotency-Key: $idempotency_key" -d '{"variables":{"title":"Bấm gửi hai lần"}}' \
+    "$wf/processes/core-approval/instances" | jq -r .id
+}
+first=$(mktemp) second=$(mktemp)
+start_once "$user_a" > "$first" & start_once "$user_a" > "$second" & wait
+created=$(cat "$first")
+same=$([[ "$created" =~ ^[0-9a-f-]+$ && "$created" == "$(cat "$second")" ]] && echo yes)
+rm -f "$first" "$second"
+check "Gửi đồng thời cùng Idempotency-Key trả cùng một quy trình" "$same" yes
+check "Gửi lại sau đó với cùng mã vẫn trả quy trình cũ" "$(start_once "$user_a")" "$created"
+other=$(start_once "$manager_a")
+check "Người khác dùng trùng mã được quy trình của riêng mình" \
+  "$([[ "$other" =~ ^[0-9a-f-]+$ && "$other" != "$created" ]] && echo yes)" yes
 
 exit $fail

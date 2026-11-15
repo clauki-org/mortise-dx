@@ -5,7 +5,15 @@
 
 import pytest
 
-from app.policy import FOUR_EYES, Caller, Denied, TaskView, check_can_complete, check_variables
+from app.policy import (
+    FOUR_EYES,
+    Caller,
+    Denied,
+    TaskView,
+    check_can_complete,
+    check_idempotency_key,
+    check_variables,
+)
 
 MANAGER_A = Caller(sub="m-a", username="manager.a", tenant="xuong-a", roles=frozenset({"user", "manager"}))
 USER_A = Caller(sub="u-a", username="user.a", tenant="xuong-a", roles=frozenset({"user"}))
@@ -58,3 +66,19 @@ def test_reserved_variables_are_rejected():
     with pytest.raises(Denied):
         check_variables({"initiator": "fake", "title": "ok"})
     check_variables({"title": "ok", "approved": True})
+
+
+def test_idempotency_variable_is_reserved():
+    with pytest.raises(Denied):
+        check_variables({"idempotencyKey": "chosen-by-client"})
+
+
+def test_uuid_is_a_valid_idempotency_key():
+    check_idempotency_key("3f2b8c1e-9a4d-4e7b-8f60-1c2d3e4f5a6b")
+
+
+@pytest.mark.parametrize("key", ["short", "x" * 101, "có dấu cách", "a/b/c/d/e"])
+def test_malformed_idempotency_key_is_rejected(key):
+    with pytest.raises(Denied) as error:
+        check_idempotency_key(key)
+    assert error.value.status == 400

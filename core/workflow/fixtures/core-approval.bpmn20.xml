@@ -17,7 +17,9 @@ trình này để kiểm cách ly tenant, phân quyền theo vai trò và quy t�
     <startEvent id="submitted"/>
     <sequenceFlow id="toReview" sourceRef="submitted" targetRef="review"/>
 
-    <userTask id="review" name="Duyệt yêu cầu" flowable:candidateGroups="manager" flowable:category="four-eyes"/>
+    <!-- Hạn 3 ngày để `make smoke` kiểm được trường `due` của task. -->
+    <userTask id="review" name="Duyệt yêu cầu" flowable:candidateGroups="manager" flowable:category="four-eyes"
+              flowable:dueDate="P3D"/>
     <sequenceFlow id="toDecision" sourceRef="review" targetRef="decision"/>
 
     <exclusiveGateway id="decision" default="toRejected"/>

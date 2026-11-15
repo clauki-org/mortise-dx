@@ -7,7 +7,7 @@
 import httpx
 
 from .config import settings
-from .policy import Denied
+from .policy import IDEMPOTENCY_VARIABLE, Denied
 
 _client = httpx.Client(
     base_url=f"{settings.flowable_url}/service",
@@ -51,6 +51,25 @@ def start(key: str, tenant: str, variables: dict[str, object]) -> dict:
     return response.json()
 
 
+def started_with(tenant: str, key: str, initiator: str, idempotency_key: str) -> dict | None:
+    """Quy trình `key` mà `initiator` đã khởi tạo với cùng Idempotency-Key, kể cả khi đã kết thúc."""
+    response = _call(
+        "POST",
+        "/query/historic-process-instances",
+        json={
+            "tenantId": tenant,
+            "processDefinitionKey": key,
+            "variables": [
+                {"name": name, "value": value, "operation": "equals", "type": "string"}
+                for name, value in (("initiator", initiator), (IDEMPOTENCY_VARIABLE, idempotency_key))
+            ],
+        },
+    )
+    _ensure_ok(response, "tìm quy trình đã khởi tạo")
+    data = response.json()["data"]
+    return data[0] if data else None
+
+
 def tasks(tenant: str, *, groups: list[str] | None = None, assignee: str | None = None) -> list[dict]:
     query: dict[str, object] = {"tenantId": tenant, "includeProcessVariables": True, "size": 200}
     if groups is not None:
@@ -87,6 +106,20 @@ def claim_and_complete(task_id: str, assignee: str, variables: dict[str, object]
         if response.status_code == 409:
             raise Denied(409, "Task vừa được người khác nhận.")
         _ensure_ok(response, "xử lý task")
+
+
+# Định nghĩa quy trình đã deploy không bao giờ đổi, nên nhớ khóa của nó suốt đời tiến trình.
+_process_keys: dict[str, str] = {}
+
+
+def process_key(definition_id: str) -> str:
+    # Mã định nghĩa chỉ có dạng `khóa:phiên bản:id` khi đủ ngắn; Flowable bỏ phần khóa khi mã dài quá
+    # 64 ký tự, nên cắt chuỗi sẽ sai với khóa dài. Hỏi thẳng định nghĩa thay vì đoán.
+    if definition_id not in _process_keys:
+        response = _call("GET", f"/repository/process-definitions/{definition_id}")
+        _ensure_ok(response, "đọc định nghĩa quy trình")
+        _process_keys[definition_id] = response.json()["key"]
+    return _process_keys[definition_id]
 
 
 def instance(instance_id: str) -> dict | None:
