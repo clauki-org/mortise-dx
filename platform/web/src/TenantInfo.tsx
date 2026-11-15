@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Đơn vị của người đang đăng nhập, đọc qua GraphQL bằng token: kiểm cả đường đăng nhập lẫn quyền dữ liệu theo tenant
-// (Hasura chỉ trả đúng đơn vị trong token).
+// Đơn vị của người đang đăng nhập, hiện ở thanh trên. Đọc qua GraphQL bằng token: Hasura chỉ trả đúng đơn vị trong
+// token, nên tên hiện ra cũng cho biết đường đăng nhập và quyền dữ liệu theo tenant đang đúng.
 
-import { Alert, Loader, Text } from "@mantine/core";
+import { Loader, Text } from "@mantine/core";
 import { useQuery } from "urql";
 
 const TENANTS = "query { core_tenants { id name } }";
@@ -16,11 +16,15 @@ export function TenantInfo() {
   if (fetching) return <Loader size="sm" aria-label="Đang tải đơn vị" />;
   if (error) {
     return (
-      <Alert color="red" title="Không đọc được dữ liệu">
-        {error.message}. Kiểm tra cổng API đang chạy và tài khoản đã được gán đơn vị.
-      </Alert>
+      <Text size="sm" c="red" title={error.message}>
+        Không đọc được đơn vị
+      </Text>
     );
   }
   const tenant = data?.core_tenants[0];
-  return <Text>Đơn vị: {tenant ? tenant.name : "chưa được gán"}</Text>;
+  return (
+    <Text size="sm" c="dimmed">
+      {tenant ? tenant.name : "Tài khoản chưa được gán đơn vị"}
+    </Text>
+  );
 }
