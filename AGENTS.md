@@ -30,6 +30,7 @@ core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp 
   apisix/ keycloak/ postgres/   cấu hình của từng thành phần bên thứ ba
   postgres/migrations/          migration lược đồ của lõi (ADR 0005)
   workflow-api/       dịch vụ tự viết: kiểm quyền trước Flowable (Python, uv)
+  files-api/          dịch vụ tự viết: tải lên, tải xuống tệp theo tenant trước SeaweedFS (Python, uv)
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
   clamav/ mosquitto/ scorpio/ ollama/ observability/      kế hoạch
 platform/             TẦNG 2: thành phần dùng chung, không chứa từ nghiệp vụ
@@ -56,7 +57,7 @@ Ranh giới bắt buộc:
 - Gỡ một gói thì lõi và các gói khác vẫn chạy, `make smoke` vẫn qua.
 - Không commit tệp mô hình AI, dữ liệu lớn hay bản sao lưu; chúng được tải hoặc sinh ra khi chạy.
 - Hợp đồng giữa các tầng nằm trong `contracts/`. Đổi claim token, định dạng `app.yaml` hay API của dịch vụ thì sửa
-  hợp đồng trong cùng pull request; đổi route hay model của workflow-api thì chạy `make contracts`.
+  hợp đồng trong cùng pull request; đổi route hay model của workflow-api hay files-api thì chạy `make contracts`.
   Lý do: [ADR 0008](docs/adr/0008-shared-api-contracts.md).
 
 ## 3. Code

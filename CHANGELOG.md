@@ -55,6 +55,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   ngày", và số việc của từng bộ lọc; trang đăng nhập và khung trang có nền và khung tách phần.
 - Màn hình xử lý một việc: thông tin hồ sơ, biểu mẫu và các nút quyết định theo khai báo của bước; lỗi như quy tắc
   bốn mắt hiện đúng lý do. Mở đường dẫn tới một việc khi chưa đăng nhập thì đăng nhập xong quay lại đúng việc đó.
+- API tệp `/v1/files` (files-api trước SeaweedFS): tải lên, xem thông tin, tải xuống theo tenant; giới hạn cỡ,
+  băm SHA-256, thông tin tệp trong `core.files`. Thêm biến `FILES_DB_PASSWORD` (`make env` tự thêm); vai trò CSDL
+  của dịch vụ được tạo mỗi lần `make up`, nên bản cài đã có dữ liệu nâng cấp không cần `make reset`.
 
 ### Changed
 

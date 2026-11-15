@@ -5,9 +5,10 @@
 # nên `make check-fast` xanh ở máy thì CI cũng xanh.
 
 SHELL := /bin/sh
-# Môi trường ảo Python đặt ngoài repo: REUSE 4.0.3 quét cả .venv lồng trong repo dù
-# git đã bỏ qua nó.
-export UV_PROJECT_ENVIRONMENT ?= $(HOME)/.cache/mortise-dx/workflow-api-venv
+# Môi trường ảo Python đặt ngoài repo, mỗi dịch vụ một thư mục: REUSE 4.0.3 quét cả .venv
+# lồng trong repo dù git đã bỏ qua nó, và hai dịch vụ dùng chung một môi trường thì mỗi lần
+# chạy uv lại gỡ phụ thuộc của dịch vụ kia.
+export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
   check-fast web-check hooks
@@ -55,9 +56,13 @@ lint: ## Kiểm tra giấy phép từng tệp (REUSE)
 	uvx reuse lint
 
 test: ## Kiểm thử đơn vị các dịch vụ tự viết của lõi
-	cd core/workflow-api && PYTHONDONTWRITEBYTECODE=1 uv run --frozen pytest -q -p no:cacheprovider
+	@for service in workflow-api files-api; do \
+	  echo "== $$service"; \
+	  (cd core/$$service && UV_PROJECT_ENVIRONMENT=$(MORTISE_VENVS)/$$service-venv PYTHONDONTWRITEBYTECODE=1 \
+	    uv run --frozen pytest -q -p no:cacheprovider) || exit 1; \
+	done
 
-contracts: ## Xuất lại OpenAPI của workflow-api vào contracts/ sau khi đổi route hay model
+contracts: ## Xuất lại OpenAPI của workflow-api và files-api vào contracts/ sau khi đổi route hay model
 	@scripts/contracts.sh write
 
 # shellcheck, yamllint và ruff chạy qua uvx để không phải cài sẵn; chỉ cần uv.
@@ -65,10 +70,10 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	@test -f .env || cp .env.example .env.check-fast
 	@if [ -f .env.check-fast ]; then docker compose --env-file .env.check-fast config -q; rm -f .env.check-fast; \
 	  else docker compose config -q; fi
-	uvx --from shellcheck-py shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh
+	uvx --from shellcheck-py shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh
 	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts .github
-	uvx ruff check --no-cache core/workflow-api
-	uvx ruff format --no-cache --check core/workflow-api
+	uvx ruff check --no-cache core/workflow-api core/files-api
+	uvx ruff format --no-cache --check core/workflow-api core/files-api
 	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts
 	uvx ruff format --no-cache --check --config core/workflow-api/pyproject.toml scripts
 	@scripts/contracts.sh check

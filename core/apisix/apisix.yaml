@@ -17,6 +17,10 @@ upstreams:
     type: roundrobin
     nodes:
       "workflow-api:8000": 1
+  - id: files-api
+    type: roundrobin
+    nodes:
+      "files-api:8000": 1
   - id: web
     type: roundrobin
     nodes:
@@ -103,6 +107,20 @@ routes:
     plugins:
       limit-count:
         count: 300
+        time_window: 60
+        key_type: var
+        key: http_authorization
+        rejected_code: 429
+
+  # API tệp của lõi (files-api trước SeaweedFS). SeaweedFS không có route công khai.
+  - id: files
+    uris: ["/v1/files", "/v1/files/*"]
+    methods: ["POST", "GET"]
+    upstream_id: files-api
+    plugin_config_id: bearer-token
+    plugins:
+      limit-count:
+        count: 120
         time_window: 60
         key_type: var
         key: http_authorization

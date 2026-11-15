@@ -69,6 +69,20 @@ services:
       retries: 30
       start_period: 30s
 
+  db-roles:
+    # Tạo vai trò CSDL của dịch vụ tự viết trước migration, kể cả trên bản cài đã có dữ liệu (core/postgres/roles.sh).
+    image: pgvector/pgvector:0.8.7-pg17-trixie
+    restart: "no"
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?run make env}
+      FILES_DB_PASSWORD: ${FILES_DB_PASSWORD:?run make env}
+    entrypoint: ["/roles.sh"]
+    volumes:
+      - ./core/postgres/roles.sh:/roles.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   migrate:
     # Chạy một lần mỗi khi `make up`: áp các migration của lõi chưa chạy rồi thoát (ADR 0005).
     # Chạy bằng vai trò hasura, chủ sở hữu CSDL mortise, để bảng thuộc đúng chủ mà Hasura đọc.
@@ -84,6 +98,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-roles:
+        condition: service_completed_successfully
 
   migrate-platform:
     # Migration của Tầng 2, lịch sử riêng với lõi (ADR 0005). Chạy sau lõi vì bảng của Tầng 2 tham chiếu
@@ -194,6 +210,39 @@ services:
       timeout: 5s
       retries: 20
 
+  files-api:
+    # Đường vào tệp của lõi (/v1/files): gán tenant từ token, giới hạn cỡ, lưu nội dung vào SeaweedFS.
+    build: core/files-api
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER: ${MORTISE_PUBLIC_URL:-http://localhost:9080}/auth/realms/mortise
+      FILES_DB_HOST: postgres
+      FILES_DB_NAME: mortise
+      FILES_DB_USER: files_api
+      FILES_DB_PASSWORD: ${FILES_DB_PASSWORD:?run make env}
+      S3_URL: http://seaweedfs:8333
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?run make env}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?run make env}
+      FILES_BUCKET: mortise-files
+      FILES_MAX_BYTES: ${FILES_MAX_BYTES:-20971520}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      seaweedfs:
+        condition: service_started
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   web:
     # Tầng 2: giao diện dựng sẵn thành tệp tĩnh, chỉ vào được qua cổng tại `/` (ADR 0006). Không mở cổng ra máy chủ.
     build: platform/web
@@ -218,6 +267,8 @@ services:
       hasura:
         condition: service_healthy
       workflow-api:
+        condition: service_healthy
+      files-api:
         condition: service_healthy
       web:
         condition: service_healthy

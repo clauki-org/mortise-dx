@@ -206,4 +206,27 @@ other=$(start_once "$manager_a")
 check "Người khác dùng trùng mã được quy trình của riêng mình" \
   "$([[ "$other" =~ ^[0-9a-f-]+$ && "$other" != "$created" ]] && echo yes)" yes
 
+# Tệp (files-api trước SeaweedFS): tải lên, tải xuống đúng nội dung, cách ly tenant, giới hạn cỡ.
+files="$base/v1/files"
+sample=$(mktemp)
+head -c 4096 /dev/urandom >"$sample"
+sample_sha=$(sha256sum <"$sample" | cut -d' ' -f1)
+response=$(curl -s -X POST -H "Authorization: Bearer $user_a" -H 'Content-Type: application/pdf' \
+  --data-binary @"$sample" -w '\n%{http_code}' "$files?name=Bi%C3%AAn%20b%E1%BA%A3n.pdf")
+status=${response##*$'\n'} body=${response%$'\n'*}
+check "user.a tải tệp lên" "$status $(jq -r .size <<<"$body")" "201 4096"
+file_id=$(jq -r .id <<<"$body")
+check "Thông tin tệp giữ tên có dấu và băm đúng" "$(jq -r '.name + " " + .sha256' <<<"$body")" "Biên bản.pdf $sample_sha"
+downloaded=$(curl -s -H "Authorization: Bearer $user_a" "$files/$file_id/content" | sha256sum | cut -d' ' -f1)
+check "Tải xuống đúng nội dung đã tải lên" "$downloaded" "$sample_sha"
+status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_b" "$files/$file_id/content")
+check "user.b (tenant khác) không tải được tệp của tenant A" "$status" 404
+status=$(curl -s -o /dev/null -w '%{http_code}' "$files/$file_id")
+check "API tệp không token bị chặn tại cổng" "$status" 401
+# Máy chủ trả 413 rồi đóng kết nối khi curl còn đang gửi, nên curl thoát mã khác 0 dù đã nhận đủ phản hồi.
+status=$(head -c $((${FILES_MAX_BYTES:-20971520} + 1)) /dev/zero | curl -s -o /dev/null -w '%{http_code}' -X POST \
+  -H "Authorization: Bearer $user_a" --data-binary @- "$files?name=qua-co.bin" || true)
+check "Tệp quá giới hạn cỡ bị từ chối" "$status" 413
+rm -f "$sample"
+
 exit $fail

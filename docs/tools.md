@@ -30,7 +30,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 
 - **Làm gì:** áp các thay đổi lược đồ CSDL theo thứ tự, ghi lại thay đổi nào đã áp, để bản cài đã có dữ liệu nhận
   được thay đổi mới mà không mất dữ liệu ([ADR 0005](adr/0005-schema-migrations.md)).
-- **Trong dự án:** dịch vụ `migrate` (lõi) rồi `migrate-platform` (Tầng 2) chạy một lần mỗi khi `make up`, trước
+- **Trong dự án:** dịch vụ `db-roles` tạo vai trò CSDL của các dịch vụ tự viết (`core/postgres/roles.sh`), rồi
+  `migrate` (lõi) và `migrate-platform` (Tầng 2) chạy một lần mỗi khi `make up`, trước
   khi Hasura khởi động; áp các migration chưa chạy rồi thoát. Chạy bằng vai trò `hasura`, chủ sở hữu CSDL
   `mortise`. Lịch sử của lõi ghi trong bảng `core.schema_migrations`, của Tầng 2 trong
   `platform.schema_migrations`; mỗi gói nghiệp vụ sẽ có thư mục và bảng theo dõi riêng.
@@ -67,7 +68,7 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - Chỉ các đường OIDC của realm `mortise` (đăng nhập, token, đăng xuất, khóa công khai, các bước của form đăng nhập)
     được chuyển tới Keycloak; mọi đường khác dưới `/auth`, gồm console quản trị, realm `master` và trang tài khoản, bị
     chặn (403) ([ADR 0007](adr/0007-login-page-exception.md)).
-  - `/v1/graphql` (Hasura) và `/v1/workflow/*` (workflow-api) bắt buộc access token. Cổng tự kiểm chữ ký token bằng
+  - `/v1/graphql` (Hasura), `/v1/workflow/*` (workflow-api) và `/v1/files` (files-api) bắt buộc access token. Cổng tự kiểm chữ ký token bằng
     khóa công khai (JWKS) của Keycloak; không token hoặc token giả thì trả 401.
   - Giới hạn tần suất theo token: 600 yêu cầu mỗi phút cho API dữ liệu, 300 cho API quy trình. Đếm theo token, không
     theo IP, để nhiều người sau cùng một NAT không chặn lẫn nhau.
@@ -115,12 +116,25 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   `tests/`. Phiên bản thư viện khóa trong `uv.lock`.
 - **Xem:** `make test` (kiểm thử đơn vị), `make smoke` (kiểm tra đầu-cuối); các endpoint ở [api.md](api.md).
 
+### files-api: đường vào tệp (tự viết)
+
+- **Làm gì:** dịch vụ nhỏ bằng Python (FastAPI) đứng giữa cổng và SeaweedFS, cho ứng dụng tải lên và tải xuống tệp.
+- **Trong dự án:**
+  - Kiểm token lần nữa; gán tenant và người tải lên từ token. Nội dung lưu với khóa `<tenant>/<id>`.
+  - Đếm cỡ trong lúc nhận, dừng ngay khi vượt `FILES_MAX_BYTES`; tính SHA-256 cùng lúc.
+  - Ghi thông tin tệp vào `core.files` bằng vai trò CSDL `files_api`, chỉ đọc và thêm được dòng của bảng đó.
+  - Tải xuống luôn là tệp đính kèm, kèm `X-Content-Type-Options: nosniff` và CSP `sandbox`.
+- **Cấu hình:** mã ở `core/files-api/`; phần thuần (tên tệp, giới hạn cỡ, header tải xuống) ở `app/policy.py`, có
+  kiểm thử ở `tests/`.
+- **Xem:** `make test`, `make smoke`; các endpoint ở [api.md](api.md). Healthcheck `/healthz` chỉ cho biết tiến trình
+  đang chạy, không kiểm CSDL hay SeaweedFS; hai dịch vụ đó lỗi thì yêu cầu trả 503 kèm hướng khắc phục.
+
 ### SeaweedFS: lưu trữ đối tượng
 
 - **Làm gì:** lưu tệp (tài liệu, ảnh, bản quét) và cung cấp API tương thích S3, nên ứng dụng dùng được thư viện S3
   có sẵn.
-- **Trong dự án:** chạy một máy chủ gộp, khóa truy cập S3 lấy từ `S3_ACCESS_KEY` và `S3_SECRET_KEY`. Dịch vụ đã
-  chạy nhưng chưa nối vào ứng dụng; đường vào qua cổng kèm quét mã độc tệp tải lên là kế hoạch.
+- **Trong dự án:** chạy một máy chủ gộp, khóa truy cập S3 lấy từ `S3_ACCESS_KEY` và `S3_SECRET_KEY`. Ứng dụng vào
+  qua files-api, không gọi thẳng; quét mã độc tệp tải lên là kế hoạch.
 - **Xem:** API S3 tại `http://127.0.0.1:8333`.
 
 ## Giao diện Tầng 2
@@ -154,14 +168,14 @@ hưởng tới mã Apache-2.0 của dự án. Những công cụ chạy qua `uvx
 |---|---|---|---|
 | Docker Engine, Docker Compose v2 | Chạy các dịch vụ lõi bằng image chính thức | `make up`, `make down`, `make reset` | Apache-2.0 |
 | GNU Make | Lối vào chung cho mọi lệnh | `make help` | GPL-3.0-or-later |
-| uv | Quản lý Python và thư viện của workflow-api; chạy công cụ không cần cài | `make test`, `make check-fast` | MIT / Apache-2.0 |
+| uv | Quản lý Python và thư viện của workflow-api, files-api; chạy công cụ không cần cài | `make test`, `make check-fast` | MIT / Apache-2.0 |
 | REUSE | Kiểm mọi tệp có header bản quyền và giấy phép | `make lint` | GPL-3.0-or-later |
 | dbmate | Áp migration lược đồ CSDL (chạy như dịch vụ một lần trong compose) | `make up`, `make migrate-status` | MIT |
 | ShellCheck | Bắt lỗi trong script shell | `make check-fast` | GPL-3.0 |
 | yamllint | Kiểm cú pháp và định dạng YAML | `make check-fast` | GPL-3.0 |
 | Ruff | Kiểm lỗi và định dạng mã Python | `make check-fast` | MIT |
 | check-jsonschema | Kiểm hợp đồng trong `contracts/` và token thật theo JSON Schema | `make check-fast`, `make smoke` | Apache-2.0 |
-| pytest | Kiểm thử đơn vị workflow-api | `make test` | MIT |
+| pytest | Kiểm thử đơn vị workflow-api và files-api | `make test` | MIT |
 | Node.js, npm | Build và kiểm giao diện; Node chỉ có trong image build, không có khi chạy | `make web-check`, `npm run dev` | MIT / Artistic-2.0 |
 | Biome | Kiểm lỗi và định dạng mã giao diện | `make web-check` | MIT OR Apache-2.0 |
 | license-checker-rseidelsohn | Kiểm giấy phép phụ thuộc của giao diện theo danh sách cho phép trong `Makefile` | `make web-check` | BSD-3-Clause |

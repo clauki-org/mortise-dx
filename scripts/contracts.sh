@@ -12,7 +12,6 @@ cd "$(dirname "$0")/.."
 mode="${1:-check}"
 checker=(uvx --from check-jsonschema==0.29.4 check-jsonschema)
 steps=(uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/check-workflow-steps.py)
-openapi=contracts/workflow-api.openapi.json
 
 case "$mode" in
   check | write) ;;
@@ -101,16 +100,30 @@ while IFS=$'\t' read -r name _; do
   exit 1
 done <"$expected"
 
-# Nhập app.main cần biến môi trường của config.py; giá trị không được dùng vì không gọi mạng.
-generated=$(cd core/workflow-api && KEYCLOAK_JWKS_URL=http://unused KEYCLOAK_ISSUER=http://unused \
-  FLOWABLE_URL=http://unused FLOWABLE_USER=unused FLOWABLE_PASSWORD=unused \
-  uv run --frozen python -c \
-  'import json; from app.main import app; print(json.dumps(app.openapi(), ensure_ascii=False, indent=2, sort_keys=True))')
+# OpenAPI sinh từ mã của từng dịch vụ. Nhập app.main cần biến môi trường của config.py; giá trị
+# không được dùng vì không gọi mạng. Mỗi dịch vụ một môi trường ảo ngoài repo (xem Makefile).
+openapi_of() {
+  local service="$1"
+  shift
+  (cd "core/$service" && env "$@" PYTHONDONTWRITEBYTECODE=1 UV_PROJECT_ENVIRONMENT="${MORTISE_VENVS:-$HOME/.cache/mortise-dx}/$service-venv" \
+    uv run --quiet --frozen python -c \
+    'import json; from app.main import app; print(json.dumps(app.openapi(), ensure_ascii=False, indent=2, sort_keys=True))')
+}
 
-if [[ "$mode" == write ]]; then
-  printf '%s\n' "$generated" > "$openapi"
-  echo "Đã xuất $openapi"
-elif ! diff -u "$openapi" <(printf '%s\n' "$generated"); then
-  echo "OpenAPI của workflow-api lệch với mã. Chạy 'make contracts' rồi commit $openapi." >&2
-  exit 1
-fi
+unused_keycloak=(KEYCLOAK_JWKS_URL=http://unused KEYCLOAK_ISSUER=http://unused)
+check_openapi() {
+  local service="$1" file="contracts/$1.openapi.json" generated
+  shift
+  generated=$(openapi_of "$service" "${unused_keycloak[@]}" "$@")
+  if [[ "$mode" == write ]]; then
+    printf '%s\n' "$generated" >"$file"
+    echo "Đã xuất $file"
+  elif ! diff -u "$file" <(printf '%s\n' "$generated"); then
+    echo "OpenAPI của $service lệch với mã. Chạy 'make contracts' rồi commit $file." >&2
+    exit 1
+  fi
+}
+
+check_openapi workflow-api FLOWABLE_URL=http://unused FLOWABLE_USER=unused FLOWABLE_PASSWORD=unused
+check_openapi files-api FILES_DB_HOST=unused FILES_DB_NAME=unused FILES_DB_USER=unused FILES_DB_PASSWORD=unused \
+  S3_URL=http://unused S3_ACCESS_KEY=unused S3_SECRET_KEY=unused FILES_BUCKET=unused FILES_MAX_BYTES=1
