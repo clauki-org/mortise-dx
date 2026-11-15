@@ -48,6 +48,7 @@ biệt.
 
 Yêu cầu: Linux hoặc macOS, Docker Engine 24+ với Compose v2, `make`, `curl`, `jq`, `openssl` và
 [`uv`](https://docs.astral.sh/uv/) (`make smoke` dùng nó để kiểm token theo hợp đồng). Khuyến nghị 8 GB RAM trở lên.
+Phát triển giao diện cần thêm Node.js 26.
 
 ```bash
 make up      # tạo .env với bí mật ngẫu nhiên, dựng lõi, chờ sẵn sàng

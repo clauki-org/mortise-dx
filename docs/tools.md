@@ -131,7 +131,7 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - Đăng nhập bằng oidc-client-ts với client `mortise-web` (Authorization Code + PKCE); token giữ trong
     `sessionStorage`, làm mới bằng refresh token, không dùng iframe theo dõi phiên.
   - GraphQL tới Hasura qua `/v1/graphql` bằng urql, gửi bằng POST; Hasura lọc dữ liệu theo tenant trong token.
-  - nginx 1.30 phục vụ tệp tĩnh sau cổng tại `/`, trả `index.html` cho đường không phải tệp, gắn
+  - nginx 1.30.6 phục vụ tệp tĩnh sau cổng tại `/`, trả `index.html` cho đường không phải tệp, gắn
     `Content-Security-Policy` và các header bảo mật (`platform/web/security-headers.conf`).
 - **Phát triển:** `cd platform/web && npm install && npm run dev`, mở `http://localhost:5173`. Máy chủ Vite chuyển
   `/v1` sang cổng; `make seed` cho địa chỉ này đăng nhập được khi bản cài chạy ở localhost (đổi địa chỉ bằng
@@ -161,4 +161,4 @@ hưởng tới mã Apache-2.0 của dự án. Những công cụ chạy qua `uvx
 | Biome | Kiểm lỗi và định dạng mã giao diện | `make web-check` | MIT OR Apache-2.0 |
 | license-checker-rseidelsohn | Kiểm giấy phép phụ thuộc của giao diện theo danh sách cho phép trong `Makefile` | `make web-check` | BSD-3-Clause |
 | curl, jq, openssl | Gọi API trong seed và smoke, đọc JSON, sinh bí mật ngẫu nhiên | `scripts/` | curl / MIT / Apache-2.0 |
-| GitHub Actions | CI: `make check-fast` và `make test` với mọi thay đổi; dựng lõi trên máy trắng và `make smoke` khi pull request đổi thứ ngoài tài liệu; vòng sao lưu và khôi phục khi đổi phần nó phụ thuộc; push lên `main` chạy đủ | `.github/workflows/ci.yml` | dịch vụ của GitHub |
+| GitHub Actions | CI: `make check-fast` và `make test` với mọi thay đổi; `make web-check` khi đổi `platform/web/`; dựng lõi trên máy trắng và `make smoke` khi pull request đổi thứ ngoài tài liệu; vòng sao lưu và khôi phục khi đổi phần nó phụ thuộc; push lên `main` chạy đủ | `.github/workflows/ci.yml` | dịch vụ của GitHub |

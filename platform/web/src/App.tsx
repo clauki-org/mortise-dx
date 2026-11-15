@@ -30,7 +30,7 @@ export function App() {
         <Center h="100vh">
           <Stack maw={480}>
             <Alert color="red" title="Không đăng nhập được">
-              {auth.message}. Kiểm tra lõi đang chạy (`make up`) rồi thử lại.
+              {auth.message}. Thử lại sau ít phút; nếu vẫn lỗi, báo người quản trị.
             </Alert>
             <Button onClick={signIn}>Đăng nhập lại</Button>
           </Stack>
