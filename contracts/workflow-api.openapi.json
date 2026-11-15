@@ -1,42 +1,6 @@
 {
   "components": {
     "schemas": {
-      "Body_complete_task_v1_workflow_tasks__task_id__complete_post": {
-        "properties": {
-          "variables": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Variables"
-          }
-        },
-        "title": "Body_complete_task_v1_workflow_tasks__task_id__complete_post",
-        "type": "object"
-      },
-      "Body_start_process_v1_workflow_processes__key__instances_post": {
-        "properties": {
-          "variables": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Variables"
-          }
-        },
-        "title": "Body_start_process_v1_workflow_processes__key__instances_post",
-        "type": "object"
-      },
       "ErrorBody": {
         "properties": {
           "error": {
@@ -49,19 +13,6 @@
           "error"
         ],
         "title": "ErrorBody",
-        "type": "object"
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "title": "Detail",
-            "type": "array"
-          }
-        },
-        "title": "HTTPValidationError",
         "type": "object"
       },
       "InstanceStatus": {
@@ -201,44 +152,24 @@
         "title": "Task",
         "type": "object"
       },
-      "ValidationError": {
+      "VariablesBody": {
+        "additionalProperties": false,
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "title": "Location",
-            "type": "array"
-          },
-          "msg": {
-            "title": "Message",
-            "type": "string"
-          },
-          "type": {
-            "title": "Error Type",
-            "type": "string"
+          "variables": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Biến gửi cho quy trình; bỏ trống thì coi như không có biến",
+            "title": "Variables"
           }
         },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError",
+        "title": "VariablesBody",
         "type": "object"
       }
     }
@@ -324,11 +255,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Unprocessable Content"
           },
           "502": {
             "content": {
@@ -406,7 +337,15 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Body_start_process_v1_workflow_processes__key__instances_post"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/VariablesBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
               }
             }
           }
@@ -466,11 +405,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Unprocessable Content"
           },
           "502": {
             "content": {
@@ -556,11 +495,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Unprocessable Content"
           },
           "502": {
             "content": {
@@ -620,7 +559,15 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Body_complete_task_v1_workflow_tasks__task_id__complete_post"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/VariablesBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
               }
             }
           }
@@ -683,11 +630,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Unprocessable Content"
           },
           "502": {
             "content": {

@@ -72,3 +72,11 @@ make up seed smoke               # dựng lại với tên mới
 
 Trong `.env` đã có, đổi tên `DXOS_PUBLIC_URL` thành `MORTISE_PUBLIC_URL` và `DXOS_BIND` thành `MORTISE_BIND` nếu
 từng đặt giá trị khác mặc định; `make env` tự thêm hai biến mới với giá trị mặc định.
+
+### Fixed
+
+- API quy trình trả 422 khi thân request có khóa ngoài `variables`, thay vì bỏ qua khóa đó. Trước đây gửi
+  `{"approved": true}` thiếu lớp `variables` vẫn hoàn thành task, nhưng quy trình không nhận được biến và rẽ sang
+  nhánh mặc định. Lỗi 422 có dạng `{"error": "..."}` như các lỗi khác của API.
+- Flowable không còn tự deploy các quy trình minh họa của ảnh `flowable-rest`; smoke kiểm không có quy trình nào
+  ngoài các tenant. Bản cài đã dựng vẫn giữ các quy trình đó trong CSDL, smoke báo lỗi cho tới khi `make reset`.

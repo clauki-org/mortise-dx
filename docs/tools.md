@@ -96,6 +96,7 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   được deploy riêng cho từng tenant.
 - **Cấu hình:** lõi chỉ có quy trình mẫu để kiểm thử, ở `core/workflow/fixtures/`; quy trình nghiệp vụ nằm trong gói
   ở `apps/`. `make seed` deploy quy trình mẫu cho mọi tenant, chạy lại không tạo phiên bản mới nếu tệp không đổi.
+  Các quy trình minh họa đi kèm ảnh `flowable-rest` được tắt trong `compose.yaml`.
 - **Xem:** tài liệu REST tại `http://127.0.0.1:8083/flowable-rest/docs`, tài khoản `rest-admin`, mật khẩu
   `FLOWABLE_ADMIN_PASSWORD`.
 

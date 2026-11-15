@@ -54,9 +54,9 @@ không có đường vào trực tiếp từ bên ngoài.
 
 | Phương thức | Đường dẫn | Việc |
 |---|---|---|
-| `POST` | `/v1/workflow/processes/{key}/instances` | Khởi tạo một quy trình của tenant mình; thân `{"variables": {...}}`; header `Idempotency-Key` tùy chọn |
+| `POST` | `/v1/workflow/processes/{key}/instances` | Khởi tạo một quy trình của tenant mình; thân `{"variables": {...}}` hoặc không có thân; header `Idempotency-Key` tùy chọn |
 | `GET` | `/v1/workflow/tasks` | Các task giao cho mình hoặc cho vai trò của mình, trong tenant mình; mỗi task có `process`, `step` (id của userTask) và `due` (hạn, có thể null) |
-| `POST` | `/v1/workflow/tasks/{id}/complete` | Hoàn thành task; thân `{"variables": {...}}` |
+| `POST` | `/v1/workflow/tasks/{id}/complete` | Hoàn thành task; thân `{"variables": {...}}` hoặc không có thân |
 | `GET` | `/v1/workflow/instances/{id}` | Trạng thái một quy trình của tenant mình |
 
 Ví dụ với quy trình mẫu `core-approval` (do `make seed` deploy cho từng tenant):
@@ -80,7 +80,7 @@ lúc chỉ được xếp lần lượt khi workflow-api chạy một bản như
 | `403` | Tài khoản không thuộc đúng một tenant; task đã giao cho người khác; không có vai trò ứng viên; người gửi tự duyệt yêu cầu của mình |
 | `404` | Task hay quy trình không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại); tenant chưa có quy trình đó |
 | `409` | Task vừa được người khác nhận |
-| `422` | Thân yêu cầu sai định dạng |
+| `422` | Thân yêu cầu sai định dạng hoặc có khóa ngoài `variables`, ví dụ gửi `{"approved": true}` thiếu lớp `variables` |
 | `502` / `503` | Flowable trả lỗi (thông điệp được chuyển lại) / không kết nối được Flowable |
 
 ## Lưu trữ đối tượng (S3)
