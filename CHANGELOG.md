@@ -43,6 +43,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Hợp đồng API giữa các tầng trong `contracts/`: JSON Schema cho claim token và `app.yaml`, OpenAPI của
   workflow-api có schema phản hồi và lỗi; `make check-fast` báo lỗi khi lệch, `make smoke` kiểm token thật.
   Ví dụ sai trong `contracts/examples/invalid/` phải bị từ chối, mỗi tệp phạm đúng một luật.
+- Task của API quy trình có thêm `process`, `step` và `due` để giao diện biết việc đang ở bước nào và hạn khi
+  nào; khởi tạo quy trình nhận header `Idempotency-Key`, gửi lặp không tạo quy trình thứ hai.
 
 ### Changed
 

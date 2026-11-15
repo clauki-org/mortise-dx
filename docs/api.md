@@ -54,8 +54,8 @@ không có đường vào trực tiếp từ bên ngoài.
 
 | Phương thức | Đường dẫn | Việc |
 |---|---|---|
-| `POST` | `/v1/workflow/processes/{key}/instances` | Khởi tạo một quy trình của tenant mình; thân `{"variables": {...}}` |
-| `GET` | `/v1/workflow/tasks` | Các task giao cho mình hoặc cho vai trò của mình, trong tenant mình |
+| `POST` | `/v1/workflow/processes/{key}/instances` | Khởi tạo một quy trình của tenant mình; thân `{"variables": {...}}`; header `Idempotency-Key` tùy chọn |
+| `GET` | `/v1/workflow/tasks` | Các task giao cho mình hoặc cho vai trò của mình, trong tenant mình; mỗi task có `process`, `step` (id của userTask) và `due` (hạn, có thể null) |
 | `POST` | `/v1/workflow/tasks/{id}/complete` | Hoàn thành task; thân `{"variables": {...}}` |
 | `GET` | `/v1/workflow/instances/{id}` | Trạng thái một quy trình của tenant mình |
 
@@ -67,10 +67,15 @@ curl -fsS -X POST http://localhost:9080/v1/workflow/processes/core-approval/inst
   -d '{"variables":{"title":"Yêu cầu mẫu"}}'
 ```
 
+Chống gửi trùng: giao diện sinh một mã ngẫu nhiên (ví dụ UUID) mỗi lần mở biểu mẫu và gửi trong header
+`Idempotency-Key`. Gửi lại cùng mã, cùng người, cùng quy trình thì nhận lại quy trình đã tạo thay vì tạo quy trình
+mới, kể cả khi quy trình đó đã kết thúc. Người khác dùng trùng mã vẫn tạo quy trình của riêng họ. Hai lần gửi cùng
+lúc chỉ được xếp lần lượt khi workflow-api chạy một bản như trong `compose.yaml`.
+
 | Mã trả về | Khi nào |
 |---|---|
 | `201` / `204` | Khởi tạo / hoàn thành thành công |
-| `400` | Ghi đè biến dành riêng của lõi (`initiator`, `initiatorName`, `tenant`) |
+| `400` | Ghi đè biến dành riêng của lõi (`initiator`, `initiatorName`, `tenant`, `idempotencyKey`); `Idempotency-Key` sai định dạng (8–100 ký tự chữ, số, `-`, `_`) |
 | `401` | Thiếu hoặc sai token |
 | `403` | Tài khoản không thuộc đúng một tenant; task đã giao cho người khác; không có vai trò ứng viên; người gửi tự duyệt yêu cầu của mình |
 | `404` | Task hay quy trình không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại); tenant chưa có quy trình đó |

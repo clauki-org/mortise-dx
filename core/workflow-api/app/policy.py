@@ -4,12 +4,19 @@
 # Quy tắc quyết định ai được làm gì với task. Hàm thuần, không gọi mạng, để kiểm thử
 # đầy đủ; main.py lấy dữ liệu từ Flowable rồi hỏi các hàm ở đây.
 
+import re
 from dataclasses import dataclass
 
 FOUR_EYES = "four-eyes"
 
+# Biến lưu Idempotency-Key của yêu cầu khởi tạo, để lần gửi lặp tìm lại được quy trình đã tạo.
+IDEMPOTENCY_VARIABLE = "idempotencyKey"
+
 # Biến do lõi đặt; ứng dụng không được ghi đè khi khởi tạo hay hoàn thành task.
-RESERVED_VARIABLES = frozenset({"initiator", "initiatorName", "tenant"})
+RESERVED_VARIABLES = frozenset({"initiator", "initiatorName", "tenant", IDEMPOTENCY_VARIABLE})
+
+# Đủ cho UUID và mã ngẫu nhiên base64url; giới hạn độ dài để khóa không phình biến của Flowable.
+_IDEMPOTENCY_KEY = re.compile(r"[A-Za-z0-9_-]{8,100}")
 
 
 @dataclass(frozen=True)
@@ -53,3 +60,8 @@ def check_variables(variables: dict[str, object]) -> None:
     clash = RESERVED_VARIABLES & variables.keys()
     if clash:
         raise Denied(400, f"Không được đặt biến dành riêng cho lõi: {', '.join(sorted(clash))}.")
+
+
+def check_idempotency_key(key: str) -> None:
+    if not _IDEMPOTENCY_KEY.fullmatch(key):
+        raise Denied(400, "Idempotency-Key phải dài 8–100 ký tự, chỉ gồm chữ, số, '-' và '_'.")

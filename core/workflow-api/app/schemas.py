@@ -16,6 +16,11 @@ class ProcessStarted(BaseModel):
 class Task(BaseModel):
     id: str
     name: str
+    step: str = Field(
+        description="Mã bước trong BPMN (id của userTask); cùng `process` xác định khai báo của bước"
+    )
+    process: str = Field(description="Khóa của định nghĩa quy trình (BPMN)")
+    due: str | None = Field(description="Hạn xử lý, ISO 8601; null nếu bước không đặt hạn")
     category: str | None = Field(description="`four-eyes` nếu người khởi tạo không được tự hoàn thành")
     processInstanceId: str
     created: str = Field(description="Thời điểm tạo task, ISO 8601")

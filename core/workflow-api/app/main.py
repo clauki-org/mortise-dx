@@ -4,14 +4,23 @@
 # API quy trình của lõi, đứng sau APISIX. Flowable chỉ nhận lệnh từ đây bằng tài khoản
 # kỹ thuật, nên mọi kiểm tra tenant, vai trò và quy tắc bốn mắt nằm ở lớp này.
 
+import threading
 from typing import Annotated
 
-from fastapi import Body, Depends, FastAPI, Request
+from fastapi import Body, Depends, FastAPI, Header, Request
 from fastapi.responses import JSONResponse, Response
 
 from . import flowable
 from .auth import caller_from_token
-from .policy import Caller, Denied, TaskView, check_can_complete, check_variables
+from .policy import (
+    IDEMPOTENCY_VARIABLE,
+    Caller,
+    Denied,
+    TaskView,
+    check_can_complete,
+    check_idempotency_key,
+    check_variables,
+)
 from .schemas import ErrorBody, InstanceStatus, ProcessStarted, Task
 
 # openapi_url=None: không phục vụ tài liệu qua cổng; hợp đồng nằm trong contracts/.
@@ -22,6 +31,19 @@ app = FastAPI(
 CallerDep = Annotated[Caller, Depends(caller_from_token)]
 # Thân request dạng {"variables": {...}}; bỏ trống thì coi như không có biến.
 Variables = Annotated[dict[str, object] | None, Body(embed=True)]
+IdempotencyKey = Annotated[
+    str | None,
+    Header(
+        alias="Idempotency-Key",
+        description="Mã ngẫu nhiên của lần gửi; cùng người gửi lại cùng mã cho cùng quy trình thì nhận "
+        "quy trình đã tạo, không tạo mới",
+    ),
+]
+
+# Hai lần bấm gần như cùng lúc phải chạy lần lượt để lần sau thấy quy trình lần trước vừa tạo. Chia khóa
+# theo băm của mã để yêu cầu của người khác không phải chờ nhau khi Flowable chậm; số khóa cố định nên không
+# phình bộ nhớ. Khóa trong tiến trình chỉ đủ khi chạy một bản workflow-api; nhiều bản thì cần khóa chung.
+_start_locks = tuple(threading.Lock() for _ in range(64))
 
 
 def _errors(*codes: int) -> dict:
@@ -45,15 +67,23 @@ def healthz() -> dict:
     response_model=ProcessStarted,
     responses=_errors(400, 403, 404, 502, 503),
 )
-def start_process(key: str, caller: CallerDep, variables: Variables = None) -> dict:
+def start_process(
+    key: str,
+    caller: CallerDep,
+    variables: Variables = None,
+    idempotency_key: IdempotencyKey = None,
+) -> dict:
     variables = variables or {}
     check_variables(variables)
-    started = flowable.start(
-        key,
-        caller.tenant,
-        variables | {"initiator": caller.sub, "initiatorName": caller.username, "tenant": caller.tenant},
-    )
-    return {"id": started["id"], "process": key}
+    variables |= {"initiator": caller.sub, "initiatorName": caller.username, "tenant": caller.tenant}
+    if idempotency_key is None:
+        return {"id": flowable.start(key, caller.tenant, variables)["id"], "process": key}
+    check_idempotency_key(idempotency_key)
+    with _start_locks[hash((caller.tenant, key, caller.sub, idempotency_key)) % len(_start_locks)]:
+        found = flowable.started_with(caller.tenant, key, caller.sub, idempotency_key)
+        if found is None:
+            found = flowable.start(key, caller.tenant, variables | {IDEMPOTENCY_VARIABLE: idempotency_key})
+    return {"id": found["id"], "process": key}
 
 
 @app.get("/v1/workflow/tasks", response_model=list[Task], responses=_errors(403, 502, 503))
@@ -111,6 +141,9 @@ def _task_out(raw: dict) -> dict:
     return {
         "id": raw["id"],
         "name": raw["name"],
+        "step": raw["taskDefinitionKey"],
+        "process": flowable.process_key(raw["processDefinitionId"]),
+        "due": raw.get("dueDate"),
         "category": raw.get("category"),
         "processInstanceId": raw["processInstanceId"],
         "created": raw["createTime"],

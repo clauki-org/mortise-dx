@@ -146,6 +146,18 @@
             "title": "Created",
             "type": "string"
           },
+          "due": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hạn xử lý, ISO 8601; null nếu bước không đặt hạn",
+            "title": "Due"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -154,8 +166,18 @@
             "title": "Name",
             "type": "string"
           },
+          "process": {
+            "description": "Khóa của định nghĩa quy trình (BPMN)",
+            "title": "Process",
+            "type": "string"
+          },
           "processInstanceId": {
             "title": "Processinstanceid",
+            "type": "string"
+          },
+          "step": {
+            "description": "Mã bước trong BPMN (id của userTask); cùng `process` xác định khai báo của bước",
+            "title": "Step",
             "type": "string"
           },
           "variables": {
@@ -167,6 +189,9 @@
         "required": [
           "id",
           "name",
+          "step",
+          "process",
+          "due",
           "category",
           "processInstanceId",
           "created",
@@ -340,6 +365,24 @@
             "schema": {
               "title": "Key",
               "type": "string"
+            }
+          },
+          {
+            "description": "Mã ngẫu nhiên của lần gửi; cùng người gửi lại cùng mã cho cùng quy trình thì nhận quy trình đã tạo, không tạo mới",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Mã ngẫu nhiên của lần gửi; cùng người gửi lại cùng mã cho cùng quy trình thì nhận quy trình đã tạo, không tạo mới",
+              "title": "Idempotency-Key"
             }
           },
           {
