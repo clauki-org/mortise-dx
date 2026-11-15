@@ -111,6 +111,13 @@ if uvx --from check-jsonschema==0.29.4 check-jsonschema -q \
   --schemafile contracts/token-claims.schema.json "$claims_file"; then status=ok; else status=lệch; fi
 check "Token khớp contracts/token-claims.schema.json" "$status" ok
 
+# Flowable chỉ chứa quy trình deploy theo tenant. Hỏi thẳng Flowable ở cổng chỉ mở trong máy
+# chủ, vì workflow-api không cho thấy quy trình ngoài tenant của người gọi.
+stray=$(curl -fsS -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" \
+  "http://127.0.0.1:${FLOWABLE_PORT:-8083}/flowable-rest/service/repository/process-definitions?size=1000" |
+  jq -r '[.data[] | select((.tenantId // "") == "") | .key] | join(",")')
+check "Flowable không có quy trình nào ngoài các tenant" "$stray" ""
+
 # Quy trình (Flowable sau workflow-api).
 wf="$base/v1/workflow"
 user_a=$(token user.a)

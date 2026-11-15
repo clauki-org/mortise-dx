@@ -8,6 +8,7 @@ import threading
 from typing import Annotated
 
 from fastapi import Body, Depends, FastAPI, Header, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
 from . import flowable
@@ -21,7 +22,7 @@ from .policy import (
     check_idempotency_key,
     check_variables,
 )
-from .schemas import ErrorBody, InstanceStatus, ProcessStarted, Task
+from .schemas import ErrorBody, InstanceStatus, ProcessStarted, Task, VariablesBody
 
 # openapi_url=None: không phục vụ tài liệu qua cổng; hợp đồng nằm trong contracts/.
 app = FastAPI(
@@ -29,8 +30,8 @@ app = FastAPI(
 )
 
 CallerDep = Annotated[Caller, Depends(caller_from_token)]
-# Thân request dạng {"variables": {...}}; bỏ trống thì coi như không có biến.
-Variables = Annotated[dict[str, object] | None, Body(embed=True)]
+# Thân request dạng {"variables": {...}}; không gửi thân thì coi như không có biến.
+VariablesIn = Annotated[VariablesBody | None, Body()]
 IdempotencyKey = Annotated[
     str | None,
     Header(
@@ -46,13 +47,25 @@ IdempotencyKey = Annotated[
 _start_locks = tuple(threading.Lock() for _ in range(64))
 
 
+# 401 và 422 khai cho mọi route: route nào cũng kiểm token, và FastAPI tự ghi 422 theo dạng
+# mặc định của nó vào OpenAPI nếu route không khai, lệch với dạng {"error": "..."} thật sự trả về.
 def _errors(*codes: int) -> dict:
-    return {code: {"model": ErrorBody} for code in (401, *codes)}
+    return {code: {"model": ErrorBody} for code in (401, 422, *codes)}
 
 
 @app.exception_handler(Denied)
 def denied(_: Request, error: Denied) -> JSONResponse:
     return JSONResponse({"error": error.reason}, status_code=error.status)
+
+
+# Mặc định FastAPI trả lỗi kiểm dữ liệu dạng {"detail": [...]} bằng tiếng Anh; mọi lỗi khác
+# của API này có dạng {"error": "..."}, nên giao diện chỉ phải đọc một dạng.
+@app.exception_handler(RequestValidationError)
+def invalid_body(_: Request, error: RequestValidationError) -> JSONResponse:
+    extra = sorted(str(e["loc"][-1]) for e in error.errors() if e["type"] == "extra_forbidden")
+    reason = f"Thân request có khóa lạ: {', '.join(extra)}. " if extra else "Thân request sai định dạng. "
+    hint = 'Biến của quy trình đặt trong `variables`, ví dụ {"variables": {"approved": true}}.'
+    return JSONResponse({"error": reason + hint}, status_code=422)
 
 
 # Healthcheck của Docker, không đi qua cổng nên không thuộc hợp đồng.
@@ -70,10 +83,10 @@ def healthz() -> dict:
 def start_process(
     key: str,
     caller: CallerDep,
-    variables: Variables = None,
+    body: VariablesIn = None,
     idempotency_key: IdempotencyKey = None,
 ) -> dict:
-    variables = variables or {}
+    variables = _variables_in(body)
     check_variables(variables)
     variables |= {"initiator": caller.sub, "initiatorName": caller.username, "tenant": caller.tenant}
     if idempotency_key is None:
@@ -100,8 +113,8 @@ def my_tasks(caller: CallerDep) -> list[dict]:
     response_class=Response,
     responses=_errors(400, 403, 404, 409, 502, 503),
 )
-def complete_task(task_id: str, caller: CallerDep, variables: Variables = None) -> Response:
-    variables = variables or {}
+def complete_task(task_id: str, caller: CallerDep, body: VariablesIn = None) -> Response:
+    variables = _variables_in(body)
     check_variables(variables)
     raw = flowable.task(task_id)
     if raw is None:
@@ -121,6 +134,10 @@ def instance_status(instance_id: str, caller: CallerDep) -> dict:
     if found is None or found.get("tenantId") != caller.tenant:
         raise Denied(404, "Không tìm thấy quy trình.")
     return {"id": found["id"], "ended": found["endTime"] is not None, "outcome": found.get("endActivityId")}
+
+
+def _variables_in(body: VariablesBody | None) -> dict[str, object]:
+    return (body.variables if body else None) or {}
 
 
 def _variables(raw: dict) -> dict[str, object]:

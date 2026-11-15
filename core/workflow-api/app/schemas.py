@@ -1,11 +1,23 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Hình dạng phản hồi của API quy trình. FastAPI dùng các model này để kiểm dữ liệu trả
-# về và sinh OpenAPI; bản OpenAPI được lưu ở contracts/workflow-api.openapi.json làm
-# hợp đồng cho giao diện và gói nghiệp vụ. Đổi model thì chạy `make contracts`.
+# Hình dạng thân request và phản hồi của API quy trình. FastAPI dùng các model này để
+# kiểm dữ liệu vào, ra và sinh OpenAPI; bản OpenAPI được lưu ở
+# contracts/workflow-api.openapi.json làm hợp đồng cho giao diện và gói nghiệp vụ. Đổi
+# model thì chạy `make contracts`.
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class VariablesBody(BaseModel):
+    # Khóa lạ ở lớp ngoài chắc chắn là gửi nhầm, thường do quên lớp `variables`. Nếu bỏ qua
+    # nó, biến của người gọi mất trong im lặng: gửi {"approved": true} vẫn hoàn thành task
+    # nhưng quy trình không nhận được `approved` và rẽ sang nhánh mặc định.
+    model_config = ConfigDict(extra="forbid")
+
+    variables: dict[str, object] | None = Field(
+        default=None, description="Biến gửi cho quy trình; bỏ trống thì coi như không có biến"
+    )
 
 
 class ProcessStarted(BaseModel):

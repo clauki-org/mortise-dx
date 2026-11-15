@@ -131,6 +131,9 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${FLOWABLE_DB_PASSWORD}
       FLOWABLE_REST_APP_ADMIN_USERID: rest-admin
       FLOWABLE_REST_APP_ADMIN_PASSWORD: ${FLOWABLE_ADMIN_PASSWORD:?run make env}
+      # Ảnh mặc định tự deploy các quy trình minh họa của Flowable, không thuộc tenant nào.
+      # Flowable chỉ chứa quy trình của nền tảng, deploy theo từng tenant.
+      FLOWABLE_REST_APP_CREATEDEMODEFINITIONS: "false"
     ports:
       - "127.0.0.1:${FLOWABLE_PORT:-8083}:8080"
     depends_on:
