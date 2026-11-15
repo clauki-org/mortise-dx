@@ -35,7 +35,7 @@ biệt.
 | Console quản trị không lộ qua cổng | Đã chạy | `make smoke` |
 | API dữ liệu tự sinh (Hasura CE), cách ly dữ liệu theo tenant | Đã chạy | `make smoke` |
 | Workflow BPMN (Flowable sau lớp workflow-api): cách ly tenant, phân quyền theo vai trò, quy tắc bốn mắt | Đã chạy | `make smoke`, `make test` |
-| Lưu trữ đối tượng tương thích S3 (SeaweedFS) | Dịch vụ chạy, chưa nối vào ứng dụng | |
+| Tệp qua cổng (`/v1/files`, SeaweedFS): tải lên, tải xuống theo tenant, giới hạn cỡ; quét mã độc là kế hoạch | Đã chạy | `make smoke`, `make test` |
 | Xác thực đa yếu tố, cơ chế đăng nhập theo chính sách từng tenant | Kế hoạch | |
 | Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
 | Nhật ký thay đổi, sổ cái chống sửa, kiểm dữ liệu theo schema | Kế hoạch | |
@@ -63,6 +63,7 @@ make smoke   # kiểm tra đầu-cuối qua cổng
 | `http://localhost:9080/auth/...` | Đăng nhập, cấp token (qua cổng) |
 | `http://localhost:9080/v1/graphql` | API dữ liệu, bắt buộc token |
 | `http://localhost:9080/v1/workflow/...` | API quy trình, bắt buộc token |
+| `http://localhost:9080/v1/files` | API tệp, bắt buộc token |
 | `http://127.0.0.1:8081/auth/admin` | Quản trị Keycloak (chỉ máy chủ) |
 | `http://127.0.0.1:8082/console` | Quản trị Hasura (chỉ máy chủ) |
 | `http://127.0.0.1:8083/flowable-rest/docs` | REST API của Flowable (chỉ máy chủ) |
@@ -90,6 +91,7 @@ Tầng 1  APISIX (cổng duy nhất, kiểm JWT, giới hạn tần suất)
           ├─ Keycloak   định danh, SSO, vai trò, tenant
           ├─ Hasura CE  API GraphQL tự sinh, quyền theo dòng
           ├─ workflow-api → Flowable  quy trình BPMN theo tenant và vai trò
+          ├─ files-api → SeaweedFS    tệp theo tenant, giới hạn cỡ
           ├─ PostgreSQL dữ liệu có cấu trúc (+ pgvector)
           └─ SeaweedFS  dữ liệu phi cấu trúc (S3)
 ```
@@ -110,6 +112,7 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Migration lược đồ CSDL | dbmate | 2.37.0 | MIT |
 | Động cơ quy trình | Flowable REST | 7.2.0 | Apache-2.0 |
 | Lớp kiểm quyền quy trình (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT | khóa trong `core/workflow-api/uv.lock` | MIT / BSD-3-Clause |
+| API tệp (tự viết) | Python 3.13, FastAPI, boto3, pg8000, PyJWT | khóa trong `core/files-api/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
 | Phục vụ giao diện | nginx | 1.30.6 | BSD-2-Clause |
 | Giao diện Tầng 2 (tự viết) | React, Mantine, oidc-client-ts, urql, React Router, TanStack Query, rjsf ([ADR 0006](docs/adr/0006-frontend-stack.md)) | khóa trong `platform/web/package-lock.json` | MIT / Apache-2.0 |
 
@@ -125,6 +128,7 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   apisix/ keycloak/ postgres/
   postgres/migrations/  migration lược đồ của lõi (dbmate)
   workflow-api/       kiểm quyền trước Flowable (Python)
+  files-api/          API tệp trước SeaweedFS (Python)
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
 platform/             Tầng 2
   web/                khung giao diện (React, Vite), phục vụ bằng nginx sau cổng

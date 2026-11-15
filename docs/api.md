@@ -94,8 +94,32 @@ lúc chỉ được xếp lần lượt khi workflow-api chạy một bản như
 | `422` | Thân yêu cầu sai định dạng hoặc có khóa ngoài `variables`, ví dụ gửi `{"approved": true}` thiếu lớp `variables` |
 | `502` / `503` | Flowable trả lỗi (thông điệp được chuyển lại) / không kết nối được Flowable |
 
-## Lưu trữ đối tượng (S3)
+## Tệp: `/v1/files`
 
-SeaweedFS cung cấp API tương thích S3 tại `http://127.0.0.1:8333`, hiện chỉ mở trong máy chủ. Khóa truy cập là
-`S3_ACCESS_KEY` và `S3_SECRET_KEY` trong `.env`. Đường vào qua cổng cho ứng dụng nằm trong kế hoạch, kèm kiểm dịch
-tệp tải lên.
+Hợp đồng đầy đủ: [`contracts/files-api.openapi.json`](../contracts/files-api.openapi.json). Lớp `files-api` đứng trước
+SeaweedFS: gán tenant và người tải lên từ token, giới hạn cỡ (mặc định 20 MB, đổi bằng `FILES_MAX_BYTES`), ghi tên,
+cỡ, băm SHA-256 vào bảng `core.files`. SeaweedFS không có đường vào từ bên ngoài.
+
+| Phương thức | Đường dẫn | Việc |
+|---|---|---|
+| `POST` | `/v1/files?name=<tên tệp>` | Tải lên; thân là nội dung tệp nguyên văn, `Content-Type` là kiểu của tệp |
+| `GET` | `/v1/files/{id}` | Thông tin tệp: tên, kiểu, cỡ, băm, người tải, trạng thái, thời điểm |
+| `GET` | `/v1/files/{id}/content` | Tải xuống; luôn là tệp đính kèm, trình duyệt không mở hay chạy nội dung |
+
+```bash
+curl -fsS -X POST "http://localhost:9080/v1/files?name=bien-ban.pdf" \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/pdf' --data-binary @bien-ban.pdf
+```
+
+| Mã trả về | Khi nào |
+|---|---|
+| `201` / `200` | Tải lên / đọc thành công |
+| `400` | Tên tệp không dùng được (rỗng sau khi bỏ phần thư mục, dài quá 255 ký tự) hoặc tệp rỗng |
+| `401` | Thiếu hoặc sai token |
+| `403` | Tài khoản không thuộc đúng một tenant, hoặc tenant chưa có trong `core.tenants` |
+| `404` | Tệp không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại); nội dung tệp không còn trong kho |
+| `413` | Tệp lớn quá giới hạn |
+| `422` | Thiếu tham số `name`, hoặc `id` không phải UUID |
+| `503` | Không kết nối được CSDL hay SeaweedFS |
+
+Trạng thái tệp hiện luôn là `unscanned`: bước quét mã độc là kế hoạch.
