@@ -117,8 +117,7 @@ trap 'rm -f "$claims_file"' EXIT
 payload=$(token manager.a | cut -d. -f2 | tr '_-' '/+')
 while (( ${#payload} % 4 )); do payload+="="; done
 base64 -d <<<"$payload" > "$claims_file"
-if uvx --from check-jsonschema==0.29.4 check-jsonschema -q \
-  --schemafile contracts/token-claims.schema.json "$claims_file"; then status=ok; else status=lệch; fi
+if scripts/contracts.sh token "$claims_file"; then status=ok; else status=lệch; fi
 check "Token khớp contracts/token-claims.schema.json" "$status" ok
 
 # Flowable chỉ chứa quy trình deploy theo tenant. Hỏi thẳng Flowable ở cổng chỉ mở trong máy
@@ -142,6 +141,15 @@ api() {
 
 status=$(curl -s -o /dev/null -w '%{http_code}' "$wf/tasks")
 check "API quy trình không token bị chặn tại cổng" "$status" 401
+# Lỗi 401 của cổng có cùng dạng ErrorBody với lỗi của workflow-api (contracts/workflow-api.openapi.json), để giao
+# diện đọc được lý do và biết phải đăng nhập lại.
+for path in /v1/workflow/tasks /v1/graphql; do
+  response=$(curl -s -X POST -w '\n%{http_code}' "$base$path")
+  status=${response##*$'\n'} body=${response%$'\n'*}
+  shape=$(jq -r 'if type == "object" and keys == ["error"] then "ErrorBody" else "khác" end' <<<"$body" \
+    2>/dev/null || echo "không phải JSON")
+  check "Lỗi 401 của $path là JSON theo hợp đồng" "$status $shape" "401 ErrorBody"
+done
 
 IFS=$'\t' read -r status body < <(api POST "$user_a" /processes/core-approval/instances \
   '{"variables":{"title":"Kiểm thử đầu-cuối"}}')

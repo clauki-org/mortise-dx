@@ -79,6 +79,9 @@ từng đặt giá trị khác mặc định; `make env` tự thêm hai biến m
 
 ### Fixed
 
+- Cổng trả lỗi `401` của `/v1/graphql` và `/v1/workflow/*` dạng JSON `{"error": "..."}` như hợp đồng ghi, thay vì
+  trang HTML. Ví dụ sai trong `contracts/examples/invalid/` phải bị từ chối đúng luật mà tệp được viết ra để thử;
+  `scripts/contracts.sh` báo lỗi khi gõ sai tham số.
 - API quy trình trả 422 khi thân request có khóa ngoài `variables`, thay vì bỏ qua khóa đó. Trước đây gửi
   `{"approved": true}` thiếu lớp `variables` vẫn hoàn thành task, nhưng quy trình không nhận được biến và rẽ sang
   nhánh mặc định. Lỗi 422 có dạng `{"error": "..."}` như các lỗi khác của API.

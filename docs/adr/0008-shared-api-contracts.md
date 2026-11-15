@@ -42,6 +42,8 @@ Các lựa chọn đã xét:
     schema nào kiểm nó;
   - mỗi tệp phạm đúng một luật. Chỉ đòi "bị từ chối" thì tệp hỏng cú pháp hay tệp sai nhiều chỗ vẫn qua, và bỏ một
     luật khỏi schema có thể không làm ví dụ nào thay đổi kết quả;
+  - luật bị phạm phải là luật tệp được viết ra để thử: `contracts/examples/expected-errors.txt` ghi vị trí lỗi và một
+    đoạn thông điệp cho từng tệp. Chỉ đếm số lỗi thì tệp bị từ chối vì lý do khác, sau khi schema đổi, vẫn qua;
   - giá trị sai cố ý không giống thứ có thật (`no-such-component`, `no_such_key`), để ví dụ không thành hợp lệ khi
     hợp đồng thêm thành phần hay khóa mới.
 - `make check-fast` gọi `scripts/contracts.sh check`, kiểm: schema đúng với metaschema; ví dụ hợp lệ và mọi

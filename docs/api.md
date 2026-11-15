@@ -6,7 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 # API của lõi
 
 Mọi API đi qua cổng APISIX tại `http://localhost:9080` (đổi bằng `MORTISE_PUBLIC_URL`). Trừ đăng nhập, mọi lời gọi
-phải có access token của Keycloak; không có hoặc sai token thì cổng trả `401`. Các ví dụ dưới đây chạy được sau
+phải có access token của Keycloak; không có hoặc sai token thì cổng trả `401` với thân JSON `{"error": "..."}`,
+cùng dạng lỗi của API quy trình. Các ví dụ dưới đây chạy được sau
 `make up && make seed`, và cũng là những gì `make smoke` kiểm tra.
 
 ## Lấy token
@@ -53,7 +54,7 @@ curl -fsS -X POST http://localhost:9080/v1/graphql \
 |---|---|
 | `200` | Truy vấn hợp lệ; lỗi nghiệp vụ nằm trong trường `errors` của GraphQL |
 | `401` | Thiếu hoặc sai token |
-| `429` | Vượt giới hạn 600 yêu cầu mỗi phút cho mỗi token |
+| `429` | Vượt giới hạn 600 yêu cầu mỗi phút cho mỗi token; thân hiện là trang HTML của cổng, chưa theo dạng JSON |
 
 ## Quy trình: `/v1/workflow/*`
 

@@ -22,6 +22,32 @@ upstreams:
     nodes:
       "web:8080": 1
 
+# Xác thực dùng chung cho mọi API dưới /v1. Hai route graphql và workflow tham chiếu bộ này, để một token và một lỗi
+# 401 có cùng nghĩa ở mọi API.
+plugin_configs:
+  - id: bearer-token
+    plugins:
+      openid-connect:
+        # bearer_only + use_jwks: cổng tự kiểm chữ ký token bằng JWKS của
+        # Keycloak, không gọi introspection nên client_secret không được dùng
+        # (schema của plugin vẫn bắt buộc khai báo). client_id cũng không ràng
+        # buộc token: token của mọi client trong realm (kể cả mortise-test) đều
+        # qua cổng nếu chữ ký và issuer đúng.
+        client_id: mortise-web
+        client_secret: not-used-bearer-only-jwks
+        discovery: http://keycloak:8080/auth/realms/mortise/.well-known/openid-configuration
+        bearer_only: true
+        use_jwks: true
+      # openid-connect trả trang HTML khi thiếu hay sai token; client viết theo hợp đồng (ErrorBody trong
+      # contracts/workflow-api.openapi.json) cần JSON để hiện lý do và biết phải đăng nhập lại. Plugin không phân biệt
+      # 401 đến từ đâu, nên 401 của Hasura hay workflow-api (hiếm, vì cổng đã kiểm token trước) cũng mang lý do chung.
+      response-rewrite:
+        vars: [["status", "==", 401]]
+        headers:
+          set:
+            Content-Type: application/json
+        body: "{\"error\":\"Thiếu hoặc sai access token; đăng nhập lại để lấy token mới.\"}\n"
+
 routes:
   # Chỉ mở các đường OIDC mà ứng dụng và trình duyệt cần của realm mortise (ADR 0007): cấu hình, đăng nhập, token,
   # đăng xuất, khóa công khai, thông tin người dùng, thu hồi token, các bước của form đăng nhập (gồm nhập OTP) và tài
@@ -56,18 +82,8 @@ routes:
     uri: /v1/graphql
     methods: ["POST", "GET", "OPTIONS"]
     upstream_id: hasura
+    plugin_config_id: bearer-token
     plugins:
-      openid-connect:
-        # bearer_only + use_jwks: cổng tự kiểm chữ ký token bằng JWKS của
-        # Keycloak, không gọi introspection nên client_secret không được dùng
-        # (schema của plugin vẫn bắt buộc khai báo). client_id cũng không ràng
-        # buộc token: token của mọi client trong realm (kể cả mortise-test) đều
-        # qua cổng nếu chữ ký và issuer đúng.
-        client_id: mortise-web
-        client_secret: not-used-bearer-only-jwks
-        discovery: http://keycloak:8080/auth/realms/mortise/.well-known/openid-configuration
-        bearer_only: true
-        use_jwks: true
       limit-count:
         count: 600
         time_window: 60
@@ -83,13 +99,8 @@ routes:
     uri: /v1/workflow/*
     methods: ["POST", "GET", "OPTIONS"]
     upstream_id: workflow-api
+    plugin_config_id: bearer-token
     plugins:
-      openid-connect:
-        client_id: mortise-web
-        client_secret: not-used-bearer-only-jwks
-        discovery: http://keycloak:8080/auth/realms/mortise/.well-known/openid-configuration
-        bearer_only: true
-        use_jwks: true
       limit-count:
         count: 300
         time_window: 60
