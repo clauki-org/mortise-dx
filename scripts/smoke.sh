@@ -101,6 +101,16 @@ for pair in "user.a xuong-a" "user.b xuong-b"; do
   check "$user chỉ thấy dữ liệu tenant của mình" "$tenants" "[\"$tenant\"]"
 done
 
+# Khai báo bước của quy trình mẫu: đọc được qua GraphQL bằng token, chỉ dòng của tenant mình.
+steps_query='{"query":"{ platform_workflow_steps(where: {process: {_eq: \"core-approval\"}}) { tenant_id step config } }"}'
+for pair in "user.a xuong-a" "user.b xuong-b"; do
+  read -r user tenant <<<"$pair"
+  steps=$(curl -fsS -X POST "$base/v1/graphql" -H "Authorization: Bearer $(token "$user")" \
+    -H 'Content-Type: application/json' -d "$steps_query" \
+    | jq -c '[.data.platform_workflow_steps[] | [.tenant_id, .step, (.config.actions | length)]]')
+  check "$user đọc được khai báo bước của tenant mình" "$steps" "[[\"$tenant\",\"review\",2]]"
+done
+
 # Token thật do Keycloak cấp phải khớp hợp đồng mà các tầng dựa vào.
 claims_file=$(mktemp)
 trap 'rm -f "$claims_file"' EXIT

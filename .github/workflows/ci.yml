@@ -72,7 +72,7 @@ jobs:
           files=$(git diff --name-only "origin/$BASE_REF...HEAD")
           printf '%s\n' "$files"
           docs='(\.md$|^docs/|^LICENSES?|^\.github/ISSUE_TEMPLATE/|^\.editorconfig$|^REUSE\.toml$)'
-          backup='(^compose\.yaml$|^core/postgres/|^scripts/(backup|restore)\.sh$'
+          backup='(^compose\.yaml$|^core/postgres/|^platform/schema/|^scripts/(backup|restore)\.sh$'
           backup="$backup"'|^Makefile$|^\.env\.example$|^\.github/workflows/)'
           core=false; restore=false
           if printf '%s\n' "$files" | grep -Evq "$docs"; then core=true; fi

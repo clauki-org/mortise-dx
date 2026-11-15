@@ -85,6 +85,22 @@ services:
       postgres:
         condition: service_healthy
 
+  migrate-platform:
+    # Migration của Tầng 2, lịch sử riêng với lõi (ADR 0005). Chạy sau lõi vì bảng của Tầng 2 tham chiếu
+    # core.tenants.
+    image: ghcr.io/amacneil/dbmate:2.37.0
+    restart: "no"
+    environment:
+      DATABASE_URL: postgres://hasura:${HASURA_DB_PASSWORD}@postgres:5432/mortise?sslmode=disable
+      DBMATE_MIGRATIONS_DIR: /migrations
+      DBMATE_MIGRATIONS_TABLE: platform.schema_migrations
+    command: ["--wait", "--no-dump-schema", "--migration-lock", "up", "--strict"]
+    volumes:
+      - ./platform/schema/migrations:/migrations:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
   hasura:
     # Bản -ce là Community Edition (Apache-2.0); bản không có -ce chứa mã EE.
     image: hasura/graphql-engine:v2.51.4-ce
@@ -110,6 +126,8 @@ services:
       postgres:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      migrate-platform:
         condition: service_completed_successfully
       keycloak:
         condition: service_healthy

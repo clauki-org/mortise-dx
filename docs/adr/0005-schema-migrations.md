@@ -38,6 +38,8 @@ Các lựa chọn đã xét:
 - Dùng **dbmate** (MIT), image chính thức `ghcr.io/amacneil/dbmate`, ghim phiên bản 2.37.0.
 - Mỗi lịch sử migration là một cặp thư mục và bảng theo dõi riêng:
   - lõi: `core/postgres/migrations/`, bảng `core.schema_migrations`;
+  - Tầng 2: `platform/schema/migrations/`, bảng `platform.schema_migrations`; chạy sau lõi vì bảng của Tầng 2
+    tham chiếu `core.tenants`;
   - mỗi gói: `apps/<gói>/schema/migrations/`, bảng theo dõi nằm **ngoài** lược đồ của gói. Gỡ gói thường xóa cả
     lược đồ của gói; nếu bảng theo dõi nằm trong đó, nó bị xóa giữa lúc gỡ.
 - Tệp migration đặt tên `YYYYMMDDHHMMSS_mo_ta_ngan.sql`, có cả phần `-- migrate:up` và `-- migrate:down`; mỗi tệp

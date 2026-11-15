@@ -91,7 +91,12 @@ hasura() {
 hasura '{"type":"bulk_keep_going","args":[
   {"type":"pg_track_table","args":{"source":"default","table":{"schema":"core","name":"tenants"}}},
   {"type":"pg_create_select_permission","args":{"source":"default","table":{"schema":"core","name":"tenants"},
-    "role":"user","permission":{"columns":["id","name","created_at"],"filter":{"id":{"_eq":"X-Hasura-Tenant-Id"}}}}}
+    "role":"user","permission":{"columns":["id","name","created_at"],"filter":{"id":{"_eq":"X-Hasura-Tenant-Id"}}}}},
+  {"type":"pg_track_table","args":{"source":"default","table":{"schema":"platform","name":"workflow_steps"}}},
+  {"type":"pg_create_select_permission","args":{"source":"default",
+    "table":{"schema":"platform","name":"workflow_steps"},"role":"user",
+    "permission":{"columns":["tenant_id","process","step","config"],
+      "filter":{"tenant_id":{"_eq":"X-Hasura-Tenant-Id"}}}}}
 ]}' >/dev/null
 echo "hasura: metadata đã áp dụng"
 
@@ -115,3 +120,25 @@ for file in core/workflow/fixtures/*.bpmn20.xml; do
   done
 done
 echo "flowable: quy trình đã sẵn sàng"
+
+# Khai báo bước của quy trình mẫu cho mọi tenant (bảng platform.workflow_steps). Ví dụ của hợp đồng viết cho
+# core-approval nên cũng là khai báo của nó; `make check-fast` đã kiểm tệp theo schema và theo BPMN. Khai báo của
+# gói đi cùng BPMN của gói, do bộ cài gói nạp. Bước không còn trong tệp bị xóa, để chạy lại seed sau khi sửa tệp
+# cho kết quả như trên dữ liệu trắng.
+file=contracts/examples/workflow.example.yaml
+declaration=$(uv run --quiet --no-project --with pyyaml==6.0.3 python -c \
+  'import json, sys, yaml; print(json.dumps(yaml.safe_load(open(sys.argv[1], encoding="utf-8"))))' "$file")
+docker compose exec -T postgres psql -qX -v ON_ERROR_STOP=1 --username hasura --dbname mortise \
+  -v declaration="$declaration" <<'SQL'
+BEGIN;
+CREATE TEMP TABLE declaration ON COMMIT DROP AS SELECT :'declaration'::jsonb AS d;
+DELETE FROM platform.workflow_steps w USING declaration
+WHERE w.process = d->>'process' AND NOT (d->'steps' ? w.step);
+INSERT INTO platform.workflow_steps (tenant_id, process, step, config)
+SELECT t.id, d->>'process', s.key, s.value
+FROM core.tenants t, declaration, jsonb_each(d->'steps') s
+ON CONFLICT (tenant_id, process, step) DO UPDATE SET config = EXCLUDED.config, updated_at = now()
+    WHERE platform.workflow_steps.config IS DISTINCT FROM EXCLUDED.config;
+COMMIT;
+SQL
+echo "postgres: khai báo bước $(jq -r .process <<<"$declaration") từ $file"
