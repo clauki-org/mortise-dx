@@ -68,6 +68,7 @@ Các lựa chọn đã xét:
 - Phần `down` của lõi dùng khi phát triển; bản cài có dữ liệu thật quay lại bằng bản sao lưu, không bằng `down`.
 - Thêm một thành phần bên thứ ba: README, `docs/tools.md` và bảng giấy phép cập nhật trong pull request chuyển lược
   đồ lõi sang migration.
-- Metadata Hasura của lõi đang áp trong `scripts/seed.sh` sẽ chuyển sang tệp khai báo cùng cơ chế với gói.
+- Metadata Hasura của lõi và Tầng 2 nằm trong tệp khai báo (`core/hasura/`, `platform/schema/hasura/`), cùng định
+  dạng với tệp của gói; `make seed` áp theo kiểu ghi đè và `make smoke` kiểm lệch (bổ sung ngày 2026-11-16).
 - CI cần kiểm: áp migration trên CSDL trắng; vòng sao lưu và khôi phục vẫn qua; khi đã có gói, cài gói, chạy smoke,
   gỡ gói, smoke vẫn qua.

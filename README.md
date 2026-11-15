@@ -127,6 +127,7 @@ Makefile              lối vào duy nhất: dựng, kiểm tra, sao lưu
 contracts/            hợp đồng API giữa các tầng: claim token, app.yaml, khai báo bước, OpenAPI
 core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết của lõi
   apisix/ keycloak/ postgres/
+  hasura/             bảng Hasura đăng ký và quyền theo vai trò (khai báo)
   postgres/migrations/  migration lược đồ của lõi (dbmate)
   workflow-api/       kiểm quyền trước Flowable (Python)
   files-api/          API tệp trước SeaweedFS (Python)

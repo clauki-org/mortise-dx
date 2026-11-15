@@ -84,22 +84,8 @@ ON CONFLICT (id) DO NOTHING;
 SQL
 echo "postgres: tenant demo xuong-a, xuong-b"
 
-hasura() {
-  curl -fsS -X POST "http://127.0.0.1:${HASURA_PORT:-8082}/v1/metadata" \
-    -H "X-Hasura-Admin-Secret: $HASURA_ADMIN_SECRET" -H 'Content-Type: application/json' -d "$1"
-}
-
-hasura '{"type":"bulk_keep_going","args":[
-  {"type":"pg_track_table","args":{"source":"default","table":{"schema":"core","name":"tenants"}}},
-  {"type":"pg_create_select_permission","args":{"source":"default","table":{"schema":"core","name":"tenants"},
-    "role":"user","permission":{"columns":["id","name","created_at"],"filter":{"id":{"_eq":"X-Hasura-Tenant-Id"}}}}},
-  {"type":"pg_track_table","args":{"source":"default","table":{"schema":"platform","name":"workflow_steps"}}},
-  {"type":"pg_create_select_permission","args":{"source":"default",
-    "table":{"schema":"platform","name":"workflow_steps"},"role":"user",
-    "permission":{"columns":["tenant_id","process","step","config"],
-      "filter":{"tenant_id":{"_eq":"X-Hasura-Tenant-Id"}}}}}
-]}' >/dev/null
-echo "hasura: metadata đã áp dụng"
+# Quyền dữ liệu của Hasura: áp tệp khai báo theo kiểu ghi đè, nên chạy lại seed cũng sửa được quyền đã bị đổi sai.
+uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py apply
 
 # Deploy quy trình mẫu dùng để kiểm thử lõi cho từng tenant có trong core.tenants. Flowable đặt tên
 # deployment theo tên tệp tải lên (bỏ qua trường deploymentName), nên băm của tệp được

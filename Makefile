@@ -77,6 +77,7 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts
 	uvx ruff format --no-cache --check --config core/workflow-api/pyproject.toml scripts
 	@scripts/contracts.sh check
+	uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py lint
 
 # Giấy phép phụ thuộc của giao diện (ADR 0006). Thư viện đóng gói vào tệp giao diện gửi tới người dùng chỉ được mang
 # giấy phép dễ dãi. Công cụ chỉ chạy lúc phát triển và build, không đóng gói vào sản phẩm, được thêm: BlueOak-1.0.0
