@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/workflow.schema.json từ chối: tên hồ sơ lấy từ biến dành riêng của lõi.
+# Nếu lọt, bảng việc hiện mã người gửi (sub trong token) thay cho tên hồ sơ.
+
+process: core-approval
+steps:
+  review:
+    title: initiator
+    actions:
+      - { id: approve, label: Duyệt, variables: { approved: true } }

@@ -66,7 +66,8 @@ export function Shell() {
           />
         ))}
       </AppShell.Navbar>
-      <AppShell.Main>
+      {/* Nền xám nhạt để các khung nội dung (Paper, nền trắng) tách khỏi nền trang. */}
+      <AppShell.Main bg="gray.0">
         <Outlet />
       </AppShell.Main>
     </AppShell>
