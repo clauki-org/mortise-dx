@@ -8,6 +8,7 @@
 process: core-approval
 steps:
   review:
+    title: title
     form:
       type: object
       required: [comment]

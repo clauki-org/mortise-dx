@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Bảng việc: các task đang chờ người đăng nhập, gồm task đã giao cho họ và task chờ nhận theo vai trò của họ
-// (workflow-api đã lọc theo tenant và vai trò). Việc gần hạn nhất đứng đầu; lọc được theo hạn.
+// (workflow-api đã lọc theo tenant và vai trò). Mỗi dòng hiện tên hồ sơ theo khai báo của bước; việc gần hạn nhất
+// đứng đầu, lọc được theo hạn.
 
-import { Alert, Badge, Button, Group, Loader, SegmentedControl, Stack, Table, Text, Title } from "@mantine/core";
+import { Alert, Badge, Button, Group, Loader, Paper, SegmentedControl, Stack, Table, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useSession } from "./session";
+import { dateTime, dueText, recordTitle, stepOf, useSteps } from "./steps";
 import { fetchTasks, type Task } from "./workflow";
 
 type Filter = "all" | "overdue" | "upcoming" | "no-due";
@@ -18,8 +20,6 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: "upcoming", label: "Còn hạn" },
   { value: "no-due", label: "Không đặt hạn" },
 ];
-
-const dateTime = new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" });
 
 function matches(task: Task, filter: Filter, now: number): boolean {
   const due = task.due === null ? null : Date.parse(task.due);
@@ -42,21 +42,19 @@ function byDue(a: Task, b: Task): number {
   return dueA - dueB || Date.parse(a.created) - Date.parse(b.created);
 }
 
-function DueCell({ due, now }: { due: string | null; now: number }) {
-  if (due === null)
+function DueBadge({ due, now }: { due: string | null; now: number }) {
+  if (due === null) {
     return (
-      <Text size="sm" c="dimmed">
+      <Badge variant="light" color="gray" tt="none">
         Không đặt hạn
-      </Text>
+      </Badge>
     );
-  const overdue = Date.parse(due) < now;
+  }
+  const { text, overdue } = dueText(due, now);
   return (
-    <Group gap="xs">
-      <Text size="sm" c={overdue ? "red" : undefined}>
-        {dateTime.format(new Date(due))}
-      </Text>
-      {overdue && <Badge color="red">Quá hạn</Badge>}
-    </Group>
+    <Badge variant="light" color={overdue ? "red" : "blue"} tt="none" title={dateTime.format(new Date(due))}>
+      {text}
+    </Badge>
   );
 }
 
@@ -64,6 +62,7 @@ export function TaskList() {
   const { getToken } = useSession();
   const [filter, setFilter] = useState<Filter>("all");
   const tasks = useQuery({ queryKey: ["tasks"], queryFn: () => fetchTasks(getToken()) });
+  const { steps, error: stepsError } = useSteps();
   const now = Date.now();
 
   if (tasks.isPending) return <Loader aria-label="Đang tải danh sách việc" />;
@@ -79,53 +78,82 @@ export function TaskList() {
       </Stack>
     );
   }
+  const count = (value: Filter) => tasks.data.filter((task) => matches(task, value, now)).length;
   const shown = tasks.data.filter((task) => matches(task, filter, now)).sort(byDue);
 
   return (
     <Stack>
-      <Group justify="space-between">
-        <Title order={1} size="h3">
-          Việc của tôi
-        </Title>
+      <Group justify="space-between" align="flex-end">
+        <div>
+          <Title order={1} size="h2">
+            Việc của tôi
+          </Title>
+          <Text c="dimmed" size="sm">
+            Việc đang chờ bạn hoặc vai trò của bạn xử lý, việc gần hạn nhất đứng đầu.
+          </Text>
+        </div>
         <SegmentedControl
           aria-label="Lọc theo hạn"
-          data={FILTERS}
+          data={FILTERS.map(({ value, label }) => ({ value, label: `${label} (${count(value)})` }))}
           value={filter}
           onChange={(value) => setFilter(value as Filter)}
         />
       </Group>
-      {shown.length === 0 ? (
-        <Text c="dimmed">
-          {tasks.data.length === 0 ? "Không có việc nào đang chờ bạn." : "Không có việc nào khớp bộ lọc."}
-        </Text>
-      ) : (
-        <Table.ScrollContainer minWidth={640}>
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Việc</Table.Th>
-                <Table.Th>Hạn</Table.Th>
-                <Table.Th>Nhận lúc</Table.Th>
-                <Table.Th>Quy trình</Table.Th>
-                <Table.Th>Người xử lý</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {shown.map((task) => (
-                <Table.Tr key={task.id}>
-                  <Table.Td>{task.name}</Table.Td>
-                  <Table.Td>
-                    <DueCell due={task.due} now={now} />
-                  </Table.Td>
-                  <Table.Td>{dateTime.format(new Date(task.created))}</Table.Td>
-                  <Table.Td>{task.process}</Table.Td>
-                  <Table.Td>{task.assignee === null ? "Chờ nhận theo vai trò" : "Đã giao cho bạn"}</Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </Table.ScrollContainer>
+      {stepsError && (
+        <Alert color="yellow" title="Không đọc được khai báo của bước">
+          Cột hồ sơ tạm hiện tên bước thay cho tên hồ sơ. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
+        </Alert>
       )}
+      <Paper withBorder radius="md">
+        {shown.length === 0 ? (
+          <Text c="dimmed" p="xl" ta="center">
+            {tasks.data.length === 0 ? "Không có việc nào đang chờ bạn." : "Không có việc nào khớp bộ lọc."}
+          </Text>
+        ) : (
+          <Table.ScrollContainer minWidth={560}>
+            <Table highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Hồ sơ</Table.Th>
+                  <Table.Th>Hạn</Table.Th>
+                  <Table.Th>Người gửi</Table.Th>
+                  <Table.Th>Nhận lúc</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {shown.map((task) => (
+                  <Table.Tr key={task.id}>
+                    <Table.Td>
+                      <Text fw={500}>{recordTitle(task, stepOf(steps, task))}</Text>
+                      <Group gap={6}>
+                        <Text size="xs" c="dimmed">
+                          {task.name}
+                        </Text>
+                        {task.assignee !== null && (
+                          <Badge size="xs" variant="outline" tt="none">
+                            Đã giao cho bạn
+                          </Badge>
+                        )}
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>
+                      <DueBadge due={task.due} now={now} />
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{String(task.variables.initiatorName ?? "")}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">
+                        {dateTime.format(new Date(task.created))}
+                      </Text>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        )}
+      </Paper>
     </Stack>
   );
 }

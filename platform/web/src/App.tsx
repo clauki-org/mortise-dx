@@ -4,10 +4,10 @@
 // Điểm vào sau khi khởi động: chưa đăng nhập thì mời đăng nhập qua Keycloak; đã đăng nhập thì dựng các màn hình
 // theo đường dẫn (React Router) trong khung trang, với client GraphQL và bộ nhớ đệm REST dùng chung.
 
-import { Alert, Button, Center, Loader, Stack, Title } from "@mantine/core";
+import { Alert, Button, Center, Loader, Paper, Stack, Text, Title } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { User } from "oidc-client-ts";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 import { Provider } from "urql";
 import { ApiError } from "./api";
@@ -48,6 +48,17 @@ const createRouter = () =>
 const retry = (failures: number, error: Error) =>
   failures < 3 && (!(error instanceof ApiError) || error.status === 0 || error.status >= 500);
 
+// Khung chung cho các màn hình trước khi đăng nhập: một thẻ giữa nền xám.
+function Gate({ children }: { children: ReactNode }) {
+  return (
+    <Center mih="100vh" bg="gray.0" p="md">
+      <Paper withBorder shadow="sm" radius="md" p="xl" w={400} maw="100%">
+        <Stack>{children}</Stack>
+      </Paper>
+    </Center>
+  );
+}
+
 export function App() {
   const auth = useAuth();
   switch (auth.status) {
@@ -59,23 +70,28 @@ export function App() {
       );
     case "error":
       return (
-        <Center h="100vh">
-          <Stack maw={480}>
-            <Alert color="red" title="Không đăng nhập được">
-              {auth.message}. Thử lại sau ít phút; nếu vẫn lỗi, báo người quản trị.
-            </Alert>
-            <Button onClick={signIn}>Đăng nhập lại</Button>
-          </Stack>
-        </Center>
+        <Gate>
+          <Alert color="red" title="Không đăng nhập được">
+            {auth.message}. Thử lại sau ít phút; nếu vẫn lỗi, báo người quản trị.
+          </Alert>
+          <Button onClick={signIn}>Đăng nhập lại</Button>
+        </Gate>
       );
     case "signed-out":
       return (
-        <Center h="100vh">
-          <Stack align="center">
-            <Title order={2}>Mortise DX</Title>
-            <Button onClick={signIn}>Đăng nhập</Button>
-          </Stack>
-        </Center>
+        <Gate>
+          <div>
+            <Title order={1} size="h2">
+              Mortise DX
+            </Title>
+            <Text c="dimmed" size="sm">
+              Đăng nhập bằng tài khoản do đơn vị cấp để xem và xử lý việc.
+            </Text>
+          </div>
+          <Button size="md" onClick={signIn}>
+            Đăng nhập
+          </Button>
+        </Gate>
       );
     case "signed-in":
       return <SignedIn user={auth.user} />;

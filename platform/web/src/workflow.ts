@@ -25,3 +25,13 @@ export type Task = {
 };
 
 export const fetchTasks = (token: string | undefined) => callApi<Task[]>("/v1/workflow/tasks", token);
+
+/** Khai báo của một bước (contracts/workflow.schema.json, $defs.step), đọc từ platform_workflow_steps. */
+export type StepConfig = {
+  /** Biến chứa tên hồ sơ */
+  title?: string;
+  form?: Record<string, unknown>;
+  ui?: Record<string, unknown>;
+  actions: { id: string; label: string; variables: Record<string, unknown> }[];
+  record?: { menu: string; variable: string };
+};

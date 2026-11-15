@@ -51,6 +51,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   qua GraphQL; `make seed` nạp khai báo của quy trình mẫu.
 - Giao diện có menu bên trái và trang "Việc của tôi": các việc đang chờ người đăng nhập, việc gần hạn đứng đầu,
   lọc quá hạn, còn hạn hoặc không đặt hạn.
+- Bảng việc hiện tên hồ sơ (trường `title` mới của khai báo bước), người gửi, hạn dạng "còn 3 ngày", "quá hạn 1
+  ngày", và số việc của từng bộ lọc; trang đăng nhập và khung trang có nền và khung tách phần.
 
 ### Changed
 

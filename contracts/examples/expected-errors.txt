@@ -27,3 +27,4 @@ workflow.missing-process.yaml	$	'process' is a required property
 workflow.no-actions.yaml	$.steps.review.actions	[] should be non-empty
 workflow.no-steps.yaml	$.steps	{} should be non-empty
 workflow.reserved-variable.yaml	$.steps.review.actions[0].variables	'initiator' should not be valid under {'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}
+workflow.title-reserved-variable.yaml	$.steps.review.title	'initiator' should not be valid under {'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}
