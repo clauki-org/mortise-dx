@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/workflow.schema.json từ chối: nút có nhãn rỗng.
+# Nếu lọt, giao diện vẽ một nút không chữ.
+
+process: core-approval
+steps:
+  review:
+    actions:
+      - { id: approve, label: " ", variables: { approved: true } }

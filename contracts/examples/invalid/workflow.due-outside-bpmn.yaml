@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/workflow.schema.json từ chối: khai hạn xử lý ở đây.
+# Hạn nằm trong BPMN (flowable:dueDate); khai thêm ở đây thì hai nơi sẽ lệch nhau.
+
+process: core-approval
+steps:
+  review:
+    due: P3D
+    actions:
+      - { id: approve, label: Duyệt, variables: { approved: true } }

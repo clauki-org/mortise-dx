@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ khai báo bước hợp lệ theo contracts/workflow.schema.json, viết cho quy trình mẫu
+# core/workflow/fixtures/core-approval.bpmn20.xml. `make check-fast` kiểm tệp này theo schema và kiểm
+# mọi userTask của quy trình đó đều có khai báo. Gói thật đặt tệp ở apps/<gói>/workflows/.
+
+process: core-approval
+steps:
+  review:
+    form:
+      type: object
+      required: [comment]
+      properties:
+        comment:
+          type: string
+          title: Ý kiến
+    ui:
+      comment:
+        ui:widget: textarea
+    actions:
+      - id: approve
+        label: Duyệt
+        variables:
+          approved: true
+      - id: reject
+        label: Từ chối
+        variables:
+          approved: false
+    record:
+      menu: items
+      variable: itemId

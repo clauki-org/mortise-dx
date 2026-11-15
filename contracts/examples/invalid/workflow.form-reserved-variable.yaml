@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/workflow.schema.json từ chối: trường biểu mẫu trùng biến dành riêng của lõi.
+# Nếu lọt, dữ liệu biểu mẫu gửi kèm khi hoàn thành task làm workflow-api trả 400 mỗi lần bấm nút.
+
+process: core-approval
+steps:
+  review:
+    form:
+      type: object
+      properties:
+        tenant:
+          type: string
+    actions:
+      - { id: approve, label: Duyệt, variables: { approved: true } }

@@ -32,23 +32,29 @@ Các lựa chọn đã xét:
 ## Quyết định
 
 - Hợp đồng giữa các tầng nằm trong `contracts/` ở gốc repo, không thuộc tầng nào:
-  - `token-claims.schema.json` và `app.schema.json`: JSON Schema, bản 2020-12;
+  - `token-claims.schema.json`, `app.schema.json` và `workflow.schema.json` (khai báo bước của quy trình): JSON
+    Schema, bản 2020-12;
   - `workflow-api.openapi.json`: sinh từ mã của workflow-api bằng `make contracts`, không sửa tay.
 - Đổi claim token, định dạng `app.yaml` hay API của dịch vụ thì sửa hợp đồng trong cùng pull request. Đổi route hay
   model của workflow-api thì chạy `make contracts` và commit tệp OpenAPI.
 - Mỗi schema có ví dụ hợp lệ trong `contracts/examples/` và ví dụ sai trong `contracts/examples/invalid/`:
-  - tệp ví dụ sai đặt tên `token-claims.<lỗi>.json` hoặc `app.<lỗi>.yaml`; tên quyết định schema nào kiểm nó;
+  - tệp ví dụ sai đặt tên `token-claims.<lỗi>.json`, `app.<lỗi>.yaml` hoặc `workflow.<lỗi>.yaml`; tên quyết định
+    schema nào kiểm nó;
   - mỗi tệp phạm đúng một luật. Chỉ đòi "bị từ chối" thì tệp hỏng cú pháp hay tệp sai nhiều chỗ vẫn qua, và bỏ một
     luật khỏi schema có thể không làm ví dụ nào thay đổi kết quả;
   - giá trị sai cố ý không giống thứ có thật (`no-such-component`, `no_such_key`), để ví dụ không thành hợp lệ khi
     hợp đồng thêm thành phần hay khóa mới.
 - `make check-fast` gọi `scripts/contracts.sh check`, kiểm: schema đúng với metaschema; ví dụ hợp lệ và mọi
   `apps/*/app.yaml` qua schema; từng ví dụ sai phạm đúng một luật; tệp trong `invalid/` sai mẫu tên bị báo lỗi;
-  OpenAPI đã commit khớp với OpenAPI sinh từ mã.
+  OpenAPI đã commit khớp với OpenAPI sinh từ mã; khai báo bước khớp với BPMN (`scripts/check-workflow-steps.py`).
 - `make smoke` lấy một token thật từ Keycloak và kiểm nó theo `token-claims.schema.json`.
 - Công cụ kiểm là check-jsonschema, chạy qua `uvx`, ghim phiên bản 0.29.4.
 - Luật kiểm được trên một tệp thì viết vào schema. Luật cần so nhiều trường hoặc nhiều tệp với nhau (mục menu trùng
-  `id`, `id` gói khớp tên lược đồ, vai trò và tệp có tồn tại) thuộc về bộ cài gói.
+  `id`, `id` gói khớp tên lược đồ, vai trò và tệp có tồn tại) thuộc về bộ cài gói. Riêng khai báo bước được kiểm
+  ngay trong `make check-fast`, vì bước quên khai báo chỉ lộ ra khi đã có task trên bảng việc: mỗi userTask có
+  khai báo, không khai bước BPMN không có, nút trong một bước không trùng `id`, trường bắt buộc có trong biểu mẫu.
+- Hạn xử lý và quy tắc bốn mắt khai trong BPMN (`flowable:dueDate`, `flowable:category`), nơi Flowable và
+  workflow-api thực thi; khai báo bước không có trường cho hai thứ này, để không có hai nơi lệch nhau.
 
 Đã kiểm ngày 2026-11-15 bằng `scripts/contracts.sh check` với check-jsonschema 0.29.4:
 

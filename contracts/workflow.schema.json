@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/workflow.schema.json",
+  "title": "Khai báo bước của quy trình (workflows/*.yaml)",
+  "description": "Tệp apps/<gói>/workflows/<khóa quy trình>.yaml. Bảng việc đọc khai báo này để biết mỗi bước người làm của BPMN hiện biểu mẫu nào, nút nào và mở hồ sơ nào. Hạn xử lý và quy tắc bốn mắt khai trong BPMN, nơi Flowable và workflow-api thực thi, không lặp lại ở đây.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["process", "steps"],
+  "properties": {
+    "process": {
+      "description": "Khóa của quy trình: id của phần tử <process> trong BPMN",
+      "$ref": "#/$defs/slug"
+    },
+    "steps": {
+      "description": "Mỗi userTask của quy trình một mục, khóa là id của userTask",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$" },
+      "additionalProperties": { "$ref": "#/$defs/step" }
+    }
+  },
+  "$defs": {
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actions"],
+      "properties": {
+        "form": {
+          "description": "JSON Schema của dữ liệu người xử lý nhập; giao diện vẽ thành biểu mẫu. Mỗi trường thành một biến của quy trình khi hoàn thành task, nên tên trường theo luật tên biến. Bỏ trống thì bước chỉ có nút.",
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "object" },
+            "properties": { "type": "object", "propertyNames": { "$ref": "#/$defs/variable" } }
+          }
+        },
+        "ui": {
+          "description": "Gợi ý cách vẽ biểu mẫu (uiSchema của react-jsonschema-form)",
+          "type": "object"
+        },
+        "actions": {
+          "description": "Các nút quyết định. Bấm nút thì dữ liệu biểu mẫu cùng variables của nút được gửi khi hoàn thành task.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/action" }
+        },
+        "record": {
+          "description": "Nút mở hồ sơ: mục menu của gói hiển thị hồ sơ, và biến của quy trình chứa mã hồ sơ",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["menu", "variable"],
+          "properties": {
+            "menu": { "$ref": "#/$defs/slug" },
+            "variable": { "$ref": "#/$defs/variable" }
+          }
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "variables"],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "label": { "$ref": "#/$defs/text" },
+        "variables": {
+          "description": "Biến gửi cho quy trình khi bấm nút, ví dụ để cổng rẽ nhánh chọn đường đi",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/variable" }
+        }
+      }
+    },
+    "variable": {
+      "description": "Tên biến của quy trình; không được trùng biến dành riêng mà lõi đặt (docs/api.md)",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "not": { "enum": ["initiator", "initiatorName", "tenant", "idempotencyKey"] }
+    },
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "text": {
+      "description": "Chữ hiển thị cho người dùng: có ít nhất một ký tự không phải khoảng trắng",
+      "type": "string",
+      "pattern": "\\S"
+    }
+  }
+}

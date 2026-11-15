@@ -45,6 +45,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   Ví dụ sai trong `contracts/examples/invalid/` phải bị từ chối, mỗi tệp phạm đúng một luật.
 - Task của API quy trình có thêm `process`, `step` và `due` để giao diện biết việc đang ở bước nào và hạn khi
   nào; khởi tạo quy trình nhận header `Idempotency-Key`, gửi lặp không tạo quy trình thứ hai.
+- Định dạng khai báo bước của quy trình (`contracts/workflow.schema.json`): biểu mẫu, nút quyết định và hồ sơ
+  liên quan của từng bước người làm; `make check-fast` kiểm mọi userTask trong BPMN của gói đều có khai báo.
 
 ### Changed
 
