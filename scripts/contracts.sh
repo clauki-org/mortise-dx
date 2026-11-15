@@ -10,17 +10,27 @@ cd "$(dirname "$0")/.."
 
 mode="${1:-check}"
 checker=(uvx --from check-jsonschema==0.29.4 check-jsonschema)
+steps=(uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/check-workflow-steps.py)
 openapi=contracts/workflow-api.openapi.json
 
 "${checker[@]}" --check-metaschema contracts/*.schema.json
 "${checker[@]}" --schemafile contracts/token-claims.schema.json contracts/examples/token-claims.example.json
 "${checker[@]}" --schemafile contracts/app.schema.json contracts/examples/app.example.yaml
-# Gói thật, nếu đã có.
-shopt -s nullglob
+"${checker[@]}" --schemafile contracts/workflow.schema.json contracts/examples/workflow.example.yaml
+"${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml --steps contracts/examples/workflow.example.yaml
+# Gói thật, nếu đã có. Khai báo bước của một gói chỉ đối chiếu với BPMN của chính gói đó.
+shopt -s nullglob globstar
 apps=(apps/*/app.yaml)
 if ((${#apps[@]})); then
   "${checker[@]}" --schemafile contracts/app.schema.json "${apps[@]}"
 fi
+for app in apps/*/; do
+  declarations=("$app"workflows/*.yaml)
+  if ((${#declarations[@]})); then
+    "${checker[@]}" --schemafile contracts/workflow.schema.json "${declarations[@]}"
+  fi
+  "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}"
+done
 
 # Ví dụ sai trong contracts/examples/invalid/ phải bị từ chối. Thiếu bước này, một schema
 # bị nới lỏng vẫn qua mọi ví dụ đúng mà không ai biết nó không còn chặn được gì.
@@ -46,13 +56,14 @@ reject() {
 }
 reject contracts/token-claims.schema.json contracts/examples/invalid/token-claims.*.json
 reject contracts/app.schema.json contracts/examples/invalid/app.*.yaml
+reject contracts/workflow.schema.json contracts/examples/invalid/workflow.*.yaml
 # Hai mẫu tên ở trên quyết định tệp nào được kiểm. Tệp đặt sai tên sẽ nằm trong invalid/
 # mà chưa từng bị kiểm, nên phải báo lỗi thay vì bỏ qua.
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
-    token-claims.*.json | app.*.yaml) ;;
+    token-claims.*.json | app.*.yaml | workflow.*.yaml) ;;
     *)
-      echo "$file không được kiểm: tên phải theo mẫu token-claims.<lỗi>.json hoặc app.<lỗi>.yaml." >&2
+      echo "$file không được kiểm: tên phải theo mẫu token-claims.<lỗi>.json, app.<lỗi>.yaml hoặc workflow.<lỗi>.yaml." >&2
       exit 1
       ;;
   esac

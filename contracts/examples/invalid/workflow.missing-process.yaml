@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/workflow.schema.json từ chối: thiếu khóa quy trình.
+# Nếu lọt, không biết khai báo thuộc quy trình nào nên không ghép được với task.
+
+steps:
+  review:
+    actions:
+      - { id: approve, label: Duyệt, variables: { approved: true } }

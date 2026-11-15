@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/workflow.schema.json từ chối: không khai bước nào.
+# Nếu lọt, mọi task của quy trình hiện ra mà không có nút để xử lý.
+
+process: core-approval
+steps: {}

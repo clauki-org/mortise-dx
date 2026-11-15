@@ -69,6 +69,8 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts .github
 	uvx ruff check --no-cache core/workflow-api
 	uvx ruff format --no-cache --check core/workflow-api
+	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts
+	uvx ruff format --no-cache --check --config core/workflow-api/pyproject.toml scripts
 	@scripts/contracts.sh check
 
 # Giấy phép phụ thuộc của giao diện (ADR 0006). Thư viện đóng gói vào tệp giao diện gửi tới người dùng chỉ được mang
