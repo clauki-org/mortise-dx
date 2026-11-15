@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: phiên bản có số 0 đứng đầu, trái
+# Semantic Versioning. Nếu lọt, công cụ so sánh phiên bản có thể xếp sai gói mới và cũ.
+
+id: example
+name: Example package
+version: "01.0.0"
+database:
+  schema: app_example
+  migrations: schema/migrations

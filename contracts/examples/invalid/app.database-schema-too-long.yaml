@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: tên lược đồ dài 64 ký tự, quá
+# giới hạn 63. Nếu lọt, PostgreSQL cắt tên và hai gói có thể ghi vào cùng một lược đồ.
+
+id: example
+name: Example package
+version: 0.1.0
+database:
+  schema: app_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  migrations: schema/migrations

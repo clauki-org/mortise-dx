@@ -12,12 +12,20 @@ from fastapi.responses import JSONResponse, Response
 from . import flowable
 from .auth import caller_from_token
 from .policy import Caller, Denied, TaskView, check_can_complete, check_variables
+from .schemas import ErrorBody, InstanceStatus, ProcessStarted, Task
 
-app = FastAPI(title="DX-OS workflow API", docs_url=None, redoc_url=None, openapi_url=None)
+# openapi_url=None: không phục vụ tài liệu qua cổng; hợp đồng nằm trong contracts/.
+app = FastAPI(
+    title="Mortise DX workflow API", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None
+)
 
 CallerDep = Annotated[Caller, Depends(caller_from_token)]
 # Thân request dạng {"variables": {...}}; bỏ trống thì coi như không có biến.
 Variables = Annotated[dict[str, object] | None, Body(embed=True)]
+
+
+def _errors(*codes: int) -> dict:
+    return {code: {"model": ErrorBody} for code in (401, *codes)}
 
 
 @app.exception_handler(Denied)
@@ -25,12 +33,18 @@ def denied(_: Request, error: Denied) -> JSONResponse:
     return JSONResponse({"error": error.reason}, status_code=error.status)
 
 
-@app.get("/healthz")
+# Healthcheck của Docker, không đi qua cổng nên không thuộc hợp đồng.
+@app.get("/healthz", include_in_schema=False)
 def healthz() -> dict:
     return {"status": "ok"}
 
 
-@app.post("/v1/workflow/processes/{key}/instances", status_code=201)
+@app.post(
+    "/v1/workflow/processes/{key}/instances",
+    status_code=201,
+    response_model=ProcessStarted,
+    responses=_errors(400, 403, 404, 502, 503),
+)
 def start_process(key: str, caller: CallerDep, variables: Variables = None) -> dict:
     variables = variables or {}
     check_variables(variables)
@@ -42,7 +56,7 @@ def start_process(key: str, caller: CallerDep, variables: Variables = None) -> d
     return {"id": started["id"], "process": key}
 
 
-@app.get("/v1/workflow/tasks")
+@app.get("/v1/workflow/tasks", response_model=list[Task], responses=_errors(403, 502, 503))
 def my_tasks(caller: CallerDep) -> list[dict]:
     # Hai truy vấn vì Flowable không gộp "chưa giao, thuộc nhóm của tôi" với "đã giao cho tôi".
     found = {t["id"]: t for t in flowable.tasks(caller.tenant, groups=sorted(caller.roles))}
@@ -50,7 +64,12 @@ def my_tasks(caller: CallerDep) -> list[dict]:
     return [_task_out(t) for t in found.values()]
 
 
-@app.post("/v1/workflow/tasks/{task_id}/complete", status_code=204)
+@app.post(
+    "/v1/workflow/tasks/{task_id}/complete",
+    status_code=204,
+    response_class=Response,
+    responses=_errors(400, 403, 404, 409, 502, 503),
+)
 def complete_task(task_id: str, caller: CallerDep, variables: Variables = None) -> Response:
     variables = variables or {}
     check_variables(variables)
@@ -62,7 +81,11 @@ def complete_task(task_id: str, caller: CallerDep, variables: Variables = None) 
     return Response(status_code=204)
 
 
-@app.get("/v1/workflow/instances/{instance_id}")
+@app.get(
+    "/v1/workflow/instances/{instance_id}",
+    response_model=InstanceStatus,
+    responses=_errors(403, 404, 502, 503),
+)
 def instance_status(instance_id: str, caller: CallerDep) -> dict:
     found = flowable.instance(instance_id)
     if found is None or found.get("tenantId") != caller.tenant:

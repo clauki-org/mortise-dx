@@ -45,8 +45,8 @@ biệt.
 
 ## Chạy từ mã nguồn
 
-Yêu cầu: Linux hoặc macOS, Docker Engine 24+ với Compose v2, `make`, `curl`, `jq`, `openssl`. Khuyến nghị 8 GB RAM
-trở lên.
+Yêu cầu: Linux hoặc macOS, Docker Engine 24+ với Compose v2, `make`, `curl`, `jq`, `openssl` và
+[`uv`](https://docs.astral.sh/uv/) (`make smoke` dùng nó để kiểm token theo hợp đồng). Khuyến nghị 8 GB RAM trở lên.
 
 ```bash
 make up      # tạo .env với bí mật ngẫu nhiên, dựng lõi, chờ sẵn sàng
@@ -114,6 +114,7 @@ Từng thành phần và công cụ phát triển làm gì, cấu hình ở đâ
 ```
 compose.yaml          các dịch vụ lõi và cách nối với nhau
 Makefile              lối vào duy nhất: dựng, kiểm tra, sao lưu
+contracts/            hợp đồng API giữa các tầng: claim token, app.yaml, OpenAPI
 core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết của lõi
   apisix/ keycloak/ postgres/
   postgres/migrations/  migration lược đồ của lõi (dbmate)

@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/app.schema.json",
+  "title": "Khai báo gói nghiệp vụ (app.yaml)",
+  "description": "Tệp apps/<id>/app.yaml. Bộ cài gói đọc tệp này để chạy migration, áp metadata Hasura, deploy quy trình và thêm mục menu (ADR 0003, ADR 0005). Mọi đường dẫn tính từ thư mục của gói.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "version", "database"],
+  "properties": {
+    "id": {
+      "description": "Mã gói, trùng tên thư mục trong apps/; dài tối đa bằng tên lược đồ",
+      "$ref": "#/$defs/slug",
+      "maxLength": 63
+    },
+    "name": { "description": "Tên hiển thị", "$ref": "#/$defs/text" },
+    "version": {
+      "description": "Phiên bản của gói, Semantic Versioning: ba số, không có số 0 đứng đầu",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "description": { "type": "string" },
+    "database": {
+      "description": "Lược đồ CSDL riêng của gói. Gỡ gói thì lùi hết migration của gói; bảng theo dõi migration nằm ngoài lược đồ này.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "migrations"],
+      "properties": {
+        "schema": {
+          "description": "Tên lược đồ PostgreSQL, bắt đầu bằng app_. PostgreSQL cắt tên dài hơn 63 ký tự, nên hai tên dài có thể trùng nhau sau khi cắt.",
+          "type": "string",
+          "pattern": "^app_[a-z0-9_]+$",
+          "maxLength": 63
+        },
+        "migrations": { "description": "Thư mục migration dbmate", "$ref": "#/$defs/path" }
+      }
+    },
+    "hasura": {
+      "description": "Thư mục metadata Hasura khai báo: bảng được đăng ký, quan hệ, quyền",
+      "$ref": "#/$defs/path"
+    },
+    "workflows": {
+      "description": "Tệp BPMN, deploy cho từng tenant khi cài gói; mỗi tệp khai một lần",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/path", "pattern": "\\.bpmn20\\.xml$" }
+    },
+    "menu": {
+      "description": "Mục menu gói thêm vào khung giao diện; mỗi mục mở một thành phần Tầng 2 với cấu hình của gói",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "component", "config"],
+        "properties": {
+          "id": { "$ref": "#/$defs/slug" },
+          "label": { "$ref": "#/$defs/text" },
+          "component": {
+            "description": "Thành phần Tầng 2 hiển thị mục này",
+            "enum": ["catalog", "form", "map", "tasks", "documents", "dashboard", "rules", "assistant"]
+          },
+          "config": { "description": "Tệp cấu hình của thành phần", "$ref": "#/$defs/path" },
+          "roles": {
+            "description": "Vai trò thấy mục này; bỏ trống thì mọi người dùng của tenant đều thấy",
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "text": {
+      "description": "Chữ hiển thị cho người dùng: có ít nhất một ký tự không phải khoảng trắng",
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "path": {
+      "description": "Đường dẫn tương đối trong thư mục gói: các đoạn chỉ gồm chữ không dấu, số, dấu chấm, gạch dưới, gạch ngang, nối bằng /; không có đoạn . hay ..",
+      "type": "string",
+      "pattern": "^(?!.*(^|/)\\.\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$"
+    }
+  }
+}

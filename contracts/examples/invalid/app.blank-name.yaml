@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: `name` chỉ gồm khoảng trắng.
+# Nếu lọt, gói hiện ra với tên trống trong danh sách gói.
+
+id: example
+name: "   "
+version: 0.1.0
+database:
+  schema: app_example
+  migrations: schema/migrations

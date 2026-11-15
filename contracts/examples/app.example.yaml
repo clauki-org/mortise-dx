@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ app.yaml hợp lệ theo contracts/app.schema.json; `make check-fast` kiểm tệp này.
+# Gói thật nằm ở apps/<id>/app.yaml.
+
+id: example
+name: Gói ví dụ
+version: 0.1.0
+description: Một danh mục đối tượng, một báo cáo và một quy trình duyệt.
+database:
+  schema: app_example
+  migrations: schema/migrations
+hasura: hasura
+workflows:
+  - bpmn/approval.bpmn20.xml
+menu:
+  - id: items
+    label: Danh mục
+    component: catalog
+    config: catalog/items.yaml
+  - id: reports
+    label: Báo cáo
+    component: dashboard
+    config: dashboards/summary.yaml
+    roles: [manager]
