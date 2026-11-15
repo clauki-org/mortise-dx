@@ -9,7 +9,8 @@ SHELL := /bin/sh
 # git đã bỏ qua nó.
 export UV_PROJECT_ENVIRONMENT ?= $(HOME)/.cache/mortise-dx/workflow-api-venv
 
-.PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts check-fast hooks
+.PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
+  check-fast web-check hooks
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -69,6 +70,22 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	uvx ruff check --no-cache core/workflow-api
 	uvx ruff format --no-cache --check core/workflow-api
 	@scripts/contracts.sh check
+
+# Giấy phép phụ thuộc của giao diện (ADR 0006). Thư viện đóng gói vào tệp giao diện gửi tới người dùng chỉ được mang
+# giấy phép dễ dãi. Công cụ chỉ chạy lúc phát triển và build, không đóng gói vào sản phẩm, được thêm: BlueOak-1.0.0
+# (OSI, dễ dãi; nhóm gói của npm), MPL-2.0 (OSI; lightningcss mà Vite dùng để xử lý CSS) và CC0-1.0, CC-BY-3.0 (dữ
+# liệu danh sách giấy phép SPDX mà chính công cụ kiểm giấy phép đọc).
+WEB_LICENSES_SHIPPED := MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD
+WEB_LICENSES_TOOLING := $(WEB_LICENSES_SHIPPED);BlueOak-1.0.0;MPL-2.0;CC0-1.0;CC-BY-3.0
+
+web-check: ## Giao diện: cài theo package-lock, Biome, kiểu TypeScript, build, giấy phép phụ thuộc (cần Node)
+	cd platform/web && npm ci --no-audit --no-fund
+	cd platform/web && npx biome check .
+	cd platform/web && npm run build
+	cd platform/web && npx license-checker-rseidelsohn --summary --production --excludePrivatePackages \
+	  --onlyAllow "$(WEB_LICENSES_SHIPPED)"
+	cd platform/web && npx license-checker-rseidelsohn --summary --development --excludePrivatePackages \
+	  --onlyAllow "$(WEB_LICENSES_TOOLING)"
 
 hooks: ## Cài hook pre-push chạy check-fast
 	install -m 755 scripts/pre-push "$$(git rev-parse --git-path hooks)/pre-push"

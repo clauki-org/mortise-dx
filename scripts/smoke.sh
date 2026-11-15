@@ -45,6 +45,13 @@ done
 check "Khóa công khai (JWKS) của realm lấy được qua cổng" \
   "$(curl -s "$base/auth/realms/mortise/protocol/openid-connect/certs" | jq -r 'has("keys")')" true
 
+# Giao diện Tầng 2 đi qua cổng: trang và đường sâu (điều hướng phía trình duyệt) trả index.html kèm CSP; đường sai
+# dưới /v1 trả 404 thay vì rơi xuống giao diện.
+page_status=$(curl -s -o /dev/null -w '%{http_code}' "$base/some/page")
+csp_headers=$(curl -sI "$base/" | grep -ci '^content-security-policy:' || true)
+check "Giao diện qua cổng, có Content-Security-Policy" "$page_status $csp_headers" "200 1"
+check "Đường API không tồn tại trả 404" "$(curl -s -o /dev/null -w '%{http_code}' "$base/v1/unknown")" 404
+
 # Đăng nhập như trình duyệt (Authorization Code + PKCE) đi trọn qua cổng: trang đăng nhập và tài nguyên của nó,
 # gửi form, đổi mã lấy token. Bài này hỏng khi danh sách đường mở ở cổng thiếu một trong các bước đó.
 pkce_login() {

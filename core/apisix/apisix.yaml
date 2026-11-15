@@ -17,6 +17,10 @@ upstreams:
     type: roundrobin
     nodes:
       "workflow-api:8000": 1
+  - id: web
+    type: roundrobin
+    nodes:
+      "web:8080": 1
 
 routes:
   # Chỉ mở các đường OIDC mà ứng dụng và trình duyệt cần của realm mortise (ADR 0007): cấu hình, đăng nhập, token,
@@ -92,4 +96,21 @@ routes:
         key_type: var
         key: http_authorization
         rejected_code: 429
+
+  # Đường dưới /v1 không khớp API nào trả 404 dạng JSON, không rơi xuống giao diện bên dưới (trả index.html với mã 200
+  # sẽ làm lời gọi API sai đường trông như thành công).
+  - id: api-unknown
+    uris: ["/v1", "/v1/*"]
+    plugins:
+      fault-injection:
+        abort:
+          http_status: 404
+          body: "{\"error\":\"not_found\",\"reason\":\"no API at this path\"}\n"
+
+  # Giao diện Tầng 2 (tệp tĩnh qua nginx). Đón mọi đường không khớp route nào ở trên; không đòi token vì chỉ trả tệp
+  # tĩnh, dữ liệu vẫn phải qua /v1 có token (ADR 0006).
+  - id: web
+    uris: ["/", "/*"]
+    methods: ["GET", "HEAD"]
+    upstream_id: web
 #END

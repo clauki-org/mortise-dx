@@ -40,13 +40,15 @@ biệt.
 | Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
 | Nhật ký thay đổi, sổ cái chống sửa, kiểm dữ liệu theo schema | Kế hoạch | |
 | Sao lưu và khôi phục toàn bộ lõi | Đã chạy | CI: sao lưu → xóa → khôi phục → `make smoke` |
-| Thành phần Tầng 2 và giao diện | Kế hoạch | |
+| Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy; chưa có kiểm thử tự động trên trình duyệt | `make smoke` (cổng, CSP, luồng PKCE), `make web-check` |
+| Thành phần Tầng 2 (danh mục, biểu mẫu, bảng việc, bản đồ) | Kế hoạch | |
 | Gói minh họa: vận hành cơ sở vật chất công cấp xã | Kế hoạch | |
 
 ## Chạy từ mã nguồn
 
 Yêu cầu: Linux hoặc macOS, Docker Engine 24+ với Compose v2, `make`, `curl`, `jq`, `openssl` và
 [`uv`](https://docs.astral.sh/uv/) (`make smoke` dùng nó để kiểm token theo hợp đồng). Khuyến nghị 8 GB RAM trở lên.
+Phát triển giao diện cần thêm Node.js 26.
 
 ```bash
 make up      # tạo .env với bí mật ngẫu nhiên, dựng lõi, chờ sẵn sàng
@@ -56,6 +58,7 @@ make smoke   # kiểm tra đầu-cuối qua cổng
 
 | Địa chỉ | Dịch vụ |
 |---|---|
+| `http://localhost:9080/` | Giao diện (đăng nhập bằng tài khoản demo bên dưới) |
 | `http://localhost:9080/auth/...` | Đăng nhập, cấp token (qua cổng) |
 | `http://localhost:9080/v1/graphql` | API dữ liệu, bắt buộc token |
 | `http://localhost:9080/v1/workflow/...` | API quy trình, bắt buộc token |
@@ -106,6 +109,8 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Migration lược đồ CSDL | dbmate | 2.37.0 | MIT |
 | Động cơ quy trình | Flowable REST | 7.2.0 | Apache-2.0 |
 | Lớp kiểm quyền quy trình (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT | khóa trong `core/workflow-api/uv.lock` | MIT / BSD-3-Clause |
+| Phục vụ giao diện | nginx | 1.30.6 | BSD-2-Clause |
+| Giao diện Tầng 2 (tự viết) | React, Mantine, oidc-client-ts, urql ([ADR 0006](docs/adr/0006-frontend-stack.md)) | khóa trong `platform/web/package-lock.json` | MIT / Apache-2.0 |
 
 Từng thành phần và công cụ phát triển làm gì, cấu hình ở đâu, xem thế nào: [docs/tools.md](docs/tools.md).
 
@@ -120,6 +125,8 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   postgres/migrations/  migration lược đồ của lõi (dbmate)
   workflow-api/       kiểm quyền trước Flowable (Python)
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
+platform/             Tầng 2
+  web/                khung giao diện (React, Vite), phục vụ bằng nginx sau cổng
 scripts/              tạo .env, seed, smoke, tạo migration, sao lưu, khôi phục, hook pre-push
 docs/                 quyết định kiến trúc (adr/), API của lõi (api.md), công cụ (tools.md)
 .github/              CI, mẫu issue và pull request
