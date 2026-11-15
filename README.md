@@ -41,7 +41,8 @@ biệt.
 | Nhật ký thay đổi, sổ cái chống sửa, kiểm dữ liệu theo schema | Kế hoạch | |
 | Sao lưu và khôi phục toàn bộ lõi | Đã chạy | CI: sao lưu → xóa → khôi phục → `make smoke` |
 | Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy; chưa có kiểm thử tự động trên trình duyệt | `make smoke` (cổng, CSP, luồng PKCE), `make web-check` |
-| Thành phần Tầng 2 (danh mục, biểu mẫu, bảng việc, bản đồ) | Kế hoạch | |
+| Bảng việc: danh sách việc đang chờ người đăng nhập, sắp và lọc theo hạn | Đã chạy; chưa có kiểm thử tự động trên trình duyệt | `make web-check` |
+| Thành phần Tầng 2 khác (danh mục, biểu mẫu, màn hình xử lý việc, bản đồ) | Kế hoạch | |
 | Gói minh họa: vận hành cơ sở vật chất công cấp xã | Kế hoạch | |
 
 ## Chạy từ mã nguồn
@@ -110,7 +111,7 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Động cơ quy trình | Flowable REST | 7.2.0 | Apache-2.0 |
 | Lớp kiểm quyền quy trình (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT | khóa trong `core/workflow-api/uv.lock` | MIT / BSD-3-Clause |
 | Phục vụ giao diện | nginx | 1.30.6 | BSD-2-Clause |
-| Giao diện Tầng 2 (tự viết) | React, Mantine, oidc-client-ts, urql ([ADR 0006](docs/adr/0006-frontend-stack.md)) | khóa trong `platform/web/package-lock.json` | MIT / Apache-2.0 |
+| Giao diện Tầng 2 (tự viết) | React, Mantine, oidc-client-ts, urql, React Router, TanStack Query ([ADR 0006](docs/adr/0006-frontend-stack.md)) | khóa trong `platform/web/package-lock.json` | MIT / Apache-2.0 |
 
 Từng thành phần và công cụ phát triển làm gì, cấu hình ở đâu, xem thế nào: [docs/tools.md](docs/tools.md).
 

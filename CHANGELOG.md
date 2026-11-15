@@ -49,6 +49,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   liên quan của từng bước người làm; `make check-fast` kiểm mọi userTask trong BPMN của gói đều có khai báo.
 - Bảng `platform.workflow_steps` (Tầng 2, lịch sử migration riêng): khai báo bước của quy trình theo tenant, đọc
   qua GraphQL; `make seed` nạp khai báo của quy trình mẫu.
+- Giao diện có menu bên trái và trang "Việc của tôi": các việc đang chờ người đăng nhập, việc gần hạn đứng đầu,
+  lọc quá hạn, còn hạn hoặc không đặt hạn.
 
 ### Changed
 

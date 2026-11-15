@@ -134,6 +134,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - Đăng nhập bằng oidc-client-ts với client `mortise-web` (Authorization Code + PKCE); token giữ trong
     `sessionStorage`, làm mới bằng refresh token, không dùng iframe theo dõi phiên.
   - GraphQL tới Hasura qua `/v1/graphql` bằng urql, gửi bằng POST; Hasura lọc dữ liệu theo tenant trong token.
+  - REST tới `/v1/workflow` bằng TanStack Query (bộ nhớ đệm, tự tải lại khi quay lại tab); điều hướng giữa các màn
+    hình bằng React Router, nginx trả `index.html` cho mọi đường nên tải lại trang vẫn đúng màn hình.
   - nginx 1.30.6 phục vụ tệp tĩnh sau cổng tại `/`, trả `index.html` cho đường không phải tệp, gắn
     `Content-Security-Policy` và các header bảo mật (`platform/web/security-headers.conf`).
 - **Phát triển:** `cd platform/web && npm install && npm run dev`, mở `http://localhost:5173`. Máy chủ Vite chuyển
