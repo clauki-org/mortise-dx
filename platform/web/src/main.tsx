@@ -4,6 +4,8 @@
 // Điểm khởi động: bọc ứng dụng trong MantineProvider để mọi component dùng chung theme.
 
 import "@mantine/core/styles.css";
+// Biểu mẫu (rjsf) dùng ô chọn ngày của Mantine khi schema có trường kiểu ngày.
+import "@mantine/dates/styles.css";
 import { MantineProvider } from "@mantine/core";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

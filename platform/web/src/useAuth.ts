@@ -21,8 +21,10 @@ let pending: Promise<User | null> | undefined;
 async function readUser(): Promise<User | null> {
   if (window.location.pathname === CALLBACK_PATH) {
     const user = await userManager.signinRedirectCallback();
-    // Bỏ mã và state khỏi thanh địa chỉ để tải lại trang không xử lý lại mã đã dùng.
-    window.history.replaceState({}, "", "/");
+    // Bỏ mã và state khỏi thanh địa chỉ để tải lại trang không xử lý lại mã đã dùng, và quay về trang đang mở trước
+    // khi đăng nhập. Chỉ nhận đường dẫn trong cùng trang ("/..." nhưng không "//...", vốn trỏ sang máy chủ khác).
+    const back = user.url_state;
+    window.history.replaceState({}, "", back?.startsWith("/") && !back.startsWith("//") ? back : "/");
     return user;
   }
   const user = await userManager.getUser();
