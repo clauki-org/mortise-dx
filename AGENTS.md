@@ -57,6 +57,7 @@ Ranh giới bắt buộc:
 - Không commit tệp mô hình AI, dữ liệu lớn hay bản sao lưu; chúng được tải hoặc sinh ra khi chạy.
 - Hợp đồng giữa các tầng nằm trong `contracts/`. Đổi claim token, định dạng `app.yaml` hay API của dịch vụ thì sửa
   hợp đồng trong cùng pull request; đổi route hay model của workflow-api thì chạy `make contracts`.
+  Lý do: [ADR 0008](docs/adr/0008-shared-api-contracts.md).
 
 ## 3. Code
 
