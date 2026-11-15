@@ -38,6 +38,7 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   cấp không cần `make reset`; `make migrate-new`, `make migrate-status`. Tenant demo chuyển sang `make seed`.
 - Hợp đồng API giữa các tầng trong `contracts/`: JSON Schema cho claim token và `app.yaml`, OpenAPI của
   workflow-api có schema phản hồi và lỗi; `make check-fast` báo lỗi khi lệch, `make smoke` kiểm token thật.
+  Ví dụ sai trong `contracts/examples/invalid/` phải bị từ chối, mỗi tệp phạm đúng một luật.
 
 ### Changed
 

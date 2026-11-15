@@ -2,14 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/clauki-org/mortise-dx/contracts/token-claims.schema.json",
   "title": "Claim trong access token",
-  "description": "Các claim mà cổng, Hasura, workflow-api, giao diện và trợ lý AI dùng để xác định người gọi. Keycloak cấp token; các claim khác của Keycloak có thể có nhưng không được dùng để phân quyền. Claim đơn vị (tỉnh, xã) thêm cùng ADR của epic #23.",
+  "description": "Các claim mà cổng, Hasura, workflow-api, giao diện và trợ lý AI dùng để xác định người gọi. Keycloak cấp token; các claim khác của Keycloak có thể có nhưng không được dùng để phân quyền.",
   "type": "object",
   "required": ["iss", "sub", "exp", "tenant", "realm_access"],
   "properties": {
     "iss": {
-      "description": "Issuer: URL công khai của realm, ví dụ http://localhost:9080/auth/realms/dxos",
+      "description": "Issuer: URL công khai của realm, ví dụ http://localhost:9080/auth/realms/mortise",
       "type": "string",
-      "pattern": "/auth/realms/dxos$"
+      "pattern": "/auth/realms/mortise$"
     },
     "sub": {
       "description": "Mã người dùng, ổn định; dùng làm người khởi tạo, người được giao, người ghi nhật ký",

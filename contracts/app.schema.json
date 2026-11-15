@@ -8,14 +8,15 @@
   "required": ["id", "name", "version", "database"],
   "properties": {
     "id": {
-      "description": "Mã gói, trùng tên thư mục trong apps/",
-      "$ref": "#/$defs/slug"
+      "description": "Mã gói, trùng tên thư mục trong apps/; dài tối đa bằng tên lược đồ",
+      "$ref": "#/$defs/slug",
+      "maxLength": 63
     },
-    "name": { "description": "Tên hiển thị", "type": "string", "minLength": 1 },
+    "name": { "description": "Tên hiển thị", "$ref": "#/$defs/text" },
     "version": {
-      "description": "Phiên bản của gói, Semantic Versioning",
+      "description": "Phiên bản của gói, Semantic Versioning: ba số, không có số 0 đứng đầu",
       "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
     },
     "description": { "type": "string" },
     "database": {
@@ -25,9 +26,10 @@
       "required": ["schema", "migrations"],
       "properties": {
         "schema": {
-          "description": "Tên lược đồ PostgreSQL, bắt đầu bằng app_",
+          "description": "Tên lược đồ PostgreSQL, bắt đầu bằng app_. PostgreSQL cắt tên dài hơn 63 ký tự, nên hai tên dài có thể trùng nhau sau khi cắt.",
           "type": "string",
-          "pattern": "^app_[a-z0-9_]+$"
+          "pattern": "^app_[a-z0-9_]+$",
+          "maxLength": 63
         },
         "migrations": { "description": "Thư mục migration dbmate", "$ref": "#/$defs/path" }
       }
@@ -37,8 +39,9 @@
       "$ref": "#/$defs/path"
     },
     "workflows": {
-      "description": "Tệp BPMN, deploy cho từng tenant khi cài gói",
+      "description": "Tệp BPMN, deploy cho từng tenant khi cài gói; mỗi tệp khai một lần",
       "type": "array",
+      "uniqueItems": true,
       "items": { "$ref": "#/$defs/path", "pattern": "\\.bpmn20\\.xml$" }
     },
     "menu": {
@@ -50,7 +53,7 @@
         "required": ["id", "label", "component", "config"],
         "properties": {
           "id": { "$ref": "#/$defs/slug" },
-          "label": { "type": "string", "minLength": 1 },
+          "label": { "$ref": "#/$defs/text" },
           "component": {
             "description": "Thành phần Tầng 2 hiển thị mục này",
             "enum": ["catalog", "form", "map", "tasks", "documents", "dashboard", "rules", "assistant"]
@@ -67,10 +70,15 @@
   },
   "$defs": {
     "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
-    "path": {
-      "description": "Đường dẫn tương đối trong thư mục gói, không chứa ..",
+    "text": {
+      "description": "Chữ hiển thị cho người dùng: có ít nhất một ký tự không phải khoảng trắng",
       "type": "string",
-      "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$)).+$"
+      "pattern": "\\S"
+    },
+    "path": {
+      "description": "Đường dẫn tương đối trong thư mục gói: các đoạn chỉ gồm chữ không dấu, số, dấu chấm, gạch dưới, gạch ngang, nối bằng /; không có đoạn . hay ..",
+      "type": "string",
+      "pattern": "^(?!.*(^|/)\\.\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$"
     }
   }
 }

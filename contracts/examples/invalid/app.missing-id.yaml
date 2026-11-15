@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: thiếu `id`. Không có mã gói thì
+# bộ cài không biết gói nằm ở thư mục nào trong apps/.
+
+name: Example package
+version: 0.1.0
+database:
+  schema: app_example
+  migrations: schema/migrations

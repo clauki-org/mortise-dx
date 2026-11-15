@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: `component` không có trong danh
+# mục thành phần Tầng 2. Nếu lọt, mục menu sẽ không có gì để hiển thị.
+# Tên cố ý không giống thành phần thật nào: dùng một tên nghe hợp lý thì ngày danh mục
+# thêm đúng thành phần đó, ví dụ này thành hợp lệ và làm hỏng bước kiểm.
+
+id: example
+name: Example package
+version: 0.1.0
+database:
+  schema: app_example
+  migrations: schema/migrations
+menu:
+  - id: items
+    label: Danh mục
+    component: no-such-component
+    config: catalog/items.yaml

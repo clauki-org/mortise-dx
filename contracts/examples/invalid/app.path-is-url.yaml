@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: `config` là một URL, không phải
+# đường dẫn tới tệp trong thư mục gói. Nếu lọt, bộ cài nhận cấu hình từ nơi không thuộc gói.
+
+id: example
+name: Example package
+version: 0.1.0
+database:
+  schema: app_example
+  migrations: schema/migrations
+menu:
+  - id: items
+    label: Danh mục
+    component: catalog
+    config: http://no-such-host.invalid/items.yaml

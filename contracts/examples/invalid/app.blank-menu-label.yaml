@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: nhãn mục menu chỉ gồm khoảng
+# trắng. Nếu lọt, menu hiện một mục trống không ai biết để làm gì.
+
+id: example
+name: Example package
+version: 0.1.0
+database:
+  schema: app_example
+  migrations: schema/migrations
+menu:
+  - id: items
+    label: "   "
+    component: catalog
+    config: catalog/items.yaml

@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: đường dẫn có `..` trỏ ra ngoài
+# thư mục của gói. Nếu lọt, một gói đọc được tệp của lõi hoặc của gói khác.
+
+id: example
+name: Example package
+version: 0.1.0
+database:
+  schema: app_example
+  migrations: schema/migrations
+menu:
+  - id: items
+    label: Danh mục
+    component: catalog
+    config: ../../core/keycloak/realm.yaml

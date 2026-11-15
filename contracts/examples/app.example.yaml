@@ -4,23 +4,23 @@
 # Ví dụ app.yaml hợp lệ theo contracts/app.schema.json; `make check-fast` kiểm tệp này.
 # Gói thật nằm ở apps/<id>/app.yaml.
 
-id: vi-du
+id: example
 name: Gói ví dụ
 version: 0.1.0
-description: Một danh mục đối tượng, một biểu mẫu và một quy trình duyệt.
+description: Một danh mục đối tượng, một báo cáo và một quy trình duyệt.
 database:
-  schema: app_vi_du
+  schema: app_example
   migrations: schema/migrations
 hasura: hasura
 workflows:
-  - bpmn/duyet.bpmn20.xml
+  - bpmn/approval.bpmn20.xml
 menu:
-  - id: danh-muc
+  - id: items
     label: Danh mục
     component: catalog
-    config: catalog/doi-tuong.yaml
-  - id: bao-cao
+    config: catalog/items.yaml
+  - id: reports
     label: Báo cáo
     component: dashboard
-    config: dashboards/tong-hop.yaml
+    config: dashboards/summary.yaml
     roles: [manager]

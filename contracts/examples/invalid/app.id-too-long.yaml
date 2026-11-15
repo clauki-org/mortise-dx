@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: `id` dài 64 ký tự, quá giới hạn
+# 63. Nếu lọt, mã gói dài hơn tên lược đồ CSDL được phép và không dùng chung được.
+
+id: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+name: Example package
+version: 0.1.0
+database:
+  schema: app_example
+  migrations: schema/migrations

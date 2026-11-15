@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: có khóa không thuộc hợp đồng.
+# Nếu lọt, gõ nhầm tên khóa (`workflow` thay vì `workflows`) sẽ bị bỏ qua trong im lặng.
+# Khóa cố ý không giống khóa thật nào: dùng một tên nghe hợp lý thì ngày hợp đồng thêm
+# đúng khóa đó, ví dụ này thành hợp lệ và làm hỏng bước kiểm.
+
+id: example
+name: Example package
+version: 0.1.0
+database:
+  schema: app_example
+  migrations: schema/migrations
+no_such_key: true
