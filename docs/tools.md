@@ -176,8 +176,9 @@ hưởng tới mã Apache-2.0 của dự án. Những công cụ chạy qua `uvx
 | Ruff | Kiểm lỗi và định dạng mã Python | `make check-fast` | MIT |
 | check-jsonschema | Kiểm hợp đồng trong `contracts/` và token thật theo JSON Schema | `make check-fast`, `make smoke` | Apache-2.0 |
 | pytest | Kiểm thử đơn vị workflow-api và files-api | `make test` | MIT |
+| Playwright | Kiểm thử giao diện trên trình duyệt thật qua cổng; bài kiểm ở `platform/web/e2e/` | `make e2e` | Apache-2.0 |
 | Node.js, npm | Build và kiểm giao diện; Node chỉ có trong image build, không có khi chạy | `make web-check`, `npm run dev` | MIT / Artistic-2.0 |
 | Biome | Kiểm lỗi và định dạng mã giao diện | `make web-check` | MIT OR Apache-2.0 |
 | license-checker-rseidelsohn | Kiểm giấy phép phụ thuộc của giao diện theo danh sách cho phép trong `Makefile` | `make web-check` | BSD-3-Clause |
 | curl, jq, openssl | Gọi API trong seed và smoke, đọc JSON, sinh bí mật ngẫu nhiên | `scripts/` | curl / MIT / Apache-2.0 |
-| GitHub Actions | CI: `make check-fast` và `make test` với mọi thay đổi; `make web-check` khi đổi `platform/web/`; dựng lõi trên máy trắng và `make smoke` khi pull request đổi thứ ngoài tài liệu; vòng sao lưu và khôi phục khi đổi phần nó phụ thuộc; push lên `main` chạy đủ | `.github/workflows/ci.yml` | dịch vụ của GitHub |
+| GitHub Actions | CI: `make check-fast` và `make test` với mọi thay đổi; `make web-check` khi đổi `platform/web/`; dựng lõi trên máy trắng, `make smoke` và `make e2e` khi pull request đổi thứ ngoài tài liệu; vòng sao lưu và khôi phục khi đổi phần nó phụ thuộc; push lên `main` chạy đủ | `.github/workflows/ci.yml` | dịch vụ của GitHub |

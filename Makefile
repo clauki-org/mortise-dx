@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check hooks
+  check-fast web-check e2e hooks
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -84,6 +84,13 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 # liệu danh sách giấy phép SPDX mà chính công cụ kiểm giấy phép đọc).
 WEB_LICENSES_SHIPPED := MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD
 WEB_LICENSES_TOOLING := $(WEB_LICENSES_SHIPPED);BlueOak-1.0.0;MPL-2.0;CC0-1.0;CC-BY-3.0
+
+# Bài kiểm chỉ nhận mật khẩu demo và địa chỉ cổng, không nhận các bí mật khác của .env. Trình duyệt Chromium do
+# Playwright tải đúng phiên bản nó cần; đã có thì bước cài chỉ kiểm rồi bỏ qua.
+e2e: ## Kiểm thử trên trình duyệt qua cổng (Playwright); cần lõi đang chạy và đã seed (cần Node)
+	cd platform/web && npm ci --no-audit --no-fund && npx playwright install chromium
+	cd platform/web && DEMO_USER_PASSWORD="$$(sed -n 's/^DEMO_USER_PASSWORD=//p' ../../.env)" \
+	  MORTISE_PUBLIC_URL="$$(sed -n 's/^MORTISE_PUBLIC_URL=//p' ../../.env)" npx playwright test
 
 web-check: ## Giao diện: cài theo package-lock, Biome, kiểu TypeScript, build, giấy phép phụ thuộc (cần Node)
 	cd platform/web && npm ci --no-audit --no-fund

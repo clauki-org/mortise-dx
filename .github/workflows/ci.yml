@@ -101,6 +101,28 @@ jobs:
         run: make seed
       - name: Smoke test through the gateway
         run: make smoke
+      # Kịch bản demo trên trình duyệt thật, qua cổng, với giao diện do nginx phục vụ kèm CSP như bản cài thật.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.13.1
+      # Trình duyệt Playwright giữ giữa các lần chạy theo package-lock (phiên bản Playwright quyết định bản Chromium).
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('platform/web/package-lock.json') }}
+      - name: System libraries for the browser
+        run: cd platform/web && npm ci --no-audit --no-fund && npx playwright install-deps chromium
+      - name: Browser end-to-end tests
+        run: make e2e
+      - name: Keep the browser test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            platform/web/playwright-report
+            platform/web/test-results
+          retention-days: 7
       # Vòng khôi phục: sao lưu, xóa sạch, dựng lõi trắng, khôi phục, rồi smoke lại.
       - name: Back up
         if: env.RESTORE_CYCLE == 'true'

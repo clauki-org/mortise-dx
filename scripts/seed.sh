@@ -54,6 +54,7 @@ users=(
   "user.a  xuong-a  -"
   "manager.a  xuong-a  manager"
   "user.b  xuong-b  -"
+  "manager.b  xuong-b  manager"
 )
 
 for entry in "${users[@]}"; do

@@ -40,8 +40,8 @@ biệt.
 | Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
 | Nhật ký thay đổi, sổ cái chống sửa, kiểm dữ liệu theo schema | Kế hoạch | |
 | Sao lưu và khôi phục toàn bộ lõi | Đã chạy | CI: sao lưu → xóa → khôi phục → `make smoke` |
-| Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy; chưa có kiểm thử tự động trên trình duyệt | `make smoke` (cổng, CSP, luồng PKCE), `make web-check` |
-| Bảng việc: danh sách việc đang chờ người đăng nhập theo hạn; màn hình xử lý với biểu mẫu và nút theo khai báo của bước | Đã chạy; chưa có kiểm thử tự động trên trình duyệt | `make web-check` |
+| Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy | `make smoke` (cổng, CSP, luồng PKCE), `make web-check`, `make e2e` |
+| Bảng việc: danh sách việc đang chờ người đăng nhập theo hạn; màn hình xử lý với biểu mẫu và nút theo khai báo của bước | Đã chạy | `make e2e` (trình duyệt: duyệt, bốn mắt, cách ly đơn vị), `make web-check` |
 | Thành phần Tầng 2 khác (danh mục, biểu mẫu nhập liệu, bản đồ) | Kế hoạch | |
 | Gói minh họa: vận hành cơ sở vật chất công cấp xã | Kế hoạch | |
 
@@ -55,6 +55,7 @@ Phát triển giao diện cần thêm Node.js 26.
 make up      # tạo .env với bí mật ngẫu nhiên, dựng lõi, chờ sẵn sàng
 make seed    # tài khoản demo cho 2 tenant và quyền dữ liệu
 make smoke   # kiểm tra đầu-cuối qua cổng
+make e2e     # kịch bản demo trên trình duyệt (cần Node)
 ```
 
 | Địa chỉ | Dịch vụ |
@@ -78,7 +79,7 @@ make backup                                       # CSDL, tệp, .env → ~/.loc
 make restore FROM=<thư mục sao lưu> CONFIRM=yes   # GHI ĐÈ dữ liệu hiện tại
 ```
 
-Tài khoản demo: `user.a`, `manager.a` (tenant `xuong-a`), `user.b` (tenant `xuong-b`); mật khẩu là
+Tài khoản demo: `user.a`, `manager.a` (tenant `xuong-a`), `user.b`, `manager.b` (tenant `xuong-b`); mật khẩu là
 `DEMO_USER_PASSWORD` trong `.env`. Mọi lệnh khác: `make help`.
 
 ## Kiến trúc
