@@ -230,6 +230,7 @@ file_id=$(jq -r .id <<<"$body")
 check "Thông tin tệp giữ tên có dấu và băm đúng" "$(jq -r '.name + " " + .sha256' <<<"$body")" "Biên bản.pdf $sample_sha"
 downloaded=$(curl -s -H "Authorization: Bearer $user_a" "$files/$file_id/content" | sha256sum | cut -d' ' -f1)
 check "Tải xuống đúng nội dung đã tải lên" "$downloaded" "$sample_sha"
+uploader=$(jq -r .uploadedBy <<<"$body")
 status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_b" "$files/$file_id/content")
 check "user.b (tenant khác) không tải được tệp của tenant A" "$status" 404
 status=$(curl -s -o /dev/null -w '%{http_code}' "$files/$file_id")
@@ -239,5 +240,41 @@ status=$(head -c $((${FILES_MAX_BYTES:-20971520} + 1)) /dev/zero | curl -s -o /d
   -H "Authorization: Bearer $user_a" --data-binary @- "$files?name=qua-co.bin" || true)
 check "Tệp quá giới hạn cỡ bị từ chối" "$status" 413
 rm -f "$sample"
+
+# Nhật ký thay đổi (ADR 0009): ghi đúng người làm, chuỗi băm khớp, và sửa lén thì lệnh kiểm chỉ ra đúng chỗ. Các
+# lần sửa lén chạy bằng superuser trong giao dịch rồi ROLLBACK, nên không để lại gì.
+sql() { docker compose exec -T postgres psql -qAtX -v ON_ERROR_STOP=1 -U postgres -d mortise "$@"; }
+logged=$(sql -c "SELECT tenant_id || ' ' || actor FROM core.audit_log
+  WHERE table_name = 'core.files' AND op = 'INSERT' AND row_key ->> 'id' = '$file_id'")
+check "Nhật ký ghi lần tải tệp với đúng người tải và đơn vị" "$logged" "xuong-a $uploader"
+status=$(scripts/audit-verify.sh >/dev/null 2>&1 && echo khớp || echo lệch)
+check "Chuỗi băm của nhật ký khớp" "$status" khớp
+refused=$(sql -c "UPDATE core.audit_log SET actor = 'sua-len' WHERE id = (SELECT min(id) FROM core.audit_log)" 2>&1 |
+  grep -c 'không được phép' || true)
+check "Nhật ký không cho sửa, kể cả chủ bảng" "$refused" 1
+# Tắt trigger trong giao dịch (chỉ superuser làm được) để giả lập người sửa lén rồi kiểm.
+tampered=$(sql <<'SQL'
+BEGIN;
+SET LOCAL session_replication_role = replica;
+UPDATE core.audit_log SET after = after || '{"name": "sua-len.pdf"}' WHERE id = (SELECT min(id) FROM core.audit_log);
+SELECT problem FROM core.audit_verify() WHERE id = (SELECT min(id) FROM core.audit_log);
+ROLLBACK;
+SQL
+)
+check "Sửa lén một dòng: lệnh kiểm chỉ ra đúng dòng" "$tampered" "nội dung dòng này đã bị sửa"
+# Hai lần sửa thật (trigger còn bật) tạo hai dòng nhật ký mới, rồi xóa lén dòng đầu trong hai dòng đó.
+broken=$(sql <<SQL
+BEGIN;
+UPDATE core.files SET name = name WHERE id = '$file_id';
+UPDATE core.files SET name = name WHERE id = '$file_id';
+SET LOCAL session_replication_role = replica;
+DELETE FROM core.audit_log WHERE id = (SELECT id FROM core.audit_log ORDER BY id DESC OFFSET 1 LIMIT 1);
+SELECT problem FROM core.audit_verify() WHERE id = (SELECT max(id) FROM core.audit_log);
+ROLLBACK;
+SQL
+)
+check "Xóa lén một dòng ở giữa: lệnh kiểm chỉ ra chỗ đứt" "$broken" "chuỗi đứt: thiếu hoặc chèn dòng ngay trước dòng này"
+status=$(scripts/audit-verify.sh >/dev/null 2>&1 && echo khớp || echo lệch)
+check "Sau các lần thử, nhật ký vẫn nguyên vẹn" "$status" khớp
 
 exit $fail

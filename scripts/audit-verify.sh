@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Kiểm chuỗi băm của nhật ký thay đổi (core.audit_verify, ADR 0009): chỉ ra dòng đầu tiên bị sửa, chỗ chuỗi bị đứt,
+# và nếu truyền bản sao lưu (hay "<id>:<băm>") thì kiểm thêm băm cuối ghi trong đó còn đúng không. Băm trong bản
+# sao lưu bắt được cả việc sửa rồi tính lại toàn bộ chuỗi hay xóa các dòng cuối, tính tới lúc sao lưu.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+anchor="${1:-}"
+if [[ -d "$anchor" ]]; then
+  if [[ ! -f "$anchor/MANIFEST" ]]; then
+    echo "$anchor không phải bản sao lưu: thiếu MANIFEST." >&2
+    exit 2
+  fi
+  head=$(sed -n 's/^audit_head=//p' "$anchor/MANIFEST")
+  if [[ -z "$head" ]]; then
+    echo "MANIFEST của $anchor không có audit_head (sao lưu trước khi có nhật ký); không có gì để đối chiếu." >&2
+    exit 2
+  fi
+  anchor=$head
+fi
+id=NULL hash=NULL
+if [[ -n "$anchor" ]]; then
+  if [[ ! "$anchor" =~ ^([0-9]+):([0-9a-f]{64})$ ]]; then
+    echo "Băm neo phải có dạng <id>:<sha256 hex>, nhận: $anchor" >&2
+    exit 2
+  fi
+  id=${BASH_REMATCH[1]} hash="'\\x${BASH_REMATCH[2]}'::bytea"
+fi
+
+psql() { docker compose exec -T postgres psql -qAtX -v ON_ERROR_STOP=1 -U postgres -d mortise "$@"; }
+problems=$(psql -F ': ' -c "SELECT id, problem FROM core.audit_verify($id, $hash)")
+if [[ -n "$problems" ]]; then
+  echo "Nhật ký thay đổi không còn nguyên vẹn (dòng: vấn đề):" >&2
+  echo "$problems" >&2
+  exit 1
+fi
+echo "audit: $(psql -c 'SELECT count(*) FROM core.audit_log') dòng, chuỗi băm khớp; ${anchor:+khớp băm sao lưu tại dòng $id}${anchor:-chưa đối chiếu băm sao lưu (ANCHOR=<thư mục sao lưu>)}"

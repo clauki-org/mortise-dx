@@ -57,6 +57,8 @@ Ranh giới bắt buộc:
 - Gói ưu tiên khai báo; chỉ viết giao diện riêng khi thành phần dùng chung không đáp ứng được, và ghi lý do.
 - Gỡ một gói thì lõi và các gói khác vẫn chạy, `make smoke` vẫn qua.
 - Không commit tệp mô hình AI, dữ liệu lớn hay bản sao lưu; chúng được tải hoặc sinh ra khi chạy.
+- Bảng chứa dữ liệu người dùng thay đổi được thì gắn nhật ký trong migration của nó: `SELECT core.audit_attach(...)`
+  (ADR 0009).
 - Quyền dữ liệu của Hasura chỉ sửa trong tệp khai báo (`core/hasura/`, `platform/schema/hasura/`), không sửa trên
   trang quản trị; mọi quyền phải lọc theo tenant trong token, `make check-fast` kiểm.
 - Hợp đồng giữa các tầng nằm trong `contracts/`. Đổi claim token, định dạng `app.yaml` hay API của dịch vụ thì sửa

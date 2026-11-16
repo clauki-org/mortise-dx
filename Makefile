@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e hooks
+  check-fast web-check e2e audit-verify hooks
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -45,6 +45,9 @@ migrate-new: ## Tạo tệp migration mới cho lõi: make migrate-new NAME=<ten
 
 migrate-status: ## Migration nào của lõi đã áp, nào còn chờ (cần lõi đang chạy)
 	docker compose run --rm --no-deps migrate status
+
+audit-verify: ## Kiểm nhật ký thay đổi không bị sửa lén; ANCHOR=<thư mục sao lưu> để đối chiếu băm lúc sao lưu
+	@scripts/audit-verify.sh "$(ANCHOR)"
 
 backup: ## Sao lưu CSDL, tệp và .env ra ngoài repo (BACKUP_DIR để đổi nơi lưu)
 	@scripts/backup.sh

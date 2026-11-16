@@ -28,6 +28,11 @@ umask 077
 mkdir -p "$dest"
 echo "Sao lưu vào $dest"
 
+# Băm cuối của nhật ký thay đổi, đọc trước khi dump nên chắc chắn có trong bản dump; khôi phục xong
+# audit-verify đối chiếu với nó (ADR 0009).
+audit_head=$(docker compose exec -T postgres psql -qAtX -U postgres -d mortise \
+  -c "SELECT id || ':' || encode(hash, 'hex') FROM core.audit_log ORDER BY id DESC LIMIT 1")
+
 # pg_dumpall lấy một ảnh nhất quán cho từng CSDL trong khi dịch vụ vẫn chạy.
 docker compose exec -T postgres pg_dumpall -U postgres --clean --if-exists | gzip >"$dest/postgres.sql.gz"
 echo "  PostgreSQL: xong"
@@ -46,6 +51,7 @@ cp .env "$dest/env"
   echo "created_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "git_commit=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
   docker compose config --images | sort | sed 's/^/image=/'
+  [[ -z "$audit_head" ]] || echo "audit_head=$audit_head"
 } >"$dest/MANIFEST"
 (cd "$dest" && sha256sum postgres.sql.gz seaweed.tar.gz env MANIFEST >SHA256SUMS)
 

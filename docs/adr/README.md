@@ -29,6 +29,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0006](0006-frontend-stack.md) | Giao diện Tầng 2: React, Mantine và component đọc cấu hình gói | Chấp nhận |
 | [0007](0007-login-page-exception.md) | Trang đăng nhập là bề mặt giao diện duy nhất của lõi | Chấp nhận |
 | [0008](0008-shared-api-contracts.md) | Hợp đồng API giữa các tầng trong `contracts/`, CI kiểm cả ví dụ đúng và ví dụ sai | Chấp nhận |
+| [0009](0009-tamper-evident-audit-log.md) | Nhật ký thay đổi ghi bằng trigger, chuỗi băm phát hiện sửa, đối chiếu băm trong bản sao lưu | Chấp nhận |
 
 ## Quyết định còn mở
 
