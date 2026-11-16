@@ -38,7 +38,8 @@ biệt.
 | Tệp qua cổng (`/v1/files`, SeaweedFS): tải lên, tải xuống theo tenant, giới hạn cỡ; quét mã độc là kế hoạch | Đã chạy | `make smoke`, `make test` |
 | Xác thực đa yếu tố, cơ chế đăng nhập theo chính sách từng tenant | Kế hoạch | |
 | Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
-| Nhật ký thay đổi, sổ cái chống sửa, kiểm dữ liệu theo schema | Kế hoạch | |
+| Nhật ký thay đổi: ai sửa gì, lúc nào, trước và sau; chuỗi băm phát hiện sửa lén, đối chiếu băm trong bản sao lưu | Đã chạy | `make smoke`, `make audit-verify` |
+| Chỉ số trỏ về bản ghi nguồn, chỉ số chất lượng dữ liệu | Kế hoạch | |
 | Sao lưu và khôi phục toàn bộ lõi | Đã chạy | CI: sao lưu → xóa → khôi phục → `make smoke` |
 | Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy | `make smoke` (cổng, CSP, luồng PKCE), `make web-check`, `make e2e` |
 | Bảng việc: danh sách việc đang chờ người đăng nhập theo hạn; màn hình xử lý với biểu mẫu và nút theo khai báo của bước | Đã chạy | `make e2e` (trình duyệt: duyệt, bốn mắt, cách ly đơn vị), `make web-check` |

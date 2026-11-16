@@ -36,10 +36,23 @@ def _connect() -> pg8000.native.Connection:
         ) from error
 
 
-def _run(sql: str, **params) -> list[list]:
+def _run(sql: str, actor: str | None = None, **params) -> list[list]:
     connection = _connect()
     try:
-        return connection.run(sql, **params)
+        if actor is None:
+            return connection.run(sql, **params)
+        # Nhật ký thay đổi (core.audit_row) đọc người làm từ mortise.actor. set_config(..., true) chỉ sống
+        # trong giao dịch hiện tại, mà pg8000 tự commit từng câu, nên mở giao dịch tường minh. Lỗi giữa chừng
+        # thì đóng kết nối, giao dịch tự hủy.
+        connection.run("BEGIN")
+        connection.run("SELECT set_config('mortise.actor', :actor, true)", actor=actor)
+        rows = connection.run(sql, **params)
+        connection.run("COMMIT")
+        return rows
+    except InterfaceError as error:
+        # Mất kết nối giữa giao dịch: giao dịch tự hủy, không ghi nửa chừng.
+        log.error("Mất kết nối CSDL giữa chừng: %s", error)
+        raise Denied(503, "Mất kết nối CSDL; thử lại sau ít phút, nếu vẫn lỗi báo người vận hành.") from error
     except DatabaseError as error:
         details = error.args[0] if error.args and isinstance(error.args[0], dict) else {}
         if details.get("C") == FOREIGN_KEY_VIOLATION:
@@ -63,6 +76,7 @@ def insert(record: dict) -> dict:
         "INSERT INTO core.files (id, tenant_id, name, content_type, size, sha256, uploaded_by) "
         "VALUES (CAST(:id AS uuid), :tenant, :name, :content_type, :size, :sha256, :uploaded_by) "
         "RETURNING id::text, name, content_type, size, sha256, uploaded_by, status, created_at",
+        actor=record["uploaded_by"],
         **record,
     )
     return _as_dict(rows[0])

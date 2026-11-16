@@ -40,6 +40,17 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   tạo tệp mới cho lõi.
 - **Xem:** `make migrate-status` (lõi); log của lần chạy gần nhất bằng `docker compose logs migrate migrate-platform`.
 
+### Nhật ký thay đổi (`core.audit_log`, tự viết)
+
+- **Làm gì:** ghi mọi thay đổi trên các bảng đã gắn trigger: ai làm, lúc nào, giá trị trước và sau. Mỗi dòng băm
+  cùng băm của dòng trước thành một chuỗi, nên sửa hay xóa lén một dòng thì lệnh kiểm chỉ ra đúng chỗ
+  ([ADR 0009](adr/0009-tamper-evident-audit-log.md)). Đây là phát hiện sửa, không chặn được người giữ quyền chủ CSDL.
+- **Trong dự án:** gắn cho `core.files`, `core.tenants`, `platform.workflow_steps` bằng `core.audit_attach()`; gói
+  gắn cho bảng của mình. `make backup` ghi băm cuối chuỗi vào MANIFEST; `make restore` kiểm lại sau khi khôi phục.
+- **Cấu hình:** migration `core/postgres/migrations/*_core_audit_log.sql`; lệnh kiểm `scripts/audit-verify.sh`.
+- **Xem:** `make audit-verify` (thêm `ANCHOR=<thư mục sao lưu>` để đối chiếu); đọc nhật ký bằng
+  `docker compose exec postgres psql -U postgres -d mortise -c 'TABLE core.audit_log'`.
+
 ### Keycloak: định danh và đăng nhập một lần
 
 - **Làm gì:** quản lý người dùng, đăng nhập, cấp token theo chuẩn OpenID Connect (OIDC), vai trò và nhóm. Mọi

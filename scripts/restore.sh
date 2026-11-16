@@ -56,4 +56,8 @@ docker compose run --rm --no-deps -T --entrypoint sh seaweedfs -c \
 
 echo "Dựng lại lõi…"
 docker compose up -d --wait
+# Nhật ký thay đổi khôi phục phải nguyên vẹn và khớp băm cuối ghi lúc sao lưu.
+if grep -q '^audit_head=' "$src/MANIFEST"; then
+  scripts/audit-verify.sh "$src"
+fi
 echo "Khôi phục xong. Kiểm tra bằng 'make smoke'."
