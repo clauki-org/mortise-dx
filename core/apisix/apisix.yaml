@@ -21,6 +21,10 @@ upstreams:
     type: roundrobin
     nodes:
       "files-api:8000": 1
+  - id: context-api
+    type: roundrobin
+    nodes:
+      "context-api:8000": 1
   - id: web
     type: roundrobin
     nodes:
@@ -121,6 +125,21 @@ routes:
     plugins:
       limit-count:
         count: 120
+        time_window: 60
+        key_type: var
+        key: http_authorization
+        rejected_code: 429
+
+  # Dữ liệu thiết bị theo NGSI-LD (context-api trước Scorpio, ADR 0012), chỉ đọc. Scorpio không có route
+  # công khai; ghi dữ liệu không qua cổng (đường MQTT của thiết bị là phần sau của issue #88).
+  - id: context
+    uri: /v1/context/*
+    methods: ["GET"]
+    upstream_id: context-api
+    plugin_config_id: bearer-token
+    plugins:
+      limit-count:
+        count: 300
         time_window: 60
         key_type: var
         key: http_authorization

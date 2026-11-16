@@ -75,13 +75,13 @@ lint: ## Kiểm tra giấy phép từng tệp (REUSE)
 	uvx reuse lint
 
 test: ## Kiểm thử đơn vị các dịch vụ tự viết của lõi
-	@for service in workflow-api files-api; do \
+	@for service in workflow-api files-api context-api; do \
 	  echo "== $$service"; \
 	  (cd core/$$service && UV_PROJECT_ENVIRONMENT=$(MORTISE_VENVS)/$$service-venv PYTHONDONTWRITEBYTECODE=1 \
 	    uv run --frozen pytest -q -p no:cacheprovider) || exit 1; \
 	done
 
-contracts: ## Xuất lại OpenAPI của workflow-api và files-api vào contracts/ sau khi đổi route hay model
+contracts: ## Xuất lại OpenAPI của workflow-api, files-api và context-api vào contracts/ sau khi đổi route hay model
 	@scripts/contracts.sh write
 
 # shellcheck, yamllint và ruff chạy qua uvx để không phải cài sẵn; chỉ cần uv.
@@ -92,8 +92,8 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	uvx --from shellcheck-py shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh \
 	  apps/*/tests/*.sh
 	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps .github
-	uvx ruff check --no-cache core/workflow-api core/files-api
-	uvx ruff format --no-cache --check core/workflow-api core/files-api
+	uvx ruff check --no-cache core/workflow-api core/files-api core/context-api
+	uvx ruff format --no-cache --check core/workflow-api core/files-api core/context-api
 	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts
 	uvx ruff format --no-cache --check --config core/workflow-api/pyproject.toml scripts
 	@scripts/contracts.sh check

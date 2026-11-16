@@ -331,4 +331,29 @@ check "Tệp nén lồng quá giới hạn quét bị từ chối" \
 check "Tệp tải lên sau khi quét có trạng thái clean" \
   "$(curl -s -H "Authorization: Bearer $user_a" "$files/$file_id" | jq -r .status)" clean
 
+
+# Dữ liệu thiết bị (context-api trước Scorpio, ADR 0012): ghi một thiết bị cho xuong-a thẳng vào Scorpio
+# qua cổng chỉ mở trong máy chủ, như cầu nối MQTT sẽ làm, rồi đọc qua cổng chung bằng token.
+context="$base/v1/context/entities"
+device=urn:ngsi-ld:Device:smoke-a
+status=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:${SCORPIO_PORT:-9090}/ngsi-ld/v1/entityOperations/upsert" \
+  -H 'Content-Type: application/json' -H 'NGSILD-Tenant: xuong-a' \
+  -d "[{\"id\":\"$device\",\"type\":\"Device\",\"humidity\":{\"type\":\"Property\",\"value\":61,\"observedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}}]")
+check "Scorpio nhận số đo của thiết bị (cổng máy chủ)" "$([[ $status == 20[14] ]] && echo yes)" yes
+seen() { curl -s -H "Authorization: Bearer $1" "${@:2}" "$context?type=Device" | jq -r --arg d "$device" '[.[].id] | index($d) != null'; }
+check "user.a đọc được thiết bị của tenant mình qua /v1/context" "$(seen "$user_a")" true
+check "user.b (tenant khác) không thấy thiết bị của tenant A" "$(seen "$user_b")" false
+check "user.b tự gửi header NGSILD-Tenant của tenant A vẫn không thấy" \
+  "$(seen "$user_b" -H 'NGSILD-Tenant: xuong-a')" false
+status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_b" "$context/$device")
+check "user.b đọc thẳng theo mã thiết bị của tenant A nhận 404" "$status" 404
+status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_a" "$context?local=false")
+check "/v1/context từ chối tham số NGSI-LD ngoài danh sách cho phép" "$status" 400
+status=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $user_a" -H 'Content-Type: application/json' \
+  -d '{}' "$context")
+check "/v1/context không nhận ghi" "$([[ $status != 2* ]] && echo yes)" yes
+# Đường ngoài /v1 rơi xuống giao diện (trả index.html), nên kiểm nội dung chứ không kiểm mã trạng thái.
+leaked=$(curl -s -H "Authorization: Bearer $user_a" "$base/ngsi-ld/v1/entities?type=Device" | grep -c "$device" || true)
+check "Scorpio không có đường vào trực tiếp qua cổng" "$leaked" 0
+
 exit $fail

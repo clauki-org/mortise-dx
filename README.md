@@ -37,6 +37,7 @@ biệt.
 | Workflow BPMN (Flowable sau lớp workflow-api): cách ly tenant, phân quyền theo vai trò, quy tắc bốn mắt | Đã chạy | `make smoke`, `make test` |
 | Tệp qua cổng (`/v1/files`, SeaweedFS): tải lên, tải xuống theo tenant, giới hạn cỡ, quét mã độc trước khi lưu (ClamAV) | Đã chạy | `make smoke` (tệp thử EICAR), `make test` |
 | Đăng nhập hai bước (OTP) cho người có quyền duyệt; workflow-api từ chối duyệt khi token không có bước OTP | Đã chạy | `make smoke`, `make test`, `make e2e` |
+| Đọc dữ liệu thiết bị theo chuẩn NGSI-LD (`/v1/context`, Scorpio), chỉ thấy thiết bị của đơn vị mình; nhận số đo qua MQTT và mở hồ sơ khi vượt ngưỡng là kế hoạch | Đã chạy | `make smoke`, `make test` |
 | Cơ chế đăng nhập theo chính sách từng tenant, Passkey | Kế hoạch | |
 | Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
 | Nhật ký thay đổi: ai sửa gì, lúc nào, trước và sau; chuỗi băm phát hiện sửa lén, đối chiếu băm trong bản sao lưu | Đã chạy | `make smoke`, `make audit-verify` |
@@ -68,9 +69,11 @@ make e2e     # kịch bản demo trên trình duyệt (cần Node)
 | `http://localhost:9080/v1/graphql` | API dữ liệu, bắt buộc token |
 | `http://localhost:9080/v1/workflow/...` | API quy trình, bắt buộc token |
 | `http://localhost:9080/v1/files` | API tệp, bắt buộc token |
+| `http://localhost:9080/v1/context/entities` | Dữ liệu thiết bị (NGSI-LD), chỉ đọc, bắt buộc token |
 | `http://127.0.0.1:8081/auth/admin` | Quản trị Keycloak (chỉ máy chủ) |
 | `http://127.0.0.1:8082/console` | Quản trị Hasura (chỉ máy chủ) |
 | `http://127.0.0.1:8083/flowable-rest/docs` | REST API của Flowable (chỉ máy chủ) |
+| `http://127.0.0.1:9090/ngsi-ld/v1/...` | API NGSI-LD của Scorpio, không xác thực (chỉ máy chủ) |
 
 Trang quản trị Keycloak, Hasura và Flowable là công cụ kỹ thuật cho người vận hành, chỉ mở trong máy chủ; lõi không có giao
 diện cho người dùng nghiệp vụ. Cách gọi API kèm ví dụ và ý nghĩa mã lỗi: [docs/api.md](docs/api.md).
@@ -97,6 +100,7 @@ Tầng 1  APISIX (cổng duy nhất, kiểm JWT, giới hạn tần suất)
           ├─ Hasura CE  API GraphQL tự sinh, quyền theo dòng
           ├─ workflow-api → Flowable  quy trình BPMN theo tenant và vai trò
           ├─ files-api → SeaweedFS    tệp theo tenant, giới hạn cỡ, quét mã độc (ClamAV)
+          ├─ context-api → Scorpio    dữ liệu thiết bị theo NGSI-LD, chỉ đọc, theo tenant
           ├─ PostgreSQL dữ liệu có cấu trúc (+ pgvector)
           └─ SeaweedFS  dữ liệu phi cấu trúc (S3)
 ```
@@ -117,8 +121,11 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Migration lược đồ CSDL | dbmate | 2.37.0 | MIT |
 | Động cơ quy trình | Flowable REST | 7.2.0 | Apache-2.0 |
 | Quét mã độc ([ADR 0010](docs/adr/0010-upload-malware-scan.md)) | ClamAV | 1.5.4 | GPL-2.0 (tiến trình riêng, không liên kết mã) |
+| Broker NGSI-LD, dữ liệu thiết bị ([ADR 0012](docs/adr/0012-device-context-ngsi-ld.md)) | Scorpio (bản native) | 6.0.2 | BSD-3-Clause |
+| CSDL của Scorpio | PostgreSQL + PostGIS | 17 + 3.6 | PostgreSQL License / GPL-2.0 (tiến trình riêng) |
 | Lớp kiểm quyền quy trình (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT | khóa trong `core/workflow-api/uv.lock` | MIT / BSD-3-Clause |
 | API tệp (tự viết) | Python 3.13, FastAPI, boto3, pg8000, PyJWT | khóa trong `core/files-api/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
+| Lớp đọc dữ liệu thiết bị (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT | khóa trong `core/context-api/uv.lock` | MIT / BSD-3-Clause |
 | Phục vụ giao diện | nginx | 1.30.6 | BSD-2-Clause |
 | Giao diện Tầng 2 (tự viết) | React, Mantine, oidc-client-ts, urql, React Router, TanStack Query, rjsf ([ADR 0006](docs/adr/0006-frontend-stack.md)) | khóa trong `platform/web/package-lock.json` | MIT / Apache-2.0 |
 
@@ -136,6 +143,7 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   postgres/migrations/  migration lược đồ của lõi (dbmate)
   workflow-api/       kiểm quyền trước Flowable (Python)
   files-api/          API tệp trước SeaweedFS (Python)
+  context-api/        đọc dữ liệu thiết bị trước Scorpio (Python)
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
 platform/             Tầng 2
   web/                khung giao diện (React, Vite), phục vụ bằng nginx sau cổng

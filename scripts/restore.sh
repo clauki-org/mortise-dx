@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Khôi phục lõi từ một thư mục do scripts/backup.sh tạo ra. GHI ĐÈ toàn bộ dữ liệu hiện
-# tại: CSDL, tài khoản, quy trình và tệp. Trình tự: kiểm checksum, dừng các dịch vụ
-# đang dùng CSDL, nạp lại PostgreSQL và SeaweedFS, rồi dựng lại cả lõi.
+# tại: CSDL, tài khoản, quy trình, tệp và dữ liệu thiết bị. Trình tự: kiểm checksum, dừng các
+# dịch vụ đang dùng CSDL, nạp lại PostgreSQL, CSDL của Scorpio và SeaweedFS, rồi dựng lại cả lõi.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -32,23 +32,46 @@ if [[ -f .env ]] && ! cmp -s .env "$src/env"; then
 fi
 install -m 600 "$src/env" .env
 
-app_services=(apisix workflow-api flowable hasura keycloak)
+app_services=(apisix workflow-api flowable hasura keycloak context-api scorpio)
 docker compose stop "${app_services[@]}" seaweedfs >/dev/null 2>&1 || true
-docker compose up -d --wait postgres >/dev/null
+docker compose up -d --wait postgres scorpio-db >/dev/null
+
+# load_cluster DỊCH_VỤ TÀI_KHOẢN TỆP [MẪU_LỖI_VÔ_HẠI...]: nạp bản pg_dumpall vào một cụm PostgreSQL.
+load_cluster() {
+  local service="$1" user="$2" dump="$3" log="$src/restore-$1.log" pattern
+  local harmless=(-e 'current user cannot be dropped' -e "role \"$user\" already exists")
+  for pattern in "${@:4}"; do harmless+=(-e "$pattern"); done
+  # Ngắt mọi kết nối còn sót để DROP DATABASE trong bản dump không bị chặn.
+  docker compose exec -T "$service" psql -U "$user" -d postgres -q -c \
+    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname IS NOT NULL;" >/dev/null
+  # ON_ERROR_STOP=0: lỗi của từng câu lệnh SQL không làm psql dừng, nên psql chỉ thoát khác 0 khi hỏng
+  # hạ tầng (mất kết nối, dịch vụ không chạy, tệp nén hỏng). Khi đó bản dump --clean có thể đã xóa
+  # CSDL mà chưa nạp lại, nên dừng ngay chứ không coi là xong.
+  if ! gunzip -c "$dump" |
+    docker compose exec -T "$service" psql -U "$user" -d postgres -q -v ON_ERROR_STOP=0 >/dev/null 2>"$log"; then
+    echo "Nạp $service bị ngắt giữa chừng; dữ liệu của $service có thể đã mất. Xem $log rồi khôi phục lại." >&2
+    exit 1
+  fi
+  # Bản dump --clean có câu lệnh xóa và tạo lại vai trò đang đăng nhập; lỗi đó vô hại. Lỗi khác
+  # thì dừng để quản trị viên xem log thay vì dựng lõi trên dữ liệu dở dang.
+  if grep -v "${harmless[@]}" "$log" | grep -q -e 'ERROR' -e 'FATAL'; then
+    echo "Nạp $service có lỗi, xem $log" >&2
+    exit 1
+  fi
+  rm -f "$log"
+}
 
 echo "Nạp PostgreSQL…"
-# Ngắt mọi kết nối còn sót để DROP DATABASE trong bản dump không bị chặn.
-docker compose exec -T postgres psql -U postgres -d postgres -q -c \
-  "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname IS NOT NULL;" >/dev/null
-gunzip -c "$src/postgres.sql.gz" |
-  docker compose exec -T postgres psql -U postgres -d postgres -q -v ON_ERROR_STOP=0 >/dev/null 2>"$src/restore-postgres.log" || true
-# Bản dump --clean có câu lệnh xóa và tạo lại vai trò postgres đang đăng nhập; lỗi đó vô
-# hại. Lỗi khác thì dừng để quản trị viên xem log thay vì dựng lõi trên dữ liệu dở dang.
-if grep -v -e 'current user cannot be dropped' -e 'role "postgres" already exists' "$src/restore-postgres.log" | grep -q 'ERROR'; then
-  echo "Nạp PostgreSQL có lỗi, xem $src/restore-postgres.log" >&2
-  exit 1
+load_cluster postgres postgres "$src/postgres.sql.gz"
+# Bản sao lưu làm trước khi có Scorpio không có tệp này; khi đó giữ CSDL Scorpio hiện tại.
+if [[ -f "$src/scorpio.sql.gz" ]]; then
+  echo "Nạp Scorpio…"
+  # Image PostGIS dựng sẵn CSDL mẫu template_postgis và schema của tiện ích (tiger, topology) trong
+  # mỗi CSDL; bản dump tạo lại chúng nên báo "đã có", không mất dữ liệu.
+  load_cluster scorpio-db scorpio "$src/scorpio.sql.gz" 'cannot drop a template database' \
+    'database "template_postgis" already exists' 'schema "tiger" already exists' 'schema "topology" already exists'
+
 fi
-rm -f "$src/restore-postgres.log"
 
 echo "Nạp SeaweedFS…"
 docker compose run --rm --no-deps -T --entrypoint sh seaweedfs -c \

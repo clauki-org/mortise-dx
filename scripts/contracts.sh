@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Hợp đồng API trong contracts/: kiểm schema và ví dụ, và giữ OpenAPI của workflow-api
-# khớp với mã. `check` (gọi từ make check-fast) báo lỗi khi lệch; `write` (make contracts)
+# Hợp đồng API trong contracts/: kiểm schema và ví dụ, và giữ OpenAPI của các dịch vụ tự viết
+# (workflow-api, files-api, context-api) khớp với mã. `check` (gọi từ make check-fast) báo lỗi khi lệch; `write` (make contracts)
 # xuất lại OpenAPI sau khi đổi route hay model; `token <tệp>` (gọi từ make smoke) kiểm claim
 # của một token thật, để phiên bản công cụ kiểm chỉ ghim ở tệp này.
 set -euo pipefail
@@ -128,3 +128,4 @@ check_openapi workflow-api FLOWABLE_URL=http://unused FLOWABLE_USER=unused FLOWA
 check_openapi files-api FILES_DB_HOST=unused FILES_DB_NAME=unused FILES_DB_USER=unused FILES_DB_PASSWORD=unused \
   S3_URL=http://unused S3_ACCESS_KEY=unused S3_SECRET_KEY=unused FILES_BUCKET=unused FILES_MAX_BYTES=1 \
   CLAMD_HOST=unused CLAMD_PORT=1 FILES_SCAN_TIMEOUT=1
+check_openapi context-api SCORPIO_URL=http://unused

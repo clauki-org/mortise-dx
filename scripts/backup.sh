@@ -4,6 +4,7 @@
 #
 # Sao lưu toàn bộ trạng thái của lõi vào một thư mục có dấu thời gian:
 #   postgres.sql.gz  mọi CSDL và vai trò (Keycloak, Flowable, mortise kèm metadata Hasura)
+#   scorpio.sql.gz   CSDL riêng của Scorpio, gồm CSDL của từng tenant (ADR 0012)
 #   seaweed.tar.gz   dữ liệu lưu trữ đối tượng
 #   env              bản sao .env (mật khẩu vai trò CSDL trong bản dump khớp với tệp này)
 #   MANIFEST, SHA256SUMS
@@ -19,10 +20,13 @@ if [[ ! -f .env ]]; then
   echo "Không thấy .env: lõi chưa được dựng bằng 'make up' trong thư mục này." >&2
   exit 1
 fi
-if ! docker compose ps --status running --services | grep -qx postgres; then
-  echo "PostgreSQL không chạy. Chạy 'make up' trước khi sao lưu." >&2
-  exit 1
-fi
+running=$(docker compose ps --status running --services)
+for service in postgres scorpio-db; do
+  if ! grep -qx "$service" <<<"$running"; then
+    echo "$service không chạy. Chạy 'make up' trước khi sao lưu." >&2
+    exit 1
+  fi
+done
 
 umask 077
 mkdir -p "$dest"
@@ -36,6 +40,11 @@ audit_head=$(docker compose exec -T postgres psql -qAtX -U postgres -d mortise \
 # pg_dumpall lấy một ảnh nhất quán cho từng CSDL trong khi dịch vụ vẫn chạy.
 docker compose exec -T postgres pg_dumpall -U postgres --clean --if-exists | gzip >"$dest/postgres.sql.gz"
 echo "  PostgreSQL: xong"
+
+# Scorpio tạo một CSDL cho mỗi tenant, nên dump cả cụm thay vì một CSDL. Mỗi CSDL nhất quán riêng, nhưng
+# không cùng thời điểm với postgres.sql.gz: số đo ghi giữa hai lần dump chỉ có ở một bên.
+docker compose exec -T scorpio-db pg_dumpall -U scorpio --clean --if-exists | gzip >"$dest/scorpio.sql.gz"
+echo "  Scorpio: xong"
 
 # SeaweedFS không có ảnh chụp nhất quán khi đang ghi, nên dừng nó trong lúc đóng gói.
 # Dùng lại đúng image của dịch vụ để không thêm image mới chỉ để chạy tar.
@@ -53,7 +62,7 @@ cp .env "$dest/env"
   docker compose config --images | sort | sed 's/^/image=/'
   [[ -z "$audit_head" ]] || echo "audit_head=$audit_head"
 } >"$dest/MANIFEST"
-(cd "$dest" && sha256sum postgres.sql.gz seaweed.tar.gz env MANIFEST >SHA256SUMS)
+(cd "$dest" && sha256sum postgres.sql.gz scorpio.sql.gz seaweed.tar.gz env MANIFEST >SHA256SUMS)
 
 echo "Hoàn tất. Bản sao lưu chứa bí mật (.env và dữ liệu): giữ ở nơi chỉ quản trị viên đọc được."
 echo "Khôi phục: make restore FROM=$dest"
