@@ -101,6 +101,11 @@ jobs:
         run: make seed
       - name: Smoke test through the gateway
         run: make smoke
+      # Gói Tầng 3 cài vào, kiểm, gỡ ra; lõi phải còn qua smoke sau khi gỡ (ADR 0005).
+      - name: Install the commune facilities package and test it
+        run: scripts/app.sh facilities-commune install && apps/facilities-commune/tests/smoke.sh
+      - name: Uninstall the package, the core still passes
+        run: scripts/app.sh facilities-commune uninstall && make smoke
       # Kịch bản demo trên trình duyệt thật, qua cổng, với giao diện do nginx phục vụ kèm CSP như bản cài thật.
       - uses: actions/setup-node@v4
         with:

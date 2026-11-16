@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Khai báo gói theo contracts/app.schema.json; `make check-fast` kiểm. scripts/app.sh đọc tệp này
+# để biết lược đồ, thư mục migration và thư mục metadata Hasura của gói.
+
+id: facilities-commune
+name: Cơ sở vật chất xã
+version: 0.1.0
+description: Cơ sở nhà, đất của xã (cơ sở, tòa, phòng) với diện tích thông thủy và loại diện tích để tính tiêu chuẩn, định mức.
+database:
+  schema: app_facilities_commune
+  migrations: schema/migrations
+hasura: hasura

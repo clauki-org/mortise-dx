@@ -1,0 +1,79 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bảng của gói mà Hasura đăng ký và quyền trên chúng; cùng định dạng và cùng cách kiểm như
+# core/hasura/tables.yaml. scripts/app.sh áp khi cài gói, bỏ đăng ký khi gỡ; gói đã cài thì
+# `make seed` áp lại và `make smoke` kiểm lệch như bảng của lõi (scripts/hasura-metadata.py).
+# Vai trò `user` chỉ đọc, thêm, sửa, xóa dòng có tenant_id bằng tenant trong token; khi thêm,
+# tenant_id gán từ token (set), không nhận từ dữ liệu gửi lên.
+# Quan hệ cha–con chưa khai vì scripts/hasura-metadata.py chưa quản lý quan hệ; thành phần danh
+# mục lọc con theo facility_id, building_id.
+
+- table: { schema: app_facilities_commune, name: facilities }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [id, tenant_id, code, name, address, status, created_at]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+  insert_permissions:
+    - role: user
+      permission:
+        columns: [code, name, address, status]
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        set: { tenant_id: X-Hasura-Tenant-Id }
+  update_permissions:
+    - role: user
+      permission:
+        columns: [code, name, address, status]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+  delete_permissions:
+    - role: user
+      permission:
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+- table: { schema: app_facilities_commune, name: buildings }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [id, tenant_id, facility_id, code, name, floors, created_at]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+  insert_permissions:
+    - role: user
+      permission:
+        columns: [facility_id, code, name, floors]
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        set: { tenant_id: X-Hasura-Tenant-Id }
+  update_permissions:
+    - role: user
+      permission:
+        columns: [facility_id, code, name, floors]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+  delete_permissions:
+    - role: user
+      permission:
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+- table: { schema: app_facilities_commune, name: rooms }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [id, tenant_id, building_id, code, name, floor, area_type, clear_area_m2, created_at]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+  insert_permissions:
+    - role: user
+      permission:
+        columns: [building_id, code, name, floor, area_type, clear_area_m2]
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        set: { tenant_id: X-Hasura-Tenant-Id }
+  update_permissions:
+    - role: user
+      permission:
+        columns: [building_id, code, name, floor, area_type, clear_area_m2]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+  delete_permissions:
+    - role: user
+      permission:
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }

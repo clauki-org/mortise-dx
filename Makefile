@@ -73,8 +73,9 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	@test -f .env || cp .env.example .env.check-fast
 	@if [ -f .env.check-fast ]; then docker compose --env-file .env.check-fast config -q; rm -f .env.check-fast; \
 	  else docker compose config -q; fi
-	uvx --from shellcheck-py shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh
-	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts .github
+	uvx --from shellcheck-py shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh \
+	  apps/*/tests/*.sh
+	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps .github
 	uvx ruff check --no-cache core/workflow-api core/files-api
 	uvx ruff format --no-cache --check core/workflow-api core/files-api
 	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts

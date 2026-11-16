@@ -44,7 +44,8 @@ biệt.
 | Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy | `make smoke` (cổng, CSP, luồng PKCE), `make web-check`, `make e2e` |
 | Bảng việc: danh sách việc đang chờ người đăng nhập theo hạn; màn hình xử lý với biểu mẫu và nút theo khai báo của bước | Đã chạy | `make e2e` (trình duyệt: duyệt, bốn mắt, cách ly đơn vị), `make web-check` |
 | Thành phần Tầng 2 khác (danh mục, biểu mẫu nhập liệu, bản đồ) | Kế hoạch | |
-| Gói minh họa: vận hành cơ sở vật chất công cấp xã | Kế hoạch | |
+| Gói minh họa `apps/facilities-commune`: bảng cơ sở, tòa, phòng cách ly theo tenant, có nhật ký; cài vào, gỡ ra bằng `scripts/app.sh` | Đã chạy | CI: cài gói → smoke gói → gỡ gói → `make smoke` |
+| Gói minh họa: định mức, dữ liệu mẫu ba xã, quy trình rà soát, bản đồ | Kế hoạch | |
 
 ## Chạy từ mã nguồn
 
@@ -137,7 +138,8 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
 platform/             Tầng 2
   web/                khung giao diện (React, Vite), phục vụ bằng nginx sau cổng
   schema/migrations/  migration lược đồ `platform` (dbmate): khai báo bước của quy trình
-scripts/              tạo .env, seed, smoke, tạo migration, sao lưu, khôi phục, hook pre-push
+apps/facilities-commune/  Tầng 3: gói cơ sở vật chất xã (app.yaml, migration, quyền Hasura, smoke của gói)
+scripts/              tạo .env, seed, smoke, tạo migration, cài và gỡ gói, sao lưu, khôi phục, hook pre-push
 docs/                 quyết định kiến trúc (adr/), API của lõi (api.md), công cụ (tools.md)
 .github/              CI, mẫu issue và pull request
 ```

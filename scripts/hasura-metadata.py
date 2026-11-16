@@ -6,9 +6,10 @@
 #   apply  đưa Hasura về đúng tệp: đăng ký bảng còn thiếu, thay quyền sai, bỏ quyền không khai (make seed)
 #   check  báo lỗi khi Hasura lệch khỏi tệp, kể cả bảng đăng ký mà không khai (make smoke)
 #   lint   không cần Hasura: mọi quyền phải lọc theo tenant trong token (make check-fast)
-# Không truyền tệp thì dùng mọi tệp *.yaml trong DECLARATIONS, để danh sách tệp chỉ nằm một chỗ. lint xét
-# thêm tệp của gói (apps/<gói>/hasura/, ADR 0005); apply và check thì chưa, vì bảng của gói do bộ cài gói
-# tạo (kế hoạch).
+# Không truyền tệp thì dùng mọi tệp *.yaml trong DECLARATIONS, để danh sách tệp chỉ nằm một chỗ, cộng tệp của
+# gói (apps/<gói>/hasura/, ADR 0005): lint xét mọi gói; apply và check chỉ xét gói đã cài, tức gói có ít nhất
+# một bảng đang đăng ký trong Hasura, vì bảng của gói do scripts/app.sh tạo và gỡ chứ không có sẵn.
+# scripts/app.sh gọi với tệp của gói: apply khi cài, untrack (bỏ đăng ký kèm quan hệ và quyền) khi gỡ.
 # Trước đây seed chỉ tạo quyền, nên quyền đã có mà sai thì giữ nguyên và không ai biết.
 
 import glob
@@ -164,21 +165,57 @@ def lint(declared: dict) -> list[str]:
     return problems
 
 
+def declaration_files(folders: tuple[str, ...]) -> list[str]:
+    return sorted(f for folder in folders for f in glob.glob(f"{folder}/*.yaml"))
+
+
+def installed_packages(current: dict) -> list[str]:
+    """Tệp khai báo của các gói đã cài: gói có ít nhất một bảng đang đăng ký trong Hasura."""
+    files = []
+    for folder in sorted(f for pattern in PACKAGE_DECLARATIONS for f in glob.glob(pattern)):
+        package = declaration_files((folder,))
+        if package and load(package).keys() & current.keys():
+            files += package
+    return files
+
+
+def untrack(declared: dict, current: dict) -> int:
+    # cascade: quan hệ và quyền trên bảng đi theo, không cần liệt kê lại. Bảng chưa đăng ký thì bỏ qua, để gỡ
+    # lại một gói đã gỡ không lỗi.
+    actions = [
+        {
+            "type": "pg_untrack_table",
+            "args": {"source": "default", "table": {"schema": s, "name": n}, "cascade": True},
+        }
+        for (s, n) in declared
+        if (s, n) in current
+    ]
+    if actions:
+        call({"type": "bulk", "args": actions})
+    print(f"hasura: đã bỏ đăng ký {len(actions)} bảng")
+    return 0
+
+
 def main() -> int:
-    if len(sys.argv) < 2 or sys.argv[1] not in {"apply", "check", "lint"}:
-        print("Cách dùng: hasura-metadata.py apply|check|lint [tệp khai báo...]", file=sys.stderr)
+    if len(sys.argv) < 2 or sys.argv[1] not in {"apply", "check", "lint", "untrack"}:
+        print("Cách dùng: hasura-metadata.py apply|check|lint|untrack [tệp khai báo...]", file=sys.stderr)
         return 2
-    mode = sys.argv[1]
-    folders = DECLARATIONS + (PACKAGE_DECLARATIONS if mode == "lint" else ())
-    files = sys.argv[2:] or sorted(f for folder in folders for f in glob.glob(f"{folder}/*.yaml"))
-    declared = load(files)
+    mode, files = sys.argv[1], sys.argv[2:]
     if mode == "lint":
+        declared = load(files or declaration_files(DECLARATIONS + PACKAGE_DECLARATIONS))
         problems = lint(declared)
         print(
             "\n".join(problems) or f"ok -- {len(declared)} bảng, mọi quyền lọc theo tenant", file=sys.stderr
         )
         return 1 if problems else 0
-    actions, drift = plan(declared, running())
+    current = running()
+    if mode == "untrack":
+        if not files:
+            print("untrack cần tệp khai báo của gói, để không bỏ đăng ký bảng của lõi.", file=sys.stderr)
+            return 2
+        return untrack(load(files), current)
+    declared = load(files or declaration_files(DECLARATIONS) + installed_packages(current))
+    actions, drift = plan(declared, current)
     if mode == "check":
         print("\n".join(drift), file=sys.stderr)
         return 1 if drift else 0
