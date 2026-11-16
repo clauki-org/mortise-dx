@@ -20,10 +20,20 @@ check() {
 }
 
 # Token cho kiểm thử lấy qua client mortise-test do `make seed` tạo; client giao diện không nhận mật khẩu trực tiếp.
+# Người duyệt (manager) phải gửi kèm mã OTP (ADR 0011): token USER [MÃ_OTP].
 token() {
   curl -fsS "$base/auth/realms/mortise/protocol/openid-connect/token" \
     -d grant_type=password -d client_id=mortise-test \
-    -d "username=$1" -d "password=$DEMO_USER_PASSWORD" | jq -r .access_token
+    -d "username=$1" -d "password=$DEMO_USER_PASSWORD" ${2:+-d "totp=$2"} | jq -r .access_token
+}
+# Mã OTP chưa dùng của người duyệt demo; scripts/otp.py chờ sang khung 30 giây mới nếu đã dùng hết mã còn hiệu lực.
+otp() { uv run --quiet --no-project python scripts/otp.py next "$1"; }
+# Claim của access token, dạng JSON.
+claims() {
+  local payload
+  payload=$(cut -d. -f2 <<<"$1" | tr '_-' '/+')
+  while (( ${#payload} % 4 )); do payload+="="; done
+  base64 -d <<<"$payload"
 }
 
 status=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$base/v1/graphql" -H 'Content-Type: application/json' -d "$query")
@@ -123,9 +133,17 @@ check "Quyền Hasura khớp tệp khai báo" "$status" khớp
 # Token thật do Keycloak cấp phải khớp hợp đồng mà các tầng dựa vào.
 claims_file=$(mktemp)
 trap 'rm -f "$claims_file"' EXIT
-payload=$(token manager.a | cut -d. -f2 | tr '_-' '/+')
-while (( ${#payload} % 4 )); do payload+="="; done
-base64 -d <<<"$payload" > "$claims_file"
+# Đăng nhập hai bước của người duyệt (ADR 0011). Chỉ thử sai một lần mỗi tài khoản: Keycloak khóa tạm tài khoản khi
+# hai lần sai cách nhau dưới một giây.
+error=$(curl -s "$base/auth/realms/mortise/protocol/openid-connect/token" -d grant_type=password \
+  -d client_id=mortise-test -d username=manager.b -d "password=$DEMO_USER_PASSWORD" | jq -r .error)
+check "Người duyệt chỉ có mật khẩu, thiếu mã OTP, không lấy được token" "$error" invalid_grant
+manager_a=$(token manager.a "$(otp manager.a)")
+check "Người duyệt có mã OTP lấy được token ghi đã nhập OTP" "$(claims "$manager_a" | jq -c '.amr | sort')" \
+  '["otp","pwd"]'
+user_a=$(token user.a)
+check "Người dùng thường vẫn đăng nhập bằng mật khẩu" "$(claims "$user_a" | jq -c .amr)" '["pwd"]'
+claims "$manager_a" > "$claims_file"
 if scripts/contracts.sh token "$claims_file"; then status=ok; else status=lệch; fi
 check "Token khớp contracts/token-claims.schema.json" "$status" ok
 
@@ -138,11 +156,9 @@ check "Flowable không có quy trình nào ngoài các tenant" "$stray" ""
 
 # Quy trình (Flowable sau workflow-api).
 wf="$base/v1/workflow"
-user_a=$(token user.a)
-manager_a=$(token manager.a)
 user_b=$(token user.b)
 # Người duyệt của tenant khác: cùng vai trò manager, nên không thấy task chỉ có thể vì cách ly tenant.
-manager_b=$(token manager.b)
+manager_b=$(token manager.b "$(otp manager.b)")
 
 # api METHOD TOKEN PATH [JSON]: in "mã trạng thái<TAB>thân phản hồi".
 api() {

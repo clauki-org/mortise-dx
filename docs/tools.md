@@ -65,8 +65,11 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - Client `mortise-test` chỉ dùng cho smoke và CI, lấy token bằng mật khẩu; do `make seed` tạo, không có trong tệp
     realm nên bản cài thật không có, trừ khi khôi phục từ bản sao lưu của bản cài đã seed.
   - Access token sống 15 phút; bật chống dò mật khẩu; tắt tự đăng ký.
-- **Cấu hình:** `core/keycloak/realm-mortise.json`, được nạp khi Keycloak khởi động lần đầu. Tài khoản demo và client
-  `mortise-test` do `scripts/seed.sh` tạo, không nằm trong tệp realm.
+  - Người có vai trò `manager` đăng nhập hai bước (mật khẩu và mã OTP) qua luồng `browser-mfa` và `direct-grant-mfa`;
+    token ghi cách đăng nhập trong claim `amr` ([ADR 0011](adr/0011-approver-mfa.md)).
+- **Cấu hình:** `core/keycloak/realm-mortise.json`, được nạp khi Keycloak khởi động lần đầu. Tài khoản demo, khóa OTP
+  của người duyệt demo (`DEMO_OTP_SECRET`) và client `mortise-test` do `scripts/seed.sh` tạo, không nằm trong tệp
+  realm. `make otp` in mã OTP hiện tại của người duyệt demo.
 - **Xem:** `http://127.0.0.1:8081/auth/admin`, tài khoản `admin`, mật khẩu `KEYCLOAK_ADMIN_PASSWORD`. Đường dẫn này
   bị chặn khi đi qua cổng. Keycloak đang chạy chế độ `start-dev`, chỉ dành cho phát triển.
 
@@ -129,6 +132,7 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - Gán tenant và người khởi tạo từ token; ứng dụng không ghi đè được các biến này.
   - Chỉ người được giao hoặc người có vai trò ứng viên mới hoàn thành được task, và chỉ trong tenant của mình.
   - Task đánh dấu `four-eyes` không cho người khởi tạo tự hoàn thành (quy tắc bốn mắt).
+  - Người có vai trò `manager` chỉ hoàn thành được task khi claim `amr` của token có `otp` (đã đăng nhập hai bước).
 - **Cấu hình:** mã ở `core/workflow-api/`; quy tắc quyền là các hàm thuần trong `app/policy.py`, có kiểm thử ở
   `tests/`. Phiên bản thư viện khóa trong `uv.lock`.
 - **Xem:** `make test` (kiểm thử đơn vị), `make smoke` (kiểm tra đầu-cuối); các endpoint ở [api.md](api.md).

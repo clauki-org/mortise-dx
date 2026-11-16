@@ -4,7 +4,22 @@
 // Phần dùng chung của các bài kiểm thử trên trình duyệt: đăng nhập qua trang Keycloak như người dùng, và tạo dữ liệu
 // đầu vào qua API bằng client kiểm thử mortise-test (password grant, chỉ dùng cho kiểm thử, ADR 0006).
 
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { type APIRequestContext, expect, type Page } from "@playwright/test";
+
+const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
+
+// Tài khoản người duyệt demo (vai trò manager) phải nhập mã OTP khi đăng nhập (ADR 0011).
+const isApprover = (username: string) => username.startsWith("manager.");
+
+/** Mã OTP chưa dùng: Keycloak từ chối mã đã dùng, nên scripts/otp.py nhớ mã đã cấp và chờ khung mới khi cần. */
+function otp(username: string): string {
+  return execFileSync("uv", ["run", "--quiet", "--no-project", "python", "scripts/otp.py", "next", username], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  }).trim();
+}
 
 function password(): string {
   const value = process.env.DEMO_USER_PASSWORD;
@@ -17,14 +32,33 @@ export async function signIn(page: Page, username: string) {
   await page.locator("#username").fill(username);
   await page.locator("#password").fill(password());
   await page.locator("#kc-login").click();
+  if (isApprover(username)) {
+    // Không thấy ô nhập mã thì báo rõ, thay vì chờ hết giờ: thường là chưa chạy `make seed` sau khi đổi realm.
+    await expect(page.locator("#otp"), `${username} phải được hỏi mã OTP (ADR 0011)`).toBeVisible();
+    await page.locator("#otp").fill(otp(username));
+    await page.locator("#kc-login").click();
+  }
 }
 
+// Mỗi lần lấy token của người duyệt tốn một mã OTP, mà mỗi khung 30 giây chỉ có ba mã Keycloak còn nhận; giữ token
+// của từng tài khoản tới gần lúc hết hạn để bài kiểm không phải chờ mã mới.
+const tokens = new Map<string, { value: string; expiresAt: number }>();
+
 export async function token(request: APIRequestContext, username: string): Promise<string> {
-  const response = await request.post("/auth/realms/mortise/protocol/openid-connect/token", {
-    form: { grant_type: "password", client_id: "mortise-test", username, password: password() },
-  });
+  const cached = tokens.get(username);
+  if (cached && cached.expiresAt - Date.now() > 60_000) return cached.value;
+  const form: Record<string, string> = {
+    grant_type: "password",
+    client_id: "mortise-test",
+    username,
+    password: password(),
+  };
+  if (isApprover(username)) form.totp = otp(username);
+  const response = await request.post("/auth/realms/mortise/protocol/openid-connect/token", { form });
   expect(response.ok(), `lấy token cho ${username}`).toBeTruthy();
-  return (await response.json()).access_token;
+  const body: { access_token: string; expires_in: number } = await response.json();
+  tokens.set(username, { value: body.access_token, expiresAt: Date.now() + body.expires_in * 1000 });
+  return body.access_token;
 }
 
 async function workflow(

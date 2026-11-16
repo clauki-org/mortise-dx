@@ -36,7 +36,8 @@ biệt.
 | API dữ liệu tự sinh (Hasura CE), cách ly dữ liệu theo tenant | Đã chạy | `make smoke` |
 | Workflow BPMN (Flowable sau lớp workflow-api): cách ly tenant, phân quyền theo vai trò, quy tắc bốn mắt | Đã chạy | `make smoke`, `make test` |
 | Tệp qua cổng (`/v1/files`, SeaweedFS): tải lên, tải xuống theo tenant, giới hạn cỡ, quét mã độc trước khi lưu (ClamAV) | Đã chạy | `make smoke` (tệp thử EICAR), `make test` |
-| Xác thực đa yếu tố, cơ chế đăng nhập theo chính sách từng tenant | Kế hoạch | |
+| Đăng nhập hai bước (OTP) cho người có quyền duyệt; workflow-api từ chối duyệt khi token không có bước OTP | Đã chạy | `make smoke`, `make test`, `make e2e` |
+| Cơ chế đăng nhập theo chính sách từng tenant, Passkey | Kế hoạch | |
 | Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
 | Nhật ký thay đổi: ai sửa gì, lúc nào, trước và sau; chuỗi băm phát hiện sửa lén, đối chiếu băm trong bản sao lưu | Đã chạy | `make smoke`, `make audit-verify` |
 | Chỉ số trỏ về bản ghi nguồn, chỉ số chất lượng dữ liệu | Kế hoạch | |
@@ -82,7 +83,8 @@ make restore FROM=<thư mục sao lưu> CONFIRM=yes   # GHI ĐÈ dữ liệu hi�
 ```
 
 Tài khoản demo: `user.a`, `manager.a` (tenant `xuong-a`), `user.b`, `manager.b` (tenant `xuong-b`); mật khẩu là
-`DEMO_USER_PASSWORD` trong `.env`. Mọi lệnh khác: `make help`.
+`DEMO_USER_PASSWORD` trong `.env`. Người duyệt (`manager.*`) nhập thêm mã OTP: `make otp` in mã hiện tại và khóa để
+nhập vào ứng dụng OTP trên điện thoại ([ADR 0011](docs/adr/0011-approver-mfa.md)). Mọi lệnh khác: `make help`.
 
 ## Kiến trúc
 
