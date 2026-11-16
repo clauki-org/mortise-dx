@@ -226,6 +226,11 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY:?run make env}
       FILES_BUCKET: mortise-files
       FILES_MAX_BYTES: ${FILES_MAX_BYTES:-20971520}
+      CLAMD_HOST: clamav
+      CLAMD_PORT: "3310"
+      # Thời gian chờ mỗi lần gửi hay nhận với clamd, giây. Lớn hơn MaxScanTime của clamav bên dưới, để tệp quét
+      # lâu nhận lý do rõ từ clamd (vượt giới hạn quét) thay vì 503 vì files-api thôi chờ.
+      FILES_SCAN_TIMEOUT: ${FILES_SCAN_TIMEOUT:-150}
     depends_on:
       keycloak:
         condition: service_healthy
@@ -233,6 +238,10 @@ services:
         condition: service_completed_successfully
       seaweedfs:
         condition: service_started
+      # files-api từ chối mọi tệp khi chưa quét được; chờ clamd nạp xong mẫu nhận diện để
+      # `make up` trả về lúc tải lên đã dùng được.
+      clamav:
+        condition: service_healthy
     healthcheck:
       test:
         - CMD
@@ -306,6 +315,29 @@ services:
       - seaweed:/data
     ports:
       - "127.0.0.1:${S3_PORT:-8333}:8333"
+
+  clamav:
+    # Quét mã độc tệp tải lên (ADR 0010); chỉ files-api gọi, không mở cổng ra máy chủ hay qua APISIX.
+    # Image không có hậu tố _base kèm sẵn mẫu nhận diện lúc dựng image, nên khởi động được khi không có
+    # mạng; có mạng thì freshclam trong container tự tải mẫu mới.
+    image: clamav/clamav:1.5.4
+    restart: unless-stopped
+    environment:
+      # Mặc định clamd bỏ qua phần vượt giới hạn quét (tổng dung lượng sau giải nén, số tầng nén, thời gian) mà vẫn
+      # báo sạch. Bật để phần vượt giới hạn bị báo và files-api từ chối (ADR 0010).
+      CLAMD_CONF_AlertExceedsMax: "yes"
+      # Tệp con trong tệp nén lớn hơn MaxFileSize chỉ được quét phần đầu và không bị báo, kể cả khi bật
+      # AlertExceedsMax (đã thử với ClamAV 1.5.4). Đặt bằng MaxScanSize để tệp con lớn chạm giới hạn tổng và bị báo.
+      CLAMD_CONF_MaxFileSize: "400M"
+      CLAMD_CONF_MaxScanSize: "400M"
+      # Ghim giá trị mặc định (120 giây, theo clamd.conf.sample của image) để FILES_SCAN_TIMEOUT đặt lớn hơn nó.
+      CLAMD_CONF_MaxScanTime: "120000"
+    healthcheck:
+      # Lệnh kiểm của image (PING tới clamd); image đặt chu kỳ 30 giây, rút ngắn để `make up` không chờ thừa.
+      test: ["CMD-SHELL", "clamdcheck.sh"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
 
 volumes:
   pgdata:

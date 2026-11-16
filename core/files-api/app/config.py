@@ -28,6 +28,9 @@ class Settings:
     s3_secret_key: str
     bucket: str
     max_bytes: int
+    clamd_host: str
+    clamd_port: int
+    scan_timeout: float
 
 
 settings = Settings(
@@ -42,4 +45,7 @@ settings = Settings(
     s3_secret_key=_required("S3_SECRET_KEY"),
     bucket=_required("FILES_BUCKET"),
     max_bytes=int(_required("FILES_MAX_BYTES")),
+    clamd_host=_required("CLAMD_HOST"),
+    clamd_port=int(_required("CLAMD_PORT")),
+    scan_timeout=float(_required("FILES_SCAN_TIMEOUT")),
 )

@@ -58,6 +58,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - API tệp `/v1/files` (files-api trước SeaweedFS): tải lên, xem thông tin, tải xuống theo tenant; giới hạn cỡ,
   băm SHA-256, thông tin tệp trong `core.files`. Thêm biến `FILES_DB_PASSWORD` (`make env` tự thêm); vai trò CSDL
   của dịch vụ được tạo mỗi lần `make up`, nên bản cài đã có dữ liệu nâng cấp không cần `make reset`.
+- Quét mã độc tệp tải lên bằng ClamAV trước khi lưu (ADR 0010): tệp nhiễm trả 422 kèm tên mẫu nhận diện và không
+  được lưu; chưa quét được thì 503. Tệp đã quét có trạng thái `clean`. Lỗi tham số của `/v1/files` giờ trả
+  `{"error": "..."}` như mọi lỗi khác, thay cho `{"detail": [...]}`. Lõi cần thêm khoảng 1 GB RAM.
 - `make e2e`: kịch bản demo chạy trên trình duyệt thật qua cổng (Playwright): duyệt hồ sơ trên web, quy tắc bốn mắt,
   người duyệt của đơn vị khác không thấy, không duyệt được; CI chạy trong job end-to-end và giữ ảnh chụp, dấu vết
   khi hỏng. Thêm tài khoản demo `manager.b` (người duyệt của tenant `xuong-b`).

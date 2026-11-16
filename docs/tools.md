@@ -138,20 +138,33 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Trong dự án:**
   - Kiểm token lần nữa; gán tenant và người tải lên từ token. Nội dung lưu với khóa `<tenant>/<id>`.
   - Đếm cỡ trong lúc nhận, dừng ngay khi vượt `FILES_MAX_BYTES`; tính SHA-256 cùng lúc.
+  - Gửi nội dung sang ClamAV quét trước khi lưu; nhiễm hay vượt giới hạn quét thì 422, chưa quét được thì 503, không
+    lưu gì.
   - Ghi thông tin tệp vào `core.files` bằng vai trò CSDL `files_api`, chỉ đọc và thêm được dòng của bảng đó.
   - Tải xuống luôn là tệp đính kèm, kèm `X-Content-Type-Options: nosniff` và CSP `sandbox`.
-- **Cấu hình:** mã ở `core/files-api/`; phần thuần (tên tệp, giới hạn cỡ, header tải xuống) ở `app/policy.py`, có
-  kiểm thử ở `tests/`.
+- **Cấu hình:** mã ở `core/files-api/`; phần thuần (tên tệp, giới hạn cỡ, header tải xuống) ở `app/policy.py`, phần
+  gọi ClamAV ở `app/scan.py`, đều có kiểm thử ở `tests/`.
 - **Xem:** `make test`, `make smoke`; các endpoint ở [api.md](api.md). Healthcheck `/healthz` chỉ cho biết tiến trình
-  đang chạy, không kiểm CSDL hay SeaweedFS; hai dịch vụ đó lỗi thì yêu cầu trả 503 kèm hướng khắc phục.
+  đang chạy, không kiểm CSDL, SeaweedFS hay ClamAV; các dịch vụ đó lỗi thì yêu cầu trả 503 kèm hướng khắc phục.
 
 ### SeaweedFS: lưu trữ đối tượng
 
 - **Làm gì:** lưu tệp (tài liệu, ảnh, bản quét) và cung cấp API tương thích S3, nên ứng dụng dùng được thư viện S3
   có sẵn.
 - **Trong dự án:** chạy một máy chủ gộp, khóa truy cập S3 lấy từ `S3_ACCESS_KEY` và `S3_SECRET_KEY`. Ứng dụng vào
-  qua files-api, không gọi thẳng; quét mã độc tệp tải lên là kế hoạch.
+  qua files-api, không gọi thẳng.
 - **Xem:** API S3 tại `http://127.0.0.1:8333`.
+
+### ClamAV: quét mã độc
+
+- **Làm gì:** phần mềm diệt virus nguồn mở; tiến trình `clamd` nhận nội dung tệp qua mạng và trả "sạch" hay tên mẫu
+  nhận diện khớp.
+- **Trong dự án:** files-api gửi mọi tệp tải lên sang quét trước khi lưu ([ADR 0010](adr/0010-upload-malware-scan.md)).
+  Image kèm sẵn mẫu nhận diện nên chạy được khi không có mạng; có mạng thì `freshclam` tự cập nhật. Không mở cổng ra
+  máy chủ.
+- **Cấu hình:** biến `CLAMD_CONF_<tùy chọn>` của dịch vụ `clamav` trong `compose.yaml` ghi vào `clamd.conf` lúc khởi
+  động; đang bật `AlertExceedsMax`, đặt `MaxFileSize` bằng `MaxScanSize` và ghim `MaxScanTime`.
+- **Xem:** `docker compose logs clamav`; `docker compose exec clamav clamdtop` xem tải của `clamd`.
 
 ## Giao diện Tầng 2
 

@@ -97,8 +97,9 @@ lúc chỉ được xếp lần lượt khi workflow-api chạy một bản như
 ## Tệp: `/v1/files`
 
 Hợp đồng đầy đủ: [`contracts/files-api.openapi.json`](../contracts/files-api.openapi.json). Lớp `files-api` đứng trước
-SeaweedFS: gán tenant và người tải lên từ token, giới hạn cỡ (mặc định 20 MB, đổi bằng `FILES_MAX_BYTES`), ghi tên,
-cỡ, băm SHA-256 vào bảng `core.files`. SeaweedFS không có đường vào từ bên ngoài.
+SeaweedFS: gán tenant và người tải lên từ token, giới hạn cỡ (mặc định 20 MB, đổi bằng `FILES_MAX_BYTES`), quét mã
+độc bằng ClamAV trước khi lưu, ghi tên, cỡ, băm SHA-256 vào bảng `core.files`. SeaweedFS và ClamAV không có đường vào
+từ bên ngoài.
 
 | Phương thức | Đường dẫn | Việc |
 |---|---|---|
@@ -119,7 +120,8 @@ curl -fsS -X POST "http://localhost:9080/v1/files?name=bien-ban.pdf" \
 | `403` | Tài khoản không thuộc đúng một tenant, hoặc tenant chưa có trong `core.tenants` |
 | `404` | Tệp không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại); nội dung tệp không còn trong kho |
 | `413` | Tệp lớn quá giới hạn |
-| `422` | Thiếu tham số `name`, hoặc `id` không phải UUID |
-| `503` | Không kết nối được CSDL hay SeaweedFS |
+| `422` | Tệp chứa mã độc, hoặc vượt giới hạn quét nên không kiểm hết được (lý do nêu tên mẫu, tệp không được lưu); thiếu tham số `name`; `id` không phải UUID |
+| `503` | Không kết nối được CSDL, SeaweedFS hay ClamAV; tệp chưa quét được thì không được nhận |
 
-Trạng thái tệp hiện luôn là `unscanned`: bước quét mã độc là kế hoạch.
+Trạng thái tệp: `clean` là đã quét trước khi lưu, không thấy mã độc; `unscanned` là tệp tải lên trước khi có bước
+quét. Quét chỉ bắt mã độc đã có mẫu; giới hạn ở [ADR 0010](adr/0010-upload-malware-scan.md).

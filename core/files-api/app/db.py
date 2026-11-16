@@ -73,8 +73,9 @@ def _as_dict(row: list) -> dict:
 
 def insert(record: dict) -> dict:
     rows = _run(
-        "INSERT INTO core.files (id, tenant_id, name, content_type, size, sha256, uploaded_by) "
-        "VALUES (CAST(:id AS uuid), :tenant, :name, :content_type, :size, :sha256, :uploaded_by) "
+        # Chỉ gọi sau khi tệp đã quét sạch (main.upload), nên ghi thẳng `clean`.
+        "INSERT INTO core.files (id, tenant_id, name, content_type, size, sha256, uploaded_by, status) "
+        "VALUES (CAST(:id AS uuid), :tenant, :name, :content_type, :size, :sha256, :uploaded_by, 'clean') "
         "RETURNING id::text, name, content_type, size, sha256, uploaded_by, status, created_at",
         actor=record["uploaded_by"],
         **record,

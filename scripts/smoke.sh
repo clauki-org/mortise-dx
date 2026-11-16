@@ -277,4 +277,42 @@ check "Xóa lén một dòng ở giữa: lệnh kiểm chỉ ra chỗ đứt" "$
 status=$(scripts/audit-verify.sh >/dev/null 2>&1 && echo khớp || echo lệch)
 check "Sau các lần thử, nhật ký vẫn nguyên vẹn" "$status" khớp
 
+# Quét mã độc (clamav): tệp thử EICAR bị từ chối và không để lại gì trong CSDL hay kho tệp. Chuỗi EICAR ghép
+# từ hai nửa lúc chạy để chính tệp này không bị phần mềm diệt virus trên máy người phát triển nhận là nhiễm.
+stored() {
+  local rows objects
+  rows=$(sql -c "SELECT count(*) FROM core.files WHERE tenant_id = 'xuong-a'")
+  objects=$(docker compose exec -T seaweedfs wget -qO- --header 'Accept: application/json' \
+    'http://127.0.0.1:8888/buckets/mortise-files/xuong-a/?limit=100000' | jq '.Entries | length')
+  echo "$rows $objects"
+}
+before=$(stored)
+# shellcheck disable=SC2016 # "$" là ký tự của chuỗi thử, không phải biến.
+eicar='X5O!P%@AP[4\PZX54(P^)7CC)7}$'
+# shellcheck disable=SC2016
+eicar+='EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
+response=$(printf '%s' "$eicar" | curl -s -X POST -H "Authorization: Bearer $user_a" \
+  -H 'Content-Type: text/plain' --data-binary @- -w '\n%{http_code}' "$files?name=eicar.txt")
+status=${response##*$'\n'} body=${response%$'\n'*}
+check "Tệp thử EICAR bị từ chối kèm tên mẫu nhận diện" \
+  "$status $(jq -r '.error | test("Eicar")' <<<"$body")" "422 true"
+check "Tệp bị từ chối không để lại dòng trong core.files hay đối tượng trong kho tệp" "$(stored)" "$before"
+# Tệp nén lồng 20 tầng, quá MaxRecursion của clamd: với cấu hình mặc định clamd bỏ qua phần sâu hơn và báo sạch;
+# compose.yaml bật AlertExceedsMax nên tệp phải bị từ chối.
+response=$(uv run --quiet --no-project python -c '
+import io, sys, zipfile
+data = b"x"
+for level in range(20):
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as archive:
+        archive.writestr(f"{level}.zip", data)
+    data = out.getvalue()
+sys.stdout.buffer.write(data)' | curl -s -X POST -H "Authorization: Bearer $user_a" -H 'Content-Type: application/zip' \
+  --data-binary @- -w '\n%{http_code}' "$files?name=long-tang.zip")
+status=${response##*$'\n'} body=${response%$'\n'*}
+check "Tệp nén lồng quá giới hạn quét bị từ chối" \
+  "$status $(jq -r '.error | test("Limits.Exceeded")' <<<"$body")" "422 true"
+check "Tệp tải lên sau khi quét có trạng thái clean" \
+  "$(curl -s -H "Authorization: Bearer $user_a" "$files/$file_id" | jq -r .status)" clean
+
 exit $fail

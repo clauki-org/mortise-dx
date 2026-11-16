@@ -15,7 +15,9 @@ class FileInfo(BaseModel):
     size: int = Field(description="Cỡ tệp, byte")
     sha256: str = Field(description="Băm SHA-256 của nội dung, hệ 16")
     uploadedBy: str = Field(description="`sub` của người tải lên")
-    status: str = Field(description="`unscanned`: chưa quét mã độc (bước quét là kế hoạch)")
+    status: str = Field(
+        description="`clean`: đã quét, không thấy mã độc; `unscanned`: tải lên trước khi có bước quét"
+    )
     created: str = Field(description="Thời điểm tải lên, ISO 8601")
 
 

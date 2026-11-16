@@ -35,7 +35,7 @@ biệt.
 | Console quản trị không lộ qua cổng | Đã chạy | `make smoke` |
 | API dữ liệu tự sinh (Hasura CE), cách ly dữ liệu theo tenant | Đã chạy | `make smoke` |
 | Workflow BPMN (Flowable sau lớp workflow-api): cách ly tenant, phân quyền theo vai trò, quy tắc bốn mắt | Đã chạy | `make smoke`, `make test` |
-| Tệp qua cổng (`/v1/files`, SeaweedFS): tải lên, tải xuống theo tenant, giới hạn cỡ; quét mã độc là kế hoạch | Đã chạy | `make smoke`, `make test` |
+| Tệp qua cổng (`/v1/files`, SeaweedFS): tải lên, tải xuống theo tenant, giới hạn cỡ, quét mã độc trước khi lưu (ClamAV) | Đã chạy | `make smoke` (tệp thử EICAR), `make test` |
 | Xác thực đa yếu tố, cơ chế đăng nhập theo chính sách từng tenant | Kế hoạch | |
 | Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
 | Nhật ký thay đổi: ai sửa gì, lúc nào, trước và sau; chuỗi băm phát hiện sửa lén, đối chiếu băm trong bản sao lưu | Đã chạy | `make smoke`, `make audit-verify` |
@@ -49,8 +49,8 @@ biệt.
 ## Chạy từ mã nguồn
 
 Yêu cầu: Linux hoặc macOS, Docker Engine 24+ với Compose v2, `make`, `curl`, `jq`, `openssl` và
-[`uv`](https://docs.astral.sh/uv/) (`make smoke` dùng nó để kiểm token theo hợp đồng). Khuyến nghị 8 GB RAM trở lên.
-Phát triển giao diện cần thêm Node.js 26.
+[`uv`](https://docs.astral.sh/uv/) (`make smoke` dùng nó để kiểm token theo hợp đồng). Khuyến nghị 8 GB RAM trở lên;
+riêng ClamAV dùng khoảng 1 GB. Phát triển giao diện cần thêm Node.js 26.
 
 ```bash
 make up      # tạo .env với bí mật ngẫu nhiên, dựng lõi, chờ sẵn sàng
@@ -93,7 +93,7 @@ Tầng 1  APISIX (cổng duy nhất, kiểm JWT, giới hạn tần suất)
           ├─ Keycloak   định danh, SSO, vai trò, tenant
           ├─ Hasura CE  API GraphQL tự sinh, quyền theo dòng
           ├─ workflow-api → Flowable  quy trình BPMN theo tenant và vai trò
-          ├─ files-api → SeaweedFS    tệp theo tenant, giới hạn cỡ
+          ├─ files-api → SeaweedFS    tệp theo tenant, giới hạn cỡ, quét mã độc (ClamAV)
           ├─ PostgreSQL dữ liệu có cấu trúc (+ pgvector)
           └─ SeaweedFS  dữ liệu phi cấu trúc (S3)
 ```
@@ -113,6 +113,7 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Lưu trữ đối tượng | SeaweedFS | 4.52 | Apache-2.0 |
 | Migration lược đồ CSDL | dbmate | 2.37.0 | MIT |
 | Động cơ quy trình | Flowable REST | 7.2.0 | Apache-2.0 |
+| Quét mã độc ([ADR 0010](docs/adr/0010-upload-malware-scan.md)) | ClamAV | 1.5.4 | GPL-2.0 (tiến trình riêng, không liên kết mã) |
 | Lớp kiểm quyền quy trình (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT | khóa trong `core/workflow-api/uv.lock` | MIT / BSD-3-Clause |
 | API tệp (tự viết) | Python 3.13, FastAPI, boto3, pg8000, PyJWT | khóa trong `core/files-api/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
 | Phục vụ giao diện | nginx | 1.30.6 | BSD-2-Clause |

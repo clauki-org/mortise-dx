@@ -5,6 +5,7 @@
 # lớp này gán tenant và người tải lên từ token, giới hạn cỡ, ghi thông tin tệp vào CSDL và chỉ
 # trả tệp của đúng tenant. Tệp của tenant khác trả 404, không lộ việc tệp tồn tại.
 
+import logging
 import re
 import tempfile
 import uuid
@@ -12,9 +13,10 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, Query, Request
 from fastapi.concurrency import run_in_threadpool
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from . import db, storage
+from . import db, scan, storage
 from .auth import caller_from_token
 from .config import settings
 from .policy import Caller, Denied, Receiver, clean_name, content_disposition
@@ -24,6 +26,7 @@ from .schemas import ErrorBody, FileInfo
 app = FastAPI(title="Mortise DX files API", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None)
 
 CallerDep = Annotated[Caller, Depends(caller_from_token)]
+log = logging.getLogger("files-api")
 
 # Kiểu nội dung chỉ để giao diện biết tệp là gì; không khớp dạng type/subtype thì coi là nhị phân.
 _MEDIA_TYPE = re.compile(r"^[\w.+-]+/[\w.+-]+$")
@@ -31,13 +34,23 @@ _MEDIA_TYPE = re.compile(r"^[\w.+-]+/[\w.+-]+$")
 _SPOOL_BYTES = 8 * 1024 * 1024
 
 
+# 401 và 422 khai cho mọi route: route nào cũng kiểm token, và FastAPI tự ghi 422 theo dạng mặc định
+# {"detail": [...]} vào OpenAPI nếu route không khai, lệch với dạng {"error": "..."} thật sự trả về.
 def _errors(*codes: int) -> dict:
-    return {code: {"model": ErrorBody} for code in (401, *codes)}
+    return {code: {"model": ErrorBody} for code in (401, 422, *codes)}
 
 
 @app.exception_handler(Denied)
 def denied(_: Request, error: Denied) -> JSONResponse:
     return JSONResponse({"error": error.reason}, status_code=error.status)
+
+
+# Thiếu `name` hay `id` không phải UUID: trả cùng dạng {"error": "..."} với mọi lỗi khác, kể cả 422 của
+# tệp nhiễm mã độc, để giao diện chỉ phải đọc một dạng.
+@app.exception_handler(RequestValidationError)
+def invalid_request(_: Request, error: RequestValidationError) -> JSONResponse:
+    fields = sorted({str(e["loc"][-1]) for e in error.errors()})
+    return JSONResponse({"error": f"Tham số sai hoặc thiếu: {', '.join(fields)}."}, status_code=422)
 
 
 # Healthcheck của Docker, không đi qua cổng nên không thuộc hợp đồng.
@@ -82,6 +95,21 @@ async def upload(
             receiver.add(chunk)
             buffer.write(chunk)
         sha256 = receiver.finish()
+        buffer.seek(0)
+        # Quét trước khi lưu: tệp nhiễm không bao giờ vào kho tệp, nên không phải dọn lại và không
+        # có lúc nào người khác tải được nó về.
+        try:
+            await run_in_threadpool(
+                scan.check, buffer, settings.clamd_host, settings.clamd_port, settings.scan_timeout
+            )
+        except scan.Infected as found:
+            log.warning(
+                "Chặn tệp theo kết quả quét: tenant=%s người tải=%s mẫu=%s",
+                caller.tenant,
+                caller.sub,
+                found.signature,
+            )
+            raise
         buffer.seek(0)
         await run_in_threadpool(storage.put, caller.tenant, file_id, buffer, content_type)
     record = {
