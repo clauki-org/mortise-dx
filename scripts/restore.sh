@@ -32,7 +32,7 @@ if [[ -f .env ]] && ! cmp -s .env "$src/env"; then
 fi
 install -m 600 "$src/env" .env
 
-app_services=(apisix workflow-api flowable hasura keycloak context-api scorpio)
+app_services=(apisix workflow-api flowable hasura keycloak context-api iot-bridge mosquitto scorpio)
 docker compose stop "${app_services[@]}" seaweedfs >/dev/null 2>&1 || true
 docker compose up -d --wait postgres scorpio-db >/dev/null
 
@@ -71,6 +71,14 @@ if [[ -f "$src/scorpio.sql.gz" ]]; then
   load_cluster scorpio-db scorpio "$src/scorpio.sql.gz" 'cannot drop a template database' \
     'database "template_postgis" already exists' 'schema "tiger" already exists' 'schema "topology" already exists'
 
+fi
+
+# Bản sao lưu làm trước khi có MQTT không có tệp này; khi đó giữ tài khoản thiết bị hiện tại. start.sh của
+# Mosquitto chỉnh quyền tệp và đặt lại tài khoản cầu nối theo .env khi dựng lại.
+if [[ -f "$src/mqtt-auth.tar.gz" ]]; then
+  echo "Nạp tài khoản MQTT…"
+  docker compose run --rm --no-deps -T --entrypoint sh mosquitto -c 'tar xzf - -C /mosquitto/auth' \
+    <"$src/mqtt-auth.tar.gz"
 fi
 
 echo "Nạp SeaweedFS…"

@@ -89,6 +89,10 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Dữ liệu thiết bị theo chuẩn NGSI-LD (ADR 0012): Scorpio với CSDL PostGIS riêng, đọc qua cổng tại `/v1/context`
   (context-api) chỉ thấy thiết bị của đơn vị mình, chỉ đọc. `make backup` và `make restore` gồm CSDL của Scorpio.
   Thêm biến `SCORPIO_DB_PASSWORD`, `SCORPIO_PORT` (`make env` tự thêm).
+- Nhận số đo thiết bị qua MQTT (ADR 0012): Mosquitto trong mạng riêng `ot`, mỗi thiết bị một tài khoản chỉ gửi vào
+  chủ đề của mình (`make device-add`, `make device-remove`), cầu nối `iot-bridge` ghi vào Scorpio theo tenant của chủ
+  đề và chỉ cho tenant có thật; định dạng tin trong `contracts/device-message.schema.json`. `make seed` cấp tài khoản
+  cho thiết bị demo. Thêm biến `MQTT_BRIDGE_PASSWORD`, `IOT_BRIDGE_DB_PASSWORD`, `DEMO_DEVICE_PASSWORD`.
 
 ### Changed
 

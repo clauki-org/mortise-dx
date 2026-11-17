@@ -5,6 +5,7 @@
 # Sao lưu toàn bộ trạng thái của lõi vào một thư mục có dấu thời gian:
 #   postgres.sql.gz  mọi CSDL và vai trò (Keycloak, Flowable, mortise kèm metadata Hasura)
 #   scorpio.sql.gz   CSDL riêng của Scorpio, gồm CSDL của từng tenant (ADR 0012)
+#   mqtt-auth.tar.gz tài khoản và quyền MQTT của thiết bị (băm mật khẩu, không phải mật khẩu)
 #   seaweed.tar.gz   dữ liệu lưu trữ đối tượng
 #   env              bản sao .env (mật khẩu vai trò CSDL trong bản dump khớp với tệp này)
 #   MANIFEST, SHA256SUMS
@@ -21,7 +22,7 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 running=$(docker compose ps --status running --services)
-for service in postgres scorpio-db; do
+for service in postgres scorpio-db mosquitto; do
   if ! grep -qx "$service" <<<"$running"; then
     echo "$service không chạy. Chạy 'make up' trước khi sao lưu." >&2
     exit 1
@@ -46,6 +47,9 @@ echo "  PostgreSQL: xong"
 docker compose exec -T scorpio-db pg_dumpall -U scorpio --clean --if-exists | gzip >"$dest/scorpio.sql.gz"
 echo "  Scorpio: xong"
 
+docker compose exec -T mosquitto tar czf - -C /mosquitto/auth passwd acl >"$dest/mqtt-auth.tar.gz"
+echo "  Tài khoản MQTT: xong"
+
 # SeaweedFS không có ảnh chụp nhất quán khi đang ghi, nên dừng nó trong lúc đóng gói.
 # Dùng lại đúng image của dịch vụ để không thêm image mới chỉ để chạy tar.
 docker compose stop seaweedfs >/dev/null
@@ -62,7 +66,7 @@ cp .env "$dest/env"
   docker compose config --images | sort | sed 's/^/image=/'
   [[ -z "$audit_head" ]] || echo "audit_head=$audit_head"
 } >"$dest/MANIFEST"
-(cd "$dest" && sha256sum postgres.sql.gz scorpio.sql.gz seaweed.tar.gz env MANIFEST >SHA256SUMS)
+(cd "$dest" && sha256sum postgres.sql.gz scorpio.sql.gz mqtt-auth.tar.gz seaweed.tar.gz env MANIFEST >SHA256SUMS)
 
 echo "Hoàn tất. Bản sao lưu chứa bí mật (.env và dữ liệu): giữ ở nơi chỉ quản trị viên đọc được."
 echo "Khôi phục: make restore FROM=$dest"

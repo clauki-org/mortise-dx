@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mortise.invalid/contracts/device-message.schema.json",
+  "title": "Tin số đo thiết bị gửi qua MQTT",
+  "description": "Nội dung tin thiết bị gửi vào chủ đề mortise/<tenant>/<thiết bị> (ADR 0012). Tenant và thiết bị lấy từ chủ đề, không có trong tin. core/iot-bridge đổi mỗi số đo thành một thuộc tính NGSI-LD của entity urn:ngsi-ld:Device:<thiết bị>.",
+  "type": "object",
+  "required": ["measurements"],
+  "additionalProperties": false,
+  "properties": {
+    "observedAt": {
+      "description": "Thời điểm đo, ISO 8601 có múi giờ. Không gửi thì cầu nối dùng thời điểm nhận.",
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "measurements": {
+      "description": "Số đo theo tên; giá trị là số hay true/false. Tên dành riêng của NGSI-LD không được dùng.",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 20,
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9]{0,63}$",
+        "not": {
+          "enum": ["id", "type", "scope", "location", "observationSpace", "operationSpace", "createdAt",
+                   "modifiedAt", "deletedAt", "observedAt"]
+        }
+      },
+      "additionalProperties": { "type": ["number", "boolean"] }
+    }
+  }
+}
