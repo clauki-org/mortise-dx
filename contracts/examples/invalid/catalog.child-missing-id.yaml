@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: đối tượng con thiếu id.
+# Nếu lọt, đường dẫn tới màn hình chi tiết của đối tượng con không có tên để chỉ ra loại con nào.
+
+title: Danh mục
+source: app_example_items
+fields:
+  - name: name
+    label: Tên
+list:
+  columns: [name]
+detail:
+  children:
+    - label: Thành phần
+      via: item_id
+      source: app_example_parts
+      fields:
+        - name: name
+          label: Tên
+      list:
+        columns: [name]

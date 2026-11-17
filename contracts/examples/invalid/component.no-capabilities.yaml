@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/component.schema.json từ chối: không nêu thành phần làm được gì.
+# Nếu lọt, bản mô tả tồn tại mà người viết gói vẫn không biết có nên chọn thành phần này.
+
+component: no-such-component
+summary: Thành phần ví dụ.
+config_schema: no-such-component.schema.json
+example: examples/no-such-component.example.yaml
+capabilities: []
+limits: []

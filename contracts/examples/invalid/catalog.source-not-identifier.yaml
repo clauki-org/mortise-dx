@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: source không phải một tên GraphQL.
+# Nếu lọt, phần sau tên bảng được ghép nguyên vào câu truy vấn và đọc thứ mà cấu hình không khai.
+
+title: Danh mục
+source: "app_example_items { no_such_column }"
+fields:
+  - name: name
+    label: Tên
+list:
+  columns: [name]

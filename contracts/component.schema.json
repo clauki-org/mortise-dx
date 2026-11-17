@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/component.schema.json",
+  "title": "Bản mô tả một thành phần Tầng 2 (<tên>.component.yaml)",
+  "description": "Tệp contracts/<tên>.component.yaml, nằm cạnh schema cấu hình của thành phần. Người viết gói và công cụ sinh cấu hình đọc tệp này để biết thành phần làm được gì và không làm được gì trước khi chọn nó cho một mục menu trong app.yaml. Chỉ ghi điều thành phần đã làm được; đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["component", "summary", "config_schema", "example", "capabilities", "limits"],
+  "properties": {
+    "component": {
+      "description": "Tên thành phần: giá trị của khóa component trong app.yaml, và là phần <tên> trong tên tệp này",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "summary": { "description": "Một câu: thành phần hiển thị gì", "$ref": "#/$defs/text" },
+    "config_schema": {
+      "description": "Schema của tệp cấu hình mà mục menu trỏ tới; đường dẫn tính từ contracts/",
+      "$ref": "#/$defs/path"
+    },
+    "example": {
+      "description": "Một tệp cấu hình hợp lệ để làm mẫu; đường dẫn tính từ contracts/",
+      "$ref": "#/$defs/path"
+    },
+    "capabilities": {
+      "description": "Những gì thành phần làm được, mỗi mục một câu, nêu khóa cấu hình bật nó nếu có",
+      "$ref": "#/$defs/sentences",
+      "minItems": 1
+    },
+    "limits": {
+      "description": "Những gì thành phần không làm, để người viết gói không chọn nhầm; chưa có giới hạn nào thì để mảng rỗng",
+      "$ref": "#/$defs/sentences"
+    }
+  },
+  "$defs": {
+    "sentences": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/text" } },
+    "text": {
+      "description": "Chữ cho người đọc: có ít nhất một ký tự không phải khoảng trắng",
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "path": { "type": "string", "pattern": "^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$" }
+  }
+}

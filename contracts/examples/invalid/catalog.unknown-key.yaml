@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: có khóa không thuộc hợp đồng.
+# Nếu lọt, gõ nhầm tên khóa (`filter` thay vì `filters`) sẽ bị bỏ qua trong im lặng.
+
+title: Danh mục
+source: app_example_items
+fields:
+  - name: name
+    label: Tên
+list:
+  columns: [name]
+no_such_key: true

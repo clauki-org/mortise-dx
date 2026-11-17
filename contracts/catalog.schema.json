@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/catalog.schema.json",
+  "title": "Cấu hình thành phần danh mục (component: catalog)",
+  "description": "Tệp cấu hình mà gói viết cho thành phần danh mục. Một tệp mô tả một loại đối tượng và các loại đối tượng con lồng bên trong nó: đọc từ bảng nào, có trường nào, danh sách hiện cột nào. Thành phần danh mục sinh truy vấn GraphQL từ tệp này và không biết gì ngoài tệp này; nơi gọi thành phần quyết định nó hiện ở đâu. Quyền đọc không khai ở đây: Hasura lọc theo token của người gọi. Thứ tự hiển thị là thứ tự khai, nên mọi thứ có thứ tự là mảng.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "source", "fields", "list"],
+  "properties": {
+    "title": { "description": "Tiêu đề màn hình danh sách", "$ref": "#/$defs/text" },
+    "source": { "$ref": "#/$defs/source" },
+    "key": { "$ref": "#/$defs/key" },
+    "fields": { "$ref": "#/$defs/fields" },
+    "list": { "$ref": "#/$defs/list" },
+    "detail": { "$ref": "#/$defs/detail" }
+  },
+  "$defs": {
+    "source": {
+      "description": "Trường gốc GraphQL của bảng trong Hasura: <lược đồ>_<bảng>",
+      "$ref": "#/$defs/identifier"
+    },
+    "key": {
+      "description": "Cột định danh một dòng, nằm trong đường dẫn tới màn hình chi tiết. Bỏ trống là id.",
+      "$ref": "#/$defs/identifier"
+    },
+    "fields": {
+      "description": "Các trường thành phần được đọc. Màn hình chi tiết hiện mọi trường theo thứ tự khai; danh sách chỉ hiện trường có tên trong list.columns.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/field" }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "label"],
+      "properties": {
+        "name": { "description": "Tên cột trong bảng", "$ref": "#/$defs/identifier" },
+        "label": { "description": "Tên hiển thị của trường", "$ref": "#/$defs/text" },
+        "type": {
+          "description": "Cách hiển thị giá trị. Bỏ trống là text.",
+          "enum": ["text", "number", "date", "datetime"]
+        },
+        "choices": {
+          "description": "Trường chỉ nhận một số giá trị cố định: giá trị lưu trong bảng và chữ hiển thị thay cho nó",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "label"],
+            "properties": {
+              "value": { "type": "string" },
+              "label": { "$ref": "#/$defs/text" }
+            }
+          }
+        }
+      }
+    },
+    "list": {
+      "description": "Danh sách các dòng. Các khóa dưới đây nhận tên trường đã khai trong fields.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["columns"],
+      "properties": {
+        "columns": {
+          "description": "Cột của bảng, theo thứ tự hiển thị. Bấm tiêu đề cột để sắp xếp theo cột đó.",
+          "$ref": "#/$defs/names",
+          "minItems": 1
+        },
+        "search": {
+          "description": "Trường kiểu text mà ô tìm kiếm dò: dòng được giữ khi một trong các trường này chứa chữ đã gõ",
+          "$ref": "#/$defs/names"
+        },
+        "filters": {
+          "description": "Trường có choices; mỗi trường thành một ô chọn giá trị để lọc",
+          "$ref": "#/$defs/names"
+        },
+        "sort": {
+          "description": "Thứ tự khi mới mở. Bỏ trống là cột đầu tiên, tăng dần.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["field"],
+          "properties": {
+            "field": { "$ref": "#/$defs/identifier" },
+            "direction": { "enum": ["asc", "desc"] }
+          }
+        },
+        "page_size": {
+          "description": "Số dòng mỗi trang. Bỏ trống là 20. Có trần để một trang không tải cả bảng.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    },
+    "detail": {
+      "description": "Màn hình chi tiết của một dòng",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "description": "Trường dùng làm tiêu đề màn hình chi tiết. Bỏ trống là cột đầu tiên của danh sách.",
+          "$ref": "#/$defs/identifier"
+        },
+        "children": {
+          "description": "Các loại đối tượng con, mỗi loại hiện thành một bảng dưới phần chi tiết. Bấm một dòng con thì mở màn hình chi tiết của nó, có thể lại có đối tượng con.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/child" }
+        }
+      }
+    },
+    "child": {
+      "description": "Một loại đối tượng con, khai như đối tượng cha, thêm cột nối về cha",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "via", "source", "fields", "list"],
+      "properties": {
+        "id": {
+          "description": "Tên ngắn của loại đối tượng con, nằm trong đường dẫn; không trùng với loại con khác của cùng cha",
+          "$ref": "#/$defs/slug"
+        },
+        "label": { "description": "Tiêu đề của bảng đối tượng con", "$ref": "#/$defs/text" },
+        "via": {
+          "description": "Cột của đối tượng con chứa khóa của đối tượng cha",
+          "$ref": "#/$defs/identifier"
+        },
+        "source": { "$ref": "#/$defs/source" },
+        "key": { "$ref": "#/$defs/key" },
+        "fields": { "$ref": "#/$defs/fields" },
+        "list": { "$ref": "#/$defs/list" },
+        "detail": { "$ref": "#/$defs/detail" }
+      }
+    },
+    "names": {
+      "description": "Danh sách tên trường, mỗi tên một lần",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/identifier" }
+    },
+    "identifier": {
+      "description": "Tên theo luật của GraphQL. Thành phần danh mục ghép các tên này vào câu truy vấn, nên ký tự ngoài chữ không dấu, số và gạch dưới sẽ đổi nghĩa của câu truy vấn.",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "text": {
+      "description": "Chữ hiển thị cho người dùng: có ít nhất một ký tự không phải khoảng trắng",
+      "type": "string",
+      "pattern": "\\S"
+    }
+  }
+}

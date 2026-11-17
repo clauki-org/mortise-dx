@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: chiều sắp xếp không phải asc hay desc.
+# Nếu lọt, Hasura từ chối câu truy vấn và danh sách không mở được.
+
+title: Danh mục
+source: app_example_items
+fields:
+  - name: name
+    label: Tên
+list:
+  columns: [name]
+  sort:
+    field: name
+    direction: no-such-direction

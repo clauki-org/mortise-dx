@@ -6,7 +6,7 @@
 
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 const gateway = process.env.MORTISE_PUBLIC_URL ?? "http://localhost:9080";
 
@@ -19,4 +19,6 @@ export default defineConfig({
     strictPort: true,
     proxy: { "/v1": gateway },
   },
+  // Kiểm thử đơn vị (Vitest) chỉ lấy tệp trong src/; e2e/ là của Playwright và cần một bản cài đang chạy.
+  test: { include: ["src/**/*.test.ts"] },
 });
