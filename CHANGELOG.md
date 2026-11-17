@@ -48,9 +48,11 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Định dạng khai báo bước của quy trình (`contracts/workflow.schema.json`): biểu mẫu, nút quyết định và hồ sơ
   liên quan của từng bước người làm; `make check-fast` kiểm mọi userTask trong BPMN của gói đều có khai báo.
 - Gói Tầng 3 đầu tiên `apps/facilities-commune`: bảng cơ sở → tòa → phòng với khóa ngoại ghép kèm tenant, quyền
-  Hasura theo tenant, nhật ký thay đổi, migration và bảng theo dõi riêng của gói; `scripts/app.sh <gói>
-  install|uninstall|status` đọc `app.yaml` để cài và gỡ gói trên lõi đang chạy. Gói đã cài thì `make seed` áp lại
-  quyền và `make smoke` kiểm lệch như bảng của lõi. CI cài gói, chạy smoke của gói, gỡ gói rồi kiểm lõi vẫn qua.
+  Hasura theo tenant, nhật ký thay đổi, migration và bảng theo dõi riêng của gói; `make app-install`,
+  `make app-uninstall` (bắt `CONFIRM=yes` vì xóa dữ liệu của gói), `make app-status`, `make app-smoke` đọc `app.yaml`
+  để cài và gỡ gói trên lõi đang chạy; tệp quyền của gói chỉ được khai bảng trong lược đồ của gói. Gói đã cài thì
+  `make seed` áp lại quyền và `make smoke` kiểm lệch như bảng của lõi. CI cài gói, chạy smoke của gói, seed và smoke
+  khi gói đang cài, gỡ gói rồi kiểm lõi vẫn qua.
 - Bảng `platform.workflow_steps` (Tầng 2, lịch sử migration riêng): khai báo bước của quy trình theo tenant, đọc
   qua GraphQL; `make seed` nạp khai báo của quy trình mẫu.
 - Giao diện có menu bên trái và trang "Việc của tôi": các việc đang chờ người đăng nhập, việc gần hạn đứng đầu,

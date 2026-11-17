@@ -35,17 +35,19 @@ ADR 0009): mỗi thao tác qua Hasura ghi lại `sub` của token và vai trò.
 
 ## Cài và gỡ
 
-Cần lõi đang chạy và đã `make seed`. Lệnh cài gói đầy đủ (quy trình, menu) thuộc Sprint 2; hiện dùng script:
+Cần lõi đang chạy và đã `make seed`. Lệnh cài gói đầy đủ (quy trình, menu) thuộc Sprint 2; hiện cài lược đồ và
+quyền:
 
 ```bash
-scripts/app.sh facilities-commune install     # migrate rồi áp hasura/tables.yaml
-apps/facilities-commune/tests/smoke.sh        # kiểm qua cổng
-scripts/app.sh facilities-commune status      # migration nào đã áp
-scripts/app.sh facilities-commune uninstall   # bỏ đăng ký Hasura rồi lùi migration; `make smoke` của lõi vẫn qua
+make app-install APP=facilities-commune                  # migrate rồi áp hasura/tables.yaml
+make app-smoke APP=facilities-commune                    # kiểm qua cổng
+make app-status APP=facilities-commune                   # migration nào đã áp
+make app-uninstall APP=facilities-commune CONFIRM=yes    # XÓA dữ liệu của gói ở mọi tenant; lõi vẫn qua smoke
 ```
 
 Gói đã cài thì `make seed` áp lại quyền của gói và `make smoke` báo lệch nếu ai sửa tay trên Hasura, như bảng của
-lõi. CI chạy đúng bốn bước trên sau smoke của lõi.
+lõi. CI cài gói, chạy smoke của gói, chạy `make seed` và `make smoke` khi gói đang cài, rồi gỡ gói và chạy lại
+`make smoke`.
 
 ## Chưa có
 

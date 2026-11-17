@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Kiểm tra gói qua cổng APISIX sau khi `scripts/app.sh facilities-commune install`: mỗi tenant chỉ
+# Kiểm tra gói qua cổng APISIX sau khi `make app-install APP=facilities-commune`: mỗi tenant chỉ
 # đọc và ghi cơ sở của mình, tenant do token quyết định chứ không do dữ liệu gửi lên, khóa ngoại
 # ghép chặn việc nối tòa vào cơ sở của tenant khác, và thay đổi qua Hasura để lại nhật ký ghi đúng
 # người làm (ADR 0009). Dùng hai tài khoản demo của lõi; tự dọn dữ liệu đã tạo nên chạy lại nhiều
@@ -104,11 +104,30 @@ out=$(gql "$token_a" "$insert_building" "{\"f\":\"$fac_a\",\"code\":\"$code\"}")
 bld_a=$(jq -r '.data.insert_app_facilities_commune_buildings_one.id' <<<"$out")
 check "$user_a nối tòa vào cơ sở của mình" "$([[ -n "$bld_a" && "$bld_a" != null ]] && echo yes)" yes
 
+# Phòng: loại diện tích và diện tích thông thủy là căn cứ tính định mức, CSDL chặn giá trị sai.
+insert_room='mutation($b: uuid!, $code: String!, $type: String!, $area: numeric!) {
+  insert_app_facilities_commune_rooms_one(object: {building_id: $b, code: $code, name: "Phòng kiểm thử",
+    area_type: $type, clear_area_m2: $area}) { id tenant_id }
+}'
+room() { gql "$token_a" "$insert_room" "{\"b\":\"$bld_a\",\"code\":\"$1\",\"type\":\"$2\",\"area\":$3}"; }
+out=$(room "$code-1" working 18.5)
+room_a=$(jq -r '.data.insert_app_facilities_commune_rooms_one.id' <<<"$out")
+check "$user_a thêm phòng làm việc, tenant lấy từ token" \
+  "$(jq -r '.data.insert_app_facilities_commune_rooms_one.tenant_id' <<<"$out")" "$tenant_a"
+check "Phòng có loại diện tích ngoài working/shared/specialized bị từ chối" \
+  "$(room "$code-2" office 10 | jq 'has("errors")')" true
+check "Phòng có diện tích thông thủy bằng 0 bị từ chối" "$(room "$code-3" shared 0 | jq 'has("errors")')" true
+
 delete_facility='mutation($id: uuid!) { delete_app_facilities_commune_facilities_by_pk(id: $id) { id } }'
+out=$(gql "$token_b" "$delete_facility" "{\"id\":\"$fac_a\"}")
+check "$user_b không xóa được cơ sở của $user_a" \
+  "$(jq -r '.data.delete_app_facilities_commune_facilities_by_pk' <<<"$out")" null
 out=$(gql "$token_a" "$delete_facility" "{\"id\":\"$fac_a\"}")
 check "ON DELETE RESTRICT: không xóa được cơ sở còn tòa" "$(jq 'has("errors")' <<<"$out")" true
 
 # Dọn: con trước, cha sau.
+gql "$token_a" 'mutation($id: uuid!) { delete_app_facilities_commune_rooms_by_pk(id: $id) { id } }' \
+  "{\"id\":\"$room_a\"}" >/dev/null
 gql "$token_a" 'mutation($id: uuid!) { delete_app_facilities_commune_buildings_by_pk(id: $id) { id } }' \
   "{\"id\":\"$bld_a\"}" >/dev/null
 gql "$token_a" "$delete_facility" "{\"id\":\"$fac_a\"}" >/dev/null

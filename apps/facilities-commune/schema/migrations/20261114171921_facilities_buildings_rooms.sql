@@ -63,9 +63,9 @@ CREATE TABLE app_facilities_commune.rooms (
     UNIQUE (tenant_id, building_id, code)
 );
 
--- Hasura thêm điều kiện tenant vào mọi truy vấn; thiếu chỉ mục thì mỗi truy vấn quét cả bảng.
-CREATE INDEX ON app_facilities_commune.buildings (tenant_id, facility_id);
-CREATE INDEX ON app_facilities_commune.rooms (tenant_id, building_id);
+-- Hasura thêm điều kiện tenant vào mọi truy vấn và khóa ngoại ghép tra con theo (tenant_id, cha): chỉ mục của
+-- UNIQUE (tenant_id, facility_id, code) và UNIQUE (tenant_id, building_id, code) bắt đầu bằng đúng hai cột đó nên
+-- dùng được cho cả hai việc, không cần chỉ mục riêng.
 
 -- Người dùng sửa được ba bảng này qua Hasura, nên mọi thay đổi phải để lại nhật ký (ADR 0009).
 SELECT core.audit_attach('app_facilities_commune.facilities');

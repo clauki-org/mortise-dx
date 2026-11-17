@@ -9,7 +9,8 @@
 # Không truyền tệp thì dùng mọi tệp *.yaml trong DECLARATIONS, để danh sách tệp chỉ nằm một chỗ, cộng tệp của
 # gói (apps/<gói>/hasura/, ADR 0005): lint xét mọi gói; apply và check chỉ xét gói đã cài, tức gói có ít nhất
 # một bảng đang đăng ký trong Hasura, vì bảng của gói do scripts/app.sh tạo và gỡ chứ không có sẵn.
-# scripts/app.sh gọi với tệp của gói: apply khi cài, untrack (bỏ đăng ký kèm quan hệ và quyền) khi gỡ.
+# scripts/app.sh gọi với tệp của gói: apply khi cài, untrack (bỏ đăng ký kèm quan hệ và quyền) khi gỡ. Tệp của
+# gói chỉ được khai bảng trong lược đồ của gói (database.schema trong app.yaml).
 # Trước đây seed chỉ tạo quyền, nên quyền đã có mà sai thì giữ nguyên và không ai biết.
 
 import glob
@@ -33,9 +34,21 @@ MANAGED = {"table"} | {f"{kind}_permissions" for kind in KINDS}
 UNMANAGED = ("object_relationships", "array_relationships", "computed_fields")
 
 
+def package_schema(path: str) -> str | None:
+    """Lược đồ của gói chứa tệp khai báo (database.schema trong app.yaml); None nếu tệp không thuộc gói."""
+    parts = os.path.normpath(path).split(os.sep)
+    if len(parts) < 3 or parts[0] != "apps":
+        return None
+    with open(os.path.join("apps", parts[1], "app.yaml"), encoding="utf-8") as file:
+        return yaml.safe_load(file)["database"]["schema"]
+
+
 def load(files: list[str]) -> dict[tuple[str, str], dict]:
     tables: dict[tuple[str, str], dict] = {}
     for path in files:
+        # Tệp của gói chỉ được khai bảng trong lược đồ của chính gói: khai nhầm một bảng của lõi thì apply sẽ
+        # cấp quyền trên bảng đó, và untrack khi gỡ gói sẽ bỏ đăng ký nó khỏi Hasura.
+        schema = package_schema(path)
         with open(path, encoding="utf-8") as file:
             for entry in yaml.safe_load(file) or []:
                 extra = entry.keys() - MANAGED
@@ -44,6 +57,10 @@ def load(files: list[str]) -> dict[tuple[str, str], dict]:
                         f"{path}: {', '.join(sorted(extra))} chưa được hỗ trợ; chỉ khai bảng và quyền"
                     )
                 key = (entry["table"]["schema"], entry["table"]["name"])
+                if schema is not None and key[0] != schema:
+                    raise SystemExit(
+                        f"{path}: bảng {key[0]}.{key[1]} nằm ngoài lược đồ của gói ({schema}, theo app.yaml)"
+                    )
                 if key in tables:
                     raise SystemExit(f"{path}: bảng {key[0]}.{key[1]} đã khai ở tệp khác")
                 tables[key] = entry

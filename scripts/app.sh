@@ -8,6 +8,7 @@
 # Hasura áp bằng scripts/hasura-metadata.py như bảng của lõi. Cài: migrate rồi áp metadata. Gỡ:
 # bỏ đăng ký metadata rồi mới lùi migration, để Hasura không trỏ tới bảng đã xóa. Chạy lại
 # nhiều lần không lỗi. Chưa deploy quy trình và menu của gói; lệnh cài gói đầy đủ thuộc Sprint 2 (#58).
+# Gọi qua Makefile: make app-install|app-uninstall|app-status APP=<gói>.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 # .env do `make env` sinh ra và không có trong repo, nên shellcheck không đọc theo.
@@ -19,18 +20,30 @@ set +a
 app="${1:-}"
 action="${2:-}"
 manifest="apps/$app/app.yaml"
-if [[ -z "$app" || ! -f "$manifest" || ! "$action" =~ ^(install|uninstall|status)$ ]]; then
-  echo "Cách dùng: scripts/app.sh <gói> install|uninstall|status (gói là thư mục trong apps/ có app.yaml)" >&2
+if [[ ! "$app" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ || ! -f "$manifest" || ! "$action" =~ ^(install|uninstall|status)$ ]]; then
+  echo "Cách dùng: make app-install|app-uninstall|app-status APP=<gói> (gói là thư mục trong apps/ có app.yaml)" >&2
+  exit 1
+fi
+# Gỡ gói xóa lược đồ của gói cùng toàn bộ dữ liệu của mọi tenant trong đó, nên phải xác nhận như make restore.
+if [[ "$action" == uninstall && "${CONFIRM:-}" != yes ]]; then
+  echo "Gỡ gói $app sẽ xóa toàn bộ dữ liệu của gói ở mọi tenant. Sao lưu trước (make backup), rồi chạy lại với" \
+    "CONFIRM=yes." >&2
   exit 1
 fi
 
 py=(uv run --quiet --no-project --with pyyaml==6.0.3 python)
 # Ba dòng: lược đồ, thư mục migration, thư mục Hasura; app.yaml đã được kiểm theo schema ở `make check-fast`.
-{ read -r schema; read -r migrations; read -r hasura_dir; } < <("${py[@]}" -c '
+{ read -r id; read -r schema; read -r migrations; read -r hasura_dir; } < <("${py[@]}" -c '
 import sys, yaml
 app = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))
-print(app["database"]["schema"]); print(app["database"]["migrations"]); print(app.get("hasura", ""))
+print(app["id"]); print(app["database"]["schema"]); print(app["database"]["migrations"]); print(app.get("hasura", ""))
 ' "$manifest")
+# contracts/app.schema.json yêu cầu id trùng tên thư mục nhưng schema không tự kiểm được; bảng theo dõi
+# migration đặt theo tên thư mục, nên lệch nhau là hai bản cài của cùng một gói có hai lịch sử migration.
+if [[ "$id" != "$app" ]]; then
+  echo "$manifest: id '$id' phải trùng tên thư mục '$app'." >&2
+  exit 1
+fi
 # Bảng theo dõi nằm ngoài lược đồ của gói (ADR 0005). Tên gói dùng gạch nối, tên bảng không.
 table="public.${app//-/_}_schema_migrations"
 declarations=()
@@ -56,7 +69,7 @@ case "$action" in
   install)
     dbmate up --strict
     if ((${#declarations[@]})); then metadata apply; fi
-    echo "Gói $app đã cài (lược đồ $schema). Kiểm: apps/$app/tests/smoke.sh"
+    echo "Gói $app đã cài (lược đồ $schema). Kiểm: make app-smoke APP=$app"
     ;;
   uninstall)
     if ((${#declarations[@]})); then metadata untrack; fi
