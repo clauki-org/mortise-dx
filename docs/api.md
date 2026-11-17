@@ -22,6 +22,9 @@ TOKEN=$(curl -fsS http://localhost:9080/auth/realms/mortise/protocol/openid-conn
   -d username=user.a -d "password=$DEMO_USER_PASSWORD" | jq -r .access_token)
 ```
 
+Người duyệt (vai trò `manager`) gửi kèm mã OTP, ví dụ `-d username=manager.a -d totp=<mã>`; `make otp` in mã của tài
+khoản demo. Thiếu mã thì Keycloak trả `invalid_grant`. Mỗi mã chỉ dùng được một lần.
+
 Token mang các claim lõi dùng để phân quyền (hợp đồng: [`contracts/token-claims.schema.json`](../contracts/token-claims.schema.json)):
 
 | Claim | Ý nghĩa |
@@ -29,6 +32,7 @@ Token mang các claim lõi dùng để phân quyền (hợp đồng: [`contracts
 | `sub` | Mã người dùng |
 | `tenant` | Đơn vị (tenant) của người dùng, đúng một giá trị |
 | `realm_access.roles` | Vai trò, ví dụ `user`, `manager` |
+| `amr` | Cách đã đăng nhập: `pwd` (mật khẩu), `otp` (mã OTP) |
 
 ## Dữ liệu: `POST /v1/graphql`
 
@@ -88,7 +92,7 @@ lúc chỉ được xếp lần lượt khi workflow-api chạy một bản như
 | `201` / `204` | Khởi tạo / hoàn thành thành công |
 | `400` | Ghi đè biến dành riêng của lõi (`initiator`, `initiatorName`, `tenant`, `idempotencyKey`); `Idempotency-Key` sai định dạng (8–100 ký tự chữ, số, `-`, `_`) |
 | `401` | Thiếu hoặc sai token |
-| `403` | Tài khoản không thuộc đúng một tenant; task đã giao cho người khác; không có vai trò ứng viên; người gửi tự duyệt yêu cầu của mình |
+| `403` | Tài khoản không thuộc đúng một tenant; người duyệt (`manager`) đăng nhập chưa qua bước OTP; task đã giao cho người khác; không có vai trò ứng viên; người gửi tự duyệt yêu cầu của mình |
 | `404` | Task hay quy trình không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại); tenant chưa có quy trình đó |
 | `409` | Task vừa được người khác nhận |
 | `422` | Thân yêu cầu sai định dạng hoặc có khóa ngoài `variables`, ví dụ gửi `{"approved": true}` thiếu lớp `variables` |

@@ -1,0 +1,9 @@
+{
+  "iss": "http://localhost:9080/auth/realms/mortise",
+  "sub": "03fbe4b5-8d07-4de5-9694-8c572a4e9033",
+  "exp": 1794221726,
+  "preferred_username": "manager.a",
+  "tenant": ["xuong-a"],
+  "realm_access": { "roles": ["default-roles-mortise", "manager", "offline_access", "uma_authorization", "user"] },
+  "amr": "otp"
+}

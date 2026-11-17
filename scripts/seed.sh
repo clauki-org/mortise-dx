@@ -23,8 +23,8 @@ kc add-roles -r mortise --rname default-roles-mortise --rolename user >/dev/null
 
 # Client chỉ dùng cho smoke và CI: còn bật password grant để lấy token bằng lệnh, không có redirect URI nên không
 # dùng được cho đăng nhập qua trình duyệt. Tạo ở seed chứ không nằm trong tệp realm, để bản cài thật không có client
-# nào nhận mật khẩu trực tiếp (ADR 0006). Mapper chép từ client giao diện để token mang cùng claim `tenant`; tạo
-# lại mỗi lần seed để luôn khớp khi mapper của client giao diện đổi.
+# nào nhận mật khẩu trực tiếp (ADR 0006). Mapper chép từ client giao diện để token mang cùng claim `tenant` và `amr`
+# (ADR 0011); tạo lại mỗi lần seed để luôn khớp khi mapper của client giao diện đổi.
 test_client=$(kc get clients -r mortise -q clientId=mortise-test --fields id --format csv --noquotes)
 [[ -z "$test_client" ]] || kc delete "clients/$test_client" -r mortise
 kc get clients -r mortise -q clientId=mortise-web | jq '.[0] | {
@@ -70,6 +70,18 @@ for entry in "${users[@]}"; do
   kc update "users/$user_id/groups/$group_id" -r mortise -s realm=mortise -s "userId=$user_id" -s "groupId=$group_id" -n >/dev/null
   if [[ "$role" != "-" ]]; then
     kc add-roles -r mortise --uusername "$username" --rolename "$role" >/dev/null
+  fi
+  # Người duyệt phải nhập mã OTP khi đăng nhập (ADR 0011). Gắn sẵn khóa từ .env để demo và kiểm thử không phải quét mã
+  # QR; xóa khóa cũ trước để chạy lại seed không tích nhiều khóa. Người dùng thật tự cài khi đăng nhập lần đầu.
+  if [[ "$role" == manager ]]; then
+    : "${DEMO_OTP_SECRET:?Thiếu DEMO_OTP_SECRET trong .env; chạy make env}"
+    kc get "users/$user_id/credentials" -r mortise | jq -r '.[] | select(.type == "otp") | .id' |
+      while read -r credential; do kc delete "users/$user_id/credentials/$credential" -r mortise; done
+    jq -n --arg secret "$DEMO_OTP_SECRET" '{credentials: [{
+        type: "otp", userLabel: "demo",
+        secretData: ({value: $secret} | tojson),
+        credentialData: ({subType: "totp", digits: 6, period: 30, counter: 0, algorithm: "HmacSHA1"} | tojson)
+      }]}' | kc update "users/$user_id" -r mortise -f - >/dev/null
   fi
   echo "keycloak: $username, tenant $tenant, vai trò thêm: $role"
 done

@@ -12,6 +12,9 @@ export default defineConfig({
   workers: 1,
   // Không tự chạy lại bài hỏng: bài chập chờn phải lộ ra để sửa, không bị che bằng lần chạy thứ hai.
   retries: 0,
+  // Người duyệt đăng nhập kèm mã OTP; khi các mã còn hiệu lực đã dùng hết (smoke chạy ngay trước), scripts/otp.py
+  // chờ sang khung 30 giây mới. Giới hạn mặc định 30 giây một bài sẽ hết trong lúc chờ (ADR 0011).
+  timeout: 90_000,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: process.env.MORTISE_PUBLIC_URL || "http://localhost:9080",

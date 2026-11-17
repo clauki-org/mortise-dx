@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e audit-verify hooks app-install app-uninstall app-status app-smoke
+  check-fast web-check e2e audit-verify hooks app-install app-uninstall app-status app-smoke otp
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -34,8 +34,11 @@ ps: ## Trạng thái các dịch vụ
 logs: ## Theo dõi log
 	docker compose logs -f --tail=100
 
-seed: ## Nạp tài khoản demo, metadata Hasura và quy trình mẫu
+seed: env ## Nạp tài khoản demo, metadata Hasura và quy trình mẫu
 	@scripts/seed.sh
+
+otp: ## In mã OTP hiện tại của tài khoản người duyệt demo và khóa để nhập vào ứng dụng OTP
+	@uv run --quiet --no-project python scripts/otp.py show
 
 smoke: ## Kiểm tra đầu-cuối qua cổng (cần lõi đang chạy và đã seed)
 	@scripts/smoke.sh

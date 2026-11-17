@@ -73,6 +73,10 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Nhật ký thay đổi `core.audit_log` (ADR 0009): ghi ai sửa gì, lúc nào, trước và sau trên tệp, đơn vị, khai báo
   bước; chuỗi băm phát hiện sửa lén; `make audit-verify` chỉ ra chỗ bị sửa; `make backup` ghi băm cuối, `make restore`
   đối chiếu lại.
+- Đăng nhập hai bước cho người duyệt (ADR 0011): vai trò `manager` nhập thêm mã OTP khi đăng nhập, lần đầu thì cài
+  ứng dụng OTP qua mã QR; token có claim `amr`; workflow-api từ chối duyệt khi token không có bước OTP. Thêm biến
+  `DEMO_OTP_SECRET` (`make env` tự thêm) và `make otp` cho tài khoản demo. Bản cài đã dựng cần `make reset` để nạp
+  lại realm.
 
 ### Changed
 

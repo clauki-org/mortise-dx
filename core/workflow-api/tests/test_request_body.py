@@ -13,7 +13,13 @@ from app.auth import caller_from_token
 from app.main import app
 from app.policy import Caller
 
-MANAGER_A = Caller(sub="m-a", username="manager.a", tenant="xuong-a", roles=frozenset({"user", "manager"}))
+MANAGER_A = Caller(
+    sub="m-a",
+    username="manager.a",
+    tenant="xuong-a",
+    roles=frozenset({"user", "manager"}),
+    methods=frozenset({"pwd", "otp"}),
+)
 COMPLETE = "/v1/workflow/tasks/t1/complete"
 START = "/v1/workflow/processes/core-approval/instances"
 

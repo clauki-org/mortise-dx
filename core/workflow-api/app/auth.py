@@ -34,4 +34,5 @@ def caller_from_token(authorization: str | None = Header(default=None)) -> Calle
         username=claims.get("preferred_username", claims["sub"]),
         tenant=tenants[0],
         roles=frozenset(claims.get("realm_access", {}).get("roles", [])),
+        methods=frozenset(claims.get("amr") or []),
     )

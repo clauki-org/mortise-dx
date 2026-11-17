@@ -7,6 +7,96 @@
   "loginWithEmailAllowed": true,
   "bruteForceProtected": true,
   "accessTokenLifespan": 900,
+  "ssoSessionMaxLifespan": 36000,
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "otpPolicyLookAheadWindow": 1,
+  "otpPolicyCodeReusable": false,
+  "browserFlow": "browser-mfa",
+  "directGrantFlow": "direct-grant-mfa",
+  "authenticationFlows": [
+    {
+      "alias": "browser-mfa",
+      "description": "Đăng nhập trên trình duyệt; người có vai trò manager nhập thêm mã OTP (ADR 0011)",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "auth-cookie", "requirement": "ALTERNATIVE", "priority": 10, "authenticatorFlow": false },
+        { "flowAlias": "browser-mfa forms", "requirement": "ALTERNATIVE", "priority": 20, "authenticatorFlow": true }
+      ]
+    },
+    {
+      "alias": "browser-mfa forms",
+      "description": "Mật khẩu, rồi OTP nếu là người duyệt",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-username-password-form", "requirement": "REQUIRED", "priority": 10,
+          "authenticatorFlow": false, "authenticatorConfig": "amr-pwd"
+        },
+        { "flowAlias": "browser-mfa approver otp", "requirement": "CONDITIONAL", "priority": 20, "authenticatorFlow": true }
+      ]
+    },
+    {
+      "alias": "browser-mfa approver otp",
+      "description": "OTP bắt buộc với vai trò manager; chưa cài thì Keycloak yêu cầu cài ngay lúc đăng nhập",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-user-role", "requirement": "REQUIRED", "priority": 10,
+          "authenticatorFlow": false, "authenticatorConfig": "approver-role"
+        },
+        {
+          "authenticator": "auth-otp-form", "requirement": "REQUIRED", "priority": 20,
+          "authenticatorFlow": false, "authenticatorConfig": "amr-otp"
+        }
+      ]
+    },
+    {
+      "alias": "direct-grant-mfa",
+      "description": "Lấy token bằng mật khẩu (chỉ client kiểm thử bật); người duyệt gửi kèm mã OTP",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "direct-grant-validate-username", "requirement": "REQUIRED", "priority": 10, "authenticatorFlow": false },
+        {
+          "authenticator": "direct-grant-validate-password", "requirement": "REQUIRED", "priority": 20,
+          "authenticatorFlow": false, "authenticatorConfig": "amr-pwd"
+        },
+        { "flowAlias": "direct-grant-mfa approver otp", "requirement": "CONDITIONAL", "priority": 30, "authenticatorFlow": true }
+      ]
+    },
+    {
+      "alias": "direct-grant-mfa approver otp",
+      "description": "OTP bắt buộc với vai trò manager",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-user-role", "requirement": "REQUIRED", "priority": 10,
+          "authenticatorFlow": false, "authenticatorConfig": "approver-role"
+        },
+        {
+          "authenticator": "direct-grant-validate-otp", "requirement": "REQUIRED", "priority": 20,
+          "authenticatorFlow": false, "authenticatorConfig": "amr-otp"
+        }
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    { "alias": "approver-role", "config": { "condUserRole": "manager", "negate": "false" } },
+    { "alias": "amr-pwd", "config": { "default.reference.value": "pwd", "default.reference.maxAge": "36000" } },
+    { "alias": "amr-otp", "config": { "default.reference.value": "otp", "default.reference.maxAge": "36000" } }
+  ],
   "roles": {
     "realm": [
       { "name": "user", "description": "Người dùng nghiệp vụ trong một tenant" },
@@ -44,6 +134,16 @@
             "access.token.claim": "true",
             "id.token.claim": "true",
             "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "amr",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-amr-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "id.token.claim": "true"
           }
         }
       ]

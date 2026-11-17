@@ -3,6 +3,8 @@
 #
 # Kiểm thử quy tắc quyền của task. Mỗi quy tắc một test, đặt tên theo điều nó bảo vệ.
 
+from dataclasses import replace
+
 import pytest
 
 from app.policy import (
@@ -15,8 +17,16 @@ from app.policy import (
     check_variables,
 )
 
-MANAGER_A = Caller(sub="m-a", username="manager.a", tenant="xuong-a", roles=frozenset({"user", "manager"}))
-USER_A = Caller(sub="u-a", username="user.a", tenant="xuong-a", roles=frozenset({"user"}))
+MANAGER_A = Caller(
+    sub="m-a",
+    username="manager.a",
+    tenant="xuong-a",
+    roles=frozenset({"user", "manager"}),
+    methods=frozenset({"pwd", "otp"}),
+)
+USER_A = Caller(
+    sub="u-a", username="user.a", tenant="xuong-a", roles=frozenset({"user"}), methods=frozenset({"pwd"})
+)
 
 
 def review_task(**changes) -> TaskView:
@@ -82,3 +92,23 @@ def test_malformed_idempotency_key_is_rejected(key):
     with pytest.raises(Denied) as error:
         check_idempotency_key(key)
     assert error.value.status == 400
+
+
+def test_approver_without_second_factor_is_denied():
+    password_only = replace(MANAGER_A, methods=frozenset({"pwd"}))
+    with pytest.raises(Denied) as denied:
+        check_can_complete(password_only, review_task())
+    assert denied.value.status == 403
+    assert "hai bước" in denied.value.reason
+
+
+def test_approver_without_second_factor_still_sees_not_found_for_other_tenant():
+    # Không lộ việc task của tenant khác tồn tại, kể cả khi người gọi thiếu OTP.
+    password_only = replace(MANAGER_A, methods=frozenset({"pwd"}))
+    with pytest.raises(Denied) as denied:
+        check_can_complete(password_only, review_task(tenant="xuong-b"))
+    assert denied.value.status == 404
+
+
+def test_user_without_approver_role_needs_no_second_factor():
+    check_can_complete(USER_A, review_task(candidate_groups=frozenset({"user"}), category=None))

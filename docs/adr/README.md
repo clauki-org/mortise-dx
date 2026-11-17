@@ -31,6 +31,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0008](0008-shared-api-contracts.md) | Hợp đồng API giữa các tầng trong `contracts/`, CI kiểm cả ví dụ đúng và ví dụ sai | Chấp nhận |
 | [0009](0009-tamper-evident-audit-log.md) | Nhật ký thay đổi ghi bằng trigger, chuỗi băm phát hiện sửa, đối chiếu băm trong bản sao lưu | Chấp nhận |
 | [0010](0010-upload-malware-scan.md) | Quét mã độc tệp tải lên bằng ClamAV, trước khi lưu, từ chối khi chưa quét được | Chấp nhận |
+| [0011](0011-approver-mfa.md) | Người duyệt đăng nhập hai bước bằng OTP; workflow-api kiểm lại bằng claim `amr` | Chấp nhận |
 
 ## Quyết định còn mở
 
