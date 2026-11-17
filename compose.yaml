@@ -464,6 +464,21 @@ services:
       timeout: 3s
       retries: 30
 
+  simulator:
+    # Bộ giả lập thiết bị demo (devices/simulator, ADR 0012): đăng nhập Mosquitto bằng tài khoản của từng thiết
+    # bị như thiết bị thật. Chỉ chạy khi gọi: `make simulate` (lặp) hoặc trong `make smoke` (một lượt).
+    build: devices/simulator
+    profiles: [simulator]
+    environment:
+      DEMO_DEVICE_PASSWORD: ${DEMO_DEVICE_PASSWORD:?run make env}
+      SIMULATOR_DEVICES: /srv/devices.yaml
+    volumes:
+      - ./devices/simulator/devices.yaml:/srv/devices.yaml:ro
+    networks: [ot]
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+
 networks:
   # Mạng của thiết bị: không có đường ra internet, và các dịch vụ khác của lõi không nằm trong đó.
   ot:

@@ -204,6 +204,15 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Cấu hình:** mã ở `core/iot-bridge/`; đổi tin thành entity ở `app/message.py`, có kiểm thử ở `tests/`.
 - **Xem:** `docker compose logs iot-bridge`; healthcheck chỉ xanh khi đã kết nối và đăng ký nhận tin.
 
+### Bộ giả lập thiết bị (`devices/simulator/`, tự viết)
+
+- **Làm gì:** đóng vai các thiết bị demo trong `devices.yaml`: nhiệt độ, độ ẩm, có người, điện năng cộng dồn.
+- **Trong dự án:** đăng nhập Mosquitto bằng tài khoản của từng thiết bị và gửi tin theo
+  `contracts/device-message.schema.json`, như thiết bị thật. Số liệu chỉ để minh họa.
+- **Cấu hình:** dịch vụ `simulator` (profile `simulator`) trong `compose.yaml`, mật khẩu `DEMO_DEVICE_PASSWORD`.
+- **Xem:** `make simulate` gửi mỗi 5 giây; `make simulate ARGS="--set xuong-a/archive-01:humidity=78"` ép một số đo;
+  `make smoke` chạy một lượt.
+
 ### context-api: đọc dữ liệu thiết bị (tự viết)
 
 - **Làm gì:** dịch vụ nhỏ bằng Python (FastAPI) đứng giữa cổng và Scorpio tại `/v1/context`.
