@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+
+[project]
+name = "mortise-cold-archive"
+version = "0.1.0"
+description = "Xuất nhật ký thay đổi cũ sang kho lạnh (Parquet trên SeaweedFS) và truy vấn bằng DuckDB"
+license = "Apache-2.0"
+requires-python = ">=3.13"
+dependencies = [
+  "duckdb==2.0.0",
+  "pg8000>=1.31",
+  "boto3>=1.40",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+ignore = ["S101", "S608"]

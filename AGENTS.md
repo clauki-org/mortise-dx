@@ -35,6 +35,7 @@ core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp 
   context-api/        dịch vụ tự viết: đọc dữ liệu thiết bị (NGSI-LD) theo tenant trước Scorpio (Python, uv)
   iot-bridge/         dịch vụ tự viết: nhận số đo qua MQTT, ghi vào Scorpio theo tenant của chủ đề (Python, uv)
   mosquitto/          cấu hình Mosquitto (MQTT) trong mạng thiết bị riêng
+  cold-archive/       công cụ tự viết: xuất nhật ký cũ sang kho lạnh (Parquet), truy vấn bằng DuckDB (Python, uv)
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
   ollama/ observability/      kế hoạch
 platform/             TẦNG 2: thành phần dùng chung, không chứa từ nghiệp vụ

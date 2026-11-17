@@ -86,6 +86,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   ứng dụng OTP qua mã QR; token có claim `amr`; workflow-api từ chối duyệt khi token không có bước OTP. Thêm biến
   `DEMO_OTP_SECRET` (`make env` tự thêm) và `make otp` cho tài khoản demo. Bản cài đã dựng cần `make reset` để nạp
   lại realm.
+- Kho lạnh cho nhật ký thay đổi (ADR 0014): `make archive BEFORE=<ngày>` xuất dòng cũ sang Parquet trên SeaweedFS,
+  chỉ ghi nhận đoạn khi băm tính lại từ tệp khớp từng dòng; `make cold-query SQL=…` truy vấn gộp kho lạnh và CSDL
+  bằng DuckDB. SeaweedFS chạy với `-volume.max=100` để có bucket thứ hai.
 - Dữ liệu thiết bị theo chuẩn NGSI-LD (ADR 0012): Scorpio với CSDL PostGIS riêng, đọc qua cổng tại `/v1/context`
   (context-api) chỉ thấy thiết bị của đơn vị mình, chỉ đọc. `make backup` và `make restore` gồm CSDL của Scorpio.
   Thêm biến `SCORPIO_DB_PASSWORD`, `SCORPIO_PORT` (`make env` tự thêm).

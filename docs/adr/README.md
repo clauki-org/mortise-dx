@@ -34,6 +34,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0011](0011-approver-mfa.md) | Người duyệt đăng nhập hai bước bằng OTP; workflow-api kiểm lại bằng claim `amr` | Chấp nhận |
 | [0012](0012-device-context-ngsi-ld.md) | Dữ liệu thiết bị: nhận qua MQTT, giữ theo NGSI-LD trong Scorpio, đọc qua context-api | Chấp nhận |
 | [0013](0013-component-config-contracts.md) | Thành phần Tầng 2 chỉ biết cấu hình của nó; schema cấu hình và bản mô tả trong `contracts/` | Chấp nhận |
+| [0014](0014-cold-audit-archive.md) | Kho lạnh cho nhật ký thay đổi: Parquet trên SeaweedFS, truy vấn bằng DuckDB, chuỗi băm nối qua đoạn | Chấp nhận |
 
 ## Quyết định còn mở
 

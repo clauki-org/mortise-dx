@@ -405,6 +405,17 @@ wait
 check "Thiết bị không nghe được số đo của thiết bị khác" \
   "$(until_reading "$user_a" meter-01 energy "$marker") $(wc -l <"$eavesdrop")" "$marker 0"
 rm -f "$eavesdrop"
+# Kho lạnh (ADR 0014): xuất mọi dòng nhật ký tới lúc này sang Parquet; công cụ chỉ ghi nhận đoạn khi băm tính lại
+# từ tệp khớp từng dòng. Chưa xóa gì khỏi CSDL (#97), nên bảng ảo audit_all phải có đúng số dòng như CSDL.
+cold() { docker compose --profile tools run --rm --build --quiet-pull cold-archive "$@" 2>/dev/null; }
+archived=$(cold archive --before "$(date -u -d '+1 minute' +%FT%TZ)" | grep -c -e 'băm từng dòng khớp' -e 'Không có dòng' || true)
+check "Xuất nhật ký sang kho lạnh, băm tính lại từ tệp khớp" "$archived" 1
+# Phòng trường hợp lệnh trên chỉ trả "Không có dòng" (đồng hồ lệch): phải có ít nhất một đoạn đã ghi nhận.
+segments=$(docker compose exec -T postgres psql -qAtX -U postgres -d mortise -c 'SELECT count(*) > 0 FROM core.audit_segments')
+check "Có đoạn nhật ký đã ghi nhận trong core.audit_segments" "$segments" t
+in_db=$(docker compose exec -T postgres psql -qAtX -U postgres -d mortise -c 'SELECT count(*) FROM core.audit_log')
+in_all=$(cold query "SELECT count(*) AS n FROM audit_all" | grep -oE '│ +[0-9]+ +│' | tr -dc '0-9')
+check "Truy vấn gộp kho lạnh và CSDL đếm đúng số dòng nhật ký" "$in_all" "$in_db"
 
 # Bộ giả lập (devices/simulator) gửi một lượt cho mọi thiết bị demo bằng tài khoản của từng thiết bị: số đo của
 # thiết bị xuong-a tới được /v1/context của user.a. Mã riêng, khác số đo bài MQTT ở trên đã ghi, để bài này chỉ

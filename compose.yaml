@@ -302,6 +302,8 @@ services:
       retries: 30
 
   seaweedfs:
+    # -volume.max: mặc định chỉ 8 volume, mà mỗi bucket (collection) chiếm vài volume ngay khi ghi tệp đầu, nên
+    # bucket thứ hai (kho lạnh, ADR 0014) không ghi được. Volume rỗng không chiếm chỗ đáng kể trên đĩa.
     image: chrislusf/seaweedfs:4.52
     restart: unless-stopped
     environment:
@@ -313,11 +315,17 @@ services:
         cat > /tmp/s3.json <<EOF
         {"identities":[{"name":"mortise","credentials":[{"accessKey":"$$S3_ACCESS_KEY","secretKey":"$$S3_SECRET_KEY"}],"actions":["Admin","Read","Write","List","Tagging"]}]}
         EOF
-        exec weed server -dir=/data -s3 -s3.config=/tmp/s3.json
+        exec weed server -dir=/data -volume.max=100 -s3 -s3.config=/tmp/s3.json
     volumes:
       - seaweed:/data
     ports:
       - "127.0.0.1:${S3_PORT:-8333}:8333"
+    healthcheck:
+      # Master trả trạng thái cụm khi đã sẵn sàng; công cụ kho lạnh chờ điều này trước khi tạo bucket.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9333/cluster/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
   clamav:
     # Quét mã độc tệp tải lên (ADR 0010); chỉ files-api gọi, không mở cổng ra máy chủ hay qua APISIX.
@@ -479,11 +487,31 @@ services:
       mosquitto:
         condition: service_healthy
 
+  cold-archive:
+    # Công cụ kho lạnh của người vận hành (ADR 0014): xuất nhật ký thay đổi cũ sang Parquet trên SeaweedFS và truy
+    # vấn bằng DuckDB. Chỉ chạy khi gọi (`make archive`, `make cold-query`); không có route qua cổng vì tệp chứa
+    # giá trị trước và sau của mọi tenant. Dùng tài khoản postgres như `make backup`.
+    build: core/cold-archive
+    profiles: [tools]
+    environment:
+      COLD_DB_HOST: postgres
+      COLD_DB_NAME: mortise
+      COLD_DB_USER: postgres
+      COLD_DB_PASSWORD: ${POSTGRES_PASSWORD:?run make env}
+      COLD_S3_ENDPOINT: seaweedfs:8333
+      COLD_BUCKET: mortise-cold
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?run make env}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?run make env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+
 networks:
   # Mạng của thiết bị: không có đường ra internet, và các dịch vụ khác của lõi không nằm trong đó.
   ot:
     internal: true
-
 volumes:
   pgdata:
   mqttauth:
