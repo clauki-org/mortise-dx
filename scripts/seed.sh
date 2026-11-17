@@ -141,3 +141,14 @@ ON CONFLICT (tenant_id, process, step) DO UPDATE SET config = EXCLUDED.config, u
 COMMIT;
 SQL
 echo "postgres: khai báo bước $(jq -r .process <<<"$declaration") từ $file"
+
+# Tài khoản MQTT của các thiết bị demo (ADR 0012), cùng mật khẩu DEMO_DEVICE_PASSWORD để bộ giả lập đăng nhập
+# được. Danh sách thiết bị nằm ở devices/simulator/devices.yaml, chung với bộ giả lập.
+: "${DEMO_DEVICE_PASSWORD:?Thiếu DEMO_DEVICE_PASSWORD trong .env; chạy make env}"
+uv run --quiet --no-project --with pyyaml==6.0.3 python -c '
+import sys, yaml
+for entry in yaml.safe_load(open(sys.argv[1], encoding="utf-8")):
+    print(entry["tenant"], entry["device"])
+' devices/simulator/devices.yaml | while read -r tenant device; do
+  scripts/device.sh add "$tenant" "$device" "$DEMO_DEVICE_PASSWORD" | sed 's/^/mosquitto: /'
+done

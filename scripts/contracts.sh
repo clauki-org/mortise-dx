@@ -54,6 +54,7 @@ print(described["component"]); print(described["config_schema"]); print(describe
     fi
   done
 done
+"${checker[@]}" --schemafile contracts/device-message.schema.json contracts/examples/device-message.example.json
 "${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml --steps contracts/examples/workflow.example.yaml
 # Gói thật, nếu đã có. Khai báo bước của một gói chỉ đối chiếu với BPMN của chính gói đó.
 shopt -s nullglob globstar
@@ -118,13 +119,15 @@ reject contracts/app.schema.json contracts/examples/invalid/app.*.yaml
 reject contracts/workflow.schema.json contracts/examples/invalid/workflow.*.yaml
 reject contracts/catalog.schema.json contracts/examples/invalid/catalog.*.yaml
 reject contracts/component.schema.json contracts/examples/invalid/component.*.yaml
+reject contracts/device-message.schema.json contracts/examples/invalid/device-message.*.json
 # Các mẫu tên ở trên quyết định tệp nào được kiểm. Tệp đặt sai tên sẽ nằm trong invalid/
 # mà chưa từng bị kiểm, nên phải báo lỗi thay vì bỏ qua.
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
-    token-claims.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml) ;;
+    token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml) ;;
     *)
-      echo "$file không được kiểm: tên phải theo mẫu token-claims.<lỗi>.json hoặc <app|workflow|catalog|component>.<lỗi>.yaml." >&2
+      echo "$file không được kiểm: tên phải theo mẫu <token-claims|device-message>.<lỗi>.json hoặc" \
+        "<app|workflow|catalog|component>.<lỗi>.yaml." >&2
       exit 1
       ;;
   esac

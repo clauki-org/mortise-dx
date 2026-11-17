@@ -76,6 +76,7 @@ services:
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD:?run make env}
       FILES_DB_PASSWORD: ${FILES_DB_PASSWORD:?run make env}
+      IOT_BRIDGE_DB_PASSWORD: ${IOT_BRIDGE_DB_PASSWORD:?run make env}
     entrypoint: ["/roles.sh"]
     volumes:
       - ./core/postgres/roles.sh:/roles.sh:ro
@@ -412,7 +413,64 @@ services:
       timeout: 5s
       retries: 20
 
+  mosquitto:
+    # Nhận số đo từ thiết bị qua MQTT (ADR 0012). Chỉ nằm trong mạng `ot`, tách khỏi các dịch vụ nghiệp vụ;
+    # không mở cổng ra máy chủ hay qua APISIX. Tài khoản thiết bị cấp bằng `make device-add`.
+    image: eclipse-mosquitto:2.1.2-alpine
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/mosquitto/config/start.sh"]
+    environment:
+      MQTT_BRIDGE_PASSWORD: ${MQTT_BRIDGE_PASSWORD:?run make env}
+    volumes:
+      - ./core/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./core/mosquitto/start.sh:/mosquitto/config/start.sh:ro
+      - mqttauth:/mosquitto/auth
+    networks: [ot]
+    healthcheck:
+      # Đăng nhập bằng tài khoản cầu nối và gửi một gói rỗng (không có quyền ghi nên broker bỏ): thoát 0 nghĩa là
+      # broker chạy và nhận tài khoản. Không đọc $$SYS vì đó là tin retained, đã tắt trong mosquitto.conf.
+      test: ["CMD-SHELL", "mosquitto_pub -u iot-bridge -P \"$$MQTT_BRIDGE_PASSWORD\" -t mortise/health -n -q 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  iot-bridge:
+    # Cầu nối MQTT sang Scorpio: tenant lấy từ chủ đề, chỉ ghi cho tenant có trong core.tenants (ADR 0012).
+    # Nằm ở cả hai mạng: nhận tin trong `ot`, ghi vào Scorpio và đọc CSDL trong mạng mặc định.
+    build: core/iot-bridge
+    restart: unless-stopped
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+      MQTT_USER: iot-bridge
+      MQTT_PASSWORD: ${MQTT_BRIDGE_PASSWORD:?run make env}
+      SCORPIO_URL: http://scorpio:9090
+      BRIDGE_DB_HOST: postgres
+      BRIDGE_DB_NAME: mortise
+      BRIDGE_DB_USER: iot_bridge
+      BRIDGE_DB_PASSWORD: ${IOT_BRIDGE_DB_PASSWORD:?run make env}
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      scorpio:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [default, ot]
+    healthcheck:
+      # Tệp do cầu nối tạo khi đã kết nối và đăng ký nhận tin xong, xóa khi mất kết nối.
+      test: ["CMD", "test", "-f", "/tmp/iot-bridge-ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+networks:
+  # Mạng của thiết bị: không có đường ra internet, và các dịch vụ khác của lõi không nằm trong đó.
+  ot:
+    internal: true
+
 volumes:
   pgdata:
+  mqttauth:
   scorpiodata:
   seaweed:

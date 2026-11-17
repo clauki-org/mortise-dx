@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e audit-verify hooks app-install app-uninstall app-status app-smoke otp
+  check-fast web-check e2e audit-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -55,6 +55,12 @@ audit-verify: ## Kiểm nhật ký thay đổi không bị sửa lén; ANCHOR=<t
 backup: ## Sao lưu CSDL, tệp và .env ra ngoài repo (BACKUP_DIR để đổi nơi lưu)
 	@scripts/backup.sh
 
+device-add: ## Cấp tài khoản MQTT cho thiết bị, in mật khẩu: make device-add TENANT=<tenant> DEVICE=<thiết bị>
+	@scripts/device.sh add "$(TENANT)" "$(DEVICE)"
+
+device-remove: ## Thu hồi tài khoản MQTT của thiết bị: make device-remove TENANT=<tenant> DEVICE=<thiết bị>
+	@scripts/device.sh remove "$(TENANT)" "$(DEVICE)"
+
 app-install: ## Cài một gói Tầng 3 lên lõi đang chạy: make app-install APP=<gói>
 	@scripts/app.sh "$(APP)" install
 
@@ -75,7 +81,7 @@ lint: ## Kiểm tra giấy phép từng tệp (REUSE)
 	uvx reuse lint
 
 test: ## Kiểm thử đơn vị các dịch vụ tự viết của lõi
-	@for service in workflow-api files-api context-api; do \
+	@for service in workflow-api files-api context-api iot-bridge; do \
 	  echo "== $$service"; \
 	  (cd core/$$service && UV_PROJECT_ENVIRONMENT=$(MORTISE_VENVS)/$$service-venv PYTHONDONTWRITEBYTECODE=1 \
 	    uv run --frozen pytest -q -p no:cacheprovider) || exit 1; \
@@ -90,10 +96,11 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	@if [ -f .env.check-fast ]; then docker compose --env-file .env.check-fast config -q; rm -f .env.check-fast; \
 	  else docker compose config -q; fi
 	uvx --from shellcheck-py shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh \
+	  core/mosquitto/start.sh \
 	  apps/*/tests/*.sh
 	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps .github
-	uvx ruff check --no-cache core/workflow-api core/files-api core/context-api
-	uvx ruff format --no-cache --check core/workflow-api core/files-api core/context-api
+	uvx ruff check --no-cache core/workflow-api core/files-api core/context-api core/iot-bridge
+	uvx ruff format --no-cache --check core/workflow-api core/files-api core/context-api core/iot-bridge
 	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts
 	uvx ruff format --no-cache --check --config core/workflow-api/pyproject.toml scripts
 	@scripts/contracts.sh check

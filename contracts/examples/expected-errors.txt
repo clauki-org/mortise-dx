@@ -32,6 +32,9 @@ catalog.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' 
 catalog.unknown-sort-direction.yaml	$.list.sort.direction	'no-such-direction' is not one of ['asc', 'desc']
 component.no-capabilities.yaml	$.capabilities	[] should be non-empty
 component.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
+device-message.reserved-name.json	$.measurements	'type' should not be valid under {'enum': ['id', 'type', 'scope', 'location', 'observationSpace', 'operationSpace', 'createdAt', 'modifiedAt', 'deletedAt', 'observedAt']}
+device-message.tenant-in-body.json	$	Additional properties are not allowed ('tenant' was unexpected)
+device-message.text-value.json	$.measurements.humidity	'71' is not of type 'number', 'boolean'
 token-claims.amr-not-array.json	$.amr	'otp' is not of type 'array'
 token-claims.missing-tenant.json	$	'tenant' is a required property
 token-claims.missing-user-role.json	$.realm_access.roles	['default-roles-mortise', 'manager', 'offline_access', 'uma_authorization'] does not contain items matching the given schema

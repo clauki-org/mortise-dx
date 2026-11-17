@@ -157,3 +157,16 @@ Tenant chưa có thiết bị nào gửi số đo thì danh sách rỗng.
 | `403` | Tài khoản không thuộc đúng một tenant, hoặc mã tenant không đúng dạng slug |
 | `404` | Entity không có trong tenant mình |
 | `502` / `503` | Kho dữ liệu thiết bị báo lỗi (chi tiết chỉ ghi vào log) / không kết nối được |
+
+### Thiết bị gửi số đo qua MQTT
+
+Thiết bị không gọi `/v1/context`; nó gửi tin MQTT vào chủ đề `mortise/<tenant>/<thiết bị>` bằng tài khoản
+`<tenant>.<thiết bị>` do `make device-add` cấp. Nội dung theo
+[`contracts/device-message.schema.json`](../contracts/device-message.schema.json):
+
+```json
+{"observedAt": "2026-11-17T10:00:00Z", "measurements": {"temperature": 24.1, "humidity": 71}}
+```
+
+Mỗi số đo thành một thuộc tính của entity `urn:ngsi-ld:Device:<thiết bị>` trong tenant của chủ đề, đọc lại qua
+`/v1/context`. Tin sai dạng hay gửi vào chủ đề của tenant khác bị bỏ, thiết bị không nhận lỗi.

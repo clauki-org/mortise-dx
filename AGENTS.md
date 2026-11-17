@@ -33,16 +33,18 @@ core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp 
   workflow-api/       dịch vụ tự viết: kiểm quyền trước Flowable (Python, uv)
   files-api/          dịch vụ tự viết: tải lên, tải xuống tệp theo tenant trước SeaweedFS (Python, uv)
   context-api/        dịch vụ tự viết: đọc dữ liệu thiết bị (NGSI-LD) theo tenant trước Scorpio (Python, uv)
+  iot-bridge/         dịch vụ tự viết: nhận số đo qua MQTT, ghi vào Scorpio theo tenant của chủ đề (Python, uv)
+  mosquitto/          cấu hình Mosquitto (MQTT) trong mạng thiết bị riêng
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
-  mosquitto/ ollama/ observability/      kế hoạch
+  ollama/ observability/      kế hoạch
 platform/             TẦNG 2: thành phần dùng chung, không chứa từ nghiệp vụ
   web/                khung giao diện: đăng nhập, menu, thương hiệu theo bản cài, nạp thành phần và gói
   components/<tên>/   kế hoạch: mã của một thành phần khi tách khỏi web/; schema cấu hình ở contracts/ (ADR 0013)
-  services/<tên>/     kế hoạch: dịch vụ dùng chung tự viết (trợ lý AI, OCR, lưu trữ lạnh, cầu nối IoT)
+  services/<tên>/     kế hoạch: dịch vụ dùng chung tự viết (trợ lý AI, OCR, lưu trữ lạnh)
   schema/             lược đồ CSDL của Tầng 2 (migration dbmate riêng) và quyền Hasura (`schema/hasura/`)
 apps/<gói>/           TẦNG 3: gói nghiệp vụ; `app.yaml` khai báo gói, phần còn lại ưu tiên là khai
                       báo (schema/, hasura/, bpmn/, forms/, rules/, map-layers/, dashboards/, knowledge/, seed/, tests/)
-devices/              kế hoạch: firmware thiết bị và bộ giả lập
+devices/              thiết bị: danh sách thiết bị demo (simulator/); firmware và bộ giả lập là kế hoạch
 deploy/               kế hoạch: triển khai lên máy chủ
 scripts/              lệnh hỗ trợ, gọi từ Makefile
 docs/                 adr/ quyết định kiến trúc, api.md API của lõi, tools.md công cụ sử dụng

@@ -182,6 +182,28 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Xem:** `http://127.0.0.1:9090/ngsi-ld/v1/entities?type=Device` kèm header `NGSILD-Tenant: <tenant>` và
   `Accept: application/json` (chỉ máy chủ, không xác thực).
 
+### Mosquitto: nhận số đo thiết bị qua MQTT
+
+- **Làm gì:** broker MQTT, giao thức nhẹ mà thiết bị IoT dùng để gửi số đo.
+- **Trong dự án:** chỉ nằm trong mạng compose `ot` (không ra internet, không mở cổng ra máy chủ). Mỗi thiết bị một
+  tài khoản `<tenant>.<thiết bị>`, chỉ được gửi vào `mortise/<tenant>/<thiết bị>`; cầu nối có tài khoản chỉ đọc
+  ([ADR 0012](adr/0012-device-context-ngsi-ld.md)).
+- **Cấu hình:** `core/mosquitto/mosquitto.conf`; `core/mosquitto/start.sh` đặt tài khoản cầu nối theo
+  `MQTT_BRIDGE_PASSWORD` mỗi lần khởi động. Tài khoản thiết bị nằm trong volume `mqttauth`, cấp bằng
+  `make device-add TENANT=… DEVICE=…` (in mật khẩu một lần), thu hồi bằng `make device-remove`.
+- **Xem:** `docker compose logs mosquitto`; gửi thử: `docker compose exec mosquitto mosquitto_pub -u <tài khoản>
+  -P <mật khẩu> -t mortise/<tenant>/<thiết bị> -m '{"measurements": {"humidity": 70}}'`.
+
+### iot-bridge: cầu nối MQTT sang NGSI-LD (tự viết)
+
+- **Làm gì:** dịch vụ Python (paho-mqtt) đọc mọi chủ đề số đo và ghi vào Scorpio.
+- **Trong dự án:**
+  - Tenant và thiết bị chỉ lấy từ chủ đề; nội dung tin theo `contracts/device-message.schema.json`.
+  - Chỉ ghi cho tenant có trong `core.tenants` (vai trò CSDL `iot_bridge` chỉ đọc bảng đó); CSDL lỗi thì không ghi.
+  - Tin hỏng bị bỏ kèm một dòng log, không làm dừng cầu nối.
+- **Cấu hình:** mã ở `core/iot-bridge/`; đổi tin thành entity ở `app/message.py`, có kiểm thử ở `tests/`.
+- **Xem:** `docker compose logs iot-bridge`; healthcheck chỉ xanh khi đã kết nối và đăng ký nhận tin.
+
 ### context-api: đọc dữ liệu thiết bị (tự viết)
 
 - **Làm gì:** dịch vụ nhỏ bằng Python (FastAPI) đứng giữa cổng và Scorpio tại `/v1/context`.

@@ -356,4 +356,54 @@ check "/v1/context không nhận ghi" "$([[ $status != 2* ]] && echo yes)" yes
 leaked=$(curl -s -H "Authorization: Bearer $user_a" "$base/ngsi-ld/v1/entities?type=Device" | grep -c "$device" || true)
 check "Scorpio không có đường vào trực tiếp qua cổng" "$leaked" 0
 
+
+# Số đo qua MQTT (Mosquitto → iot-bridge → Scorpio, ADR 0012): thiết bị demo do `make seed` cấp tài khoản. Lệnh
+# gửi chạy trong container Mosquitto vì cổng MQTT không mở ra máy chủ.
+# Không dừng smoke khi gửi lỗi: kết quả được kiểm ở bước đọc lại hay bằng mã thoát.
+mqtt_pub() { # TÀI_KHOẢN MẬT_KHẨU CHỦ_ĐỀ NỘI_DUNG
+  docker compose exec -T mosquitto mosquitto_pub -u "$1" -P "$2" -t "$3" -m "$4" -q 1 2>&1
+}
+# Chờ thuộc tính $3 của thiết bị $2 (đọc bằng token $1) bằng $4; số đo đi qua cầu nối nên không có ngay.
+until_reading() {
+  local value
+  for _ in $(seq 1 30); do
+    value=$(curl -s -H "Authorization: Bearer $1" "$context/urn:ngsi-ld:Device:$2" | jq -r ".$3.value // empty")
+    [[ "$value" == "$4" ]] && break
+    sleep 0.5
+  done
+  echo "$value"
+}
+marker="$((RANDOM % 900 + 100)).5"
+mqtt_pub xuong-a.archive-01 "$DEMO_DEVICE_PASSWORD" mortise/xuong-a/archive-01 'không phải JSON' >/dev/null || true
+mqtt_pub xuong-a.archive-01 "$DEMO_DEVICE_PASSWORD" mortise/xuong-a/archive-01 \
+  "{\"measurements\": {\"humidity\": $marker}}" >/dev/null || true
+check "Số đo gửi qua MQTT tới được /v1/context của tenant mình (sau một tin hỏng)" \
+  "$(until_reading "$user_a" archive-01 humidity "$marker")" "$marker"
+# Thiết bị của xuong-a gửi vào chủ đề của xuong-b: Mosquitto bỏ tin mà không báo lỗi, nên chỉ kết luận sau khi
+# một tin hợp lệ gửi sau của xuong-b đã tới.
+mqtt_pub xuong-a.archive-01 "$DEMO_DEVICE_PASSWORD" mortise/xuong-b/archive-01 \
+  '{"measurements": {"spoofed": 1}}' >/dev/null || true
+mqtt_pub xuong-b.archive-01 "$DEMO_DEVICE_PASSWORD" mortise/xuong-b/archive-01 \
+  "{\"measurements\": {\"humidity\": $marker}}" >/dev/null || true
+until_reading "$user_b" archive-01 humidity "$marker" >/dev/null
+check "Thiết bị không gửi được số đo vào chủ đề của tenant khác" \
+  "$(curl -s -H "Authorization: Bearer $user_b" "$context/urn:ngsi-ld:Device:archive-01" | jq 'has("spoofed")')" false
+check "MQTT từ chối kết nối không tài khoản" \
+  "$(docker compose exec -T mosquitto mosquitto_pub -t mortise/xuong-a/archive-01 -m x -q 1 >/dev/null 2>&1 && echo nhận || echo từ-chối)" từ-chối
+check "MQTT từ chối mật khẩu sai" \
+  "$(mqtt_pub xuong-a.archive-01 sai mortise/xuong-a/archive-01 x >/dev/null && echo nhận || echo từ-chối)" từ-chối
+# Mosquitto vẫn nhận lệnh đăng ký mortise/# của thiết bị nhưng không chuyển tin nào nó không có quyền đọc: kiểm
+# rằng tin của thiết bị khác đã tới cầu nối mà thiết bị đăng ký không nhận được.
+eavesdrop=$(mktemp)
+docker compose exec -T mosquitto mosquitto_sub -u xuong-a.archive-01 -P "$DEMO_DEVICE_PASSWORD" \
+  -t 'mortise/#' -C 1 -W 6 >"$eavesdrop" 2>/dev/null &
+sleep 2
+mqtt_pub xuong-a.meter-01 "$DEMO_DEVICE_PASSWORD" mortise/xuong-a/meter-01 \
+  "{\"measurements\": {\"energy\": $marker}}" >/dev/null || true
+until_reading "$user_a" meter-01 energy "$marker" >/dev/null
+wait
+check "Thiết bị không nghe được số đo của thiết bị khác" \
+  "$(until_reading "$user_a" meter-01 energy "$marker") $(wc -l <"$eavesdrop")" "$marker 0"
+rm -f "$eavesdrop"
+
 exit $fail
