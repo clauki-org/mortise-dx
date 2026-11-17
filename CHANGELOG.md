@@ -93,6 +93,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   chủ đề của mình (`make device-add`, `make device-remove`), cầu nối `iot-bridge` ghi vào Scorpio theo tenant của chủ
   đề và chỉ cho tenant có thật; định dạng tin trong `contracts/device-message.schema.json`. `make seed` cấp tài khoản
   cho thiết bị demo. Thêm biến `MQTT_BRIDGE_PASSWORD`, `IOT_BRIDGE_DB_PASSWORD`, `DEMO_DEVICE_PASSWORD`.
+- Bộ giả lập thiết bị demo (`devices/simulator`, `make simulate`): gửi nhiệt độ, độ ẩm, có người, điện năng qua MQTT
+  bằng tài khoản của từng thiết bị; `--set` ép một số đo để thử vượt ngưỡng. `make smoke` chạy một lượt.
 
 ### Changed
 

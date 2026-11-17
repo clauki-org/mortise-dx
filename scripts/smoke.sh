@@ -406,4 +406,21 @@ check "Thiết bị không nghe được số đo của thiết bị khác" \
   "$(until_reading "$user_a" meter-01 energy "$marker") $(wc -l <"$eavesdrop")" "$marker 0"
 rm -f "$eavesdrop"
 
+# Bộ giả lập (devices/simulator) gửi một lượt cho mọi thiết bị demo bằng tài khoản của từng thiết bị: số đo của
+# thiết bị xuong-a tới được /v1/context của user.a. Mã riêng, khác số đo bài MQTT ở trên đã ghi, để bài này chỉ
+# qua khi chính bộ giả lập gửi.
+sim_marker="$((RANDOM % 900 + 1000)).25"
+if docker compose --profile simulator run --rm --quiet-pull simulator --once \
+  --set xuong-a/meter-01:energy="$sim_marker" >/dev/null 2>&1; then
+  status=chạy
+else
+  status=lỗi
+fi
+check "Bộ giả lập gửi được số đo của mọi thiết bị demo" "$status" chạy
+check "Số đo của bộ giả lập tới /v1/context" "$(until_reading "$user_a" meter-01 energy "$sim_marker")" "$sim_marker"
+demo='["urn:ngsi-ld:Device:archive-01","urn:ngsi-ld:Device:meter-01","urn:ngsi-ld:Device:room-101"]'
+check "user.a thấy đủ thiết bị demo của xuong-a" \
+  "$(curl -s -H "Authorization: Bearer $user_a" "$context?type=Device&limit=100" |
+    jq --argjson demo "$demo" '[.[].id] | contains($demo)')" true
+
 exit $fail

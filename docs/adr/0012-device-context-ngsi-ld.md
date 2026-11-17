@@ -50,6 +50,8 @@ Các lựa chọn đã xét:
     không trùng tên dành riêng của NGSI-LD); chỉ ghi cho tenant có trong `core.tenants` (vai trò CSDL
     `iot_bridge` chỉ đọc bảng đó), CSDL lỗi thì không ghi; ghi bằng upsert `options=update` nên số đo gửi riêng
     không làm mất số đo khác. Tin hỏng chỉ bị bỏ kèm một dòng log.
+  - Bộ giả lập `devices/simulator` đăng nhập bằng tài khoản của từng thiết bị demo và gửi đúng định dạng của hợp
+    đồng, như thiết bị thật; `make smoke` (chạy trong CI) gửi một lượt và kiểm số đo tới `/v1/context`.
   - Cầu nối đặt ở lõi chứ không ở Tầng 2 (`platform/services/`), vì nó ghi thẳng vào Scorpio và đọc CSDL, còn
     Tầng 2 chỉ gọi lõi qua cổng.
   Cổng của Scorpio mở ở `127.0.0.1` cho người vận hành và smoke.
