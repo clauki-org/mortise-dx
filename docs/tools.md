@@ -171,6 +171,26 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   động; đang bật `AlertExceedsMax`, đặt `MaxFileSize` bằng `MaxScanSize` và ghim `MaxScanTime`.
 - **Xem:** `docker compose logs clamav`; `docker compose exec clamav clamdtop` xem tải của `clamd`.
 
+### Scorpio: dữ liệu thiết bị theo NGSI-LD
+
+- **Làm gì:** broker theo chuẩn NGSI-LD (ETSI): giữ trạng thái hiện tại của thiết bị (entity và thuộc tính kèm thời
+  điểm đo), trả lời truy vấn theo loại, mã, điều kiện.
+- **Trong dự án:** bản native không cần Kafka, CSDL riêng `scorpio-db` (PostgreSQL có PostGIS, Scorpio bắt buộc).
+  Mỗi tenant một CSDL, tách theo header `NGSILD-Tenant`. Scorpio không xác thực nên không có route qua cổng; người
+  dùng đọc qua context-api ([ADR 0012](adr/0012-device-context-ngsi-ld.md)). `make backup` có `scorpio.sql.gz`.
+- **Cấu hình:** dịch vụ `scorpio` và `scorpio-db` trong `compose.yaml`; mật khẩu CSDL `SCORPIO_DB_PASSWORD`.
+- **Xem:** `http://127.0.0.1:9090/ngsi-ld/v1/entities?type=Device` kèm header `NGSILD-Tenant: <tenant>` và
+  `Accept: application/json` (chỉ máy chủ, không xác thực).
+
+### context-api: đọc dữ liệu thiết bị (tự viết)
+
+- **Làm gì:** dịch vụ nhỏ bằng Python (FastAPI) đứng giữa cổng và Scorpio tại `/v1/context`.
+- **Trong dự án:**
+  - Kiểm token lần nữa; đặt header tenant cho Scorpio bằng tenant trong token, không chuyển header người gọi gửi.
+  - Chỉ đọc: danh sách entity và một entity theo mã; chỉ chuyển các tham số truy vấn đã biết.
+- **Cấu hình:** mã ở `core/context-api/`; quy tắc ở `app/policy.py`, có kiểm thử ở `tests/`.
+- **Xem:** `make test`, `make smoke`; các endpoint ở [api.md](api.md).
+
 ## Giao diện Tầng 2
 
 ### Khung giao diện (`platform/web/`, tự viết)

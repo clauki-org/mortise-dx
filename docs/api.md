@@ -129,3 +129,31 @@ curl -fsS -X POST "http://localhost:9080/v1/files?name=bien-ban.pdf" \
 
 Trạng thái tệp: `clean` là đã quét trước khi lưu, không thấy mã độc; `unscanned` là tệp tải lên trước khi có bước
 quét. Quét chỉ bắt mã độc đã có mẫu; giới hạn ở [ADR 0010](adr/0010-upload-malware-scan.md).
+
+## Dữ liệu thiết bị: `/v1/context`
+
+Hợp đồng đầy đủ: [`contracts/context-api.openapi.json`](../contracts/context-api.openapi.json). Lớp `context-api` đứng
+trước Scorpio (broker NGSI-LD, [ADR 0012](adr/0012-device-context-ngsi-ld.md)): chỉ đọc, chỉ thấy thiết bị của tenant
+trong token. Header `NGSILD-Tenant` người gọi gửi bị bỏ qua.
+
+| Phương thức | Đường dẫn | Việc |
+|---|---|---|
+| `GET` | `/v1/context/entities` | Entity của tenant mình; tham số NGSI-LD `type`, `id`, `idPattern`, `attrs`, `q`, `limit` (1–1000), `offset` |
+| `GET` | `/v1/context/entities/{id}` | Một entity theo mã, dạng `urn:ngsi-ld:<loại>:<mã>` |
+
+```bash
+curl -fsS "http://localhost:9080/v1/context/entities?type=Device" -H "Authorization: Bearer $TOKEN"
+```
+
+Phản hồi là entity NGSI-LD dạng JSON rút gọn theo ngữ cảnh lõi, ví dụ
+`{"id": "urn:ngsi-ld:Device:kho-01", "type": "Device", "humidity": {"type": "Property", "value": 78, "observedAt": "..."}}`.
+Tenant chưa có thiết bị nào gửi số đo thì danh sách rỗng.
+
+| Mã trả về | Khi nào |
+|---|---|
+| `200` | Đọc thành công |
+| `400` | Tham số ngoài danh sách, lặp lại, dài quá 300 ký tự, `limit` ngoài khoảng, `offset` không phải số, mã entity sai dạng, hoặc truy vấn `q` Scorpio không nhận |
+| `401` | Thiếu hoặc sai token |
+| `403` | Tài khoản không thuộc đúng một tenant, hoặc mã tenant không đúng dạng slug |
+| `404` | Entity không có trong tenant mình |
+| `502` / `503` | Kho dữ liệu thiết bị báo lỗi (chi tiết chỉ ghi vào log) / không kết nối được |

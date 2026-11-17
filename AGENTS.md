@@ -32,8 +32,9 @@ core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp 
   postgres/migrations/          migration lược đồ của lõi (ADR 0005)
   workflow-api/       dịch vụ tự viết: kiểm quyền trước Flowable (Python, uv)
   files-api/          dịch vụ tự viết: tải lên, tải xuống tệp theo tenant trước SeaweedFS (Python, uv)
+  context-api/        dịch vụ tự viết: đọc dữ liệu thiết bị (NGSI-LD) theo tenant trước Scorpio (Python, uv)
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
-  mosquitto/ scorpio/ ollama/ observability/      kế hoạch
+  mosquitto/ ollama/ observability/      kế hoạch
 platform/             TẦNG 2: thành phần dùng chung, không chứa từ nghiệp vụ
   web/                khung giao diện: đăng nhập, menu, thương hiệu theo bản cài, nạp thành phần và gói
   components/<tên>/   kế hoạch: một thành phần, gồm giao diện và schema cấu hình
