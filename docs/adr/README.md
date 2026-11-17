@@ -33,6 +33,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0010](0010-upload-malware-scan.md) | Quét mã độc tệp tải lên bằng ClamAV, trước khi lưu, từ chối khi chưa quét được | Chấp nhận |
 | [0011](0011-approver-mfa.md) | Người duyệt đăng nhập hai bước bằng OTP; workflow-api kiểm lại bằng claim `amr` | Chấp nhận |
 | [0012](0012-device-context-ngsi-ld.md) | Dữ liệu thiết bị theo NGSI-LD: Scorpio sau lớp context-api, chỉ đọc qua cổng | Chấp nhận |
+| [0013](0013-component-config-contracts.md) | Thành phần Tầng 2 chỉ biết cấu hình của nó; schema cấu hình và bản mô tả trong `contracts/` | Chấp nhận |
 
 ## Quyết định còn mở
 

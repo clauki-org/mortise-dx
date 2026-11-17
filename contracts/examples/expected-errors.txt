@@ -16,6 +16,22 @@ app.path-is-url.yaml	$.menu[0].config	'http://no-such-host.invalid/items.yaml' d
 app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'documents', 'dashboard', 'rules', 'assistant']
 app.unknown-field.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
 app.version-leading-zero.yaml	$.version	'01.0.0' does not match '^(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)$'
+catalog.blank-field-label.yaml	$.fields[0].label	'   ' does not match '\\\\S'
+catalog.child-id-not-slug.yaml	$.detail.children[0].id	'No Such/Child' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
+catalog.child-missing-id.yaml	$.detail.children[0]	'id' is a required property
+catalog.child-missing-via.yaml	$.detail.children[0]	'via' is a required property
+catalog.duplicate-column.yaml	$.list.columns	['name', 'name'] has non-unique elements
+catalog.empty-choices.yaml	$.fields[0].choices	[] should be non-empty
+catalog.missing-source.yaml	$	'source' is a required property
+catalog.no-columns.yaml	$.list.columns	[] should be non-empty
+catalog.no-fields.yaml	$.fields	[] should be non-empty
+catalog.page-size-too-large.yaml	$.list.page_size	101 is greater than the maximum of 100
+catalog.source-not-identifier.yaml	$.source	'app_example_items { no_such_column }' does not match '^[A-Za-z_][A-Za-z0-9_]*$'
+catalog.unknown-field-type.yaml	$.fields[0].type	'no-such-type' is not one of ['text', 'number', 'date', 'datetime']
+catalog.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
+catalog.unknown-sort-direction.yaml	$.list.sort.direction	'no-such-direction' is not one of ['asc', 'desc']
+component.no-capabilities.yaml	$.capabilities	[] should be non-empty
+component.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
 token-claims.amr-not-array.json	$.amr	'otp' is not of type 'array'
 token-claims.missing-tenant.json	$	'tenant' is a required property
 token-claims.missing-user-role.json	$.realm_access.roles	['default-roles-mortise', 'manager', 'offline_access', 'uma_authorization'] does not contain items matching the given schema

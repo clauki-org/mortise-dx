@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ cấu hình danh mục hợp lệ theo contracts/catalog.schema.json; `make check-fast` kiểm tệp này.
+# Đây là tệp catalog/items.yaml mà mục menu `items` trong app.example.yaml trỏ tới. Đối tượng con
+# khai lồng trong đối tượng cha: mỗi danh mục có các thành phần, mỗi thành phần có các lần kiểm.
+# Gói thật đặt tệp trong thư mục của gói.
+
+title: Danh mục
+source: app_example_items
+key: id
+fields:
+  - name: code
+    label: Mã
+  - name: name
+    label: Tên
+  - name: status
+    label: Tình trạng
+    choices:
+      - value: active
+        label: Đang dùng
+      - value: retired
+        label: Ngừng dùng
+  - name: quantity
+    label: Số lượng
+    type: number
+  - name: created_at
+    label: Ngày tạo
+    type: datetime
+list:
+  columns: [code, name, status, quantity]
+  search: [code, name]
+  filters: [status]
+  sort:
+    field: code
+    direction: asc
+  page_size: 20
+detail:
+  title: name
+  children:
+    - id: parts
+      label: Thành phần
+      via: item_id
+      source: app_example_parts
+      fields:
+        - name: name
+          label: Tên
+        - name: installed_on
+          label: Ngày lắp
+          type: date
+      list:
+        columns: [name, installed_on]
+      detail:
+        children:
+          - id: checks
+            label: Lần kiểm
+            via: part_id
+            source: app_example_checks
+            key: check_no
+            fields:
+              - name: check_no
+                label: Số phiếu
+                type: number
+              - name: result
+                label: Kết quả
+            list:
+              columns: [check_no, result]

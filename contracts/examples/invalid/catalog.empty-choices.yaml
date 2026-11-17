@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: choices không có giá trị nào.
+# Nếu lọt, ô lọc của trường này hiện ra mà không chọn được gì.
+
+title: Danh mục
+source: app_example_items
+fields:
+  - name: name
+    label: Tên
+    choices: []
+list:
+  columns: [name]

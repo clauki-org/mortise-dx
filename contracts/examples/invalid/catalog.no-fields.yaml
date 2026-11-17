@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: không khai trường nào.
+# Nếu lọt, câu truy vấn không chọn cột nào và Hasura từ chối.
+
+title: Danh mục
+source: app_example_items
+fields: []
+list:
+  columns: [name]

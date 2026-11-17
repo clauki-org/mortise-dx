@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bản mô tả thành phần danh mục theo contracts/component.schema.json; `make check-fast` kiểm tệp này.
+# Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, catalog.ts). Mỗi dòng dưới đây đã được
+# chạy thử trên giao diện; đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
+
+component: catalog
+summary: Danh sách và màn hình chi tiết của một loại đối tượng cùng các đối tượng con của nó, đọc qua GraphQL theo cấu hình của gói.
+config_schema: catalog.schema.json
+example: examples/catalog.example.yaml
+capabilities:
+  - Danh sách dạng bảng; cột nào hiện, tên cột và thứ tự cột theo fields và list.columns.
+  - Tìm theo chữ, không phân biệt hoa thường, trên các trường kiểu text khai trong list.search.
+  - Lọc theo một giá trị của mỗi trường có choices khai trong list.filters.
+  - Sắp xếp tăng hoặc giảm theo một cột khi bấm tiêu đề cột; thứ tự lúc mới mở theo list.sort. Dòng chưa có giá
+    trị ở cột sắp xếp đứng cuối.
+  - Phân trang theo list.page_size, có nút trang trước và trang sau.
+  - Tìm, lọc, thứ tự và trang của danh sách nằm trên đường dẫn; mở lại đường dẫn là về đúng chỗ đang xem.
+  - Màn hình chi tiết của một dòng hiện mọi trường trong fields theo thứ tự khai.
+  - Giá trị hiện theo kiểu của trường (số, ngày, ngày giờ); trường có choices hiện chữ thay cho giá trị lưu.
+  - Quan hệ cha–con nhiều cấp, khai lồng trong cùng tệp bằng detail.children. Màn hình chi tiết của cha có bảng của
+    từng loại đối tượng con, tìm, lọc và phân trang được; màn hình chi tiết của con có đường về mọi cấp cha.
+  - Nơi gọi chỉ đưa cấu hình và địa chỉ gốc; thành phần không cần menu, bảng hay cấu hình nào khác của hệ thống.
+limits:
+  - Chỉ đọc; không thêm, sửa hay xóa dòng.
+  - Mỗi danh sách đọc một bảng; không hiện cột của bảng khác, kể cả tên của đối tượng cha.
+  - Không hiện tổng số dòng và tổng số trang.
+  - Mỗi lúc chỉ sắp xếp theo một cột; thứ tự của chữ có dấu là thứ tự so sánh của CSDL.
+  - Ô tìm không dò trường số, trường ngày và trường có choices.
+  - Không có kiểu đúng/sai riêng; cột đúng/sai hiện và lọc được khi khai choices với giá trị "true" và "false".
+  - Đối tượng con trỏ về cha bằng một cột; không hỗ trợ khóa ghép. Đối tượng con chỉ mở được từ đối tượng cha.
+  - Kiểu number luôn viết có dấu ngăn hàng nghìn; số không phải số lượng (số cổng, năm, mã) nên khai là text.
+  - Cấu hình không cấp và không giới hạn quyền; người dùng thấy dòng nào do quyền Hasura của bảng quyết định.

@@ -113,9 +113,10 @@ e2e: ## Kiểm thử trên trình duyệt qua cổng (Playwright); cần lõi đ
 	cd platform/web && DEMO_USER_PASSWORD="$$(sed -n 's/^DEMO_USER_PASSWORD=//p' ../../.env)" \
 	  MORTISE_PUBLIC_URL="$$(sed -n 's/^MORTISE_PUBLIC_URL=//p' ../../.env)" npx playwright test
 
-web-check: ## Giao diện: cài theo package-lock, Biome, kiểu TypeScript, build, giấy phép phụ thuộc (cần Node)
+web-check: ## Giao diện: cài theo package-lock, Biome, kiểm thử đơn vị, kiểu TypeScript, build, giấy phép phụ thuộc (cần Node)
 	cd platform/web && npm ci --no-audit --no-fund
 	cd platform/web && npx biome check .
+	cd platform/web && npm test
 	cd platform/web && npm run build
 	cd platform/web && npx license-checker-rseidelsohn --summary --production --excludePrivatePackages \
 	  --onlyAllow "$(WEB_LICENSES_SHIPPED)"

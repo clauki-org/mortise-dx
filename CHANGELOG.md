@@ -55,6 +55,15 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   khi gói đang cài, gỡ gói rồi kiểm lõi vẫn qua.
 - Bảng `platform.workflow_steps` (Tầng 2, lịch sử migration riêng): khai báo bước của quy trình theo tenant, đọc
   qua GraphQL; `make seed` nạp khai báo của quy trình mẫu.
+- Định dạng cấu hình của thành phần danh mục (`contracts/catalog.schema.json`, ADR 0013): bảng đọc, trường, cột
+  của danh sách, ô tìm, ô lọc, thứ tự, cỡ trang và đối tượng con; `make check-fast` kiểm cấu hình danh mục của
+  mọi gói trong `apps/`.
+- Thành phần danh mục của giao diện (`platform/web/src/Catalog.tsx`): danh sách có tìm, lọc, sắp xếp, phân trang và
+  màn hình chi tiết có bảng đối tượng con nhiều cấp, tất cả theo cấu hình của gói; việc làm được và giới hạn ghi ở
+  `contracts/catalog.component.yaml`. Chưa có trang nào gọi thành phần. `make web-check` chạy thêm kiểm thử đơn vị
+  (Vitest).
+- Gói `apps/facilities-commune` khai cấu hình danh mục cơ sở → tòa → phòng (`catalog/facilities.yaml`, mục `menu`
+  `facilities` trong `app.yaml`); chưa hiện trên giao diện cho tới khi có lệnh cài gói đầy đủ.
 - Giao diện có menu bên trái và trang "Việc của tôi": các việc đang chờ người đăng nhập, việc gần hạn đứng đầu,
   lọc quá hạn, còn hạn hoặc không đặt hạn.
 - Bảng việc hiện tên hồ sơ (trường `title` mới của khai báo bước), người gửi, hạn dạng "còn 3 ngày", "quá hạn 1

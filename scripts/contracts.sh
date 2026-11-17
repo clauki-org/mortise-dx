@@ -11,7 +11,8 @@ cd "$(dirname "$0")/.."
 
 mode="${1:-check}"
 checker=(uvx --from check-jsonschema==0.29.4 check-jsonschema)
-steps=(uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/check-workflow-steps.py)
+yaml=(uv run --quiet --no-project --with pyyaml==6.0.3 python)
+steps=("${yaml[@]}" scripts/check-workflow-steps.py)
 
 case "$mode" in
   check | write) ;;
@@ -32,6 +33,27 @@ esac
 "${checker[@]}" --schemafile contracts/token-claims.schema.json contracts/examples/token-claims.example.json
 "${checker[@]}" --schemafile contracts/app.schema.json contracts/examples/app.example.yaml
 "${checker[@]}" --schemafile contracts/workflow.schema.json contracts/examples/workflow.example.yaml
+"${checker[@]}" --schemafile contracts/catalog.schema.json contracts/examples/catalog.example.yaml
+# Bản mô tả của từng thành phần Tầng 2. Tên tệp, tên thành phần và hai đường dẫn trong tệp phải khớp nhau: bản mô tả
+# trỏ tới schema hay ví dụ đã đổi tên là thứ người đọc và công cụ không tự phát hiện được.
+for description in contracts/*.component.yaml; do
+  "${checker[@]}" --schemafile contracts/component.schema.json "$description"
+  { read -r component; read -r config_schema; read -r example; } < <("${yaml[@]}" -c '
+import sys, yaml
+described = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))
+print(described["component"]); print(described["config_schema"]); print(described["example"])
+' "$description")
+  if [[ "contracts/$component.component.yaml" != "$description" ]]; then
+    echo "$description khai component: $component; tên tệp phải là $component.component.yaml." >&2
+    exit 1
+  fi
+  for file in "$config_schema" "$example"; do
+    if [[ ! -f "contracts/$file" ]]; then
+      echo "$description trỏ tới contracts/$file, tệp này không có." >&2
+      exit 1
+    fi
+  done
+done
 "${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml --steps contracts/examples/workflow.example.yaml
 # Gói thật, nếu đã có. Khai báo bước của một gói chỉ đối chiếu với BPMN của chính gói đó.
 shopt -s nullglob globstar
@@ -45,6 +67,18 @@ for app in apps/*/; do
     "${checker[@]}" --schemafile contracts/workflow.schema.json "${declarations[@]}"
   fi
   "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}"
+  # Cấu hình danh mục nằm ở đường dẫn do app.yaml khai, không theo tên thư mục cố định, nên phải đọc app.yaml
+  # để biết tệp nào cần kiểm; dò theo tên thư mục sẽ bỏ sót tệp đặt ở chỗ khác.
+  mapfile -t catalogs < <("${yaml[@]}" -c '
+import sys, yaml
+app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
+for item in app.get("menu", []):
+    if item["component"] == "catalog":
+        print(sys.argv[1] + item["config"])
+' "$app")
+  if ((${#catalogs[@]})); then
+    "${checker[@]}" --schemafile contracts/catalog.schema.json "${catalogs[@]}"
+  fi
 done
 
 # Ví dụ sai trong contracts/examples/invalid/ phải bị từ chối. Thiếu bước này, một schema
@@ -82,13 +116,15 @@ reject() {
 reject contracts/token-claims.schema.json contracts/examples/invalid/token-claims.*.json
 reject contracts/app.schema.json contracts/examples/invalid/app.*.yaml
 reject contracts/workflow.schema.json contracts/examples/invalid/workflow.*.yaml
-# Hai mẫu tên ở trên quyết định tệp nào được kiểm. Tệp đặt sai tên sẽ nằm trong invalid/
+reject contracts/catalog.schema.json contracts/examples/invalid/catalog.*.yaml
+reject contracts/component.schema.json contracts/examples/invalid/component.*.yaml
+# Các mẫu tên ở trên quyết định tệp nào được kiểm. Tệp đặt sai tên sẽ nằm trong invalid/
 # mà chưa từng bị kiểm, nên phải báo lỗi thay vì bỏ qua.
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
-    token-claims.*.json | app.*.yaml | workflow.*.yaml) ;;
+    token-claims.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml) ;;
     *)
-      echo "$file không được kiểm: tên phải theo mẫu token-claims.<lỗi>.json, app.<lỗi>.yaml hoặc workflow.<lỗi>.yaml." >&2
+      echo "$file không được kiểm: tên phải theo mẫu token-claims.<lỗi>.json hoặc <app|workflow|catalog|component>.<lỗi>.yaml." >&2
       exit 1
       ;;
   esac

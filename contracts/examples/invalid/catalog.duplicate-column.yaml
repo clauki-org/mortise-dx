@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: một trường được khai hai lần trong columns.
+# Nếu lọt, bảng có hai cột giống hệt nhau.
+
+title: Danh mục
+source: app_example_items
+fields:
+  - name: name
+    label: Tên
+list:
+  columns: [name, name]

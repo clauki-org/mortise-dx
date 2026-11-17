@@ -37,7 +37,7 @@ core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp 
   mosquitto/ ollama/ observability/      kế hoạch
 platform/             TẦNG 2: thành phần dùng chung, không chứa từ nghiệp vụ
   web/                khung giao diện: đăng nhập, menu, thương hiệu theo bản cài, nạp thành phần và gói
-  components/<tên>/   kế hoạch: một thành phần, gồm giao diện và schema cấu hình
+  components/<tên>/   kế hoạch: mã của một thành phần khi tách khỏi web/; schema cấu hình ở contracts/ (ADR 0013)
   services/<tên>/     kế hoạch: dịch vụ dùng chung tự viết (trợ lý AI, OCR, lưu trữ lạnh, cầu nối IoT)
   schema/             lược đồ CSDL của Tầng 2 (migration dbmate riêng) và quyền Hasura (`schema/hasura/`)
 apps/<gói>/           TẦNG 3: gói nghiệp vụ; `app.yaml` khai báo gói, phần còn lại ưu tiên là khai
@@ -64,7 +64,9 @@ Ranh giới bắt buộc:
   trang quản trị; mọi quyền phải lọc theo tenant trong token, `make check-fast` kiểm.
 - Hợp đồng giữa các tầng nằm trong `contracts/`. Đổi claim token, định dạng `app.yaml` hay API của dịch vụ thì sửa
   hợp đồng trong cùng pull request; đổi route hay model của workflow-api hay files-api thì chạy `make contracts`.
-  Lý do: [ADR 0008](docs/adr/0008-shared-api-contracts.md).
+  Lý do: [ADR 0008](docs/adr/0008-shared-api-contracts.md). Thành phần Tầng 2 có schema cấu hình và bản mô tả
+  (`contracts/<tên>.schema.json`, `contracts/<tên>.component.yaml`); đổi hành vi của thành phần thì sửa bản mô tả
+  trong cùng pull request. Lý do: [ADR 0013](docs/adr/0013-component-config-contracts.md).
 
 ## 3. Code
 

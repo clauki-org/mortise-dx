@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: thiếu source.
+# Nếu lọt, thành phần danh mục không biết đọc bảng nào và màn hình chỉ báo lỗi khi đã mở.
+
+title: Danh mục
+fields:
+  - name: name
+    label: Tên
+list:
+  columns: [name]

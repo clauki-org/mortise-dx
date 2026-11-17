@@ -210,7 +210,7 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   `/v1` sang cổng; `make seed` cho địa chỉ này đăng nhập được khi bản cài chạy ở localhost (đổi địa chỉ bằng
   `WEB_DEV_URL`). Sửa xong chạy lại `docker compose build web` để
   bản qua cổng nhận thay đổi.
-- **Kiểm tra:** `make web-check` (Biome, kiểu TypeScript, build, giấy phép phụ thuộc); `make smoke` kiểm route `/`,
+- **Kiểm tra:** `make web-check` (Biome, kiểm thử đơn vị, kiểu TypeScript, build, giấy phép phụ thuộc); `make smoke` kiểm route `/`,
   CSP và luồng đăng nhập PKCE qua cổng.
 
 ## Công cụ phát triển và kiểm tra
@@ -233,6 +233,7 @@ hưởng tới mã Apache-2.0 của dự án. Những công cụ chạy qua `uvx
 | Playwright | Kiểm thử giao diện trên trình duyệt thật qua cổng; bài kiểm ở `platform/web/e2e/` | `make e2e` | Apache-2.0 |
 | Node.js, npm | Build và kiểm giao diện; Node chỉ có trong image build, không có khi chạy | `make web-check`, `npm run dev` | MIT / Artistic-2.0 |
 | Biome | Kiểm lỗi và định dạng mã giao diện | `make web-check` | MIT OR Apache-2.0 |
+| Vitest | Kiểm thử đơn vị mã giao diện không cần trình duyệt; bài kiểm là tệp `*.test.ts` trong `platform/web/src/` | `make web-check` | MIT |
 | license-checker-rseidelsohn | Kiểm giấy phép phụ thuộc của giao diện theo danh sách cho phép trong `Makefile` | `make web-check` | BSD-3-Clause |
 | curl, jq, openssl | Gọi API trong seed và smoke, đọc JSON, sinh bí mật ngẫu nhiên | `scripts/` | curl / MIT / Apache-2.0 |
 | GitHub Actions | CI: `make check-fast` và `make test` với mọi thay đổi; `make web-check` khi đổi `platform/web/`; dựng lõi trên máy trắng, `make smoke` và `make e2e` khi pull request đổi thứ ngoài tài liệu; vòng sao lưu và khôi phục khi đổi phần nó phụ thuộc; push lên `main` chạy đủ | `.github/workflows/ci.yml` | dịch vụ của GitHub |

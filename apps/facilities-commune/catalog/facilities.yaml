@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình thành phần danh mục cho cơ sở → tòa → phòng, theo contracts/catalog.schema.json; app.yaml trỏ tới tệp
+# này ở mục menu `facilities` và `make check-fast` kiểm. Tên bảng là tên GraphQL mà Hasura sinh từ
+# hasura/tables.yaml (<lược đồ>_<bảng>); cột khai ở đây phải nằm trong quyền đọc của vai trò `user` ở tệp đó.
+# Khóa của cơ sở và tòa là id vì bảng con nối về cha bằng uuid (facility_id, building_id).
+
+title: Cơ sở nhà, đất
+source: app_facilities_commune_facilities
+fields:
+  - { name: code, label: Mã }
+  - { name: name, label: Tên cơ sở }
+  - { name: address, label: Địa chỉ }
+  - name: status
+    label: Tình trạng
+    choices:
+      - { value: in_use, label: Đang sử dụng }
+      - { value: surplus, label: Dôi dư }
+  - { name: created_at, label: Ngày tạo, type: datetime }
+list:
+  columns: [code, name, address, status]
+  search: [code, name, address]
+  filters: [status]
+detail:
+  title: name
+  children:
+    - id: buildings
+      label: Tòa nhà
+      via: facility_id
+      source: app_facilities_commune_buildings
+      fields:
+        - { name: code, label: Mã }
+        - { name: name, label: Tên tòa }
+        - { name: floors, label: Số tầng, type: number }
+        - { name: created_at, label: Ngày tạo, type: datetime }
+      list:
+        columns: [code, name, floors]
+        search: [code, name]
+      detail:
+        title: name
+        children:
+          - id: rooms
+            label: Phòng
+            via: building_id
+            source: app_facilities_commune_rooms
+            fields:
+              - { name: code, label: Mã }
+              - { name: name, label: Tên phòng }
+              - { name: floor, label: Tầng, type: number }
+              # Loại diện tích quyết định phòng được tính vào định mức nào, nên lọc được theo nó.
+              - name: area_type
+                label: Loại diện tích
+                choices:
+                  - { value: working, label: Làm việc }
+                  - { value: shared, label: Sử dụng chung }
+                  - { value: specialized, label: Chuyên dùng }
+              - { name: clear_area_m2, label: Diện tích thông thủy (m²), type: number }
+              - { name: created_at, label: Ngày tạo, type: datetime }
+            list:
+              columns: [code, name, floor, area_type, clear_area_m2]
+              search: [code, name]
+              filters: [area_type]
+            detail:
+              title: name

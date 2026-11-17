@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/component.schema.json từ chối: có khóa không thuộc hợp đồng.
+# Nếu lọt, mỗi bản mô tả tự thêm khóa riêng và công cụ đọc không còn dựa được vào một dạng chung.
+
+component: no-such-component
+summary: Thành phần ví dụ.
+config_schema: no-such-component.schema.json
+example: examples/no-such-component.example.yaml
+capabilities:
+  - Hiển thị một thứ.
+limits: []
+no_such_key: true
