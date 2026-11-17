@@ -34,8 +34,8 @@ Các lựa chọn đã xét:
   `core.files`, `core.tenants`; của Tầng 2 gắn cho `platform.workflow_steps`; gói gắn cho bảng của mình.
 - Người làm chọn theo tài khoản đã mở kết nối (`session_user`):
   - `hasura`: `x-hasura-user-id` trong biến phiên `hasura.user`. Đi qua JWT thì là `sub` của token, tin được. Đi
-    bằng admin secret thì người gọi tự khai, nên ghi kèm `x-hasura-role` để người đọc biết mức tin. Hiện chưa có
-    quyền ghi nào qua Hasura cho người dùng, nên đường này chưa được kiểm bằng thao tác thật.
+    bằng admin secret thì người gọi tự khai, nên ghi kèm `x-hasura-role` để người đọc biết mức tin. Đường ghi qua
+    Hasura bằng JWT có bài kiểm từ gói `facilities-commune`: nhật ký ghi đúng `sub` và vai trò của token.
   - Dịch vụ tự viết: đặt `mortise.actor` bằng `set_config(..., true)` trong cùng giao dịch ghi (files-api làm vậy).
   - Không có hai nguồn trên: ghi tên tài khoản CSDL, ví dụ thay đổi của `make seed`.
 - Chuỗi băm toàn cục, công thức phiên bản 1 (`core.audit_hash`): SHA-256 của mảng JSON `[phiên bản, prev_hash dạng

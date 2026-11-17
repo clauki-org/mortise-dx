@@ -98,7 +98,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
     vai trò từ `realm_access.roles`.
   - Quyền mẫu: vai trò `user` chỉ đọc được dòng của `core.tenants` có `id` bằng tenant trong token.
 - **Cấu hình:** biến môi trường trong `compose.yaml`. Bảng được đăng ký và quyền theo vai trò khai báo trong
-  `core/hasura/tables.yaml` và `platform/schema/hasura/tables.yaml`, cùng định dạng Hasura xuất ra. `make seed` áp
+  `core/hasura/tables.yaml`, `platform/schema/hasura/tables.yaml` và `apps/<gói>/hasura/*.yaml` của gói đã cài
+  (`make app-install`), cùng định dạng Hasura xuất ra; tệp của gói chỉ được khai bảng trong lược đồ của gói. `make seed` áp
   các tệp này theo kiểu ghi đè (quyền đã bị sửa sai cũng về đúng), `make smoke` báo lỗi khi Hasura lệch khỏi tệp,
   `make check-fast` báo lỗi khi một quyền không lọc theo tenant (`scripts/hasura-metadata.py`). Kiểm theo cấu trúc:
   phải có một nhánh AND so `_eq` với `X-Hasura-Tenant-Id`; quyền sửa phải có cả `filter` lẫn `check`. Tệp chỉ quản lý

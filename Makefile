@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e audit-verify hooks
+  check-fast web-check e2e audit-verify hooks app-install app-uninstall app-status app-smoke
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -52,6 +52,19 @@ audit-verify: ## Kiểm nhật ký thay đổi không bị sửa lén; ANCHOR=<t
 backup: ## Sao lưu CSDL, tệp và .env ra ngoài repo (BACKUP_DIR để đổi nơi lưu)
 	@scripts/backup.sh
 
+app-install: ## Cài một gói Tầng 3 lên lõi đang chạy: make app-install APP=<gói>
+	@scripts/app.sh "$(APP)" install
+
+app-uninstall: ## Gỡ gói, XÓA dữ liệu của gói ở mọi tenant: make app-uninstall APP=<gói> CONFIRM=yes
+	@CONFIRM="$(CONFIRM)" scripts/app.sh "$(APP)" uninstall
+
+app-status: ## Migration nào của gói đã áp: make app-status APP=<gói>
+	@scripts/app.sh "$(APP)" status
+
+app-smoke: ## Kiểm tra qua cổng của một gói đã cài: make app-smoke APP=<gói>
+	@test -x "apps/$(APP)/tests/smoke.sh" || { echo "Gói '$(APP)' không có apps/$(APP)/tests/smoke.sh" >&2; exit 1; }
+	@apps/$(APP)/tests/smoke.sh
+
 restore: ## Khôi phục từ bản sao lưu, GHI ĐÈ dữ liệu: make restore FROM=<thư mục> CONFIRM=yes
 	@scripts/restore.sh "$(FROM)"
 
@@ -73,8 +86,9 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	@test -f .env || cp .env.example .env.check-fast
 	@if [ -f .env.check-fast ]; then docker compose --env-file .env.check-fast config -q; rm -f .env.check-fast; \
 	  else docker compose config -q; fi
-	uvx --from shellcheck-py shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh
-	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts .github
+	uvx --from shellcheck-py shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh \
+	  apps/*/tests/*.sh
+	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps .github
 	uvx ruff check --no-cache core/workflow-api core/files-api
 	uvx ruff format --no-cache --check core/workflow-api core/files-api
 	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts

@@ -39,7 +39,7 @@ platform/             TẦNG 2: thành phần dùng chung, không chứa từ ng
   components/<tên>/   kế hoạch: một thành phần, gồm giao diện và schema cấu hình
   services/<tên>/     kế hoạch: dịch vụ dùng chung tự viết (trợ lý AI, OCR, lưu trữ lạnh, cầu nối IoT)
   schema/             lược đồ CSDL của Tầng 2 (migration dbmate riêng) và quyền Hasura (`schema/hasura/`)
-apps/<gói>/           TẦNG 3 (kế hoạch): gói nghiệp vụ; `app.yaml` khai báo gói, phần còn lại ưu tiên là khai
+apps/<gói>/           TẦNG 3: gói nghiệp vụ; `app.yaml` khai báo gói, phần còn lại ưu tiên là khai
                       báo (schema/, hasura/, bpmn/, forms/, rules/, map-layers/, dashboards/, knowledge/, seed/, tests/)
 devices/              kế hoạch: firmware thiết bị và bộ giả lập
 deploy/               kế hoạch: triển khai lên máy chủ
