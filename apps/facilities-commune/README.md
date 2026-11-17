@@ -15,6 +15,7 @@ với diện tích thông thủy và loại diện tích của từng phòng đ�
 app.yaml             khai báo gói theo contracts/app.schema.json: lược đồ, thư mục migration và Hasura
 schema/migrations/   migration dbmate của gói; bảng theo dõi public.facilities_commune_schema_migrations (ADR 0005)
 hasura/tables.yaml   bảng đăng ký và quyền theo tenant cho vai trò `user`, cùng định dạng với core/hasura/
+catalog/             cấu hình thành phần danh mục (cơ sở → tòa → phòng) theo contracts/catalog.schema.json
 tests/smoke.sh       kiểm qua cổng: cách ly tenant, tenant lấy từ token, khóa ngoại ghép, RESTRICT, nhật ký
 ```
 
@@ -51,5 +52,8 @@ lõi. CI cài gói, chạy smoke của gói, chạy `make seed` và `make smoke`
 
 ## Chưa có
 
-Bảng định mức, biên chế và cách tính diện tích được phép; dữ liệu mẫu ba xã (`make seed-demo`); mục `menu` trong
-`app.yaml` cho thành phần danh mục; quy trình rà soát. Theo dõi ở các issue của Sprint 1 và Sprint 2.
+Bảng định mức, biên chế và cách tính diện tích được phép; dữ liệu mẫu ba xã (`make seed-demo`); quy trình rà soát.
+Theo dõi ở các issue của Sprint 1 và Sprint 2.
+
+Mục `menu` `facilities` trong `app.yaml` khai cấu hình danh mục và được `make check-fast` kiểm theo schema, nhưng
+chưa hiện trên giao diện: đưa menu của gói vào khung giao diện thuộc lệnh cài gói đầy đủ ở Sprint 2.

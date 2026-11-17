@@ -12,3 +12,8 @@ database:
   schema: app_facilities_commune
   migrations: schema/migrations
 hasura: hasura
+menu:
+  - id: facilities
+    label: Cơ sở nhà, đất
+    component: catalog
+    config: catalog/facilities.yaml
