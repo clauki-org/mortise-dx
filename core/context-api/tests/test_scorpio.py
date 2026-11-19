@@ -32,19 +32,19 @@ def answer(monkeypatch, status: int, body: object = None, text: str | None = Non
 
 def test_tenant_header_is_set_from_argument(monkeypatch):
     seen = answer(monkeypatch, 200, [])
-    scorpio.entities("xuong-a", {"type": "Device"})
-    assert seen[0].headers["NGSILD-Tenant"] == "xuong-a"
+    scorpio.entities("xa-a", {"type": "Device"})
+    assert seen[0].headers["NGSILD-Tenant"] == "xa-a"
 
 
 def test_tenant_without_data_reads_as_empty_list(monkeypatch):
     answer(monkeypatch, 404, TENANT_NOT_FOUND)
-    assert scorpio.entities("xuong-a", {}) == []
+    assert scorpio.entities("xa-a", {}) == []
 
 
 def test_internal_error_text_is_not_returned(monkeypatch):
     answer(monkeypatch, 500, text="org.postgresql.util.PSQLException: relation secret_table ...")
     with pytest.raises(Denied) as denied:
-        scorpio.entities("xuong-a", {})
+        scorpio.entities("xa-a", {})
     assert denied.value.status == 502
     assert "PSQL" not in denied.value.reason and "secret_table" not in denied.value.reason
 
@@ -52,5 +52,5 @@ def test_internal_error_text_is_not_returned(monkeypatch):
 def test_non_list_answer_is_a_gateway_error(monkeypatch):
     answer(monkeypatch, 200, {"unexpected": True})
     with pytest.raises(Denied) as denied:
-        scorpio.entities("xuong-a", {})
+        scorpio.entities("xa-a", {})
     assert denied.value.status == 502

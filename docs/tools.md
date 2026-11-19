@@ -57,8 +57,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   ứng dụng đăng nhập ở một chỗ.
 - **Trong dự án:**
   - Realm `mortise` chứa toàn bộ người dùng của nền tảng.
-  - Mỗi tenant là một nhóm (`xuong-a`, `xuong-b`); bộ ánh xạ đưa tên nhóm vào claim `tenant` của token. Các thành
-    phần khác dựa vào claim này để tách dữ liệu.
+  - Mỗi tenant là một nhóm (`xa-a`, `xa-b`, `xa-c`: ba xã demo); bộ ánh xạ đưa tên nhóm vào claim `tenant` của
+    token. Các thành phần khác dựa vào claim này để tách dữ liệu.
   - Vai trò realm: `user`, `manager`, `tenant_admin`.
   - Client `mortise-web` là client công khai cho ứng dụng web: chỉ Authorization Code với PKCE, không nhận mật khẩu
     trực tiếp; redirect URI và web origin theo `MORTISE_PUBLIC_URL` ([ADR 0006](adr/0006-frontend-stack.md)).
@@ -210,7 +210,7 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Trong dự án:** đăng nhập Mosquitto bằng tài khoản của từng thiết bị và gửi tin theo
   `contracts/device-message.schema.json`, như thiết bị thật. Số liệu chỉ để minh họa.
 - **Cấu hình:** dịch vụ `simulator` (profile `simulator`) trong `compose.yaml`, mật khẩu `DEMO_DEVICE_PASSWORD`.
-- **Xem:** `make simulate` gửi mỗi 5 giây; `make simulate ARGS="--set xuong-a/archive-01:humidity=78"` ép một số đo;
+- **Xem:** `make simulate` gửi mỗi 5 giây; `make simulate ARGS="--set xa-a/archive-01:humidity=78"` ép một số đo;
   `make smoke` chạy một lượt.
 
 ### cold-archive và DuckDB: kho lạnh của nhật ký (tự viết)

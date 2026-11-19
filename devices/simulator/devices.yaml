@@ -5,15 +5,15 @@
 # DEMO_DEVICE_PASSWORD), bộ giả lập gửi số đo thay cho chúng. Tenant phải có trong core.tenants.
 # Số đo (measurements) là tên thuộc tính NGSI-LD mà thiết bị gửi.
 
-- tenant: xuong-a
+- tenant: xa-a
   device: archive-01
   measurements: [temperature, humidity]
-- tenant: xuong-a
+- tenant: xa-a
   device: room-101
   measurements: [occupied]
-- tenant: xuong-a
+- tenant: xa-a
   device: meter-01
   measurements: [energy]
-- tenant: xuong-b
+- tenant: xa-b
   device: archive-01
   measurements: [temperature, humidity]

@@ -78,7 +78,7 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   `{"error": "..."}` như mọi lỗi khác, thay cho `{"detail": [...]}`. Lõi cần thêm khoảng 1 GB RAM.
 - `make e2e`: kịch bản demo chạy trên trình duyệt thật qua cổng (Playwright): duyệt hồ sơ trên web, quy tắc bốn mắt,
   người duyệt của đơn vị khác không thấy, không duyệt được; CI chạy trong job end-to-end và giữ ảnh chụp, dấu vết
-  khi hỏng. Thêm tài khoản demo `manager.b` (người duyệt của tenant `xuong-b`).
+  khi hỏng. Thêm tài khoản demo `manager.b` (người duyệt của tenant `xa-b`).
 - Nhật ký thay đổi `core.audit_log` (ADR 0009): ghi ai sửa gì, lúc nào, trước và sau trên tệp, đơn vị, khai báo
   bước; chuỗi băm phát hiện sửa lén; `make audit-verify` chỉ ra chỗ bị sửa; `make backup` ghi băm cuối, `make restore`
   đối chiếu lại.
@@ -101,6 +101,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Changed
 
+- Tenant demo đổi từ `xuong-a`, `xuong-b` sang ba xã của "Tỉnh Mẫu" (tỉnh hư cấu): `xa-a`, `xa-b`, `xa-c`, thêm tài
+  khoản `user.c`, `manager.c`. Bản cài đã dựng cần `make reset` để nạp lại realm.
 - Quyền dữ liệu của Hasura khai báo trong repo (`core/hasura/`, `platform/schema/hasura/`) thay cho lệnh gọi API
   trong seed. `make seed` ghi đè quyền đã bị sửa sai, `make smoke` báo lỗi khi Hasura lệch khỏi tệp,
   `make check-fast` báo lỗi khi một quyền không lọc theo tenant.

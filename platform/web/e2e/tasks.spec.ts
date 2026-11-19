@@ -54,7 +54,7 @@ test("người duyệt của đơn vị B không thấy, không mở, không duy
   const task = await taskOf(request, "manager.a", await submitApproval(request, "user.a", title));
 
   // Quyền Hasura: kiểm trên toàn kết quả, không dựa vào việc giao diện chỉ hiện đơn vị đầu tiên.
-  expect(await visibleTenants(request, "manager.b")).toEqual(["xuong-b"]);
+  expect(await visibleTenants(request, "manager.b")).toEqual(["xa-b"]);
 
   // manager.b có cùng vai trò duyệt với manager.a, nên không thấy việc của A chỉ có thể do cách ly đơn vị.
   const tasksLoaded = page.waitForResponse((response) => response.url().endsWith("/v1/workflow/tasks"));
@@ -62,7 +62,7 @@ test("người duyệt của đơn vị B không thấy, không mở, không duy
   await signIn(page, "manager.b");
   await tasksLoaded;
   await expect(page.getByRole("heading", { name: "Việc của tôi" })).toBeVisible();
-  await expect(page.getByText("Tenant B (demo)")).toBeVisible();
+  await expect(page.getByText("Xã B (Tỉnh Mẫu)")).toBeVisible();
   await expect(page.getByRole("link", { name: title })).toHaveCount(0);
 
   await page.goto(`/tasks/${task}`);

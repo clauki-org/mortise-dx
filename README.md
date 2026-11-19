@@ -58,7 +58,7 @@ riêng ClamAV dùng khoảng 1 GB. Phát triển giao diện cần thêm Node.js
 
 ```bash
 make up      # tạo .env với bí mật ngẫu nhiên, dựng lõi, chờ sẵn sàng
-make seed    # tài khoản demo cho 2 tenant và quyền dữ liệu
+make seed    # tài khoản demo cho 3 xã của "Tỉnh Mẫu" (hư cấu) và quyền dữ liệu
 make smoke   # kiểm tra đầu-cuối qua cổng
 make e2e     # kịch bản demo trên trình duyệt (cần Node)
 ```
@@ -86,8 +86,8 @@ make backup                                       # CSDL, tệp, .env → ~/.loc
 make restore FROM=<thư mục sao lưu> CONFIRM=yes   # GHI ĐÈ dữ liệu hiện tại
 ```
 
-Tài khoản demo: `user.a`, `manager.a` (tenant `xuong-a`), `user.b`, `manager.b` (tenant `xuong-b`); mật khẩu là
-`DEMO_USER_PASSWORD` trong `.env`. Người duyệt (`manager.*`) nhập thêm mã OTP: `make otp` in mã hiện tại và khóa để
+Tài khoản demo: `user.a`, `manager.a` (tenant `xa-a`), `user.b`, `manager.b` (`xa-b`), `user.c`, `manager.c` (`xa-c`),
+ba xã của "Tỉnh Mẫu", tỉnh hư cấu; mật khẩu là `DEMO_USER_PASSWORD` trong `.env`. Người duyệt (`manager.*`) nhập thêm mã OTP: `make otp` in mã hiện tại và khóa để
 nhập vào ứng dụng OTP trên điện thoại ([ADR 0011](docs/adr/0011-approver-mfa.md)). Thiết bị demo nằm trong
 `devices/simulator/devices.yaml`, mật khẩu MQTT `DEMO_DEVICE_PASSWORD`; `make simulate` gửi số đo giả cho chúng.
 Thiết bị khác cấp tài khoản bằng `make device-add TENANT=<tenant> DEVICE=<thiết bị>`. Mọi lệnh khác: `make help`.

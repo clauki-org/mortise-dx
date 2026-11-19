@@ -105,8 +105,9 @@
     ]
   },
   "groups": [
-    { "name": "xuong-a" },
-    { "name": "xuong-b" }
+    { "name": "xa-a" },
+    { "name": "xa-b" },
+    { "name": "xa-c" }
   ],
   "clients": [
     {

@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Nạp dữ liệu demo: 2 tenant, tài khoản Keycloak cho từng tenant, metadata Hasura
+# Nạp dữ liệu demo: 3 xã của "Tỉnh Mẫu" (tenant), tài khoản Keycloak cho từng xã, metadata Hasura
 # (track bảng + quyền theo tenant). Chạy lại nhiều lần không lỗi.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -51,10 +51,12 @@ fi
 
 # username  tenant   vai trò thêm
 users=(
-  "user.a  xuong-a  -"
-  "manager.a  xuong-a  manager"
-  "user.b  xuong-b  -"
-  "manager.b  xuong-b  manager"
+  "user.a  xa-a  -"
+  "manager.a  xa-a  manager"
+  "user.b  xa-b  -"
+  "manager.b  xa-b  manager"
+  "user.c  xa-c  -"
+  "manager.c  xa-c  manager"
 )
 
 for entry in "${users[@]}"; do
@@ -87,14 +89,16 @@ for entry in "${users[@]}"; do
 done
 
 # Tenant demo là dữ liệu, không phải lược đồ, nên nằm ở seed chứ không nằm trong migration:
-# bản cài thật không được tự có hai tenant demo. Tên trùng tên group trong realm.
+# bản cài thật không được tự có tenant demo. Ba xã của "Tỉnh Mẫu", tỉnh hư cấu dùng cho demo (#58). Tên trùng tên
+# group trong realm.
 docker compose exec -T postgres psql -qX -v ON_ERROR_STOP=1 --username hasura --dbname mortise <<'SQL'
 INSERT INTO core.tenants (id, name) VALUES
-    ('xuong-a', 'Tenant A (demo)'),
-    ('xuong-b', 'Tenant B (demo)')
-ON CONFLICT (id) DO NOTHING;
+    ('xa-a', 'Xã A (Tỉnh Mẫu)'),
+    ('xa-b', 'Xã B (Tỉnh Mẫu)'),
+    ('xa-c', 'Xã C (Tỉnh Mẫu)')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 SQL
-echo "postgres: tenant demo xuong-a, xuong-b"
+echo "postgres: tenant demo xa-a, xa-b, xa-c"
 
 # Quyền dữ liệu của Hasura: áp tệp khai báo theo kiểu ghi đè, nên chạy lại seed cũng sửa được quyền đã bị đổi sai.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py apply

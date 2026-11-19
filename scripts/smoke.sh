@@ -93,7 +93,7 @@ if [[ -n "$browser_token" ]]; then
 else
   tenants="không lấy được token"
 fi
-check "Đăng nhập PKCE qua cổng đi trọn và gọi được API" "$tenants" '["xuong-a"]'
+check "Đăng nhập PKCE qua cổng đi trọn và gọi được API" "$tenants" '["xa-a"]'
 
 error=$(curl -s "$base/auth/realms/mortise/protocol/openid-connect/token" -d grant_type=password \
   -d client_id=mortise-web -d username=user.a -d "password=$DEMO_USER_PASSWORD" | jq -r .error)
@@ -104,7 +104,7 @@ location=$(curl -s -o /dev/null -w '%{redirect_url}' "$base/auth/realms/mortise/
 ?client_id=mortise-web&response_type=code&scope=openid&redirect_uri=$base/callback")
 check "Client giao diện bắt buộc PKCE" "$(grep -o 'error=invalid_request' <<<"$location")" error=invalid_request
 
-for pair in "user.a xuong-a" "user.b xuong-b"; do
+for pair in "user.a xa-a" "user.b xa-b" "user.c xa-c"; do
   read -r user tenant <<<"$pair"
   tenants=$(curl -fsS -X POST "$base/v1/graphql" -H "Authorization: Bearer $(token "$user")" \
     -H 'Content-Type: application/json' -d "$query" | jq -c '[.data.core_tenants[].id]')
@@ -113,7 +113,7 @@ done
 
 # Khai báo bước của quy trình mẫu: đọc được qua GraphQL bằng token, chỉ dòng của tenant mình.
 steps_query='{"query":"{ platform_workflow_steps(where: {process: {_eq: \"core-approval\"}}) { tenant_id step config } }"}'
-for pair in "user.a xuong-a" "user.b xuong-b"; do
+for pair in "user.a xa-a" "user.b xa-b"; do
   read -r user tenant <<<"$pair"
   steps=$(curl -fsS -X POST "$base/v1/graphql" -H "Authorization: Bearer $(token "$user")" \
     -H 'Content-Type: application/json' -d "$steps_query" \
@@ -262,7 +262,7 @@ rm -f "$sample"
 sql() { docker compose exec -T postgres psql -qAtX -v ON_ERROR_STOP=1 -U postgres -d mortise "$@"; }
 logged=$(sql -c "SELECT tenant_id || ' ' || actor FROM core.audit_log
   WHERE table_name = 'core.files' AND op = 'INSERT' AND row_key ->> 'id' = '$file_id'")
-check "Nhật ký ghi lần tải tệp với đúng người tải và đơn vị" "$logged" "xuong-a $uploader"
+check "Nhật ký ghi lần tải tệp với đúng người tải và đơn vị" "$logged" "xa-a $uploader"
 status=$(scripts/audit-verify.sh >/dev/null 2>&1 && echo khớp || echo lệch)
 check "Chuỗi băm của nhật ký khớp" "$status" khớp
 refused=$(sql -c "UPDATE core.audit_log SET actor = 'sua-len' WHERE id = (SELECT min(id) FROM core.audit_log)" 2>&1 |
@@ -297,9 +297,9 @@ check "Sau các lần thử, nhật ký vẫn nguyên vẹn" "$status" khớp
 # từ hai nửa lúc chạy để chính tệp này không bị phần mềm diệt virus trên máy người phát triển nhận là nhiễm.
 stored() {
   local rows objects
-  rows=$(sql -c "SELECT count(*) FROM core.files WHERE tenant_id = 'xuong-a'")
+  rows=$(sql -c "SELECT count(*) FROM core.files WHERE tenant_id = 'xa-a'")
   objects=$(docker compose exec -T seaweedfs wget -qO- --header 'Accept: application/json' \
-    'http://127.0.0.1:8888/buckets/mortise-files/xuong-a/?limit=100000' | jq '.Entries | length')
+    'http://127.0.0.1:8888/buckets/mortise-files/xa-a/?limit=100000' | jq '.Entries | length')
   echo "$rows $objects"
 }
 before=$(stored)
@@ -332,19 +332,19 @@ check "Tệp tải lên sau khi quét có trạng thái clean" \
   "$(curl -s -H "Authorization: Bearer $user_a" "$files/$file_id" | jq -r .status)" clean
 
 
-# Dữ liệu thiết bị (context-api trước Scorpio, ADR 0012): ghi một thiết bị cho xuong-a thẳng vào Scorpio
+# Dữ liệu thiết bị (context-api trước Scorpio, ADR 0012): ghi một thiết bị cho xa-a thẳng vào Scorpio
 # qua cổng chỉ mở trong máy chủ, như cầu nối MQTT sẽ làm, rồi đọc qua cổng chung bằng token.
 context="$base/v1/context/entities"
 device=urn:ngsi-ld:Device:smoke-a
 status=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:${SCORPIO_PORT:-9090}/ngsi-ld/v1/entityOperations/upsert" \
-  -H 'Content-Type: application/json' -H 'NGSILD-Tenant: xuong-a' \
+  -H 'Content-Type: application/json' -H 'NGSILD-Tenant: xa-a' \
   -d "[{\"id\":\"$device\",\"type\":\"Device\",\"humidity\":{\"type\":\"Property\",\"value\":61,\"observedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}}]")
 check "Scorpio nhận số đo của thiết bị (cổng máy chủ)" "$([[ $status == 20[14] ]] && echo yes)" yes
 seen() { curl -s -H "Authorization: Bearer $1" "${@:2}" "$context?type=Device" | jq -r --arg d "$device" '[.[].id] | index($d) != null'; }
 check "user.a đọc được thiết bị của tenant mình qua /v1/context" "$(seen "$user_a")" true
 check "user.b (tenant khác) không thấy thiết bị của tenant A" "$(seen "$user_b")" false
 check "user.b tự gửi header NGSILD-Tenant của tenant A vẫn không thấy" \
-  "$(seen "$user_b" -H 'NGSILD-Tenant: xuong-a')" false
+  "$(seen "$user_b" -H 'NGSILD-Tenant: xa-a')" false
 status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_b" "$context/$device")
 check "user.b đọc thẳng theo mã thiết bị của tenant A nhận 404" "$status" 404
 status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_a" "$context?local=false")
@@ -374,31 +374,31 @@ until_reading() {
   echo "$value"
 }
 marker="$((RANDOM % 900 + 100)).5"
-mqtt_pub xuong-a.archive-01 "$DEMO_DEVICE_PASSWORD" mortise/xuong-a/archive-01 'không phải JSON' >/dev/null || true
-mqtt_pub xuong-a.archive-01 "$DEMO_DEVICE_PASSWORD" mortise/xuong-a/archive-01 \
+mqtt_pub xa-a.archive-01 "$DEMO_DEVICE_PASSWORD" mortise/xa-a/archive-01 'không phải JSON' >/dev/null || true
+mqtt_pub xa-a.archive-01 "$DEMO_DEVICE_PASSWORD" mortise/xa-a/archive-01 \
   "{\"measurements\": {\"humidity\": $marker}}" >/dev/null || true
 check "Số đo gửi qua MQTT tới được /v1/context của tenant mình (sau một tin hỏng)" \
   "$(until_reading "$user_a" archive-01 humidity "$marker")" "$marker"
-# Thiết bị của xuong-a gửi vào chủ đề của xuong-b: Mosquitto bỏ tin mà không báo lỗi, nên chỉ kết luận sau khi
-# một tin hợp lệ gửi sau của xuong-b đã tới.
-mqtt_pub xuong-a.archive-01 "$DEMO_DEVICE_PASSWORD" mortise/xuong-b/archive-01 \
+# Thiết bị của xa-a gửi vào chủ đề của xa-b: Mosquitto bỏ tin mà không báo lỗi, nên chỉ kết luận sau khi
+# một tin hợp lệ gửi sau của xa-b đã tới.
+mqtt_pub xa-a.archive-01 "$DEMO_DEVICE_PASSWORD" mortise/xa-b/archive-01 \
   '{"measurements": {"spoofed": 1}}' >/dev/null || true
-mqtt_pub xuong-b.archive-01 "$DEMO_DEVICE_PASSWORD" mortise/xuong-b/archive-01 \
+mqtt_pub xa-b.archive-01 "$DEMO_DEVICE_PASSWORD" mortise/xa-b/archive-01 \
   "{\"measurements\": {\"humidity\": $marker}}" >/dev/null || true
 until_reading "$user_b" archive-01 humidity "$marker" >/dev/null
 check "Thiết bị không gửi được số đo vào chủ đề của tenant khác" \
   "$(curl -s -H "Authorization: Bearer $user_b" "$context/urn:ngsi-ld:Device:archive-01" | jq 'has("spoofed")')" false
 check "MQTT từ chối kết nối không tài khoản" \
-  "$(docker compose exec -T mosquitto mosquitto_pub -t mortise/xuong-a/archive-01 -m x -q 1 >/dev/null 2>&1 && echo nhận || echo từ-chối)" từ-chối
+  "$(docker compose exec -T mosquitto mosquitto_pub -t mortise/xa-a/archive-01 -m x -q 1 >/dev/null 2>&1 && echo nhận || echo từ-chối)" từ-chối
 check "MQTT từ chối mật khẩu sai" \
-  "$(mqtt_pub xuong-a.archive-01 sai mortise/xuong-a/archive-01 x >/dev/null && echo nhận || echo từ-chối)" từ-chối
+  "$(mqtt_pub xa-a.archive-01 sai mortise/xa-a/archive-01 x >/dev/null && echo nhận || echo từ-chối)" từ-chối
 # Mosquitto vẫn nhận lệnh đăng ký mortise/# của thiết bị nhưng không chuyển tin nào nó không có quyền đọc: kiểm
 # rằng tin của thiết bị khác đã tới cầu nối mà thiết bị đăng ký không nhận được.
 eavesdrop=$(mktemp)
-docker compose exec -T mosquitto mosquitto_sub -u xuong-a.archive-01 -P "$DEMO_DEVICE_PASSWORD" \
+docker compose exec -T mosquitto mosquitto_sub -u xa-a.archive-01 -P "$DEMO_DEVICE_PASSWORD" \
   -t 'mortise/#' -C 1 -W 6 >"$eavesdrop" 2>/dev/null &
 sleep 2
-mqtt_pub xuong-a.meter-01 "$DEMO_DEVICE_PASSWORD" mortise/xuong-a/meter-01 \
+mqtt_pub xa-a.meter-01 "$DEMO_DEVICE_PASSWORD" mortise/xa-a/meter-01 \
   "{\"measurements\": {\"energy\": $marker}}" >/dev/null || true
 until_reading "$user_a" meter-01 energy "$marker" >/dev/null
 wait
@@ -418,11 +418,11 @@ in_all=$(cold query "SELECT count(*) AS n FROM audit_all" | grep -oE '│ +[0-9]
 check "Truy vấn gộp kho lạnh và CSDL đếm đúng số dòng nhật ký" "$in_all" "$in_db"
 
 # Bộ giả lập (devices/simulator) gửi một lượt cho mọi thiết bị demo bằng tài khoản của từng thiết bị: số đo của
-# thiết bị xuong-a tới được /v1/context của user.a. Mã riêng, khác số đo bài MQTT ở trên đã ghi, để bài này chỉ
+# thiết bị xa-a tới được /v1/context của user.a. Mã riêng, khác số đo bài MQTT ở trên đã ghi, để bài này chỉ
 # qua khi chính bộ giả lập gửi.
 sim_marker="$((RANDOM % 900 + 1000)).25"
 if docker compose --profile simulator run --rm --quiet-pull simulator --once \
-  --set xuong-a/meter-01:energy="$sim_marker" >/dev/null 2>&1; then
+  --set xa-a/meter-01:energy="$sim_marker" >/dev/null 2>&1; then
   status=chạy
 else
   status=lỗi
@@ -430,7 +430,7 @@ fi
 check "Bộ giả lập gửi được số đo của mọi thiết bị demo" "$status" chạy
 check "Số đo của bộ giả lập tới /v1/context" "$(until_reading "$user_a" meter-01 energy "$sim_marker")" "$sim_marker"
 demo='["urn:ngsi-ld:Device:archive-01","urn:ngsi-ld:Device:meter-01","urn:ngsi-ld:Device:room-101"]'
-check "user.a thấy đủ thiết bị demo của xuong-a" \
+check "user.a thấy đủ thiết bị demo của xa-a" \
   "$(curl -s -H "Authorization: Bearer $user_a" "$context?type=Device&limit=100" |
     jq --argjson demo "$demo" '[.[].id] | contains($demo)')" true
 

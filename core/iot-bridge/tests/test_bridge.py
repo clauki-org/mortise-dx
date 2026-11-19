@@ -29,14 +29,14 @@ def good(value: float = 70) -> bytes:
 def test_garbage_then_valid_message_is_still_written():
     scorpio = FakeScorpio()
     bridge = Bridge(TenantCheck(lambda tenant: True), scorpio)
-    assert bridge.handle("mortise/xuong-a/archive-01", b"\x00garbage") is False
-    assert bridge.handle("mortise/xuong-a/archive-01", good()) is True
-    assert [tenant for tenant, _ in scorpio.writes] == ["xuong-a"]
+    assert bridge.handle("mortise/xa-a/archive-01", b"\x00garbage") is False
+    assert bridge.handle("mortise/xa-a/archive-01", good()) is True
+    assert [tenant for tenant, _ in scorpio.writes] == ["xa-a"]
 
 
 def test_unknown_tenant_is_not_written():
     scorpio = FakeScorpio()
-    bridge = Bridge(TenantCheck(lambda tenant: tenant == "xuong-a"), scorpio)
+    bridge = Bridge(TenantCheck(lambda tenant: tenant == "xa-a"), scorpio)
     assert bridge.handle("mortise/khong-co/archive-01", good()) is False
     assert scorpio.writes == []
 
@@ -46,22 +46,22 @@ def test_database_error_fails_closed():
         raise OSError("connection refused")
 
     scorpio = FakeScorpio()
-    assert Bridge(TenantCheck(broken), scorpio).handle("mortise/xuong-a/archive-01", good()) is False
+    assert Bridge(TenantCheck(broken), scorpio).handle("mortise/xa-a/archive-01", good()) is False
     assert scorpio.writes == []
 
 
 def test_scorpio_error_does_not_escape():
     bridge = Bridge(TenantCheck(lambda tenant: True), FakeScorpio(fail=True))
-    assert bridge.handle("mortise/xuong-a/archive-01", good()) is False
+    assert bridge.handle("mortise/xa-a/archive-01", good()) is False
 
 
 def test_new_tenant_is_seen_shortly_after_it_is_created():
     # Cầu nối chạy trước `make seed`: tenant chưa có lúc đầu không bị nhớ là "không có" quá lâu.
     now = [0.0]
-    created = {"xuong-a": False}
+    created = {"xa-a": False}
     check = TenantCheck(lambda tenant: created[tenant], clock=lambda: now[0])
-    assert check.exists("xuong-a") is False
-    created["xuong-a"] = True
-    assert check.exists("xuong-a") is False
+    assert check.exists("xa-a") is False
+    created["xa-a"] = True
+    assert check.exists("xa-a") is False
     now[0] += UNKNOWN_SECONDS + 1
-    assert check.exists("xuong-a") is True
+    assert check.exists("xa-a") is True

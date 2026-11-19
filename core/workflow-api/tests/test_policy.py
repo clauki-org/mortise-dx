@@ -20,18 +20,18 @@ from app.policy import (
 MANAGER_A = Caller(
     sub="m-a",
     username="manager.a",
-    tenant="xuong-a",
+    tenant="xa-a",
     roles=frozenset({"user", "manager"}),
     methods=frozenset({"pwd", "otp"}),
 )
 USER_A = Caller(
-    sub="u-a", username="user.a", tenant="xuong-a", roles=frozenset({"user"}), methods=frozenset({"pwd"})
+    sub="u-a", username="user.a", tenant="xa-a", roles=frozenset({"user"}), methods=frozenset({"pwd"})
 )
 
 
 def review_task(**changes) -> TaskView:
     base = dict(
-        tenant="xuong-a",
+        tenant="xa-a",
         assignee=None,
         candidate_groups=frozenset({"manager"}),
         category=FOUR_EYES,
@@ -46,7 +46,7 @@ def test_manager_of_same_tenant_can_complete():
 
 def test_other_tenant_sees_not_found():
     with pytest.raises(Denied) as error:
-        check_can_complete(MANAGER_A, review_task(tenant="xuong-b"))
+        check_can_complete(MANAGER_A, review_task(tenant="xa-b"))
     assert error.value.status == 404
 
 
@@ -106,7 +106,7 @@ def test_approver_without_second_factor_still_sees_not_found_for_other_tenant():
     # Không lộ việc task của tenant khác tồn tại, kể cả khi người gọi thiếu OTP.
     password_only = replace(MANAGER_A, methods=frozenset({"pwd"}))
     with pytest.raises(Denied) as denied:
-        check_can_complete(password_only, review_task(tenant="xuong-b"))
+        check_can_complete(password_only, review_task(tenant="xa-b"))
     assert denied.value.status == 404
 
 

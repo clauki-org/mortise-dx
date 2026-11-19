@@ -38,8 +38,8 @@ Các lựa chọn đã xét:
 - workflow-api từ chối hoàn thành task (403) khi người gọi có vai trò `manager` mà `amr` không có `otp`; task của
   tenant khác vẫn trả 404 trước, để không lộ task tồn tại. Đây là lớp kiểm thứ hai: Keycloak đúng thì không cấp
   được token như vậy.
-- Tài khoản demo: `make env` sinh `DEMO_OTP_SECRET`, `make seed` gắn khóa này cho `manager.a`, `manager.b` qua API
-  quản trị. `make otp` in mã hiện tại và khóa để nhập vào ứng dụng OTP. Smoke và e2e lấy mã bằng `scripts/otp.py`,
+- Tài khoản demo: `make env` sinh `DEMO_OTP_SECRET`, `make seed` gắn khóa này cho các tài khoản `manager.*` demo
+  qua API quản trị. `make otp` in mã hiện tại và khóa để nhập vào ứng dụng OTP. Smoke và e2e lấy mã bằng `scripts/otp.py`,
   lệnh này nhớ mã đã dùng của từng tài khoản và chờ sang khung 30 giây mới khi hết mã còn hiệu lực.
 
 Đã thử ngày 2026-11-16 trên Keycloak 26.7.5: người duyệt chỉ có mật khẩu bị từ chối (`invalid_grant`); có mã thì

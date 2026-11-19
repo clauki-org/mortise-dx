@@ -7,7 +7,7 @@
 # nối hay Scorpio, nên chạy giả lập là kiểm cả đường MQTT.
 #   --once                 gửi một lượt rồi thoát (make smoke)
 #   --interval GIÂY        gửi lặp lại (make simulate)
-#   --set T/D:SỐ_ĐO=GIÁ_TRỊ  ép một số đo, ví dụ xuong-a/archive-01:humidity=78 để thử vượt ngưỡng
+#   --set T/D:SỐ_ĐO=GIÁ_TRỊ  ép một số đo, ví dụ xa-a/archive-01:humidity=78 để thử vượt ngưỡng
 
 import argparse
 import json
@@ -65,7 +65,7 @@ def load(path: str) -> list[Device]:
 
 
 def parse_override(text: str) -> tuple[str, str, float | bool]:
-    """`xuong-a/archive-01:humidity=78` thành (chủ đề, số đo, giá trị)."""
+    """`xa-a/archive-01:humidity=78` thành (chủ đề, số đo, giá trị)."""
     try:
         target, assignment = text.split(":", 1)
         name, raw = assignment.split("=", 1)

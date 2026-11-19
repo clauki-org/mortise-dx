@@ -55,7 +55,7 @@ audit-verify: ## Kiểm nhật ký thay đổi không bị sửa lén; ANCHOR=<t
 backup: ## Sao lưu CSDL, tệp và .env ra ngoài repo (BACKUP_DIR để đổi nơi lưu)
 	@scripts/backup.sh
 
-simulate: ## Chạy bộ giả lập thiết bị demo, gửi số đo mỗi 5 giây; thêm ARGS="--set xuong-a/archive-01:humidity=78"
+simulate: ## Chạy bộ giả lập thiết bị demo, gửi số đo mỗi 5 giây; thêm ARGS="--set xa-a/archive-01:humidity=78"
 	docker compose --profile simulator run --rm --build simulator $(ARGS)
 
 device-add: ## Cấp tài khoản MQTT cho thiết bị, in mật khẩu: make device-add TENANT=<tenant> DEVICE=<thiết bị>
