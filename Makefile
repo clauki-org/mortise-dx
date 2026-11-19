@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e audit-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate
+  check-fast web-check e2e audit-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -63,6 +63,12 @@ device-add: ## Cấp tài khoản MQTT cho thiết bị, in mật khẩu: make d
 
 device-remove: ## Thu hồi tài khoản MQTT của thiết bị: make device-remove TENANT=<tenant> DEVICE=<thiết bị>
 	@scripts/device.sh remove "$(TENANT)" "$(DEVICE)"
+archive: ## Xuất nhật ký thay đổi cũ sang kho lạnh: make archive BEFORE=<ngày, ví dụ 2026-11-01>
+	@test -n "$(BEFORE)" || { echo "Cách dùng: make archive BEFORE=2026-11-01" >&2; exit 1; }
+	@docker compose --profile tools run --rm --build cold-archive archive --before "$(BEFORE)"
+cold-query: ## Truy vấn nhật ký gộp kho lạnh và CSDL bằng DuckDB: make cold-query SQL="SELECT count(*) FROM audit_all"
+	@test -n "$(SQL)" || { echo 'Cách dùng: make cold-query SQL="SELECT count(*) FROM audit_all"' >&2; exit 1; }
+	@docker compose --profile tools run --rm --build cold-archive query "$(SQL)"
 
 app-install: ## Cài một gói Tầng 3 lên lõi đang chạy: make app-install APP=<gói>
 	@scripts/app.sh "$(APP)" install
@@ -84,7 +90,7 @@ lint: ## Kiểm tra giấy phép từng tệp (REUSE)
 	uvx reuse lint
 
 test: ## Kiểm thử đơn vị các dịch vụ tự viết của lõi và bộ giả lập thiết bị
-	@for dir in core/workflow-api core/files-api core/context-api core/iot-bridge devices/simulator; do \
+	@for dir in core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive devices/simulator; do \
 	  echo "== $$dir"; \
 	  (cd $$dir && UV_PROJECT_ENVIRONMENT=$(MORTISE_VENVS)/$$(basename $$dir)-venv PYTHONDONTWRITEBYTECODE=1 \
 	    uv run --frozen pytest -q -p no:cacheprovider) || exit 1; \
@@ -102,9 +108,10 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	  core/mosquitto/start.sh \
 	  apps/*/tests/*.sh
 	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps .github
-	uvx ruff check --no-cache core/workflow-api core/files-api core/context-api core/iot-bridge devices/simulator
-	uvx ruff format --no-cache --check core/workflow-api core/files-api core/context-api core/iot-bridge \
+	uvx ruff check --no-cache core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive \
 	  devices/simulator
+	uvx ruff format --no-cache --check core/workflow-api core/files-api core/context-api core/iot-bridge \
+	  core/cold-archive devices/simulator
 	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts
 	uvx ruff format --no-cache --check --config core/workflow-api/pyproject.toml scripts
 	@scripts/contracts.sh check
