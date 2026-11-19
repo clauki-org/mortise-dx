@@ -35,7 +35,7 @@ def test_override_forces_one_measurement():
     assert json.loads(message(device, {(topic, name): value}))["measurements"]["humidity"] == 78
 
 
-@pytest.mark.parametrize("text", ["xuong-a/archive-01", "xuong-a/archive-01:humidity=abc"])
+@pytest.mark.parametrize("text", ["xa-a/archive-01", "xa-a/archive-01:humidity=abc"])
 def test_malformed_override_is_refused(text):
     with pytest.raises(SystemExit):
         parse_override(text)

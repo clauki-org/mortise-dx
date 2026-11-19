@@ -38,7 +38,7 @@ device-message.text-value.json	$.measurements.humidity	'71' is not of type 'numb
 token-claims.amr-not-array.json	$.amr	'otp' is not of type 'array'
 token-claims.missing-tenant.json	$	'tenant' is a required property
 token-claims.missing-user-role.json	$.realm_access.roles	['default-roles-mortise', 'manager', 'offline_access', 'uma_authorization'] does not contain items matching the given schema
-token-claims.two-tenants.json	$.tenant	['xuong-a', 'xuong-b'] is too long
+token-claims.two-tenants.json	$.tenant	['xa-a', 'xa-b'] is too long
 workflow.blank-action-label.yaml	$.steps.review.actions[0].label	' ' does not match '\\\\S'
 workflow.due-outside-bpmn.yaml	$.steps.review	Additional properties are not allowed ('due' was unexpected)
 workflow.form-not-object.yaml	$.steps.review.form.type	'object' was expected

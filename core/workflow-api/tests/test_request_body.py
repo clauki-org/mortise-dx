@@ -16,7 +16,7 @@ from app.policy import Caller
 MANAGER_A = Caller(
     sub="m-a",
     username="manager.a",
-    tenant="xuong-a",
+    tenant="xa-a",
     roles=frozenset({"user", "manager"}),
     methods=frozenset({"pwd", "otp"}),
 )
@@ -36,7 +36,7 @@ def sent(monkeypatch) -> list[dict]:
         calls.append(variables)
         return {"id": "p1"}
 
-    task = {"id": "t1", "tenantId": "xuong-a", "assignee": None, "category": None, "variables": []}
+    task = {"id": "t1", "tenantId": "xa-a", "assignee": None, "category": None, "variables": []}
     monkeypatch.setattr(flowable, "task", lambda _id: task)
     monkeypatch.setattr(flowable, "candidate_groups", lambda _id: frozenset({"manager"}))
     monkeypatch.setattr(flowable, "claim_and_complete", complete)

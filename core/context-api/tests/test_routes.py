@@ -12,7 +12,7 @@ from app.auth import caller_from_token
 from app.main import app
 from app.policy import Caller
 
-USER_A = Caller(sub="u-a", tenant="xuong-a")
+USER_A = Caller(sub="u-a", tenant="xa-a")
 client = TestClient(app)
 
 
@@ -37,10 +37,10 @@ def calls(monkeypatch) -> list[tuple]:
 
 def test_tenant_comes_from_token_not_from_header(calls):
     response = client.get(
-        "/v1/context/entities", params={"type": "Device"}, headers={"NGSILD-Tenant": "xuong-b"}
+        "/v1/context/entities", params={"type": "Device"}, headers={"NGSILD-Tenant": "xa-b"}
     )
     assert response.status_code == 200
-    assert calls == [("xuong-a", {"type": "Device"})]
+    assert calls == [("xa-a", {"type": "Device"})]
     # Thuộc tính riêng của thiết bị giữ nguyên, không bị model cắt bỏ.
     assert response.json()[0]["humidity"] == {"value": 78}
 
@@ -54,7 +54,7 @@ def test_unknown_query_parameter_never_reaches_scorpio(calls):
 def test_entity_by_id_uses_token_tenant(calls):
     response = client.get("/v1/context/entities/urn:ngsi-ld:Device:kho-01")
     assert response.status_code == 200
-    assert calls == [("xuong-a", "urn:ngsi-ld:Device:kho-01")]
+    assert calls == [("xa-a", "urn:ngsi-ld:Device:kho-01")]
 
 
 def test_malformed_entity_id_never_reaches_scorpio(calls):

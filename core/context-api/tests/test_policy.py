@@ -51,7 +51,7 @@ def test_offset_must_be_a_non_negative_integer(offset):
 
 
 def test_tenant_must_be_a_slug():
-    check_tenant("xuong-a")
+    check_tenant("xa-a")
     for bad in ["xưởng-a", "Xuong-A", "a b", "a\r\nX: y", ""]:
         with pytest.raises(Denied) as denied:
             check_tenant(bad)

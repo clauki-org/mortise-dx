@@ -10,7 +10,7 @@ import pytest
 
 from app.message import MAX_MEASUREMENTS, Rejected, parse
 
-TOPIC = "mortise/xuong-a/archive-01"
+TOPIC = "mortise/xa-a/archive-01"
 
 
 def body(**fields) -> bytes:
@@ -19,7 +19,7 @@ def body(**fields) -> bytes:
 
 def test_measurements_become_properties_with_observed_at():
     reading = parse(TOPIC, body(observedAt="2026-11-17T17:00:00+07:00", measurements={"humidity": 71.5}))
-    assert (reading.tenant, reading.device) == ("xuong-a", "archive-01")
+    assert (reading.tenant, reading.device) == ("xa-a", "archive-01")
     assert reading.entity == {
         "id": "urn:ngsi-ld:Device:archive-01",
         "type": "Device",
@@ -30,7 +30,7 @@ def test_measurements_become_properties_with_observed_at():
 def test_tenant_in_payload_is_rejected():
     # Như contracts/examples/invalid/device-message.tenant-in-body.json: tenant chỉ đến từ chủ đề.
     with pytest.raises(Rejected):
-        parse(TOPIC, body(tenant="xuong-b", measurements={"occupied": True}))
+        parse(TOPIC, body(tenant="xa-b", measurements={"occupied": True}))
 
 
 def test_boolean_measurement_is_kept():
@@ -40,11 +40,11 @@ def test_boolean_measurement_is_kept():
 @pytest.mark.parametrize(
     "topic",
     [
-        "mortise/xuong-a",
-        "mortise/xuong-a/archive-01/extra",
-        "other/xuong-a/archive-01",
+        "mortise/xa-a",
+        "mortise/xa-a/archive-01/extra",
+        "other/xa-a/archive-01",
         "mortise/Xuong-A/a",
-        "mortise/xuong-a/a" + "b" * 64,
+        "mortise/xa-a/a" + "b" * 64,
         "mortise/../archive-01",
     ],
 )

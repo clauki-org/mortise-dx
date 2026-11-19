@@ -21,7 +21,7 @@ set +a
 
 base="${MORTISE_PUBLIC_URL:-http://localhost:9080}"
 user_a=user.a
-tenant_a=xuong-a
+tenant_a=xa-a
 user_b=user.b
 fail=0
 
@@ -74,7 +74,7 @@ SQL
 check "Nhật ký ghi thay đổi qua Hasura với đúng người làm" "$audit" "$tenant_a INSERT $(sub_of "$token_a") user"
 
 out=$(gql "$token_a" 'mutation($code: String!) {
-  insert_app_facilities_commune_facilities_one(object: {code: $code, name: "x", tenant_id: "xuong-b"}) { id }
+  insert_app_facilities_commune_facilities_one(object: {code: $code, name: "x", tenant_id: "xa-b"}) { id }
 }' "{\"code\":\"$code-spoof\"}")
 check "$user_a không tự đặt được cột tenant_id" "$(jq 'has("errors")' <<<"$out")" true
 
@@ -133,5 +133,7 @@ gql "$token_a" 'mutation($id: uuid!) { delete_app_facilities_commune_buildings_b
 gql "$token_a" "$delete_facility" "{\"id\":\"$fac_a\"}" >/dev/null
 gql "$token_b" "$delete_facility" "{\"id\":\"$fac_b\"}" >/dev/null
 check "Dọn dữ liệu kiểm thử" "$(ids "$token_a")" "[]"
+
+
 
 exit $fail
