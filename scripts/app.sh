@@ -5,9 +5,10 @@
 # Cài, gỡ và xem trạng thái một gói Tầng 3 trên lõi đang chạy. Đọc apps/<gói>/app.yaml
 # (contracts/app.schema.json) để biết lược đồ, thư mục migration và thư mục metadata Hasura.
 # Migration chạy bằng dbmate với thư mục và bảng theo dõi riêng của gói (ADR 0005); metadata
-# Hasura áp bằng scripts/hasura-metadata.py như bảng của lõi. Cài: migrate rồi áp metadata. Gỡ:
-# bỏ đăng ký metadata rồi mới lùi migration, để Hasura không trỏ tới bảng đã xóa. Chạy lại
-# nhiều lần không lỗi. Chưa deploy quy trình và menu của gói; lệnh cài gói đầy đủ thuộc Sprint 2 (#58).
+# Hasura áp bằng scripts/hasura-metadata.py như bảng của lõi; quy trình, khai báo bước và menu nạp bằng
+# scripts/app-deploy.py cho mọi tenant đang có. Cài: migrate, áp metadata, nạp. Gỡ: xóa phần đã nạp, bỏ đăng ký
+# metadata rồi mới lùi migration, để Hasura không trỏ tới bảng đã xóa. Chạy lại nhiều lần không lỗi; tenant tạo
+# sau khi cài gói thì chạy lại app-install để nhận quy trình và menu của gói.
 # Gọi qua Makefile: make app-install|app-uninstall|app-status APP=<gói>.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -26,8 +27,8 @@ if [[ ! "$app" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ || ! -f "$manifest" || ! "$action" =~
 fi
 # Gỡ gói xóa lược đồ của gói cùng toàn bộ dữ liệu của mọi tenant trong đó, nên phải xác nhận như make restore.
 if [[ "$action" == uninstall && "${CONFIRM:-}" != yes ]]; then
-  echo "Gỡ gói $app sẽ xóa toàn bộ dữ liệu của gói ở mọi tenant. Sao lưu trước (make backup), rồi chạy lại với" \
-    "CONFIRM=yes." >&2
+  echo "Gỡ gói $app sẽ xóa toàn bộ dữ liệu của gói ở mọi tenant, kể cả hồ sơ đang chạy theo quy trình của gói." \
+    "Sao lưu trước (make backup), rồi chạy lại với CONFIRM=yes." >&2
   exit 1
 fi
 
@@ -60,6 +61,8 @@ dbmate() {
 
 metadata() { "${py[@]}" scripts/hasura-metadata.py "$1" "${declarations[@]}"; }
 
+deploy() { "${py[@]}" scripts/app-deploy.py "$1" "apps/$app"; }
+
 applied() { dbmate status 2>/dev/null | awk '/^Applied:/ {print $2}'; }
 
 case "$action" in
@@ -69,9 +72,11 @@ case "$action" in
   install)
     dbmate up --strict
     if ((${#declarations[@]})); then metadata apply; fi
+    deploy install
     echo "Gói $app đã cài (lược đồ $schema). Kiểm: make app-smoke APP=$app"
     ;;
   uninstall)
+    deploy remove
     if ((${#declarations[@]})); then metadata untrack; fi
     # dbmate rollback lùi một migration mỗi lần (ADR 0005), nên lặp tới khi gói không còn gì.
     while [[ "$(applied)" != "0" ]]; do dbmate rollback; done

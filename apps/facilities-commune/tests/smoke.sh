@@ -4,9 +4,9 @@
 #
 # Kiểm tra gói qua cổng APISIX sau khi `make app-install APP=facilities-commune`: mỗi tenant chỉ
 # đọc và ghi cơ sở của mình, tenant do token quyết định chứ không do dữ liệu gửi lên, khóa ngoại
-# ghép chặn việc nối tòa vào cơ sở của tenant khác, và thay đổi qua Hasura để lại nhật ký ghi đúng
-# người làm (ADR 0009). Dùng tài khoản demo của lõi; tự dọn dữ liệu đã tạo nên chạy lại nhiều
-# lần không lỗi. Cần lõi đang chạy và đã `make seed`.
+# ghép chặn việc nối tòa vào cơ sở của tenant khác, thay đổi qua Hasura để lại nhật ký ghi đúng
+# người làm (ADR 0009), và menu của gói được nạp theo tenant. Dùng tài khoản demo của lõi; tự dọn dữ
+# liệu đã tạo nên chạy lại nhiều lần không lỗi. Cần lõi đang chạy và đã `make seed`.
 #
 # SC2016: biến GraphQL ($id, $code) phải nằm trong nháy đơn để shell không mở rộng; giá trị đi
 # qua trường variables của yêu cầu, không ghép chuỗi, nên không có rủi ro tiêm vào truy vấn.
@@ -134,6 +134,15 @@ gql "$token_a" "$delete_facility" "{\"id\":\"$fac_a\"}" >/dev/null
 gql "$token_b" "$delete_facility" "{\"id\":\"$fac_b\"}" >/dev/null
 check "Dọn dữ liệu kiểm thử" "$(ids "$token_a")" "[]"
 
+
+# Menu của gói (app.yaml, nạp khi cài): mỗi tenant thấy mục của mình kèm nội dung cấu hình danh mục, không thấy dòng
+# của tenant khác.
+menu='{ platform_menu_items(where: {app: {_eq: "facilities-commune"}}) { tenant_id item component config } }'
+check "Menu của gói: user.a thấy mục danh mục cơ sở kèm cấu hình, chỉ của xã mình" \
+  "$(gql "$token_a" "$menu" | jq -c '[.data.platform_menu_items[] | [.tenant_id, .item, .component, .config.source]]')" \
+  '[["xa-a","facilities","catalog","app_facilities_commune_facilities"]]'
+check "Menu của gói: user.b chỉ thấy mục của xã mình" \
+  "$(gql "$token_b" "$menu" | jq -c '[.data.platform_menu_items[].tenant_id] | unique')" '["xa-b"]'
 
 # Dữ liệu demo (`make seed-demo`, seed/demo.yaml) và kết quả tính của từng xã (view area_summary): được phép = làm
 # việc theo biên chế + sử dụng chung bằng phần làm việc + chuyên dùng; thực tế chỉ cộng cơ sở đang dùng; phần vượt

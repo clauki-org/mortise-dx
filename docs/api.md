@@ -46,7 +46,18 @@ curl -fsS -X POST http://localhost:9080/v1/graphql \
 
 Khai báo bước của quy trình (`contracts/workflow.schema.json`) nằm ở `platform_workflow_steps`, một dòng mỗi bước:
 `process` và `step` khớp với hai trường cùng tên của task trong API quy trình, `config` là phần khai báo của bước
-(biểu mẫu, nút, hồ sơ). `make seed` nạp khai báo của quy trình mẫu `core-approval`.
+(biểu mẫu, nút, hồ sơ). `make seed` nạp khai báo của quy trình mẫu `core-approval`; `make app-install` nạp khai
+báo của gói từ `apps/<gói>/workflows/*.yaml`, cùng BPMN mà `app.yaml` khai ở `workflows`.
+
+Menu của các gói đã cài nằm ở `platform_menu_items`, một dòng mỗi mục của `menu` trong `app.yaml`: `app` là gói,
+`item` là id của mục, `position` là thứ tự gói khai, `config` là nội dung tệp cấu hình của thành phần (không phải
+đường dẫn), `roles` là vai trò thấy mục (`null` là mọi người).
+
+```bash
+curl -fsS -X POST http://localhost:9080/v1/graphql \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"query":"{ platform_menu_items(order_by: {position: asc}) { app item label component config roles } }"}'
+```
 
 ```bash
 curl -fsS -X POST http://localhost:9080/v1/graphql \

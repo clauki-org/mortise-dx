@@ -81,6 +81,11 @@ for item in app.get("menu", []):
     "${checker[@]}" --schemafile contracts/catalog.schema.json "${catalogs[@]}"
   fi
 done
+# Khóa quy trình là duy nhất trên cả lõi và mọi gói: bộ cài gói (scripts/app-deploy.py) xóa khai báo bước và
+# deployment theo khóa, nên một gói khai trùng khóa với lõi hay gói khác sẽ xóa luôn quy trình của bên kia khi cài
+# lại hay khi gỡ.
+"${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml apps/**/*.bpmn20.xml \
+  --steps contracts/examples/workflow.example.yaml apps/*/workflows/*.yaml
 
 # Ví dụ sai trong contracts/examples/invalid/ phải bị từ chối. Thiếu bước này, một schema
 # bị nới lỏng vẫn qua mọi ví dụ đúng mà không ai biết nó không còn chặn được gì.

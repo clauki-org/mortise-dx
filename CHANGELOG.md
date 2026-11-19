@@ -15,6 +15,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Gói `facilities-commune` tính diện tích được phép và phần vượt tiêu chuẩn, định mức của từng xã theo NĐ 155/2025
   sửa bởi NĐ 369/2026 (view `area_summary`), từ biên chế theo dòng phụ lục mức m² có trích dẫn và diện tích
   chuyên dùng; dữ liệu demo có biên chế, xã A vượt 420 m².
+- `make app-install` nạp cả quy trình BPMN, khai báo bước và menu của gói cho mọi xã; menu đọc được qua GraphQL
+  (`platform_menu_items`) kèm nội dung cấu hình. `make app-uninstall` xóa chúng, kể cả hồ sơ đang chạy theo quy
+  trình của gói. Xã tạo sau khi cài gói thì chạy lại `make app-install`.
 - `make seed-demo`: dữ liệu demo hư cấu của ba xã cho gói `facilities-commune` (cơ sở, tòa, phòng), nạp qua cổng bằng
   tài khoản của từng xã; chạy lại không tạo bản trùng.
 - Khung giao diện Tầng 2 tại `/` của cổng (`platform/web/`, React, Mantine): đăng nhập Authorization Code + PKCE
