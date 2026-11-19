@@ -41,6 +41,7 @@ quyền:
 
 ```bash
 make app-install APP=facilities-commune                  # migrate rồi áp hasura/tables.yaml
+make seed-demo                                           # dữ liệu demo ba xã (seed/demo.yaml), qua cổng
 make app-smoke APP=facilities-commune                    # kiểm qua cổng
 make app-status APP=facilities-commune                   # migration nào đã áp
 make app-uninstall APP=facilities-commune CONFIRM=yes    # XÓA dữ liệu của gói ở mọi tenant; lõi vẫn qua smoke
@@ -52,8 +53,13 @@ lõi. CI cài gói, chạy smoke của gói, chạy `make seed` và `make smoke`
 
 ## Chưa có
 
-Bảng định mức, biên chế và cách tính diện tích được phép; dữ liệu mẫu ba xã (`make seed-demo`); quy trình rà soát.
-Theo dõi ở các issue của Sprint 1 và Sprint 2.
+Bảng định mức, biên chế và cách tính diện tích được phép (#100); quy trình rà soát.
+
+## Dữ liệu demo
+
+`seed/demo.yaml` là dữ liệu hư cấu của ba xã thuộc "Tỉnh Mẫu": tổng diện tích thông thủy của cơ sở đang dùng là
+1.000 m² (xã A), 730 m² (xã B), 460 m² (xã C); xã C còn một cơ sở dôi dư 250 m². `make seed-demo` nạp qua cổng bằng
+tài khoản của từng xã (`seed/load.py`), chạy lại không tạo bản trùng; smoke của gói kiểm các tổng này khi đã nạp.
 
 Mục `menu` `facilities` trong `app.yaml` khai cấu hình danh mục và được `make check-fast` kiểm theo schema, nhưng
 chưa hiện trên giao diện: đưa menu của gói vào khung giao diện thuộc lệnh cài gói đầy đủ ở Sprint 2.

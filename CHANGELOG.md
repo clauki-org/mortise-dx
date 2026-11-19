@@ -12,6 +12,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- `make seed-demo`: dữ liệu demo hư cấu của ba xã cho gói `facilities-commune` (cơ sở, tòa, phòng), nạp qua cổng bằng
+  tài khoản của từng xã; chạy lại không tạo bản trùng.
 - Khung giao diện Tầng 2 tại `/` của cổng (`platform/web/`, React, Mantine): đăng nhập Authorization Code + PKCE
   qua Keycloak, đăng xuất, tự làm mới token, đọc đơn vị của người dùng qua GraphQL. nginx phục vụ tệp tĩnh kèm
   Content-Security-Policy; đường sai dưới `/v1` trả 404. `make web-check` (Biome, kiểu, build, giấy phép phụ thuộc)
