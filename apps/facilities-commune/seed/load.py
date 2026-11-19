@@ -3,7 +3,8 @@
 #
 # Nạp dữ liệu demo của gói (demo.yaml) qua cổng, như một cán bộ xã nhập tay: lấy token của tài khoản từng xã
 # rồi ghi bằng GraphQL. Gói không đụng thẳng vào CSDL (AGENTS.md), và nhật ký thay đổi ghi đúng người làm của
-# từng xã. Cơ sở đã có (trùng mã trong xã) thì bỏ qua cả cây của nó, nên chạy lại không tạo bản trùng.
+# từng xã. Dòng đã có (trùng mã, hay trùng chức danh với biên chế) thì giữ nguyên, nên chạy lại không tạo bản
+# trùng.
 # Gọi bằng `make seed-demo` sau `make seed` và `make app-install APP=facilities-commune`.
 
 import base64
@@ -101,7 +102,13 @@ def load_tenant(tenant: str, spec: dict) -> int:
                 if room["code"] not in rooms:
                     insert(access, "rooms", room | {"building_id": building_id})
                     added += 1
-    print(f"{tenant}: thêm {added} dòng (cơ sở, tòa, phòng); phần đã có giữ nguyên")
+    name = f"{TABLE}_staffing"
+    existing = {row["position"] for row in graphql(access, f"{{ {name} {{ position }} }}", {})[name]}
+    for row in spec.get("staffing", []):
+        if row["position"] not in existing:
+            insert(access, "staffing", row)
+            added += 1
+    print(f"{tenant}: thêm {added} dòng (cơ sở, tòa, phòng, biên chế); phần đã có giữ nguyên")
     return added
 
 

@@ -135,16 +135,14 @@ gql "$token_b" "$delete_facility" "{\"id\":\"$fac_b\"}" >/dev/null
 check "Dọn dữ liệu kiểm thử" "$(ids "$token_a")" "[]"
 
 
-# Dữ liệu demo (`make seed-demo`, seed/demo.yaml): tổng diện tích thông thủy theo trạng thái cơ sở của từng xã đúng số
-# liệu của câu chuyện demo. Chưa nạp thì bỏ qua, để smoke của gói vẫn chạy được trên bản cài không có dữ liệu demo.
-areas='{ app_facilities_commune_facilities { id status code }
-  app_facilities_commune_buildings { id facility_id } app_facilities_commune_rooms { building_id clear_area_m2 } }'
-totals() { # TOKEN: in "<trạng thái>=<tổng m²>" theo thứ tự trạng thái
-  gql "$1" "$areas" | jq -r '.data as $d
-    | ($d.app_facilities_commune_facilities | map({(.id): .status}) | add) as $status
-    | ($d.app_facilities_commune_buildings | map({(.id): $status[.facility_id]}) | add) as $of
-    | $d.app_facilities_commune_rooms | group_by($of[.building_id])
-    | map("\($of[.[0].building_id])=\(map(.clear_area_m2 | tonumber) | add)") | join(" ")'
+# Dữ liệu demo (`make seed-demo`, seed/demo.yaml) và kết quả tính của từng xã (view area_summary): được phép = làm
+# việc theo biên chế + sử dụng chung bằng phần làm việc + chuyên dùng; thực tế chỉ cộng cơ sở đang dùng; phần vượt
+# không âm. Chưa nạp thì bỏ qua, để smoke của gói vẫn chạy được trên bản cài không có dữ liệu demo.
+summary_query='{ app_facilities_commune_area_summary { tenant_id allowed_m2 in_use_m2 surplus_m2 excess_m2 } }'
+summary() { # TOKEN: in "<tenant> allowed=.. in_use=.. surplus=.. excess=.." cho mỗi dòng thấy được
+  gql "$1" "$summary_query" | jq -r '.data.app_facilities_commune_area_summary[]
+    | "\(.tenant_id) allowed=\(.allowed_m2 | tonumber + 0) in_use=\(.in_use_m2 | tonumber + 0)"
+      + " surplus=\(.surplus_m2 | tonumber + 0) excess=\(.excess_m2 | tonumber + 0)"'
 }
 # Xã nào đã có một cơ sở demo thì coi như đã nạp và kiểm cả ba xã, để nạp sót một xã không làm smoke bỏ qua.
 demo_codes='{ app_facilities_commune_facilities(where: {code: {_like: "TS-%"}}) { id } }'
@@ -153,9 +151,30 @@ for user in "$user_a" "$user_b" user.c; do
   loaded=$((loaded + $(gql "$(token "$user")" "$demo_codes" | jq '.data.app_facilities_commune_facilities | length')))
 done
 if ((loaded > 0)); then
-  check "Dữ liệu demo xã A: 1.000 m² thông thủy đang dùng" "$(totals "$token_a")" "in_use=1000"
-  check "Dữ liệu demo xã B: 730 m² thông thủy đang dùng" "$(totals "$token_b")" "in_use=730"
-  check "Dữ liệu demo xã C: 460 m² đang dùng, 250 m² dôi dư" "$(totals "$(token user.c)")" "in_use=460 surplus=250"
+  # Dọn diện tích chuyên dùng mà lần chạy trước để sót (dừng giữa lúc thêm và xóa), nếu không phần vượt của xã A lệch
+  # ở mọi lần sau.
+  gql "$token_a" 'mutation { delete_app_facilities_commune_specialized_allowances(
+    where: {basis: {_eq: "Kiểm thử smoke"}}) { affected_rows } }' >/dev/null
+  check "Xã A: được phép 580 m², dùng 1.000 m², vượt 420 m²; chỉ thấy dòng của mình" "$(summary "$token_a")" \
+    "xa-a allowed=580 in_use=1000 surplus=0 excess=420"
+  check "Xã B: được phép 600 m², dùng 730 m², vượt 130 m²" "$(summary "$token_b")" \
+    "xa-b allowed=600 in_use=730 surplus=0 excess=130"
+  check "Xã C: được phép 480 m², dùng 460 m², không vượt; dôi dư 250 m² tính riêng" "$(summary "$(token user.c)")" \
+    "xa-c allowed=480 in_use=460 surplus=250 excess=0"
+  check "Mức m² của biên chế trỏ về đúng dòng phụ lục" \
+    "$(gql "$token_a" '{ app_facilities_commune_staffing_allowances(where: {norm_row: {_eq: 10}}) {
+      headcount max_m2 allowed_m2 source } }' |
+      jq -c '.data.app_facilities_commune_staffing_allowances[] | [.headcount, (.max_m2 | tonumber + 0),
+        (.allowed_m2 | tonumber + 0), .source]')" \
+    '[14,15,210,"Phụ lục NĐ 369/2026/NĐ-CP, STT 10"]'
+  # Diện tích chuyên dùng do cấp có thẩm quyền quyết định cộng thẳng vào phần được phép.
+  extra=$(gql "$token_a" 'mutation($name: String!) { insert_app_facilities_commune_specialized_allowances_one(
+    object: {name: $name, area_m2: 50, basis: "Kiểm thử smoke"}) { id } }' "{\"name\":\"$code\"}" |
+    jq -r '.data.insert_app_facilities_commune_specialized_allowances_one.id')
+  check "Thêm 50 m² chuyên dùng: phần vượt của xã A còn 370 m²" "$(summary "$token_a" | grep -o 'excess=[0-9]*')" \
+    "excess=370"
+  gql "$token_a" 'mutation($id: uuid!) { delete_app_facilities_commune_specialized_allowances_by_pk(id: $id) { id } }' \
+    "{\"id\":\"$extra\"}" >/dev/null
 else
   echo "SKIP  Dữ liệu demo chưa nạp (make seed-demo)"
 fi
