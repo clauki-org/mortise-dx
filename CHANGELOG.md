@@ -131,6 +131,8 @@ từng đặt giá trị khác mặc định; `make env` tự thêm hai biến m
 
 ### Fixed
 
+- `make restore` dừng cả files-api trong lúc nạp dữ liệu; trước đây nó vẫn chạy và có thể ghi tệp xen vào dữ liệu đang
+  bị ghi đè.
 - Cổng trả lỗi `401` của `/v1/graphql` và `/v1/workflow/*` dạng JSON `{"error": "..."}` như hợp đồng ghi, thay vì
   trang HTML. Ví dụ sai trong `contracts/examples/invalid/` phải bị từ chối đúng luật mà tệp được viết ra để thử;
   `scripts/contracts.sh` báo lỗi khi gõ sai tham số.
