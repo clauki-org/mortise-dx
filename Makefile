@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e audit-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query
+  check-fast web-check e2e audit-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query seed-demo
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -70,6 +70,15 @@ cold-query: ## Truy vấn nhật ký gộp kho lạnh và CSDL bằng DuckDB: ma
 	@test -n "$(SQL)" || { echo 'Cách dùng: make cold-query SQL="SELECT count(*) FROM audit_all"' >&2; exit 1; }
 	@docker compose --profile tools run --rm --build cold-archive query "$(SQL)"
 
+seed-demo: ## Nạp dữ liệu demo của các gói (apps/*/seed/load.py) qua cổng; cần gói đã cài và make seed
+	@loaders=$$(ls apps/*/seed/load.py 2>/dev/null); \
+	test -n "$$loaders" || { echo "Không gói nào có seed/load.py." >&2; exit 1; }; \
+	for loader in $$loaders; do \
+	  DEMO_USER_PASSWORD="$$(sed -n 's/^DEMO_USER_PASSWORD=//p' .env)" \
+	  MORTISE_PUBLIC_URL="$$(sed -n 's/^MORTISE_PUBLIC_URL=//p' .env)" \
+	    uv run --quiet --no-project --with pyyaml==6.0.3 python "$$loader" || exit 1; \
+	done
+
 app-install: ## Cài một gói Tầng 3 lên lõi đang chạy: make app-install APP=<gói>
 	@scripts/app.sh "$(APP)" install
 
@@ -112,8 +121,8 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	  devices/simulator
 	uvx ruff format --no-cache --check core/workflow-api core/files-api core/context-api core/iot-bridge \
 	  core/cold-archive devices/simulator
-	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts
-	uvx ruff format --no-cache --check --config core/workflow-api/pyproject.toml scripts
+	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts apps
+	uvx ruff format --no-cache --check --config core/workflow-api/pyproject.toml scripts apps
 	@scripts/contracts.sh check
 	uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py lint
 

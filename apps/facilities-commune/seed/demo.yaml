@@ -1,0 +1,99 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Dữ liệu demo HƯ CẤU của ba xã thuộc "Tỉnh Mẫu" (#58): tên, địa chỉ, diện tích đều đặt ra để minh họa, không lấy
+# từ cơ quan nào. `make seed-demo` nạp tệp này qua cổng bằng tài khoản của từng xã (load.py).
+# Tổng diện tích thông thủy của cơ sở đang dùng: xã A 1.000 m², xã B 730 m², xã C 460 m²; xã C còn một cơ sở dôi dư
+# 250 m². Diện tích được phép và phần vượt tính ở #100, không ghi ở đây.
+
+xa-a:
+  user: user.a
+  facilities:
+    - code: TS-A1
+      name: Trụ sở UBND xã A
+      address: Thôn 1, xã A, Tỉnh Mẫu
+      status: in_use
+      buildings:
+        - code: NLV
+          name: Nhà làm việc
+          floors: 2
+          rooms:
+            - { code: P101, name: Phòng làm việc 101, floor: 1, area_type: working, clear_area_m2: 60 }
+            - { code: P102, name: Phòng làm việc 102, floor: 1, area_type: working, clear_area_m2: 60 }
+            - { code: P103, name: Phòng làm việc 103, floor: 1, area_type: working, clear_area_m2: 60 }
+            - { code: P104, name: Bộ phận một cửa, floor: 1, area_type: shared, clear_area_m2: 120 }
+            - { code: P201, name: Phòng làm việc 201, floor: 2, area_type: working, clear_area_m2: 80 }
+            - { code: P202, name: Phòng làm việc 202, floor: 2, area_type: working, clear_area_m2: 80 }
+            - { code: P203, name: Phòng họp, floor: 2, area_type: shared, clear_area_m2: 140 }
+        - code: NPT
+          name: Nhà phụ trợ
+          floors: 1
+          rooms:
+            - { code: K01, name: Kho lưu trữ, floor: 1, area_type: shared, clear_area_m2: 60 }
+            - { code: H01, name: Hội trường nhỏ, floor: 1, area_type: shared, clear_area_m2: 40 }
+    - code: TS-A2
+      name: Trụ sở xã cũ (tiếp nhận khi sắp xếp)
+      address: Thôn 5, xã A, Tỉnh Mẫu
+      status: in_use
+      buildings:
+        - code: NLV
+          name: Nhà làm việc
+          floors: 1
+          rooms:
+            - { code: P01, name: Phòng làm việc 01, floor: 1, area_type: working, clear_area_m2: 80 }
+            - { code: P02, name: Phòng làm việc 02, floor: 1, area_type: working, clear_area_m2: 80 }
+            - { code: P03, name: Phòng họp, floor: 1, area_type: shared, clear_area_m2: 90 }
+            - { code: P04, name: Kho, floor: 1, area_type: shared, clear_area_m2: 50 }
+
+xa-b:
+  user: user.b
+  facilities:
+    - code: TS-B1
+      name: Trụ sở UBND xã B
+      address: Thôn 2, xã B, Tỉnh Mẫu
+      status: in_use
+      buildings:
+        - code: NLV
+          name: Nhà làm việc
+          floors: 2
+          rooms:
+            - { code: P101, name: Phòng làm việc 101, floor: 1, area_type: working, clear_area_m2: 55 }
+            - { code: P102, name: Phòng làm việc 102, floor: 1, area_type: working, clear_area_m2: 55 }
+            - { code: P103, name: Phòng làm việc 103, floor: 1, area_type: working, clear_area_m2: 55 }
+            - { code: P104, name: Bộ phận một cửa, floor: 1, area_type: shared, clear_area_m2: 150 }
+            - { code: P201, name: Phòng làm việc 201, floor: 2, area_type: working, clear_area_m2: 55 }
+            - { code: P202, name: Phòng làm việc 202, floor: 2, area_type: working, clear_area_m2: 55 }
+            - { code: P203, name: Phòng làm việc 203, floor: 2, area_type: working, clear_area_m2: 55 }
+            - { code: P204, name: Phòng họp, floor: 2, area_type: shared, clear_area_m2: 150 }
+            - { code: P205, name: Kho lưu trữ, floor: 2, area_type: shared, clear_area_m2: 100 }
+
+xa-c:
+  user: user.c
+  facilities:
+    - code: TS-C1
+      name: Trụ sở UBND xã C
+      address: Thôn 3, xã C, Tỉnh Mẫu
+      status: in_use
+      buildings:
+        - code: NLV
+          name: Nhà làm việc
+          floors: 1
+          rooms:
+            - { code: P01, name: Phòng làm việc 01, floor: 1, area_type: working, clear_area_m2: 60 }
+            - { code: P02, name: Phòng làm việc 02, floor: 1, area_type: working, clear_area_m2: 60 }
+            - { code: P03, name: Phòng làm việc 03, floor: 1, area_type: working, clear_area_m2: 60 }
+            - { code: P04, name: Phòng làm việc 04, floor: 1, area_type: working, clear_area_m2: 60 }
+            - { code: P05, name: Bộ phận một cửa, floor: 1, area_type: shared, clear_area_m2: 120 }
+            - { code: P06, name: Phòng họp, floor: 1, area_type: shared, clear_area_m2: 100 }
+    - code: TS-C2
+      name: Trụ sở xã cũ (không còn sử dụng)
+      address: Thôn 7, xã C, Tỉnh Mẫu
+      status: surplus
+      buildings:
+        - code: NLV
+          name: Nhà làm việc cũ
+          floors: 1
+          rooms:
+            - { code: P01, name: Phòng 01, floor: 1, area_type: working, clear_area_m2: 70 }
+            - { code: P02, name: Phòng 02, floor: 1, area_type: working, clear_area_m2: 70 }
+            - { code: P03, name: Phòng họp cũ, floor: 1, area_type: shared, clear_area_m2: 110 }

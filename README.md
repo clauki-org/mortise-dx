@@ -48,7 +48,8 @@ biệt.
 | Bảng việc: danh sách việc đang chờ người đăng nhập theo hạn; màn hình xử lý với biểu mẫu và nút theo khai báo của bước | Đã chạy | `make e2e` (trình duyệt: duyệt, bốn mắt, cách ly đơn vị), `make web-check` |
 | Thành phần Tầng 2 khác (danh mục, biểu mẫu nhập liệu, bản đồ) | Kế hoạch | |
 | Gói minh họa `apps/facilities-commune`: bảng cơ sở, tòa, phòng cách ly theo tenant, có nhật ký; cài vào, gỡ ra bằng `make app-install`, `make app-uninstall` | Đã chạy | CI: cài gói → smoke gói → `make seed`, `make smoke` khi gói đang cài → gỡ gói → `make smoke` |
-| Gói minh họa: định mức, dữ liệu mẫu ba xã, quy trình rà soát, bản đồ | Kế hoạch | |
+| Gói minh họa: dữ liệu demo ba xã của "Tỉnh Mẫu" (hư cấu), nạp qua cổng bằng `make seed-demo` | Đã chạy | CI: `make seed-demo`, smoke gói kiểm tổng diện tích từng xã |
+| Gói minh họa: định mức, quy trình rà soát, bản đồ | Kế hoạch | |
 
 ## Chạy từ mã nguồn
 

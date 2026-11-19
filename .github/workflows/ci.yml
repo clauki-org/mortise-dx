@@ -103,7 +103,7 @@ jobs:
         run: make smoke
       # Gói Tầng 3 cài vào, kiểm, gỡ ra; lõi phải còn qua smoke sau khi gỡ (ADR 0005).
       - name: Install the commune facilities package and test it
-        run: make app-install APP=facilities-commune && make app-smoke APP=facilities-commune
+        run: make app-install APP=facilities-commune && make seed-demo && make app-smoke APP=facilities-commune
       # Gói đang cài: seed áp lại quyền của gói, smoke của lõi kiểm cả quyền của gói không lệch khai báo.
       - name: Seed and smoke the core with the package installed
         run: make seed && make smoke

@@ -5,7 +5,7 @@
 # Kiểm tra gói qua cổng APISIX sau khi `make app-install APP=facilities-commune`: mỗi tenant chỉ
 # đọc và ghi cơ sở của mình, tenant do token quyết định chứ không do dữ liệu gửi lên, khóa ngoại
 # ghép chặn việc nối tòa vào cơ sở của tenant khác, và thay đổi qua Hasura để lại nhật ký ghi đúng
-# người làm (ADR 0009). Dùng hai tài khoản demo của lõi; tự dọn dữ liệu đã tạo nên chạy lại nhiều
+# người làm (ADR 0009). Dùng tài khoản demo của lõi; tự dọn dữ liệu đã tạo nên chạy lại nhiều
 # lần không lỗi. Cần lõi đang chạy và đã `make seed`.
 #
 # SC2016: biến GraphQL ($id, $code) phải nằm trong nháy đơn để shell không mở rộng; giá trị đi
@@ -135,5 +135,29 @@ gql "$token_b" "$delete_facility" "{\"id\":\"$fac_b\"}" >/dev/null
 check "Dọn dữ liệu kiểm thử" "$(ids "$token_a")" "[]"
 
 
+# Dữ liệu demo (`make seed-demo`, seed/demo.yaml): tổng diện tích thông thủy theo trạng thái cơ sở của từng xã đúng số
+# liệu của câu chuyện demo. Chưa nạp thì bỏ qua, để smoke của gói vẫn chạy được trên bản cài không có dữ liệu demo.
+areas='{ app_facilities_commune_facilities { id status code }
+  app_facilities_commune_buildings { id facility_id } app_facilities_commune_rooms { building_id clear_area_m2 } }'
+totals() { # TOKEN: in "<trạng thái>=<tổng m²>" theo thứ tự trạng thái
+  gql "$1" "$areas" | jq -r '.data as $d
+    | ($d.app_facilities_commune_facilities | map({(.id): .status}) | add) as $status
+    | ($d.app_facilities_commune_buildings | map({(.id): $status[.facility_id]}) | add) as $of
+    | $d.app_facilities_commune_rooms | group_by($of[.building_id])
+    | map("\($of[.[0].building_id])=\(map(.clear_area_m2 | tonumber) | add)") | join(" ")'
+}
+# Xã nào đã có một cơ sở demo thì coi như đã nạp và kiểm cả ba xã, để nạp sót một xã không làm smoke bỏ qua.
+demo_codes='{ app_facilities_commune_facilities(where: {code: {_like: "TS-%"}}) { id } }'
+loaded=0
+for user in "$user_a" "$user_b" user.c; do
+  loaded=$((loaded + $(gql "$(token "$user")" "$demo_codes" | jq '.data.app_facilities_commune_facilities | length')))
+done
+if ((loaded > 0)); then
+  check "Dữ liệu demo xã A: 1.000 m² thông thủy đang dùng" "$(totals "$token_a")" "in_use=1000"
+  check "Dữ liệu demo xã B: 730 m² thông thủy đang dùng" "$(totals "$token_b")" "in_use=730"
+  check "Dữ liệu demo xã C: 460 m² đang dùng, 250 m² dôi dư" "$(totals "$(token user.c)")" "in_use=460 surplus=250"
+else
+  echo "SKIP  Dữ liệu demo chưa nạp (make seed-demo)"
+fi
 
 exit $fail
