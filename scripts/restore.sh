@@ -32,7 +32,10 @@ if [[ -f .env ]] && ! cmp -s .env "$src/env"; then
 fi
 install -m 600 "$src/env" .env
 
-app_services=(apisix workflow-api flowable hasura keycloak context-api iot-bridge mosquitto scorpio)
+# Mọi dịch vụ ghi vào CSDL, kho tệp hay tài khoản MQTT phải dừng trong lúc nạp, nếu không chúng ghi xen vào dữ
+# liệu đang bị ghi đè: bảng và kho tệp lệch nhau, nhật ký thay đổi có dòng không khớp băm sao lưu. Thêm dịch vụ mới
+# có ghi thì thêm vào đây.
+app_services=(apisix workflow-api files-api flowable hasura keycloak context-api iot-bridge mosquitto scorpio)
 docker compose stop "${app_services[@]}" seaweedfs >/dev/null 2>&1 || true
 docker compose up -d --wait postgres scorpio-db >/dev/null
 
