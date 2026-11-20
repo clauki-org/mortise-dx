@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/threshold-rule.schema.json từ chối: không có `above` hay `below`.
+# Nếu lọt, luật không bao giờ vượt ngưỡng và không ai biết nó không chạy.
+
+id: test-level-high
+title: Thiếu ngưỡng
+entityType: Device
+measurement: testLevel
+holdSeconds: 5
+process: core-approval

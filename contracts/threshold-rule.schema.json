@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/threshold-rule.schema.json",
+  "title": "Luật ngưỡng của số đo thiết bị",
+  "description": "Một luật: số đo của thiết bị vượt ngưỡng liên tục trong một khoảng thời gian thì core/iot-bridge mở một quy trình cho tenant của thiết bị, qua workflow-api bằng tài khoản dịch vụ (ADR 0017). Còn hồ sơ mở của cùng luật và thiết bị thì không mở thêm; đóng hồ sơ khi số đo vẫn vượt ngưỡng thì lần đo vượt kế tiếp mở hồ sơ mới. Gói khai tệp luật ở mục `rules` của app.yaml; bộ cài gói nạp luật cho mọi tenant.",
+  "type": "object",
+  "required": ["id", "title", "entityType", "measurement", "holdSeconds", "process"],
+  "oneOf": [{ "required": ["above"] }, { "required": ["below"] }],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "Mã luật, duy nhất trong gói",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "title": {
+      "description": "Tiêu đề của hồ sơ được mở, hiện trên bảng việc",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "entityType": {
+      "description": "Loại entity NGSI-LD mà luật xét. core/iot-bridge ghi mọi thiết bị với loại Device (ADR 0012), nên hiện chỉ có giá trị này.",
+      "enum": ["Device"]
+    },
+    "measurement": {
+      "description": "Tên số đo, như trong contracts/device-message.schema.json",
+      "type": "string",
+      "pattern": "^[a-z][A-Za-z0-9]{0,63}$"
+    },
+    "above": {
+      "description": "Vượt ngưỡng khi số đo lớn hơn giá trị này",
+      "type": "number"
+    },
+    "below": {
+      "description": "Vượt ngưỡng khi số đo nhỏ hơn giá trị này",
+      "type": "number"
+    },
+    "holdSeconds": {
+      "description": "Số giây số đo phải vượt ngưỡng liên tục, tính theo observedAt từ lần đo vượt đầu tiên tới lần đo mới nhất. Một lần đo vượt đơn lẻ giữa các lần đo bình thường không mở hồ sơ. iot-bridge chỉ xét RULE_HISTORY lần đo gần nhất (mặc định 200), nên khoảng giữ phải ngắn hơn thời gian thiết bị gửi chừng ấy lần đo.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 86400
+    },
+    "process": {
+      "description": "Khóa quy trình BPMN được mở; tenant phải có quy trình này (deploy bởi gói hoặc `make seed`)",
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+    }
+  }
+}

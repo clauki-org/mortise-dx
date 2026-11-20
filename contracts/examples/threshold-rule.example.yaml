@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ luật ngưỡng hợp lệ theo contracts/threshold-rule.schema.json. `make seed` nạp tệp này làm luật mẫu của lõi
+# cho mọi tenant, mở quy trình mẫu core-approval; `make smoke` gửi số đo `testLevel` để kiểm đường mở hồ sơ. Không
+# thiết bị demo nào gửi số đo này. Ngưỡng là số kiểm thử, không theo quy định nào. Gói thật đặt tệp ở apps/<gói>/rules/.
+
+id: test-level-high
+title: Kiểm thử luật ngưỡng
+entityType: Device
+measurement: testLevel
+above: 100
+holdSeconds: 5
+process: core-approval

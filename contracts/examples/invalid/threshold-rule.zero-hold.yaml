@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/threshold-rule.schema.json từ chối: `holdSeconds` bằng 0.
+# Nếu lọt, một lần đo vượt đơn lẻ cũng mở hồ sơ.
+
+id: test-level-high
+title: Không giữ
+entityType: Device
+measurement: testLevel
+above: 100
+holdSeconds: 0
+process: core-approval

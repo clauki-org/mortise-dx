@@ -473,6 +473,52 @@ wait
 check "Thiết bị không nghe được số đo của thiết bị khác" \
   "$(until_reading "$user_a" meter-01 energy "$marker") $(wc -l <"$eavesdrop")" "$marker 0"
 rm -f "$eavesdrop"
+
+# Luật ngưỡng (#89): luật mẫu của lõi (contracts/examples/threshold-rule.example.yaml, `testLevel` > 100 liên tục 5
+# giây) mở core-approval cho tenant của thiết bị, qua tài khoản dịch vụ của cầu nối. observedAt do thiết bị gửi, nên
+# hai lần đo cách nhau 10 giây gửi ngay được. Không thiết bị demo nào gửi `testLevel`.
+# rule_cases TOKEN: các việc đang chờ do luật mẫu mở cho room-101.
+rule_cases() {
+  api GET "$1" /tasks | cut -f2 | jq -r '.[] | select(.variables.rule == "test-level-high"
+    and .variables.ruleApp == "core" and .variables.device == "room-101") | .id'
+}
+# Đóng việc do lần chạy trước để lại (smoke dừng giữa chừng), để "mở đúng một hồ sơ" không phụ thuộc lần trước.
+close_rule_cases() {
+  local task
+  for task in $(rule_cases "$manager_a"); do
+    api POST "$manager_a" "/tasks/$task/complete" '{"variables":{"approved":false}}' >/dev/null
+  done
+}
+level() { # GIÁ_TRỊ GIÂY_LÙI
+  mqtt_pub xa-a.room-101 "$DEMO_DEVICE_PASSWORD" mortise/xa-a/room-101 \
+    "{\"observedAt\": \"$(date -u -d "-$2 seconds" +%FT%TZ)\", \"measurements\": {\"testLevel\": $1}}" >/dev/null || true
+  until_reading "$user_a" room-101 testLevel "$1" >/dev/null
+}
+until_cases() { # TOKEN SỐ_VIỆC
+  local found
+  for _ in $(seq 1 20); do
+    found=$(rule_cases "$1" | grep -c . || true)
+    [[ "$found" == "$2" ]] && break
+    sleep 0.5
+  done
+  echo "$found"
+}
+close_rule_cases
+# Bắt đầu từ một lần đo bình thường: lần chạy trước dừng giữa chừng thì số đo cuối có thể còn vượt ngưỡng.
+level 10 11
+level 150 10
+sleep 2
+check "Một lần đo vượt ngưỡng chưa đủ lâu: chưa mở hồ sơ" "$(rule_cases "$manager_a" | grep -c . || true)" 0
+level 151 0
+check "Vượt ngưỡng liên tục đủ lâu: manager.a có đúng một hồ sơ" "$(until_cases "$manager_a" 1)" 1
+check "manager.b (tenant khác) không thấy hồ sơ đó" "$(rule_cases "$manager_b" | grep -c . || true)" 0
+level 152 0
+sleep 2
+check "Vẫn vượt ngưỡng khi hồ sơ còn mở: không mở thêm" "$(rule_cases "$manager_a" | grep -c . || true)" 1
+# Dọn: số đo về bình thường rồi đóng hồ sơ, để lần chạy sau bắt đầu từ trạng thái như lần này.
+level 10 0
+close_rule_cases
+check "Đóng hồ sơ xong không còn việc nào của luật mẫu" "$(rule_cases "$manager_a" | grep -c . || true)" 0
 # Kho lạnh (ADR 0014): xuất mọi dòng nhật ký tới lúc này sang Parquet; công cụ chỉ ghi nhận đoạn khi băm tính lại
 # từ tệp khớp từng dòng. Chưa xóa gì khỏi CSDL (#97), nên bảng ảo audit_all phải có đúng số dòng như CSDL.
 cold() { docker compose --profile tools run --rm --build --quiet-pull cold-archive "$@" 2>/dev/null; }

@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Cầu nối MQTT sang NGSI-LD (dịch vụ iot-bridge trong compose.yaml, ADR 0012): đăng ký nhận mọi chủ đề số
-# đo `mortise/+/+` trên Mosquitto, đổi từng tin thành entity (message.py), kiểm tenant (tenants.py) rồi
-# ghi vào Scorpio (scorpio.py). Một tin hỏng chỉ bị bỏ kèm một dòng log, vòng nhận tin không dừng.
+# đo `mortise/+/+` trên Mosquitto, đổi từng tin thành entity (message.py), kiểm tenant (tenants.py), ghi
+# vào Scorpio (scorpio.py), rồi xét luật ngưỡng và mở hồ sơ khi cần (watch.py). Một tin hỏng chỉ bị bỏ kèm
+# một dòng log, vòng nhận tin không dừng.
 
 import logging
 import os
@@ -12,9 +13,11 @@ from pathlib import Path
 import paho.mqtt.client as mqtt
 
 from . import config
-from .message import Rejected, parse
+from .cases import Cases
+from .message import Reading, Rejected, parse
 from .scorpio import Scorpio, Unavailable
 from .tenants import TenantCheck, database_lookup
+from .watch import RuleCache, Watcher, database_rules
 
 TOPIC = "mortise/+/+"
 # Healthcheck của Docker đọc tệp này: có nghĩa là đã kết nối và đăng ký nhận tin xong.
@@ -24,26 +27,39 @@ log = logging.getLogger("iot-bridge")
 
 
 class Bridge:
-    def __init__(self, tenants: TenantCheck, scorpio: Scorpio):
+    def __init__(self, tenants: TenantCheck, scorpio: Scorpio, watcher: Watcher | None = None):
         self._tenants = tenants
         self._scorpio = scorpio
+        self._watcher = watcher
 
     def handle(self, topic: str, payload: bytes) -> bool:
-        """Xử lý một tin; True nếu đã ghi. Mọi lỗi đều ghi log và trả False, không ném ra ngoài."""
+        """Xử lý một tin; True nếu đã ghi số đo. Mọi lỗi đều ghi log, không ném ra ngoài."""
         try:
             reading = parse(topic, payload)
             if not self._tenants.exists(reading.tenant):
                 log.warning("Bỏ tin của tenant không có trong core.tenants: %s", reading.tenant)
                 return False
             self._scorpio.upsert(reading.tenant, reading.entity)
-            return True
         except Rejected as error:
             log.warning("Bỏ tin không hợp lệ: %s", error)
+            return False
         except Unavailable as error:
             log.error("Không ghi được số đo của %s: %s", topic[:200], error)
+            return False
         except Exception:
             log.exception("Lỗi không lường trước khi xử lý tin của %s", topic[:200])
-        return False
+            return False
+        self._watch(reading)
+        return True
+
+    def _watch(self, reading: Reading) -> None:
+        # Xét luật sau khi đã ghi: lỗi ở bước này không được làm mất số đo hay dừng vòng nhận tin.
+        if self._watcher is None:
+            return
+        try:
+            self._watcher.check(reading)
+        except Exception:
+            log.exception("Lỗi không lường trước khi xét luật ngưỡng cho %s", reading.device)
 
 
 def client_for(bridge: Bridge, settings: config.Settings) -> mqtt.Client:
@@ -79,7 +95,12 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     settings = config.load()
     lookup = database_lookup(settings.db_host, settings.db_name, settings.db_user, settings.db_password)
-    bridge = Bridge(TenantCheck(lookup), Scorpio(settings.scorpio_url))
+    scorpio = Scorpio(settings.scorpio_url)
+    rules = RuleCache(
+        database_rules(settings.db_host, settings.db_name, settings.db_user, settings.db_password)
+    )
+    cases = Cases(settings.token_url, settings.client_id, settings.client_secret, settings.workflow_url)
+    bridge = Bridge(TenantCheck(lookup), scorpio, Watcher(rules, scorpio, cases, settings.rule_history))
     client = client_for(bridge, settings)
     client.reconnect_delay_set(min_delay=1, max_delay=30)
     client.connect_async(settings.mqtt_host, settings.mqtt_port, keepalive=30)

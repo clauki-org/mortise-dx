@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/threshold-rule.schema.json từ chối: loại entity iot-bridge không ghi.
+# Nếu lọt, luật không bao giờ khớp thiết bị nào.
+
+id: test-level-high
+title: Loại lạ
+entityType: Room
+measurement: testLevel
+above: 100
+holdSeconds: 5
+process: core-approval

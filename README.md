@@ -37,7 +37,7 @@ biệt.
 | Workflow BPMN (Flowable sau lớp workflow-api): cách ly tenant, phân quyền theo vai trò, quy tắc bốn mắt | Đã chạy | `make smoke`, `make test` |
 | Tệp qua cổng (`/v1/files`, SeaweedFS): tải lên, tải xuống theo tenant, giới hạn cỡ, quét mã độc trước khi lưu (ClamAV) | Đã chạy | `make smoke` (tệp thử EICAR), `make test` |
 | Đăng nhập hai bước (OTP) cho người có quyền duyệt; workflow-api từ chối duyệt khi token không có bước OTP | Đã chạy | `make smoke`, `make test`, `make e2e` |
-| Dữ liệu thiết bị: nhận số đo qua MQTT trong mạng riêng (mỗi thiết bị một tài khoản, chỉ gửi vào chủ đề của mình), giữ theo NGSI-LD (Scorpio), đọc qua `/v1/context` chỉ thấy thiết bị của đơn vị mình; bộ giả lập thiết bị (`make simulate`); mở hồ sơ khi vượt ngưỡng là kế hoạch | Đã chạy | `make smoke` (gồm bộ giả lập), `make test` |
+| Dữ liệu thiết bị: nhận số đo qua MQTT trong mạng riêng (mỗi thiết bị một tài khoản, chỉ gửi vào chủ đề của mình), giữ theo NGSI-LD (Scorpio), đọc qua `/v1/context` chỉ thấy thiết bị của đơn vị mình; bộ giả lập thiết bị (`make simulate`); số đo vượt ngưỡng liên tục đủ lâu thì tự mở hồ sơ trên bảng việc của đúng đơn vị theo luật khai báo (`contracts/threshold-rule.schema.json`), không mở trùng khi hồ sơ cũ còn mở | Đã chạy | `make smoke` (gồm bộ giả lập, luật mẫu), `make test` |
 | Cơ chế đăng nhập theo chính sách từng tenant, Passkey | Kế hoạch | |
 | Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
 | Nhật ký thay đổi: ai sửa gì, lúc nào, trước và sau; chuỗi băm phát hiện sửa lén, đối chiếu băm trong bản sao lưu | Đã chạy | `make smoke`, `make audit-verify` |
@@ -114,6 +114,7 @@ Tầng 1  APISIX (cổng duy nhất, kiểm JWT, giới hạn tần suất)
           ├─ files-api → SeaweedFS    tệp theo tenant, giới hạn cỡ, quét mã độc (ClamAV)
           ├─ context-api → Scorpio    dữ liệu thiết bị theo NGSI-LD, chỉ đọc, theo tenant
           │    ↑ iot-bridge ← Mosquitto (MQTT, mạng ot riêng) ← thiết bị
+          │      └→ workflow-api khi số đo vượt ngưỡng (luật của gói)
           ├─ PostgreSQL dữ liệu có cấu trúc (+ pgvector)
           └─ SeaweedFS  dữ liệu phi cấu trúc (S3)
 ```
@@ -161,7 +162,7 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   workflow-api/       kiểm quyền trước Flowable (Python)
   files-api/          API tệp trước SeaweedFS (Python)
   context-api/        đọc dữ liệu thiết bị trước Scorpio (Python)
-  iot-bridge/         nhận số đo qua MQTT, ghi vào Scorpio (Python)
+  iot-bridge/         nhận số đo qua MQTT, ghi vào Scorpio, mở hồ sơ khi vượt ngưỡng (Python)
   mosquitto/          cấu hình Mosquitto
   cold-archive/       xuất nhật ký cũ sang kho lạnh, truy vấn bằng DuckDB (Python, lệnh của người vận hành)
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi

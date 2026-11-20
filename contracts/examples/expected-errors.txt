@@ -37,6 +37,9 @@ device-message.tenant-in-body.json	$	Additional properties are not allowed ('ten
 device-message.text-value.json	$.measurements.humidity	'71' is not of type 'number', 'boolean'
 service-token-claims.has-tenant.json	$.tenant	['xa-a'] should not be valid under {}
 service-token-claims.user-role.json	$.realm_access.roles	['default-roles-mortise', 'user'] should not be valid under {'contains': {'const': 'user'}}
+threshold-rule.no-threshold.yaml	$	{'id': 'test-level-high', 'title': 'Thiếu ngưỡng', 'entityType': 'Device', 'measurement': 'testLevel', 'holdSeconds': 5, 'process': 'core-approval'} is not valid under any of the given schemas
+threshold-rule.unknown-entity-type.yaml	$.entityType	'Room' is not one of ['Device']
+threshold-rule.zero-hold.yaml	$.holdSeconds	0 is less than the minimum of 1
 token-claims.amr-not-array.json	$.amr	'otp' is not of type 'array'
 token-claims.missing-tenant.json	$	'tenant' is a required property
 token-claims.missing-user-role.json	$.realm_access.roles	['default-roles-mortise', 'manager', 'offline_access', 'uma_authorization'] does not contain items matching the given schema

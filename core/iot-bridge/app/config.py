@@ -26,6 +26,13 @@ class Settings:
     db_name: str
     db_user: str
     db_password: str
+    # Mở hồ sơ khi vượt ngưỡng (watch.py): workflow-api và tài khoản dịch vụ của cầu nối (ADR 0017).
+    workflow_url: str
+    token_url: str
+    client_id: str
+    client_secret: str
+    # Số lần đo gần nhất lấy về để xét một luật; chuỗi vượt ngưỡng dài hơn thì tính từ lần cũ nhất lấy được.
+    rule_history: int
 
 
 def load() -> Settings:
@@ -39,4 +46,9 @@ def load() -> Settings:
         db_name=_required("BRIDGE_DB_NAME"),
         db_user=_required("BRIDGE_DB_USER"),
         db_password=_required("BRIDGE_DB_PASSWORD"),
+        workflow_url=_required("WORKFLOW_URL"),
+        token_url=_required("KEYCLOAK_TOKEN_URL"),
+        client_id=_required("BRIDGE_CLIENT_ID"),
+        client_secret=_required("BRIDGE_CLIENT_SECRET"),
+        rule_history=int(os.environ.get("RULE_HISTORY", "200")),
     )

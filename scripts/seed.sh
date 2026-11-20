@@ -142,6 +142,9 @@ uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.
 # core-approval nên cũng là khai báo của nó; `make check-fast` đã kiểm tệp theo schema và theo BPMN.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py workflows \
   --bpmn core/workflow/fixtures/*.bpmn20.xml --steps contracts/examples/workflow.example.yaml
+# Luật ngưỡng mẫu của lõi, mở core-approval; `make smoke` kiểm đường mở hồ sơ khi vượt ngưỡng bằng luật này.
+uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py rules \
+  --owner core contracts/examples/threshold-rule.example.yaml
 echo "flowable: quy trình đã sẵn sàng"
 
 # Tài khoản MQTT của các thiết bị demo (ADR 0012), cùng mật khẩu DEMO_DEVICE_PASSWORD để bộ giả lập đăng nhập
