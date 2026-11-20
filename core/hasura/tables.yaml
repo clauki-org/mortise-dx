@@ -6,9 +6,11 @@
 # khi Hasura đang chạy lệch khỏi tệp, `make check-fast` báo lỗi khi một quyền không lọc theo tenant
 # (scripts/hasura-metadata.py). Đổi quyền thì sửa ở đây, không sửa trên trang quản trị Hasura.
 
+# parent_id cho người dùng biết tenant của mình thuộc tenant nào; không vai trò nào ghi được cột này vì nó quyết
+# định tenant nào đọc được tổng hợp của tenant nào (ADR 0016). rollup_reader không có quyền nào ở bảng của lõi.
 - table: { schema: core, name: tenants }
   select_permissions:
     - role: user
       permission:
-        columns: [id, name, created_at]
+        columns: [id, name, parent_id, created_at]
         filter: { id: { _eq: X-Hasura-Tenant-Id } }

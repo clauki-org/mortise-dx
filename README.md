@@ -50,6 +50,7 @@ biệt.
 | Gói minh họa `apps/facilities-commune`: bảng cơ sở, tòa, phòng cách ly theo tenant, cán bộ chỉ thấy và sửa cơ sở được phân công (xã tự sửa phân công), có nhật ký; cài vào, gỡ ra bằng `make app-install`, `make app-uninstall`, kèm menu của gói; quy trình và khai báo bước của gói nạp cùng lúc bằng bộ nạp chung với `make seed` (gói minh họa chưa có quy trình) | Đã chạy | CI: cài gói → smoke gói (gồm menu theo tenant) → `make seed`, `make smoke` khi gói đang cài → gỡ gói → `make smoke` |
 | Gói minh họa: dữ liệu demo ba xã của "Tỉnh Mẫu" (hư cấu), nạp qua cổng bằng `make seed-demo` | Đã chạy | CI: `make seed-demo`, smoke gói kiểm tổng diện tích từng xã |
 | Gói minh họa: diện tích được phép và phần vượt tiêu chuẩn, định mức của từng xã theo NĐ 155/2025 sửa bởi NĐ 369/2026, mức m² có trích dẫn | Đã chạy | CI: smoke gói kiểm kết quả ba xã |
+| Gói minh họa: tỉnh xem tổng hợp diện tích của các xã (tenant cha, vai trò `rollup_reader`), không đọc được dữ liệu gốc của xã | Đã chạy | CI: smoke gói kiểm tỉnh thấy đúng ba xã, số khớp số của xã, không đọc được bảng phòng |
 | Gói minh họa: quy trình rà soát, bản đồ | Kế hoạch | |
 
 ## Chạy từ mã nguồn
@@ -89,8 +90,9 @@ make restore FROM=<thư mục sao lưu> CONFIRM=yes   # GHI ĐÈ dữ liệu hi�
 ```
 
 Tài khoản demo: `user.a`, `manager.a`, `admin.a` (tenant `xa-a`), tương tự `.b` cho `xa-b` và `.c` cho `xa-c`, ba xã
-của "Tỉnh Mẫu", tỉnh hư cấu; mật khẩu là `DEMO_USER_PASSWORD` trong `.env`. `admin.*` có vai trò `tenant_admin`
-(quản trị xã). Người duyệt (`manager.*`) nhập thêm mã OTP: `make otp` in mã hiện tại và khóa để
+của "Tỉnh Mẫu", tỉnh hư cấu, và `leader.tinh` (tenant cha `tinh-mau`, đọc tổng hợp của ba xã); mật khẩu là
+`DEMO_USER_PASSWORD` trong `.env`. `admin.*` có vai trò `tenant_admin` (quản trị xã). Người duyệt (`manager.*`) nhập
+thêm mã OTP: `make otp` in mã hiện tại và khóa để
 nhập vào ứng dụng OTP trên điện thoại ([ADR 0011](docs/adr/0011-approver-mfa.md)). Thiết bị demo nằm trong
 `devices/simulator/devices.yaml`, mật khẩu MQTT `DEMO_DEVICE_PASSWORD`; `make simulate` gửi số đo giả cho chúng.
 Thiết bị khác cấp tài khoản bằng `make device-add TENANT=<tenant> DEVICE=<thiết bị>`. Mọi lệnh khác: `make help`.

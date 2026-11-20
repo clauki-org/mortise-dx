@@ -232,3 +232,12 @@
       permission: { columns: *area_summary_columns, filter: *tenant }
     - role: tenant_admin
       permission: { columns: *area_summary_columns, filter: *tenant }
+
+# Tổng hợp cho tenant cha (ADR 0016): chỉ vai trò rollup_reader đọc, chỉ dòng của tenant con có cha là tenant trong
+# token. Vai trò này không có quyền ở bảng nào khác của gói.
+- table: { schema: app_facilities_commune, name: area_rollup }
+  select_permissions:
+    - role: rollup_reader
+      permission:
+        columns: [parent_tenant_id, tenant_id, tenant_name, allowed_m2, in_use_m2, surplus_m2, excess_m2]
+        filter: { parent_tenant_id: { _eq: X-Hasura-Tenant-Id } }

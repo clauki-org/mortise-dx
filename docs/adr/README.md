@@ -36,6 +36,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0013](0013-component-config-contracts.md) | Thành phần Tầng 2 chỉ biết cấu hình của nó; schema cấu hình và bản mô tả trong `contracts/` | Chấp nhận |
 | [0014](0014-cold-audit-archive.md) | Kho lạnh cho nhật ký thay đổi: Parquet trên SeaweedFS, truy vấn bằng DuckDB, chuỗi băm nối qua đoạn | Chấp nhận |
 | [0015](0015-assignment-as-data.md) | Luật quyền là khai báo, phân công cán bộ theo cơ sở là dữ liệu xã tự sửa | Chấp nhận |
+| [0016](0016-parent-tenant-rollup.md) | Tenant cha đọc tổng hợp của tenant con qua view của gói và vai trò `rollup_reader` | Chấp nhận |
 
 ## Quyết định còn mở
 

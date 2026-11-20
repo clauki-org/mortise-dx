@@ -233,6 +233,24 @@ check "Menu của gói: user.a thấy mục danh mục cơ sở kèm cấu hình
 check "Menu của gói: user.b chỉ thấy mục của xã mình" \
   "$(gql "$token_b" "$menu" | jq -c '[.data.platform_menu_items[].tenant_id] | unique')" '["xa-b"]'
 
+# Tổng hợp cho tenant cha (ADR 0016): leader.tinh (tenant tinh-mau, vai trò rollup_reader) thấy đúng ba xã con trong
+# view area_rollup, không đọc được bảng gốc dưới vai trò nào; xã không đọc được view tổng hợp.
+error_code() { jq -r '.errors[0].extensions.code // "không lỗi"'; }
+rollup='{ app_facilities_commune_area_rollup(order_by: {tenant_id: asc}) { parent_tenant_id tenant_id tenant_name
+  allowed_m2 in_use_m2 surplus_m2 excess_m2 } }'
+leader=$(token leader.tinh)
+check "Tỉnh thấy đúng ba xã con trong tổng hợp" \
+  "$(gql "$leader" "$rollup" "{}" rollup_reader | jq -c '[.data.app_facilities_commune_area_rollup[] |
+    [.parent_tenant_id, .tenant_id]]')" '[["tinh-mau","xa-a"],["tinh-mau","xa-b"],["tinh-mau","xa-c"]]'
+rooms='{ app_facilities_commune_rooms { id } }'
+check "Tỉnh (rollup_reader) không đọc được bảng phòng" "$(gql "$leader" "$rooms" "{}" rollup_reader | error_code)" \
+  validation-failed
+check "Tỉnh (user) không thấy phòng nào của xã" "$(gql "$leader" "$rooms" "{}" user |
+  jq -c '.data.app_facilities_commune_rooms')" '[]'
+check "Xã không đọc được tổng hợp của tỉnh" "$(gql "$token_a" "$rollup" "{}" user | error_code)" validation-failed
+check "Xã không tự nhận vai trò rollup_reader khi token không có" \
+  "$(gql "$token_a" "$rollup" "{}" rollup_reader | error_code)" access-denied
+
 # Dữ liệu demo (`make seed-demo`, seed/demo.yaml): tổng diện tích thông thủy theo trạng thái cơ sở của từng xã đúng số
 # liệu của câu chuyện demo. Đọc bằng quản trị xã để thấy toàn xã, không phụ thuộc phân công. Chưa nạp thì bỏ qua, để
 # smoke của gói vẫn chạy được trên bản cài không có dữ liệu demo.
@@ -291,6 +309,12 @@ if ((loaded > 0)); then
   check "Dữ liệu demo xã C: 460 m² đang dùng, 250 m² dôi dư" "$(totals "$admin_c")" "in_use=460 surplus=250"
   check "Dữ liệu demo: $user_a phụ trách mọi cơ sở demo của xã A" "$(gql "$token_a" "$demo_codes" |
     jq '.data.app_facilities_commune_facilities | length')" 2
+  # Tỉnh thấy đúng số của xã, lấy từ cùng area_summary nên không lệch với số xã tự thấy.
+  check "Tỉnh thấy số liệu ba xã khớp số của từng xã" \
+    "$(gql "$leader" "$rollup" "{}" rollup_reader | jq -r '.data.app_facilities_commune_area_rollup[] |
+      "\(.tenant_id) allowed=\(.allowed_m2 | tonumber + 0) in_use=\(.in_use_m2 | tonumber + 0)"
+      + " surplus=\(.surplus_m2 | tonumber + 0) excess=\(.excess_m2 | tonumber + 0)"' | paste -sd ';')" \
+    "$(for access in "$token_a" "$token_b" "$(token user.c)"; do summary "$access"; done | paste -sd ';')"
 else
   echo "SKIP  Dữ liệu demo chưa nạp (make seed-demo)"
 fi

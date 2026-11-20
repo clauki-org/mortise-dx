@@ -36,7 +36,7 @@
       "required": ["roles"],
       "properties": {
         "roles": {
-          "description": "Vai trò. Mọi người dùng có `user`; `manager` duyệt được trong quy trình; `tenant_admin` quản trị một tenant. Keycloak thêm các vai trò mặc định của nó, bên dùng bỏ qua vai trò không biết.",
+          "description": "Vai trò. Mọi người dùng có `user`; `manager` duyệt được trong quy trình; `tenant_admin` quản trị một tenant; `rollup_reader` đọc số liệu tổng hợp của các tenant con (ADR 0016). Keycloak thêm các vai trò mặc định của nó, bên dùng bỏ qua vai trò không biết.",
           "type": "array",
           "items": { "type": "string" },
           "contains": { "const": "user" }

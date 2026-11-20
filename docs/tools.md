@@ -57,9 +57,10 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   ứng dụng đăng nhập ở một chỗ.
 - **Trong dự án:**
   - Realm `mortise` chứa toàn bộ người dùng của nền tảng.
-  - Mỗi tenant là một nhóm (`xa-a`, `xa-b`, `xa-c`: ba xã demo); bộ ánh xạ đưa tên nhóm vào claim `tenant` của
+  - Mỗi tenant là một nhóm (`xa-a`, `xa-b`, `xa-c`: ba xã demo, con của `tinh-mau`); bộ ánh xạ đưa tên nhóm vào claim `tenant` của
     token. Các thành phần khác dựa vào claim này để tách dữ liệu.
-  - Vai trò realm: `user`, `manager`, `tenant_admin`.
+  - Vai trò realm: `user`, `manager`, `tenant_admin`, `rollup_reader` (đọc tổng hợp của tenant con,
+    [ADR 0016](adr/0016-parent-tenant-rollup.md)).
   - Client `mortise-web` là client công khai cho ứng dụng web: chỉ Authorization Code với PKCE, không nhận mật khẩu
     trực tiếp; redirect URI và web origin theo `MORTISE_PUBLIC_URL` ([ADR 0006](adr/0006-frontend-stack.md)).
   - Client `mortise-test` chỉ dùng cho smoke và CI, lấy token bằng mật khẩu; do `make seed` tạo, không có trong tệp
