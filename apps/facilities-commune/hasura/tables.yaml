@@ -77,3 +77,67 @@
     - role: user
       permission:
         filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+# Biên chế và diện tích chuyên dùng do xã nhập; mức m² theo chức danh (working_area_norms) là dữ liệu chung, không
+# đăng ký, xã đọc qua view staffing_allowances.
+- table: { schema: app_facilities_commune, name: staffing }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [id, tenant_id, position, norm_row, headcount, created_at]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+  insert_permissions:
+    - role: user
+      permission:
+        columns: [position, norm_row, headcount]
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        set: { tenant_id: X-Hasura-Tenant-Id }
+  update_permissions:
+    - role: user
+      permission:
+        columns: [position, norm_row, headcount]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+  delete_permissions:
+    - role: user
+      permission:
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+- table: { schema: app_facilities_commune, name: specialized_allowances }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [id, tenant_id, name, area_m2, basis, created_at]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+  insert_permissions:
+    - role: user
+      permission:
+        columns: [name, area_m2, basis]
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        set: { tenant_id: X-Hasura-Tenant-Id }
+  update_permissions:
+    - role: user
+      permission:
+        columns: [name, area_m2, basis]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+  delete_permissions:
+    - role: user
+      permission:
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+# Hai view chỉ đọc: mức của từng dòng biên chế kèm trích dẫn, và kết quả của từng xã (được phép, thực tế, phần vượt).
+- table: { schema: app_facilities_commune, name: staffing_allowances }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [tenant_id, position, headcount, norm_row, norm_title, max_m2, allowed_m2, source, norm_note]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+- table: { schema: app_facilities_commune, name: area_summary }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [tenant_id, working_allowed_m2, shared_allowed_m2, specialized_allowed_m2, allowed_m2, in_use_m2,
+                  surplus_m2, excess_m2]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
