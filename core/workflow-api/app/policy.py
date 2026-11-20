@@ -34,6 +34,8 @@ class Caller:
     roles: frozenset[str]
     # Cách đã đăng nhập, từ claim `amr` của token: "pwd" là mật khẩu, "otp" là mã OTP.
     methods: frozenset[str] = frozenset()
+    # Tài khoản dịch vụ mở quy trình thay cho tenant ghi ở header (ADR 0017), không phải một người.
+    service: bool = False
 
 
 @dataclass(frozen=True)
@@ -67,6 +69,12 @@ def check_can_complete(caller: Caller, task: TaskView) -> None:
         raise Denied(403, "Vai trò của bạn không được xử lý task này.")
     if task.category == FOUR_EYES and task.initiator == caller.sub:
         raise Denied(403, "Quy tắc bốn mắt: người gửi yêu cầu không được tự duyệt.")
+
+
+def check_person(caller: Caller) -> None:
+    """Tài khoản dịch vụ chỉ được mở quy trình: không có vai trò nên không xem hay xử lý task của ai."""
+    if caller.service:
+        raise Denied(403, "Tài khoản dịch vụ chỉ được mở quy trình.")
 
 
 def check_variables(variables: dict[str, object]) -> None:

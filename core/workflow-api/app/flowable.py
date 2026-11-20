@@ -51,20 +51,24 @@ def start(key: str, tenant: str, variables: dict[str, object]) -> dict:
     return response.json()
 
 
-def started_with(tenant: str, key: str, initiator: str, idempotency_key: str) -> dict | None:
-    """Quy trình `key` mà `initiator` đã khởi tạo với cùng Idempotency-Key, kể cả khi đã kết thúc."""
-    response = _call(
-        "POST",
-        "/query/historic-process-instances",
-        json={
-            "tenantId": tenant,
-            "processDefinitionKey": key,
-            "variables": [
-                {"name": name, "value": value, "operation": "equals", "type": "string"}
-                for name, value in (("initiator", initiator), (IDEMPOTENCY_VARIABLE, idempotency_key))
-            ],
-        },
-    )
+def started_with(
+    tenant: str, key: str, initiator: str, idempotency_key: str, *, open_only: bool = False
+) -> dict | None:
+    """Quy trình `key` mà `initiator` đã khởi tạo với cùng Idempotency-Key.
+
+    Mặc định tính cả quy trình đã kết thúc; open_only thì chỉ tính quy trình còn mở.
+    """
+    query: dict[str, object] = {
+        "tenantId": tenant,
+        "processDefinitionKey": key,
+        "variables": [
+            {"name": name, "value": value, "operation": "equals", "type": "string"}
+            for name, value in (("initiator", initiator), (IDEMPOTENCY_VARIABLE, idempotency_key))
+        ],
+    }
+    if open_only:
+        query["finished"] = False
+    response = _call("POST", "/query/historic-process-instances", json=query)
     _ensure_ok(response, "tìm quy trình đã khởi tạo")
     data = response.json()["data"]
     return data[0] if data else None

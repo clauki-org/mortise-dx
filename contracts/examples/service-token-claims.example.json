@@ -1,0 +1,7 @@
+{
+  "iss": "http://localhost:9080/auth/realms/mortise",
+  "sub": "7c1e2a4b-5d9f-4e3a-8b6c-0f1d2e3a4b5c",
+  "exp": 1794221726,
+  "azp": "mortise-iot-bridge",
+  "preferred_username": "service-account-mortise-iot-bridge"
+}

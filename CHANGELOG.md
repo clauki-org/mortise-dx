@@ -12,6 +12,11 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Tài khoản dịch vụ cho workflow-api (ADR 0017): client Keycloak `mortise-iot-bridge` (client credentials, secret
+  `IOT_BRIDGE_CLIENT_SECRET`, tạo bằng `make seed`) mở quy trình thay cho tenant ghi ở header `X-Mortise-Tenant`, chỉ
+  được khởi tạo; `Idempotency-Key` của dịch vụ chỉ khớp quy trình còn mở. Hợp đồng
+  `contracts/service-token-claims.schema.json`. Bản cài cũ chạy `make env`, `make up` rồi `make seed` để có secret,
+  cấu hình workflow-api và client.
 - Tenant cha (ADR 0016): cột `core.tenants.parent_id`, vai trò `rollup_reader` để tenant cha đọc tổng hợp của
   tenant con qua view của gói; dữ liệu demo có tenant `tinh-mau` là cha của ba xã, tài khoản `leader.tinh` thấy
   diện tích được phép, đang dùng và phần vượt của ba xã (view `area_rollup`) mà không đọc được cơ sở, tòa, phòng.

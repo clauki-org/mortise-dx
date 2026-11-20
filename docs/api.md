@@ -100,12 +100,25 @@ Chống gửi trùng: giao diện sinh một mã ngẫu nhiên (ví dụ UUID) m
 mới, kể cả khi quy trình đó đã kết thúc. Người khác dùng trùng mã vẫn tạo quy trình của riêng họ. Hai lần gửi cùng
 lúc chỉ được xếp lần lượt khi workflow-api chạy một bản như trong `compose.yaml`.
 
+Tài khoản dịch vụ ([ADR 0017](adr/0017-service-account-for-tenant.md)): client Keycloak `mortise-iot-bridge` lấy
+token bằng client credentials, secret `IOT_BRIDGE_CLIENT_SECRET` trong `.env`. Token này không có tenant; mỗi yêu cầu
+ghi tenant ở header `X-Mortise-Tenant` và chỉ được khởi tạo quy trình. Với tài khoản dịch vụ, `Idempotency-Key` chỉ
+khớp quy trình còn mở: còn hồ sơ mở thì nhận lại hồ sơ đó, hồ sơ đã kết thúc thì cùng mã mở hồ sơ mới.
+
+```bash
+SERVICE=$(curl -fsS http://localhost:9080/auth/realms/mortise/protocol/openid-connect/token \
+  -d grant_type=client_credentials -d client_id=mortise-iot-bridge \
+  -d "client_secret=$IOT_BRIDGE_CLIENT_SECRET" | jq -r .access_token)
+curl -fsS -X POST http://localhost:9080/v1/workflow/processes/core-approval/instances \
+  -H "Authorization: Bearer $SERVICE" -H 'X-Mortise-Tenant: xa-a' -H 'Idempotency-Key: rule-x__device-1'
+```
+
 | Mã trả về | Khi nào |
 |---|---|
 | `201` / `204` | Khởi tạo / hoàn thành thành công |
-| `400` | Ghi đè biến dành riêng của lõi (`initiator`, `initiatorName`, `tenant`, `idempotencyKey`); `Idempotency-Key` sai định dạng (8–100 ký tự chữ, số, `-`, `_`) |
+| `400` | Ghi đè biến dành riêng của lõi (`initiator`, `initiatorName`, `tenant`, `idempotencyKey`); `Idempotency-Key` sai định dạng (8–100 ký tự chữ, số, `-`, `_`); người dùng gửi `X-Mortise-Tenant`; tài khoản dịch vụ thiếu header đó |
 | `401` | Thiếu hoặc sai token |
-| `403` | Tài khoản không thuộc đúng một tenant; người duyệt (`manager`) đăng nhập chưa qua bước OTP; task đã giao cho người khác; không có vai trò ứng viên; người gửi tự duyệt yêu cầu của mình |
+| `403` | Tài khoản không thuộc đúng một tenant; tài khoản dịch vụ gọi đường khác ngoài khởi tạo quy trình; người duyệt (`manager`) đăng nhập chưa qua bước OTP; task đã giao cho người khác; không có vai trò ứng viên; người gửi tự duyệt yêu cầu của mình |
 | `404` | Task hay quy trình không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại); tenant chưa có quy trình đó |
 | `409` | Task vừa được người khác nhận |
 | `422` | Thân yêu cầu sai định dạng hoặc có khóa ngoài `variables`, ví dụ gửi `{"approved": true}` thiếu lớp `variables` |
