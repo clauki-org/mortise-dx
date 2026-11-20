@@ -12,6 +12,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Quy trình rà soát của gói `facilities-commune`: bốn mắt; phần vượt trên ngưỡng thì công khai một thời hạn rồi
+  trình người có thẩm quyền, từ ngưỡng trở xuống thì báo cáo để tiếp tục sử dụng. Ngưỡng và thời hạn là `settings`
+  trong `app.yaml`, ghi đè khi cài bằng `make app-install SETTINGS=...` (ADR 0019).
 - Gói `facilities-commune` mở việc "Kiểm tra kho lưu trữ" cho người duyệt của xã khi độ ẩm kho vượt 75% liên tục 5
   phút (ngưỡng minh họa, chưa theo văn bản nào): luật `rules/archive-humidity.yaml`, quy trình
   `archive-inspection`. `/v1/context/temporal/entities/{id}` đọc lịch sử số đo theo NGSI-LD.

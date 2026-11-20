@@ -122,7 +122,10 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   được deploy riêng cho từng tenant.
 - **Cấu hình:** lõi chỉ có quy trình mẫu để kiểm thử, ở `core/workflow/fixtures/`; quy trình nghiệp vụ nằm trong gói
   ở `apps/`. `make seed` deploy quy trình mẫu cho mọi tenant, chạy lại không tạo phiên bản mới nếu tệp không đổi.
-  Các quy trình minh họa đi kèm ảnh `flowable-rest` được tắt trong `compose.yaml`.
+  Các quy trình minh họa đi kèm ảnh `flowable-rest` được tắt trong `compose.yaml`. Hẹn giờ (timer) chạy với cấu
+  hình mặc định của ảnh, không cần bật thêm. BPMN của gói có thể viết `{{tên}}` cho ngưỡng hay thời hạn; bộ cài thay
+  bằng `settings` trong `app.yaml` lúc deploy, ghi đè bằng `make app-install SETTINGS=...`
+  ([ADR 0019](adr/0019-workflow-settings-at-deploy.md)).
 - **Xem:** tài liệu REST tại `http://127.0.0.1:8083/flowable-rest/docs`, tài khoản `rest-admin`, mật khẩu
   `FLOWABLE_ADMIN_PASSWORD`.
 

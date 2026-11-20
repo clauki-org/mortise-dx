@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Mortise DX contributors
+SPDX-License-Identifier: Apache-2.0
+
+Hồ sơ rà soát diện tích trụ sở của xã (#58). Cán bộ lập hồ sơ với phần vượt tiêu chuẩn, định mức (biến excessM2,
+m²); người có vai trò manager trong cùng xã duyệt, người lập không tự duyệt được (category four-eyes, workflow-api
+chặn). Phần vượt từ ngưỡng trở xuống: duyệt xong là báo cáo để tiếp tục sử dụng. Vượt trên ngưỡng: duyệt xong thì
+công khai một thời hạn, hết hạn mới sang bước trình người có thẩm quyền. Bước sau khi trình (tỉnh duyệt, bảng phân
+cấp) thuộc #110, #111.
+
+Ngưỡng và thời hạn là {{review_threshold_m2}} và {{publication_period}}: bộ cài thay bằng settings của app.yaml lúc
+deploy (ADR 0019), nên chúng nằm trong định nghĩa quy trình, người lập hay người duyệt không ghi đè được bằng biến.
+
+Nhánh được chọn ngay khi lập hồ sơ, trước bước duyệt: workflow-api cho người hoàn thành bước gửi kèm biến, nên nếu
+rẽ nhánh sau bước duyệt thì người duyệt gửi excessM2 = 0 là né được bước công khai. excessM2 do giao diện gửi lúc
+lập, người duyệt đối chiếu với hồ sơ; lấy số ở phía máy chủ là việc sau (README của gói).
+-->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             targetNamespace="https://mortise-dx/apps/facilities-commune">
+  <process id="facilities-review" name="Rà soát diện tích trụ sở" isExecutable="true">
+    <startEvent id="filed"/>
+    <sequenceFlow id="toRoute" sourceRef="filed" targetRef="route"/>
+
+    <!-- Chỉ đi nhánh không công khai khi excessM2 có giá trị, không âm và không vượt ngưỡng. Thiếu hay âm thì đi nhánh
+         mặc định (công khai); không đọc được thành số thì Flowable báo lỗi và hồ sơ không được tạo. -->
+    <exclusiveGateway id="route" default="toReviewPublish"/>
+    <sequenceFlow id="toReviewReport" sourceRef="route" targetRef="review_report">
+      <conditionExpression xsi:type="tFormalExpression">${execution.getVariable("excessM2") != null &amp;&amp; execution.getVariable("excessM2") &gt;= 0 &amp;&amp; execution.getVariable("excessM2") &lt;= {{review_threshold_m2}}}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="toReviewPublish" sourceRef="route" targetRef="review_publish"/>
+
+    <!-- Hai bước duyệt cùng luật, khác nhánh. Biến approved bị xóa khi bước bắt đầu: người lập đặt sẵn approved = true
+         lúc lập hồ sơ thì người duyệt hoàn thành mà không chọn gì cũng thành đã duyệt. -->
+    <userTask id="review_report" name="Duyệt báo cáo tiếp tục sử dụng" flowable:candidateGroups="manager"
+              flowable:category="four-eyes">
+      <extensionElements>
+        <flowable:taskListener event="create" expression="${execution.removeVariable('approved')}"/>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="toReportDecision" sourceRef="review_report" targetRef="report_decision"/>
+    <exclusiveGateway id="report_decision" default="toReportRejected"/>
+    <sequenceFlow id="toRetained" sourceRef="report_decision" targetRef="retained">
+      <conditionExpression xsi:type="tFormalExpression">${execution.getVariable("approved") == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="toReportRejected" sourceRef="report_decision" targetRef="rejected_report"/>
+    <endEvent id="retained" name="Báo cáo để tiếp tục sử dụng"/>
+    <endEvent id="rejected_report" name="Trả lại"/>
+
+    <userTask id="review_publish" name="Duyệt để công khai" flowable:candidateGroups="manager"
+              flowable:category="four-eyes">
+      <extensionElements>
+        <flowable:taskListener event="create" expression="${execution.removeVariable('approved')}"/>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="toPublishDecision" sourceRef="review_publish" targetRef="publish_decision"/>
+    <exclusiveGateway id="publish_decision" default="toPublishRejected"/>
+    <sequenceFlow id="toPublication" sourceRef="publish_decision" targetRef="publication">
+      <conditionExpression xsi:type="tFormalExpression">${execution.getVariable("approved") == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="toPublishRejected" sourceRef="publish_decision" targetRef="rejected_publish"/>
+    <endEvent id="rejected_publish" name="Trả lại"/>
+
+    <!-- Thời gian công khai: không có việc nào cho người dùng, hết hạn thì Flowable tự chuyển sang bước trình. -->
+    <intermediateCatchEvent id="publication" name="Công khai">
+      <timerEventDefinition>
+        <timeDuration>{{publication_period}}</timeDuration>
+      </timerEventDefinition>
+    </intermediateCatchEvent>
+    <sequenceFlow id="toSubmit" sourceRef="publication" targetRef="submit"/>
+
+    <userTask id="submit" name="Trình người có thẩm quyền" flowable:candidateGroups="manager"/>
+    <sequenceFlow id="toSubmitted" sourceRef="submit" targetRef="submitted"/>
+    <endEvent id="submitted" name="Đã trình"/>
+  </process>
+</definitions>

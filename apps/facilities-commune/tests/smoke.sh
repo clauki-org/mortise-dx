@@ -366,4 +366,7 @@ inspect_done
 check "Ghi kết quả kiểm tra xong, không còn việc kiểm tra kho" "$(tasks "$manager_a" | grep -c . || true)" 0
 scripts/device.sh remove "$tenant_a" "$sensor" >/dev/null
 
+# Quy trình rà soát (ngưỡng, công khai có hẹn giờ, trình) ở tệp riêng; cần gói cài với thời hạn công khai ngắn.
+apps/facilities-commune/tests/workflow.sh || fail=1
+
 exit $fail

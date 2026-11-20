@@ -14,8 +14,14 @@ database:
 hasura: hasura
 workflows:
   - bpmn/archive-inspection.bpmn20.xml
+  - bpmn/facilities-review.bpmn20.xml
 rules:
   - rules/archive-humidity.yaml
+# Giá trị theo luật cho quy trình rà soát (#58): phần vượt trên 300 m² phải công khai 30 ngày. Demo và CI ghi đè thời
+# hạn khi cài: make app-install APP=facilities-commune SETTINGS=publication_period=PT20S (ADR 0019).
+settings:
+  review_threshold_m2: 300
+  publication_period: P30D
 menu:
   - id: facilities
     label: Cơ sở nhà, đất

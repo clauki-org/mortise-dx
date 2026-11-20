@@ -12,7 +12,8 @@ với diện tích thông thủy và loại diện tích của từng phòng đ�
 ## Bố cục
 
 ```
-app.yaml             khai báo gói theo contracts/app.schema.json: lược đồ, thư mục migration và Hasura
+app.yaml             khai báo gói theo contracts/app.schema.json: lược đồ, thư mục migration, Hasura, quy trình,
+                     settings (ngưỡng, thời hạn) và menu
 schema/migrations/   migration dbmate của gói; bảng theo dõi public.facilities_commune_schema_migrations (ADR 0005)
 hasura/tables.yaml   bảng đăng ký, quan hệ và quyền theo tenant và phân công, cùng định dạng với core/hasura/
 catalog/             cấu hình thành phần danh mục (cơ sở → tòa → phòng) theo contracts/catalog.schema.json
@@ -20,7 +21,8 @@ bpmn/                quy trình BPMN của gói, deploy cho từng tenant khi c�
 workflows/           khai báo bước của từng quy trình theo contracts/workflow.schema.json
 rules/               luật ngưỡng của số đo thiết bị theo contracts/threshold-rule.schema.json
 tests/smoke.sh       kiểm qua cổng: cách ly tenant, tenant lấy từ token, phân công, khóa ngoại ghép, RESTRICT,
-                     nhật ký, phần vượt; mở việc kiểm tra kho khi độ ẩm vượt ngưỡng (số đo gửi qua MQTT)
+                     nhật ký, phần vượt; mở việc kiểm tra kho khi độ ẩm vượt ngưỡng (số đo gửi qua MQTT);
+                     gọi tests/workflow.sh kiểm quy trình rà soát
 ```
 
 ## Dữ liệu
@@ -79,13 +81,35 @@ Bản gốc đã đối chiếu (tải ngày 2026-11-19 từ cổng văn bản c
 | NĐ 155/2025/NĐ-CP | https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/6/155-cp.signed.pdf | `b5cf65d96ea278c83150db0490d57b9522dd0a505a6c6e369c650499fff4765b` |
 | NĐ 369/2026/NĐ-CP | https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/9/369_2026_nd-cp_25092026-signed.signed.pdf | `83bb37181f6a8f2c3bcc9a7824321a6501817af8b19e146a18edf6949c918500` |
 
+## Quy trình rà soát
+
+`bpmn/facilities-review.bpmn20.xml` (khóa `facilities-review`). Cán bộ lập hồ sơ với các biến `title` (tên hồ
+sơ), `facilityId` (cơ sở) và `excessM2` (phần vượt tiêu chuẩn, định mức, m²). Người có vai trò `manager` trong cùng
+xã duyệt; người lập không tự duyệt được (bốn mắt).
+
+- **Phần vượt từ ngưỡng trở xuống** (`review_report`): duyệt xong là kết thúc ở "báo cáo để tiếp tục sử dụng".
+- **Phần vượt trên ngưỡng** (`review_publish`): duyệt xong thì công khai trong thời hạn, không có bước nào cho người
+  dùng. Hết hạn thì sang bước `submit`, trình người có thẩm quyền kèm đơn vị đề nghị nhận.
+- **Phần vượt thiếu hay âm:** đi nhánh công khai.
+- **Phần vượt không đọc được thành số:** không lập được hồ sơ, API quy trình trả 502.
+
+Nhánh được chọn ngay khi lập hồ sơ, trước bước duyệt: người duyệt gửi kèm biến khi duyệt cũng không đổi được nhánh.
+
+Ngưỡng và thời hạn là `settings` trong `app.yaml` (ADR 0019): `review_threshold_m2: 300`, `publication_period: P30D`
+theo câu chuyện ở #58. Demo và CI ghi đè thời hạn khi cài:
+`make app-install APP=facilities-commune SETTINGS=publication_period=PT20S`.
+
+**Giới hạn:** `excessM2` do giao diện gửi khi lập hồ sơ, người duyệt đối chiếu với hồ sơ. Quy trình chưa tự lấy phần
+vượt từ view `area_summary`; lấy số ở phía máy chủ là việc sau.
+
 ## Cài và gỡ
 
-Cần lõi đang chạy và đã `make seed`. Lệnh cài gói đầy đủ (quy trình, menu) thuộc Sprint 2; hiện cài lược đồ và
-quyền:
+Cần lõi đang chạy và đã `make seed`. Cài gói chạy migration, áp quyền Hasura, deploy quy trình cho mọi xã, nạp khai
+báo bước và menu:
 
 ```bash
-make app-install APP=facilities-commune                  # migrate rồi áp hasura/tables.yaml
+make app-install APP=facilities-commune                  # thời hạn công khai theo app.yaml (P30D)
+make app-install APP=facilities-commune SETTINGS=publication_period=PT20S   # demo, CI: thời hạn 20 giây
 make seed-demo                                           # dữ liệu demo ba xã (seed/demo.yaml), qua cổng
 make app-smoke APP=facilities-commune                    # kiểm qua cổng
 make app-status APP=facilities-commune                   # migration nào đã áp
@@ -112,7 +136,7 @@ make simulate ARGS="--set xa-a/archive-01:humidity=78"   # giữ độ ẩm kho 
 
 ## Chưa có
 
-Quy trình rà soát (#108); phần bù diện tích sử dụng chung theo Tiêu chuẩn quốc gia; diện tích sử dụng chung khi
+Bước sau khi trình (tỉnh duyệt, bảng phân cấp thẩm quyền: #110, #111); phần bù diện tích sử dụng chung theo Tiêu chuẩn quốc gia; diện tích sử dụng chung khi
 nhiều cơ quan chung một trụ sở (Điều 6 khoản 2 điểm a, sửa bởi NĐ 369).
 
 ## Dữ liệu demo

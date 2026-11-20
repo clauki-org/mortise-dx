@@ -11,6 +11,9 @@
 #   workflows --bpmn ... --steps ...   chỉ deploy và nạp khai báo bước; make seed gọi cho quy trình mẫu
 #   rules --owner core <tệp> ...       chỉ nạp luật ngưỡng; make seed gọi cho luật mẫu
 # Chạy lại không tạo bản trùng: tên deployment mang băm của tệp, nên tệp không đổi thì không deploy lại.
+# BPMN của gói có thể chứa {{tên}}: được thay bằng giá trị trong `settings` của app.yaml, ghi đè lúc cài
+# bằng biến môi trường APP_SETTINGS (make app-install SETTINGS=tên=giá trị), trước khi băm và deploy
+# (ADR 0019).
 # Tenant tạo sau khi cài gói chưa có gì cho tới khi chạy lại `make app-install`. Biến môi trường lấy từ .env
 # (scripts/app.sh, scripts/seed.sh nạp sẵn); `make check-fast` đã kiểm app.yaml, khai báo bước, cấu hình danh
 # mục, và khóa quy trình không trùng giữa lõi và các gói. Gỡ gói xóa theo tệp đang có trong thư mục gói:
@@ -31,6 +34,7 @@ import uuid
 import xml.etree.ElementTree as ET
 
 import yaml
+from workflow_settings import SettingsError, merge, parse_overrides, render
 
 BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
 
@@ -82,12 +86,16 @@ def process_keys(path: str) -> list[str]:
     return [process.get("id") for process in root.iter(f"{BPMN}process")]
 
 
-def deploy(files: list[str], every: list[str]) -> None:
+def deploy(files: list[str], every: list[str], settings: dict[str, str]) -> None:
     # Flowable đặt tên deployment theo tên tệp tải lên (bỏ qua trường deploymentName), nên băm của tệp
-    # được gắn vào tên tệp: tệp không đổi thì không tạo phiên bản mới.
+    # được gắn vào tên tệp: tệp không đổi thì không tạo phiên bản mới. Băm tính trên tệp đã thay giá trị: đổi
+    # settings mà băm theo tệp gốc thì quy trình không được deploy lại và vẫn chạy với giá trị cũ.
     for path in files:
-        with open(path, "rb") as file:
-            content = file.read()
+        with open(path, encoding="utf-8") as file:
+            try:
+                content = render(file.read(), settings, path).encode()
+            except SettingsError as error:
+                raise SystemExit(str(error)) from error
         stem = os.path.basename(path).removesuffix(".bpmn20.xml")
         name = f"{stem}-{hashlib.sha256(content).hexdigest()[:12]}"
         for tenant in every:
@@ -217,6 +225,17 @@ def package(directory: str) -> tuple[dict, list[str], list[str]]:
     return app, bpmn, steps
 
 
+def package_settings(app: dict) -> dict[str, str]:
+    try:
+        settings = merge(app.get("settings") or {}, parse_overrides(os.environ.get("APP_SETTINGS", "")))
+    except SettingsError as error:
+        raise SystemExit(str(error)) from error
+    # In ra để người cài thấy quy trình chạy với giá trị nào, nhất là khi ghi đè thời hạn cho demo.
+    for name, value in sorted(settings.items()):
+        print(f"settings: {name} = {value}")
+    return settings
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Nạp quy trình, khai báo bước và menu của gói vào lõi")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -232,7 +251,7 @@ def main() -> int:
 
     every = tenants()
     if args.command == "workflows":
-        deploy(args.bpmn, every)
+        deploy(args.bpmn, every, {})
         load_steps(args.steps)
         return 0
     if args.command == "rules":
@@ -240,7 +259,7 @@ def main() -> int:
         return 0
     app, bpmn, steps = package(args.directory)
     if args.command == "install":
-        deploy(bpmn, every)
+        deploy(bpmn, every, package_settings(app))
         load_steps(steps)
         load_menu(args.directory, app)
         load_rules(app["id"], [os.path.join(args.directory, path) for path in app.get("rules", [])])

@@ -14,6 +14,9 @@ database:
 hasura: hasura
 workflows:
   - bpmn/approval.bpmn20.xml
+settings:
+  approval_limit: 1000
+  answer_within: P5D
 menu:
   - id: items
     label: Danh mục
