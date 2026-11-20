@@ -7,6 +7,8 @@
 # dịch vụ đang dùng CSDL, nạp lại PostgreSQL, CSDL của Scorpio và SeaweedFS, rồi dựng lại cả lõi.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/writers.sh
+source scripts/writers.sh
 
 src="${1:-}"
 if [[ -z "$src" || ! -d "$src" ]]; then
@@ -32,11 +34,9 @@ if [[ -f .env ]] && ! cmp -s .env "$src/env"; then
 fi
 install -m 600 "$src/env" .env
 
-# Mọi dịch vụ ghi vào CSDL, kho tệp hay tài khoản MQTT phải dừng trong lúc nạp, nếu không chúng ghi xen vào dữ
-# liệu đang bị ghi đè: bảng và kho tệp lệch nhau, nhật ký thay đổi có dòng không khớp băm sao lưu. Thêm dịch vụ mới
-# có ghi thì thêm vào đây.
-app_services=(apisix workflow-api files-api flowable hasura keycloak context-api iot-bridge mosquitto scorpio)
-docker compose stop "${app_services[@]}" seaweedfs >/dev/null 2>&1 || true
+# Mọi dịch vụ ghi (scripts/writers.sh) phải dừng trong lúc nạp, nếu không chúng ghi xen vào dữ liệu đang bị ghi đè:
+# bảng và kho tệp lệch nhau, nhật ký thay đổi có dòng không khớp băm sao lưu.
+docker compose stop "${writers[@]}" >/dev/null 2>&1 || true
 docker compose up -d --wait postgres scorpio-db >/dev/null
 
 # load_cluster DỊCH_VỤ TÀI_KHOẢN TỆP [MẪU_LỖI_VÔ_HẠI...]: nạp bản pg_dumpall vào một cụm PostgreSQL.
@@ -94,4 +94,9 @@ docker compose up -d --wait
 if grep -q '^audit_head=' "$src/MANIFEST"; then
   scripts/audit-verify.sh "$src"
 fi
+# Bản sao lưu phải nhất quán giữa core.files và kho tệp (backup.sh dừng dịch vụ ghi trong lúc chép).
+scripts/files-verify.sh || {
+  echo "core.files và kho tệp lệch nhau trong bản sao lưu này; xem danh sách ở trên." >&2
+  exit 1
+}
 echo "Khôi phục xong. Kiểm tra bằng 'make smoke'."

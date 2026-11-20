@@ -72,7 +72,7 @@ jobs:
           files=$(git diff --name-only "origin/$BASE_REF...HEAD")
           printf '%s\n' "$files"
           docs='(\.md$|^docs/|^LICENSES?|^\.github/ISSUE_TEMPLATE/|^\.editorconfig$|^REUSE\.toml$)'
-          backup='(^compose\.yaml$|^core/postgres/|^platform/schema/|^scripts/(backup|restore)\.sh$'
+          backup='(^compose\.yaml$|^core/postgres/|^platform/schema/|^scripts/(backup|restore|writers|files-verify|backup-under-load)\.sh$'
           backup="$backup"'|^Makefile$|^\.env\.example$|^\.github/workflows/)'
           core=false; restore=false
           if printf '%s\n' "$files" | grep -Evq "$docs"; then core=true; fi
@@ -132,9 +132,10 @@ jobs:
             platform/web/test-results
           retention-days: 7
       # Vòng khôi phục: sao lưu, xóa sạch, dựng lõi trắng, khôi phục, rồi smoke lại.
-      - name: Back up
+      # Sao lưu trong khi tải tệp lên liên tục; restore phía dưới kiểm core.files khớp kho tệp (#104).
+      - name: Back up while files are being uploaded
         if: env.RESTORE_CYCLE == 'true'
-        run: make backup
+        run: make backup-under-load
         env:
           BACKUP_DIR: ${{ runner.temp }}/backups
       - name: Wipe and start a clean core
