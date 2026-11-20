@@ -34,6 +34,26 @@ kc get clients -r mortise -q clientId=mortise-web | jq '.[0] | {
   }' | kc create clients -r mortise -f - -i >/dev/null
 echo "keycloak: client kiểm thử mortise-test"
 
+# Tài khoản dịch vụ của iot-bridge (ADR 0017): mở hồ sơ khi số đo vượt ngưỡng, qua workflow-api, thay cho tenant ghi ở
+# header. Chỉ bật client credentials, nên chỉ ai giữ IOT_BRIDGE_CLIENT_SECRET mới lấy được token mang azp này. Tạo ở
+# seed để secret lấy từ .env. Đã có thì cập nhật chứ không xóa rồi tạo lại: tạo lại đổi `sub` của tài khoản dịch vụ, mà
+# workflow-api chống mở trùng theo `sub` đó, nên hồ sơ còn mở từ trước sẽ bị mở thêm lần nữa.
+bridge_spec=$(jq -n --arg secret "$IOT_BRIDGE_CLIENT_SECRET" '{
+    clientId: "mortise-iot-bridge", name: "Mortise DX iot-bridge (dịch vụ)", enabled: true, publicClient: false,
+    secret: $secret, serviceAccountsEnabled: true, standardFlowEnabled: false, implicitFlowEnabled: false,
+    directAccessGrantsEnabled: false, redirectUris: [], webOrigins: []
+  }')
+bridge_client=$(kc get clients -r mortise -q clientId=mortise-iot-bridge --fields id --format csv --noquotes)
+if [[ -z "$bridge_client" ]]; then
+  kc create clients -r mortise -f - <<<"$bridge_spec" >/dev/null
+else
+  kc update "clients/$bridge_client" -r mortise -f - <<<"$bridge_spec" >/dev/null
+fi
+# Tài khoản dịch vụ nhận vai trò mặc định của realm, trong đó có `user`; bỏ đi để token này không được Hasura hay dịch
+# vụ khác coi là một người dùng. Đã bỏ ở lần seed trước thì lệnh không làm gì.
+kc remove-roles -r mortise --uusername service-account-mortise-iot-bridge --rolename default-roles-mortise
+echo "keycloak: tài khoản dịch vụ mortise-iot-bridge"
+
 # Máy chủ phát triển giao diện (Vite) chạy ở địa chỉ khác URL công khai, nên client giao diện nhận thêm địa chỉ đó làm
 # redirect URI, địa chỉ sau đăng xuất và web origin. Chỉ làm khi bản cài chạy trên máy cục bộ (URL công khai là
 # localhost), để seed chạy nhầm trên máy chủ thật không mở thêm địa chỉ đăng nhập; realm trong tệp không đổi.

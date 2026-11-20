@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/service-token-claims.schema.json",
+  "title": "Claim trong access token của tài khoản dịch vụ",
+  "description": "Token do Keycloak cấp cho client dịch vụ bằng client credentials (ADR 0017). Không có tenant và không có vai trò: dịch vụ ghi tenant ở header X-Mortise-Tenant cho từng yêu cầu tới workflow-api, và chỉ được khởi tạo quy trình.",
+  "type": "object",
+  "required": ["iss", "sub", "exp", "azp"],
+  "properties": {
+    "iss": {
+      "description": "Issuer: URL công khai của realm, ví dụ http://localhost:9080/auth/realms/mortise",
+      "type": "string",
+      "pattern": "/auth/realms/mortise$"
+    },
+    "sub": {
+      "description": "Mã của tài khoản dịch vụ; workflow-api đặt làm initiator của quy trình dịch vụ mở",
+      "type": "string",
+      "minLength": 1
+    },
+    "exp": {
+      "description": "Thời điểm hết hạn, giây kể từ epoch",
+      "type": "integer"
+    },
+    "azp": {
+      "description": "Client dịch vụ đã xin token; workflow-api chỉ coi là dịch vụ khi client có trong WORKFLOW_SERVICE_CLIENTS",
+      "type": "string",
+      "minLength": 1
+    },
+    "tenant": {
+      "description": "Không được có: tenant của token dịch vụ đến từ header, không từ group Keycloak",
+      "not": {}
+    },
+    "realm_access": {
+      "type": "object",
+      "properties": {
+        "roles": {
+          "description": "Không được có vai trò `user`: token dịch vụ không phải một người dùng",
+          "type": "array",
+          "items": { "type": "string" },
+          "not": { "contains": { "const": "user" } }
+        }
+      }
+    }
+  }
+}

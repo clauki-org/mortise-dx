@@ -248,6 +248,59 @@ other=$(start_once "$manager_a")
 check "Người khác dùng trùng mã được quy trình của riêng mình" \
   "$([[ "$other" =~ ^[0-9a-f-]+$ && "$other" != "$created" ]] && echo yes)" yes
 
+# Tài khoản dịch vụ (ADR 0017): mở quy trình thay cho tenant ghi ở header, ngoài ra không làm được gì.
+token_url="$base/auth/realms/mortise/protocol/openid-connect/token"
+service=$(curl -fsS "$token_url" -d grant_type=client_credentials -d client_id=mortise-iot-bridge \
+  -d "client_secret=$IOT_BRIDGE_CLIENT_SECRET" | jq -r .access_token)
+claims "$service" > "$claims_file"
+if scripts/contracts.sh service-token "$claims_file"; then status=ok; else status=lệch; fi
+check "Token dịch vụ khớp contracts/service-token-claims.schema.json" "$status" ok
+error=$(curl -s "$token_url" -d grant_type=password -d client_id=mortise-iot-bridge \
+  -d "client_secret=$IOT_BRIDGE_CLIENT_SECRET" -d username=user.a -d "password=$DEMO_USER_PASSWORD" | jq -r .error)
+check "Người dùng không lấy được token mang client dịch vụ, kể cả có secret" "$error" unauthorized_client
+
+# service_start TENANT: id quy trình dịch vụ mở, hoặc mã trạng thái nếu không mở được; cùng một mã chống trùng cho
+# cả bài.
+service_key="smoke-$(openssl rand -hex 8)"
+service_start() {
+  curl -s -X POST -H "Authorization: Bearer $service" ${1:+-H "X-Mortise-Tenant: $1"} \
+    -H "Idempotency-Key: $service_key" -H 'Content-Type: application/json' \
+    -d '{"variables":{"title":"Hồ sơ do dịch vụ mở"}}' -w '\n%{http_code}' "$wf/processes/core-approval/instances" |
+    jq -Rrs 'split("\n") | if .[1] == "201" then (.[0] | fromjson | .id) else .[1] end'
+}
+task_in() { api GET "$1" /tasks | cut -f2 | jq -r --arg p "$2" '.[] | select(.processInstanceId == $p) | .id'; }
+
+opened=$(service_start xa-a)
+check "Dịch vụ mở quy trình cho tenant ghi ở header" "$([[ "$opened" =~ ^[0-9a-f-]+$ ]] && echo yes)" yes
+check "manager.a thấy việc do dịch vụ mở" "$([[ -n "$(task_in "$manager_a" "$opened")" ]] && echo yes)" yes
+check "manager.b (tenant khác) không thấy việc đó" "$(task_in "$manager_b" "$opened")" ""
+check "Cùng mã khi quy trình còn mở: không mở thêm" "$(service_start xa-a)" "$opened"
+IFS=$'\t' read -r status _ < <(api POST "$manager_a" "/tasks/$(task_in "$manager_a" "$opened")/complete" \
+  '{"variables":{"approved":false}}')
+check "manager.a xử lý việc do dịch vụ mở" "$status" 204
+reopened=$(service_start xa-a)
+check "Cùng mã sau khi quy trình đã kết thúc: mở quy trình mới" \
+  "$([[ "$reopened" =~ ^[0-9a-f-]+$ && "$reopened" != "$opened" ]] && echo yes)" yes
+# Dọn: để bảng việc demo không tích việc do smoke để lại.
+api POST "$manager_a" "/tasks/$(task_in "$manager_a" "$reopened")/complete" '{"variables":{"approved":false}}' >/dev/null
+
+check "Dịch vụ thiếu X-Mortise-Tenant bị từ chối" "$(service_start "")" 400
+for path in /tasks "/instances/$opened"; do
+  status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $service" -H 'X-Mortise-Tenant: xa-a' \
+    "$wf$path")
+  check "Dịch vụ chỉ được mở quy trình, không đọc được ${path/$opened/<id>}" "$status" 403
+done
+status=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $user_a" -H 'X-Mortise-Tenant: xa-b' \
+  -H 'Content-Type: application/json' "$wf/processes/core-approval/instances")
+check "Người dùng gửi X-Mortise-Tenant bị từ chối" "$status" 400
+rows=$(curl -s -X POST -H "Authorization: Bearer $service" -H 'Content-Type: application/json' -d "$query" \
+  "$base/v1/graphql" | jq -r '.data.core_tenants // [] | length')
+check "Token dịch vụ không đọc được dữ liệu qua Hasura" "$rows" 0
+for path in /v1/files/00000000-0000-0000-0000-000000000000 /v1/context/entities; do
+  status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $service" "$base$path")
+  check "Token dịch vụ không có tenant nên bị từ chối ở $path" "$status" 403
+done
+
 # Tệp (files-api trước SeaweedFS): tải lên, tải xuống đúng nội dung, cách ly tenant, giới hạn cỡ.
 files="$base/v1/files"
 sample=$(mktemp)

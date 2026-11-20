@@ -208,6 +208,24 @@
               ],
               "title": "Authorization"
             }
+          },
+          {
+            "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+            "in": "header",
+            "name": "X-Mortise-Tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+              "title": "X-Mortise-Tenant"
+            }
           }
         ],
         "responses": {
@@ -220,6 +238,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
           },
           "401": {
             "content": {
@@ -299,7 +327,7 @@
             }
           },
           {
-            "description": "Mã ngẫu nhiên của lần gửi; cùng người gửi lại cùng mã cho cùng quy trình thì nhận quy trình đã tạo, không tạo mới",
+            "description": "Mã ngẫu nhiên của lần gửi; cùng người gửi lại cùng mã cho cùng quy trình thì nhận quy trình đã tạo, không tạo mới. Với tài khoản dịch vụ (ADR 0017), chỉ quy trình còn mở mới được trả lại: quy trình cũ đã kết thúc thì mã đó mở quy trình mới",
             "in": "header",
             "name": "Idempotency-Key",
             "required": false,
@@ -312,7 +340,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Mã ngẫu nhiên của lần gửi; cùng người gửi lại cùng mã cho cùng quy trình thì nhận quy trình đã tạo, không tạo mới",
+              "description": "Mã ngẫu nhiên của lần gửi; cùng người gửi lại cùng mã cho cùng quy trình thì nhận quy trình đã tạo, không tạo mới. Với tài khoản dịch vụ (ADR 0017), chỉ quy trình còn mở mới được trả lại: quy trình cũ đã kết thúc thì mã đó mở quy trình mới",
               "title": "Idempotency-Key"
             }
           },
@@ -330,6 +358,24 @@
                 }
               ],
               "title": "Authorization"
+            }
+          },
+          {
+            "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+            "in": "header",
+            "name": "X-Mortise-Tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+              "title": "X-Mortise-Tenant"
             }
           }
         ],
@@ -454,6 +500,24 @@
               ],
               "title": "Authorization"
             }
+          },
+          {
+            "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+            "in": "header",
+            "name": "X-Mortise-Tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+              "title": "X-Mortise-Tenant"
+            }
           }
         ],
         "responses": {
@@ -470,6 +534,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
           },
           "401": {
             "content": {
@@ -552,6 +626,24 @@
                 }
               ],
               "title": "Authorization"
+            }
+          },
+          {
+            "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+            "in": "header",
+            "name": "X-Mortise-Tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+              "title": "X-Mortise-Tenant"
             }
           }
         ],

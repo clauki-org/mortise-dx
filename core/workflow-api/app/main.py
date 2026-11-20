@@ -20,6 +20,7 @@ from .policy import (
     TaskView,
     check_can_complete,
     check_idempotency_key,
+    check_person,
     check_variables,
 )
 from .schemas import ErrorBody, InstanceStatus, ProcessStarted, Task, VariablesBody
@@ -37,7 +38,8 @@ IdempotencyKey = Annotated[
     Header(
         alias="Idempotency-Key",
         description="Mã ngẫu nhiên của lần gửi; cùng người gửi lại cùng mã cho cùng quy trình thì nhận "
-        "quy trình đã tạo, không tạo mới",
+        "quy trình đã tạo, không tạo mới. Với tài khoản dịch vụ (ADR 0017), chỉ quy trình còn mở mới được "
+        "trả lại: quy trình cũ đã kết thúc thì mã đó mở quy trình mới",
     ),
 ]
 
@@ -47,10 +49,11 @@ IdempotencyKey = Annotated[
 _start_locks = tuple(threading.Lock() for _ in range(64))
 
 
-# 401 và 422 khai cho mọi route: route nào cũng kiểm token, và FastAPI tự ghi 422 theo dạng
-# mặc định của nó vào OpenAPI nếu route không khai, lệch với dạng {"error": "..."} thật sự trả về.
+# 400, 401 và 422 khai cho mọi route: route nào cũng kiểm token và header X-Mortise-Tenant, và FastAPI tự
+# ghi 422 theo dạng mặc định của nó vào OpenAPI nếu route không khai, lệch với dạng {"error": "..."} thật sự
+# trả về.
 def _errors(*codes: int) -> dict:
-    return {code: {"model": ErrorBody} for code in (401, 422, *codes)}
+    return {code: {"model": ErrorBody} for code in (400, 401, 422, *codes)}
 
 
 @app.exception_handler(Denied)
@@ -93,7 +96,12 @@ def start_process(
         return {"id": flowable.start(key, caller.tenant, variables)["id"], "process": key}
     check_idempotency_key(idempotency_key)
     with _start_locks[hash((caller.tenant, key, caller.sub, idempotency_key)) % len(_start_locks)]:
-        found = flowable.started_with(caller.tenant, key, caller.sub, idempotency_key)
+        # Dịch vụ dùng mã cố định cho một sự việc, ví dụ một luật trên một thiết bị: còn hồ sơ mở thì không mở
+        # thêm, hồ sơ đã đóng thì lần sau mở hồ sơ mới. Lọc theo initiator là sub của dịch vụ, nên người dùng
+        # không chặn được việc mở hồ sơ bằng cách tự tạo quy trình mang cùng mã.
+        found = flowable.started_with(
+            caller.tenant, key, caller.sub, idempotency_key, open_only=caller.service
+        )
         if found is None:
             found = flowable.start(key, caller.tenant, variables | {IDEMPOTENCY_VARIABLE: idempotency_key})
     return {"id": found["id"], "process": key}
@@ -101,6 +109,7 @@ def start_process(
 
 @app.get("/v1/workflow/tasks", response_model=list[Task], responses=_errors(403, 502, 503))
 def my_tasks(caller: CallerDep) -> list[dict]:
+    check_person(caller)
     # Hai truy vấn vì Flowable không gộp "chưa giao, thuộc nhóm của tôi" với "đã giao cho tôi".
     found = {t["id"]: t for t in flowable.tasks(caller.tenant, groups=sorted(caller.roles))}
     found |= {t["id"]: t for t in flowable.tasks(caller.tenant, assignee=caller.sub)}
@@ -114,6 +123,7 @@ def my_tasks(caller: CallerDep) -> list[dict]:
     responses=_errors(400, 403, 404, 409, 502, 503),
 )
 def complete_task(task_id: str, caller: CallerDep, body: VariablesIn = None) -> Response:
+    check_person(caller)
     variables = _variables_in(body)
     check_variables(variables)
     raw = flowable.task(task_id)
@@ -130,6 +140,7 @@ def complete_task(task_id: str, caller: CallerDep, body: VariablesIn = None) -> 
     responses=_errors(403, 404, 502, 503),
 )
 def instance_status(instance_id: str, caller: CallerDep) -> dict:
+    check_person(caller)
     found = flowable.instance(instance_id)
     if found is None or found.get("tenantId") != caller.tenant:
         raise Denied(404, "Không tìm thấy quy trình.")

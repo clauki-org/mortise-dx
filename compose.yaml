@@ -196,6 +196,8 @@ services:
       FLOWABLE_URL: http://flowable:8080/flowable-rest
       FLOWABLE_USER: rest-admin
       FLOWABLE_PASSWORD: ${FLOWABLE_ADMIN_PASSWORD}
+      # Client Keycloak của dịch vụ được mở quy trình thay cho tenant ghi ở header (ADR 0017), cách nhau dấu phẩy.
+      WORKFLOW_SERVICE_CLIENTS: mortise-iot-bridge
     depends_on:
       keycloak:
         condition: service_healthy

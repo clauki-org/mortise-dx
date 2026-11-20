@@ -23,14 +23,23 @@ case "$mode" in
     fi
     exec "${checker[@]}" -q --schemafile contracts/token-claims.schema.json "$2"
     ;;
+  service-token)
+    if [[ ! -f "${2:-}" ]]; then
+      echo "Cách dùng: $0 service-token <tệp claim>; không thấy tệp '${2:-}'." >&2
+      exit 2
+    fi
+    exec "${checker[@]}" -q --schemafile contracts/service-token-claims.schema.json "$2"
+    ;;
   *)
-    echo "Cách dùng: $0 [check | write | token <tệp claim>]" >&2
+    echo "Cách dùng: $0 [check | write | token <tệp claim> | service-token <tệp claim>]" >&2
     exit 2
     ;;
 esac
 
 "${checker[@]}" --check-metaschema contracts/*.schema.json
 "${checker[@]}" --schemafile contracts/token-claims.schema.json contracts/examples/token-claims.example.json
+"${checker[@]}" --schemafile contracts/service-token-claims.schema.json \
+  contracts/examples/service-token-claims.example.json
 "${checker[@]}" --schemafile contracts/app.schema.json contracts/examples/app.example.yaml
 "${checker[@]}" --schemafile contracts/workflow.schema.json contracts/examples/workflow.example.yaml
 "${checker[@]}" --schemafile contracts/catalog.schema.json contracts/examples/catalog.example.yaml
@@ -120,6 +129,7 @@ reject() {
   echo "ok -- $# ví dụ sai bị $schema từ chối đúng luật"
 }
 reject contracts/token-claims.schema.json contracts/examples/invalid/token-claims.*.json
+reject contracts/service-token-claims.schema.json contracts/examples/invalid/service-token-claims.*.json
 reject contracts/app.schema.json contracts/examples/invalid/app.*.yaml
 reject contracts/workflow.schema.json contracts/examples/invalid/workflow.*.yaml
 reject contracts/catalog.schema.json contracts/examples/invalid/catalog.*.yaml
@@ -129,9 +139,9 @@ reject contracts/device-message.schema.json contracts/examples/invalid/device-me
 # mà chưa từng bị kiểm, nên phải báo lỗi thay vì bỏ qua.
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
-    token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml) ;;
+    token-claims.*.json | service-token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml) ;;
     *)
-      echo "$file không được kiểm: tên phải theo mẫu <token-claims|device-message>.<lỗi>.json hoặc" \
+      echo "$file không được kiểm: tên phải theo mẫu <token-claims|service-token-claims|device-message>.<lỗi>.json hoặc" \
         "<app|workflow|catalog|component>.<lỗi>.yaml." >&2
       exit 1
       ;;
