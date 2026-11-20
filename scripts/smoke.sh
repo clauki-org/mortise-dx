@@ -111,6 +111,21 @@ for pair in "user.a xa-a" "user.b xa-b" "user.c xa-c"; do
   check "$user chỉ thấy dữ liệu tenant của mình" "$tenants" "[\"$tenant\"]"
 done
 
+# Tenant cha (ADR 0016): xã biết mình thuộc tỉnh nào; tài khoản của tỉnh với vai trò user chỉ thấy tenant của mình,
+# không thấy tenant con. Vai trò rollup_reader không có quyền nào ở bảng của lõi, chỉ đọc view tổng hợp của gói.
+parent_query='{"query":"{ core_tenants { id parent_id } }"}'
+parent_of() {
+  curl -fsS -X POST "$base/v1/graphql" -H "Authorization: Bearer $1" -H "X-Hasura-Role: ${2:-user}" \
+    -H 'Content-Type: application/json' -d "$parent_query"
+}
+check "user.a đọc được tenant cha của mình" "$(parent_of "$(token user.a)" | jq -c '.data.core_tenants')" \
+  '[{"id":"xa-a","parent_id":"tinh-mau"}]'
+leader=$(token leader.tinh)
+check "Tài khoản tỉnh (vai trò user) chỉ thấy tenant của mình, không thấy tenant con" \
+  "$(parent_of "$leader" | jq -c '[.data.core_tenants[].id]')" '["tinh-mau"]'
+check "Vai trò rollup_reader không đọc được bảng tenant của lõi" \
+  "$(parent_of "$leader" rollup_reader | jq -r '.errors[0].extensions.code // "không lỗi"')" validation-failed
+
 # Khai báo bước của quy trình mẫu: đọc được qua GraphQL bằng token, chỉ dòng của tenant mình.
 steps_query='{"query":"{ platform_workflow_steps(where: {process: {_eq: \"core-approval\"}}) { tenant_id step config } }"}'
 for pair in "user.a xa-a" "user.b xa-b"; do

@@ -101,13 +101,15 @@
     "realm": [
       { "name": "user", "description": "Người dùng nghiệp vụ trong một tenant" },
       { "name": "manager", "description": "Quản lý, được duyệt trong quy trình" },
-      { "name": "tenant_admin", "description": "Quản trị một tenant" }
+      { "name": "tenant_admin", "description": "Quản trị một tenant" },
+      { "name": "rollup_reader", "description": "Đọc số liệu tổng hợp của các tenant con (ADR 0016)" }
     ]
   },
   "groups": [
     { "name": "xa-a" },
     { "name": "xa-b" },
-    { "name": "xa-c" }
+    { "name": "xa-c" },
+    { "name": "tinh-mau" }
   ],
   "clients": [
     {

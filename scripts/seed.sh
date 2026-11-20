@@ -61,7 +61,15 @@ users=(
   "user.c  xa-c  -"
   "manager.c  xa-c  manager"
   "admin.c  xa-c  tenant_admin"
+  "leader.tinh  tinh-mau  rollup_reader"
 )
+
+# Tệp realm chỉ được nạp khi Keycloak khởi động lần đầu. Bản cài dựng trước khi có vai trò rollup_reader và tenant
+# cha (ADR 0016) thì tạo bù ở đây (group tạo bù trong vòng lặp dưới), để không phải `make reset`.
+if ! kc get roles/rollup_reader -r mortise >/dev/null 2>&1; then
+  kc create roles -r mortise -s name=rollup_reader \
+    -s "description=Đọc số liệu tổng hợp của các tenant con (ADR 0016)" >/dev/null
+fi
 
 for entry in "${users[@]}"; do
   read -r username tenant role <<<"$entry"
@@ -73,6 +81,7 @@ for entry in "${users[@]}"; do
   kc set-password -r mortise --username "$username" --new-password "$DEMO_USER_PASSWORD" >/dev/null
   user_id=$(kc get users -r mortise -q "username=$username" -q exact=true --fields id --format csv --noquotes)
   group_id=$(kc get groups -r mortise -q "search=$tenant" --fields id,name --format csv --noquotes | awk -F, -v n="$tenant" '$2==n{print $1}')
+  [[ -n "$group_id" ]] || group_id=$(kc create groups -r mortise -s "name=$tenant" -i)
   kc update "users/$user_id/groups/$group_id" -r mortise -s realm=mortise -s "userId=$user_id" -s "groupId=$group_id" -n >/dev/null
   if [[ "$role" != "-" ]]; then
     kc add-roles -r mortise --uusername "$username" --rolename "$role" >/dev/null
@@ -93,16 +102,17 @@ for entry in "${users[@]}"; do
 done
 
 # Tenant demo là dữ liệu, không phải lược đồ, nên nằm ở seed chứ không nằm trong migration:
-# bản cài thật không được tự có tenant demo. Ba xã của "Tỉnh Mẫu", tỉnh hư cấu dùng cho demo (#58). Tên trùng tên
-# group trong realm.
+# bản cài thật không được tự có tenant demo. Ba xã của "Tỉnh Mẫu", tỉnh hư cấu dùng cho demo (#58), là con của
+# tenant tỉnh (ADR 0016); cha phải có trước con vì khóa ngoại parent_id. Tên trùng tên group trong realm.
 docker compose exec -T postgres psql -qX -v ON_ERROR_STOP=1 --username hasura --dbname mortise <<'SQL'
-INSERT INTO core.tenants (id, name) VALUES
-    ('xa-a', 'Xã A (Tỉnh Mẫu)'),
-    ('xa-b', 'Xã B (Tỉnh Mẫu)'),
-    ('xa-c', 'Xã C (Tỉnh Mẫu)')
-ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+INSERT INTO core.tenants (id, name, parent_id) VALUES
+    ('tinh-mau', 'Tỉnh Mẫu', NULL),
+    ('xa-a', 'Xã A (Tỉnh Mẫu)', 'tinh-mau'),
+    ('xa-b', 'Xã B (Tỉnh Mẫu)', 'tinh-mau'),
+    ('xa-c', 'Xã C (Tỉnh Mẫu)', 'tinh-mau')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, parent_id = EXCLUDED.parent_id;
 SQL
-echo "postgres: tenant demo xa-a, xa-b, xa-c"
+echo "postgres: tenant demo tinh-mau (cha), xa-a, xa-b, xa-c"
 
 # Quyền dữ liệu của Hasura: áp tệp khai báo theo kiểu ghi đè, nên chạy lại seed cũng sửa được quyền đã bị đổi sai.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py apply

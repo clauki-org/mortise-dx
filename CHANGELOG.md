@@ -12,6 +12,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Tenant cha (ADR 0016): cột `core.tenants.parent_id`, vai trò `rollup_reader` để tenant cha đọc tổng hợp của
+  tenant con qua view của gói; dữ liệu demo có tenant `tinh-mau` là cha của ba xã, tài khoản `leader.tinh` thấy
+  diện tích được phép, đang dùng và phần vượt của ba xã (view `area_rollup`) mà không đọc được cơ sở, tòa, phòng.
 - Phân công cán bộ theo cơ sở trong gói `facilities-commune` (ADR 0015): cán bộ chỉ thấy và sửa cơ sở mình được
   phân công; `manager` đọc toàn xã; `tenant_admin` (tài khoản demo `admin.a`, `admin.b`, `admin.c`) tạo cơ sở và tự
   sửa phân công qua GraphQL. `scripts/hasura-metadata.py` quản lý cả quan hệ Hasura.
