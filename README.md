@@ -47,7 +47,7 @@ biệt.
 | Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy | `make smoke` (cổng, CSP, luồng PKCE), `make web-check`, `make e2e` |
 | Bảng việc: danh sách việc đang chờ người đăng nhập theo hạn; màn hình xử lý với biểu mẫu và nút theo khai báo của bước | Đã chạy | `make e2e` (trình duyệt: duyệt, bốn mắt, cách ly đơn vị), `make web-check` |
 | Thành phần Tầng 2 khác (danh mục, biểu mẫu nhập liệu, bản đồ) | Kế hoạch | |
-| Gói minh họa `apps/facilities-commune`: bảng cơ sở, tòa, phòng cách ly theo tenant, có nhật ký; cài vào, gỡ ra bằng `make app-install`, `make app-uninstall` | Đã chạy | CI: cài gói → smoke gói → `make seed`, `make smoke` khi gói đang cài → gỡ gói → `make smoke` |
+| Gói minh họa `apps/facilities-commune`: bảng cơ sở, tòa, phòng cách ly theo tenant, có nhật ký; cài vào, gỡ ra bằng `make app-install`, `make app-uninstall`, kèm menu của gói; quy trình và khai báo bước của gói nạp cùng lúc bằng bộ nạp chung với `make seed` (gói minh họa chưa có quy trình) | Đã chạy | CI: cài gói → smoke gói (gồm menu theo tenant) → `make seed`, `make smoke` khi gói đang cài → gỡ gói → `make smoke` |
 | Gói minh họa: dữ liệu demo ba xã của "Tỉnh Mẫu" (hư cấu), nạp qua cổng bằng `make seed-demo` | Đã chạy | CI: `make seed-demo`, smoke gói kiểm tổng diện tích từng xã |
 | Gói minh họa: diện tích được phép và phần vượt tiêu chuẩn, định mức của từng xã theo NĐ 155/2025 sửa bởi NĐ 369/2026, mức m² có trích dẫn | Đã chạy | CI: smoke gói kiểm kết quả ba xã |
 | Gói minh họa: quy trình rà soát, bản đồ | Kế hoạch | |
@@ -160,7 +160,7 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
 platform/             Tầng 2
   web/                khung giao diện (React, Vite), phục vụ bằng nginx sau cổng
-  schema/migrations/  migration lược đồ `platform` (dbmate): khai báo bước của quy trình
+  schema/migrations/  migration lược đồ `platform` (dbmate): khai báo bước của quy trình, menu của gói
 apps/facilities-commune/  Tầng 3: gói cơ sở vật chất xã (app.yaml, migration, quyền Hasura, smoke của gói)
 devices/simulator/    bộ giả lập và danh sách thiết bị demo (Python)
 scripts/              tạo .env, seed, smoke, tạo migration, cài và gỡ gói, sao lưu, khôi phục, hook pre-push

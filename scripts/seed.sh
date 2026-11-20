@@ -103,48 +103,12 @@ echo "postgres: tenant demo xa-a, xa-b, xa-c"
 # Quyền dữ liệu của Hasura: áp tệp khai báo theo kiểu ghi đè, nên chạy lại seed cũng sửa được quyền đã bị đổi sai.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py apply
 
-# Deploy quy trình mẫu dùng để kiểm thử lõi cho từng tenant có trong core.tenants. Flowable đặt tên
-# deployment theo tên tệp tải lên (bỏ qua trường deploymentName), nên băm của tệp được
-# gắn vào tên tệp: chạy lại seed không tạo phiên bản mới nếu tệp BPMN không đổi.
-flowable="http://127.0.0.1:${FLOWABLE_PORT:-8083}/flowable-rest/service"
-tenants=$(curl -fsS -X POST "http://127.0.0.1:${HASURA_PORT:-8082}/v1/graphql" \
-  -H "X-Hasura-Admin-Secret: $HASURA_ADMIN_SECRET" -H 'Content-Type: application/json' \
-  -d '{"query":"{ core_tenants { id } }"}' | jq -r '.data.core_tenants[].id')
-for file in core/workflow/fixtures/*.bpmn20.xml; do
-  name="$(basename "$file" .bpmn20.xml)-$(sha256sum "$file" | cut -c1-12)"
-  for tenant in $tenants; do
-    existing=$(curl -fsS -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" \
-      "$flowable/repository/deployments?name=$name&tenantId=$tenant" | jq '.total')
-    if [[ "$existing" == "0" ]]; then
-      curl -fsS -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" -F "file=@$file;filename=$name.bpmn20.xml" \
-        -F "tenantId=$tenant" "$flowable/repository/deployments" >/dev/null
-      echo "flowable: deploy $name cho $tenant"
-    fi
-  done
-done
+# Quy trình mẫu dùng để kiểm thử lõi và khai báo bước của nó, cho mọi tenant có trong core.tenants; chung một bộ nạp
+# với gói (scripts/app-deploy.py), nên chạy lại không deploy lại tệp không đổi. Ví dụ của hợp đồng viết cho
+# core-approval nên cũng là khai báo của nó; `make check-fast` đã kiểm tệp theo schema và theo BPMN.
+uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py workflows \
+  --bpmn core/workflow/fixtures/*.bpmn20.xml --steps contracts/examples/workflow.example.yaml
 echo "flowable: quy trình đã sẵn sàng"
-
-# Khai báo bước của quy trình mẫu cho mọi tenant (bảng platform.workflow_steps). Ví dụ của hợp đồng viết cho
-# core-approval nên cũng là khai báo của nó; `make check-fast` đã kiểm tệp theo schema và theo BPMN. Khai báo của
-# gói đi cùng BPMN của gói, do bộ cài gói nạp. Bước không còn trong tệp bị xóa, để chạy lại seed sau khi sửa tệp
-# cho kết quả như trên dữ liệu trắng.
-file=contracts/examples/workflow.example.yaml
-declaration=$(uv run --quiet --no-project --with pyyaml==6.0.3 python -c \
-  'import json, sys, yaml; print(json.dumps(yaml.safe_load(open(sys.argv[1], encoding="utf-8"))))' "$file")
-docker compose exec -T postgres psql -qX -v ON_ERROR_STOP=1 --username hasura --dbname mortise \
-  -v declaration="$declaration" <<'SQL'
-BEGIN;
-CREATE TEMP TABLE declaration ON COMMIT DROP AS SELECT :'declaration'::jsonb AS d;
-DELETE FROM platform.workflow_steps w USING declaration
-WHERE w.process = d->>'process' AND NOT (d->'steps' ? w.step);
-INSERT INTO platform.workflow_steps (tenant_id, process, step, config)
-SELECT t.id, d->>'process', s.key, s.value
-FROM core.tenants t, declaration, jsonb_each(d->'steps') s
-ON CONFLICT (tenant_id, process, step) DO UPDATE SET config = EXCLUDED.config, updated_at = now()
-    WHERE platform.workflow_steps.config IS DISTINCT FROM EXCLUDED.config;
-COMMIT;
-SQL
-echo "postgres: khai báo bước $(jq -r .process <<<"$declaration") từ $file"
 
 # Tài khoản MQTT của các thiết bị demo (ADR 0012), cùng mật khẩu DEMO_DEVICE_PASSWORD để bộ giả lập đăng nhập
 # được. Danh sách thiết bị nằm ở devices/simulator/devices.yaml, chung với bộ giả lập.

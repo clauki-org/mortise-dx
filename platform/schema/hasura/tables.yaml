@@ -10,3 +10,10 @@
       permission:
         columns: [tenant_id, process, step, config]
         filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+- table: { schema: platform, name: menu_items }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [tenant_id, app, item, position, label, component, config, roles]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }

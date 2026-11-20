@@ -1,0 +1,225 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Nạp phần chạy lúc dùng của một gói vào lõi, cho mọi tenant đang có trong core.tenants: deploy BPMN lên
+# Flowable, khai báo bước vào platform.workflow_steps, mục menu kèm nội dung tệp cấu hình vào
+# platform.menu_items. Ba lệnh:
+#   install <thư mục gói>   đọc app.yaml (workflows, menu) và <gói>/workflows/*.yaml; app.sh gọi khi cài
+#   remove <thư mục gói>    xóa deployment (kèm hồ sơ đang chạy), khai báo bước và menu của gói; gọi khi gỡ
+#   workflows --bpmn ... --steps ...   chỉ deploy và nạp khai báo bước; make seed gọi cho quy trình mẫu
+# Chạy lại không tạo bản trùng: tên deployment mang băm của tệp, nên tệp không đổi thì không deploy lại.
+# Tenant tạo sau khi cài gói chưa có gì cho tới khi chạy lại `make app-install`. Biến môi trường lấy từ .env
+# (scripts/app.sh, scripts/seed.sh nạp sẵn); `make check-fast` đã kiểm app.yaml, khai báo bước, cấu hình danh
+# mục, và khóa quy trình không trùng giữa lõi và các gói. Gỡ gói xóa theo tệp đang có trong thư mục gói:
+# đổi tên hay bỏ một quy trình khỏi gói thì gỡ gói trước, nếu không deployment cũ còn lại trong Flowable.
+
+import argparse
+import base64
+import glob
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
+import xml.etree.ElementTree as ET
+
+import yaml
+
+BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
+
+
+def load_yaml(path: str) -> dict:
+    with open(path, encoding="utf-8") as file:
+        return yaml.safe_load(file)
+
+
+def psql(sql: str, **params: str) -> str:
+    """Chạy SQL trong CSDL của lõi; giá trị truyền bằng biến psql (:'tên') nên không phải tự thoát chuỗi."""
+    command = ["docker", "compose", "exec", "-T", "postgres", "psql", "-qAtX", "-v", "ON_ERROR_STOP=1"]
+    command += ["--username", "hasura", "--dbname", "mortise"]
+    for name, value in params.items():
+        command += ["-v", f"{name}={value}"]
+    # Lệnh cố định; tham số là nội dung tệp trong repo, đi qua biến psql chứ không ghép vào SQL.
+    result = subprocess.run(command, input=sql, capture_output=True, text=True, check=False)  # noqa: S603
+    if result.returncode != 0:
+        raise SystemExit(f"PostgreSQL báo lỗi: {result.stderr.strip()}\nKiểm lõi đang chạy: make ps")
+    return result.stdout
+
+
+def tenants() -> list[str]:
+    return psql("SELECT id FROM core.tenants ORDER BY id;").split()
+
+
+def flowable(method: str, path: str, body: bytes | None = None, content_type: str = "") -> dict:
+    base = f"http://127.0.0.1:{os.environ.get('FLOWABLE_PORT', '8083')}/flowable-rest/service"
+    password = os.environ.get("FLOWABLE_ADMIN_PASSWORD")
+    if not password:
+        raise SystemExit("Thiếu FLOWABLE_ADMIN_PASSWORD; chạy make env rồi gọi qua make.")
+    credentials = base64.b64encode(f"rest-admin:{password}".encode()).decode()
+    request = urllib.request.Request(base + path, data=body, method=method)  # noqa: S310
+    request.add_header("Authorization", f"Basic {credentials}")
+    if content_type:
+        request.add_header("Content-Type", content_type)
+    try:
+        # Địa chỉ cố định 127.0.0.1 ở trên, không lấy từ dữ liệu bên ngoài.
+        with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310
+            raw = response.read()
+    except (urllib.error.URLError, TimeoutError) as error:
+        raise SystemExit(f"Flowable {method} {path}: {error}\nKiểm lõi đang chạy: make ps") from error
+    return json.loads(raw) if raw else {}
+
+
+def process_keys(path: str) -> list[str]:
+    # Tệp BPMN nằm trong repo, do người đóng góp viết, không phải dữ liệu từ bên ngoài.
+    root = ET.parse(path).getroot()  # noqa: S314
+    return [process.get("id") for process in root.iter(f"{BPMN}process")]
+
+
+def deploy(files: list[str], every: list[str]) -> None:
+    # Flowable đặt tên deployment theo tên tệp tải lên (bỏ qua trường deploymentName), nên băm của tệp
+    # được gắn vào tên tệp: tệp không đổi thì không tạo phiên bản mới.
+    for path in files:
+        with open(path, "rb") as file:
+            content = file.read()
+        stem = os.path.basename(path).removesuffix(".bpmn20.xml")
+        name = f"{stem}-{hashlib.sha256(content).hexdigest()[:12]}"
+        for tenant in every:
+            query = urllib.parse.urlencode({"name": name, "tenantId": tenant})
+            if flowable("GET", f"/repository/deployments?{query}")["total"]:
+                continue
+            boundary = uuid.uuid4().hex
+            body = (
+                (
+                    f'--{boundary}\r\nContent-Disposition: form-data; name="tenantId"\r\n\r\n{tenant}\r\n'
+                    f'--{boundary}\r\nContent-Disposition: form-data; name="file"; '
+                    f'filename="{name}.bpmn20.xml"\r\n'
+                    "Content-Type: application/xml\r\n\r\n"
+                ).encode()
+                + content
+                + f"\r\n--{boundary}--\r\n".encode()
+            )
+            flowable("POST", "/repository/deployments", body, f"multipart/form-data; boundary={boundary}")
+            print(f"flowable: deploy {name} cho {tenant}")
+
+
+def undeploy(files: list[str], every: list[str]) -> None:
+    # Xóa mọi phiên bản của quy trình, kèm hồ sơ đang chạy và lịch sử (cascade): giữ lại thì Flowable vẫn chạy
+    # hồ sơ của một gói không còn bảng, biểu mẫu hay menu nào.
+    for key in [key for path in files for key in process_keys(path)]:
+        for tenant in every:
+            # Một quy trình hiếm khi có tới 1000 phiên bản trong một tenant; vượt thì chạy gỡ lại lần nữa.
+            query = urllib.parse.urlencode({"key": key, "tenantId": tenant, "size": 1000})
+            definitions = flowable("GET", f"/repository/process-definitions?{query}")["data"]
+            for deployment in sorted({definition["deploymentId"] for definition in definitions}):
+                flowable("DELETE", f"/repository/deployments/{deployment}?cascade=true")
+                print(f"flowable: xóa deployment {deployment} ({key}) của {tenant}")
+
+
+STEPS_SQL = """
+BEGIN;
+CREATE TEMP TABLE declaration ON COMMIT DROP AS SELECT :'declaration'::jsonb AS d;
+DELETE FROM platform.workflow_steps w USING declaration
+WHERE w.process = d->>'process' AND NOT (d->'steps' ? w.step);
+INSERT INTO platform.workflow_steps (tenant_id, process, step, config)
+SELECT t.id, d->>'process', s.key, s.value
+FROM core.tenants t, declaration, jsonb_each(d->'steps') s
+ON CONFLICT (tenant_id, process, step) DO UPDATE SET config = EXCLUDED.config, updated_at = now()
+    WHERE platform.workflow_steps.config IS DISTINCT FROM EXCLUDED.config;
+COMMIT;
+"""
+
+
+def load_steps(files: list[str]) -> None:
+    # Bước không còn trong tệp bị xóa, để chạy lại sau khi sửa tệp cho kết quả như trên dữ liệu trắng.
+    for path in files:
+        declaration = load_yaml(path)
+        psql(STEPS_SQL, declaration=json.dumps(declaration))
+        print(f"postgres: khai báo bước {declaration['process']} từ {path}")
+
+
+MENU_SQL = """
+BEGIN;
+CREATE TEMP TABLE item ON COMMIT DROP AS SELECT * FROM jsonb_to_recordset(:'items'::jsonb)
+    AS x(item text, position integer, label text, component text, config jsonb, roles text[]);
+DELETE FROM platform.menu_items m WHERE m.app = :'app' AND m.item NOT IN (SELECT item FROM item);
+INSERT INTO platform.menu_items (tenant_id, app, item, position, label, component, config, roles)
+SELECT t.id, :'app', i.item, i.position, i.label, i.component, i.config, i.roles
+FROM core.tenants t, item i
+ON CONFLICT (tenant_id, app, item) DO UPDATE
+    SET position = EXCLUDED.position, label = EXCLUDED.label,
+    component = EXCLUDED.component, config = EXCLUDED.config, roles = EXCLUDED.roles, updated_at = now()
+    WHERE (platform.menu_items.position, platform.menu_items.label, platform.menu_items.component,
+           platform.menu_items.config, platform.menu_items.roles)
+        IS DISTINCT FROM
+        (EXCLUDED.position, EXCLUDED.label, EXCLUDED.component, EXCLUDED.config, EXCLUDED.roles);
+COMMIT;
+"""
+
+
+def load_menu(directory: str, app: dict) -> None:
+    items = [
+        {
+            "item": entry["id"],
+            "position": position,
+            "label": entry["label"],
+            "component": entry["component"],
+            "config": load_yaml(os.path.join(directory, entry["config"])),
+            "roles": entry.get("roles") or None,
+        }
+        for position, entry in enumerate(app.get("menu", []))
+    ]
+    psql(MENU_SQL, app=app["id"], items=json.dumps(items))
+    print(f"postgres: {len(items)} mục menu của {app['id']}")
+
+
+def package(directory: str) -> tuple[dict, list[str], list[str]]:
+    app = load_yaml(os.path.join(directory, "app.yaml"))
+    # Kiểm trước khi ghi gì: schema không buộc id menu duy nhất, và trùng id làm câu INSERT báo lỗi khó hiểu
+    # sau khi quy trình đã deploy.
+    ids = [entry["id"] for entry in app.get("menu", [])]
+    if len(ids) != len(set(ids)):
+        raise SystemExit(f"{directory}/app.yaml: id trong menu bị trùng ({', '.join(sorted(ids))}).")
+    bpmn = [os.path.join(directory, path) for path in app.get("workflows", [])]
+    steps = sorted(glob.glob(os.path.join(directory, "workflows", "*.yaml")))
+    return app, bpmn, steps
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Nạp quy trình, khai báo bước và menu của gói vào lõi")
+    commands = parser.add_subparsers(dest="command", required=True)
+    for name in ("install", "remove"):
+        commands.add_parser(name).add_argument("directory")
+    workflows = commands.add_parser("workflows")
+    workflows.add_argument("--bpmn", nargs="+", required=True)
+    workflows.add_argument("--steps", nargs="+", required=True)
+    args = parser.parse_args()
+
+    every = tenants()
+    if args.command == "workflows":
+        deploy(args.bpmn, every)
+        load_steps(args.steps)
+        return 0
+    app, bpmn, steps = package(args.directory)
+    if args.command == "install":
+        deploy(bpmn, every)
+        load_steps(steps)
+        load_menu(args.directory, app)
+        return 0
+    undeploy(bpmn, every)
+    processes = [load_yaml(path)["process"] for path in steps]
+    psql(
+        "DELETE FROM platform.workflow_steps WHERE process = ANY(string_to_array(:'processes', ','));"
+        "DELETE FROM platform.menu_items WHERE app = :'app';",
+        processes=",".join(processes),
+        app=app["id"],
+    )
+    print(f"postgres: xóa khai báo bước và menu của {app['id']}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
