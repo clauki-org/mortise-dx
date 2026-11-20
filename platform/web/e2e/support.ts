@@ -61,6 +61,12 @@ export async function token(request: APIRequestContext, username: string): Promi
   return body.access_token;
 }
 
+/** sub trong token của một tài khoản: Hasura đặt vào X-Hasura-User-Id, phân công cán bộ so với giá trị này. */
+export async function subOf(request: APIRequestContext, username: string): Promise<string> {
+  const payload = (await token(request, username)).split(".")[1] ?? "";
+  return JSON.parse(Buffer.from(payload, "base64url").toString("utf8")).sub;
+}
+
 async function workflow(
   request: APIRequestContext,
   username: string,
@@ -111,6 +117,27 @@ export async function visibleTenants(request: APIRequestContext, username: strin
   expect(response.ok(), `GraphQL với ${username}`).toBeTruthy();
   const body: { data: { core_tenants: { id: string }[] } } = await response.json();
   return body.data.core_tenants.map((tenant) => tenant.id);
+}
+
+/**
+ * Gọi GraphQL bằng token của một tài khoản, với vai trò chọn bằng header X-Hasura-Role (mặc định user); trả phần
+ * data. Lỗi GraphQL làm bài kiểm dừng ngay với nguyên văn lỗi, không để lỗi lộ ra muộn ở bước sau.
+ */
+export async function graphql<T>(
+  request: APIRequestContext,
+  username: string,
+  query: string,
+  variables: object = {},
+  role = "user",
+): Promise<T> {
+  const response = await request.post("/v1/graphql", {
+    headers: { Authorization: `Bearer ${await token(request, username)}`, "X-Hasura-Role": role },
+    data: { query, variables },
+  });
+  expect(response.ok(), `GraphQL với ${username}`).toBeTruthy();
+  const body: { data?: T; errors?: { message: string }[] } = await response.json();
+  expect(body.errors, `GraphQL với ${username} (${role})`).toBeUndefined();
+  return body.data as T;
 }
 
 export async function outcome(request: APIRequestContext, username: string, instance: string) {

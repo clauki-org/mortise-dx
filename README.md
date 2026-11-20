@@ -46,7 +46,8 @@ biệt.
 | Sao lưu và khôi phục toàn bộ lõi | Đã chạy | CI: sao lưu → xóa → khôi phục → `make smoke` |
 | Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy | `make smoke` (cổng, CSP, luồng PKCE), `make web-check`, `make e2e` |
 | Bảng việc: danh sách việc đang chờ người đăng nhập theo hạn; màn hình xử lý với biểu mẫu và nút theo khai báo của bước | Đã chạy | `make e2e` (trình duyệt: duyệt, bốn mắt, cách ly đơn vị), `make web-check` |
-| Thành phần Tầng 2 khác (danh mục, biểu mẫu nhập liệu, bản đồ) | Kế hoạch | |
+| Menu dựng từ các gói đã cài; mục của gói mở thành phần danh mục (danh sách, tìm, lọc, chi tiết cha–con) theo cấu hình của gói, không có mã giao diện riêng của gói | Đã chạy | `make e2e` (trình duyệt: cán bộ xã A mở danh mục cơ sở từ menu, không thấy cơ sở của xã B), `make web-check` |
+| Thành phần Tầng 2 khác (biểu mẫu nhập liệu, bản đồ) | Kế hoạch | |
 | Gói minh họa `apps/facilities-commune`: bảng cơ sở, tòa, phòng cách ly theo tenant, cán bộ chỉ thấy và sửa cơ sở được phân công (xã tự sửa phân công), có nhật ký; cài vào, gỡ ra bằng `make app-install`, `make app-uninstall`, kèm menu của gói; quy trình, khai báo bước và luật ngưỡng của gói nạp cùng lúc bằng bộ nạp chung với `make seed` | Đã chạy | CI: cài gói → smoke gói (gồm menu theo tenant) → `make seed`, `make smoke` khi gói đang cài → gỡ gói → `make smoke` |
 | Gói minh họa: dữ liệu demo ba xã của "Tỉnh Mẫu" (hư cấu), nạp qua cổng bằng `make seed-demo` | Đã chạy | CI: `make seed-demo`, smoke gói kiểm tổng diện tích từng xã |
 | Gói minh họa: diện tích được phép và phần vượt tiêu chuẩn, định mức của từng xã theo NĐ 155/2025 sửa bởi NĐ 369/2026, mức m² có trích dẫn | Đã chạy | CI: smoke gói kiểm kết quả ba xã |
@@ -64,7 +65,7 @@ riêng ClamAV dùng khoảng 1 GB. Phát triển giao diện cần thêm Node.js
 make up      # tạo .env với bí mật ngẫu nhiên, dựng lõi, chờ sẵn sàng
 make seed    # tài khoản demo cho 3 xã của "Tỉnh Mẫu" (hư cấu) và quyền dữ liệu
 make smoke   # kiểm tra đầu-cuối qua cổng
-make e2e     # kịch bản demo trên trình duyệt (cần Node)
+make e2e     # kịch bản demo trên trình duyệt (cần Node và gói xã: make app-install APP=facilities-commune)
 ```
 
 | Địa chỉ | Dịch vụ |

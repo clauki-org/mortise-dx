@@ -107,9 +107,8 @@ jobs:
       # Gói đang cài: seed áp lại quyền của gói, smoke của lõi kiểm cả quyền của gói không lệch khai báo.
       - name: Seed and smoke the core with the package installed
         run: make seed && make smoke
-      - name: Uninstall the package, the core still passes
-        run: make app-uninstall APP=facilities-commune CONFIRM=yes && make smoke
-      # Kịch bản demo trên trình duyệt thật, qua cổng, với giao diện do nginx phục vụ kèm CSP như bản cài thật.
+      # Kịch bản demo trên trình duyệt thật, qua cổng, với giao diện do nginx phục vụ kèm CSP như bản cài thật; gói xã
+      # đang cài để có menu và danh mục của gói.
       - uses: actions/setup-node@v4
         with:
           node-version: 26.13.1
@@ -131,6 +130,10 @@ jobs:
             platform/web/playwright-report
             platform/web/test-results
           retention-days: 7
+      # Gỡ sau e2e: bài danh mục trên trình duyệt (platform/web/e2e/catalog.spec.ts) cần gói đang cài. Lõi phải còn
+      # qua smoke sau khi gỡ (ADR 0005), và vòng sao lưu bên dưới chạy trên lõi không có gói như trước.
+      - name: Uninstall the package, the core still passes
+        run: make app-uninstall APP=facilities-commune CONFIRM=yes && make smoke
       # Vòng khôi phục: sao lưu, xóa sạch, dựng lõi trắng, khôi phục, rồi smoke lại.
       # Sao lưu trong khi tải tệp lên liên tục; restore phía dưới kiểm core.files khớp kho tệp (#104).
       - name: Back up while files are being uploaded

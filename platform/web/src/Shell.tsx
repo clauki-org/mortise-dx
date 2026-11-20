@@ -8,10 +8,13 @@ import { AppShell, Burger, Button, Group, NavLink, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Link, Outlet, useLocation } from "react-router";
 import { userManager } from "./auth";
+import { itemPath } from "./menu";
+import { usePackageMenu } from "./PackagePage";
 import { useSession } from "./session";
 import { TenantInfo } from "./TenantInfo";
 
-// Mục của các màn hình dùng chung. Mục do gói khai trong app.yaml (menu) được nối vào đây khi có bộ cài gói.
+// Mục của các màn hình dùng chung, luôn có. Mục do các gói đã cài khai trong app.yaml (menu) nối theo sau, đọc qua
+// GraphQL theo tenant: gỡ gói thì mục của nó tự mất, không phải sửa giao diện.
 const MENU = [{ to: "/tasks", label: "Việc của tôi" }];
 
 const signOut = () => userManager.signoutRedirect();
@@ -20,6 +23,8 @@ export function Shell() {
   const { user } = useSession();
   const [opened, { toggle, close }] = useDisclosure();
   const { pathname } = useLocation();
+  const packages = usePackageMenu();
+  const items = [...MENU, ...packages.items.map((entry) => ({ to: itemPath(entry), label: entry.label }))];
 
   return (
     <AppShell
@@ -55,7 +60,7 @@ export function Shell() {
         </Group>
       </AppShell.Header>
       <AppShell.Navbar p="xs" aria-label="Menu chính">
-        {MENU.map((item) => (
+        {items.map((item) => (
           <NavLink
             key={item.to}
             component={Link}
@@ -65,6 +70,12 @@ export function Shell() {
             onClick={close}
           />
         ))}
+        {/* Lỗi đọc menu của gói không chặn các màn hình dùng chung; chỉ báo ở cuối menu. */}
+        {packages.error && (
+          <Text size="xs" c="red" p="xs" title={packages.error.message}>
+            Không đọc được menu của các gói
+          </Text>
+        )}
       </AppShell.Navbar>
       {/* Nền xám nhạt để các khung nội dung (Paper, nền trắng) tách khỏi nền trang. */}
       <AppShell.Main bg="gray.0">
