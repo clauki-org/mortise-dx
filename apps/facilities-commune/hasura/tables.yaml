@@ -1,143 +1,234 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Bảng của gói mà Hasura đăng ký và quyền trên chúng; cùng định dạng và cùng cách kiểm như
+# Bảng của gói mà Hasura đăng ký, quan hệ và quyền trên chúng; cùng định dạng và cùng cách kiểm như
 # core/hasura/tables.yaml. make app-install áp khi cài gói, bỏ đăng ký khi gỡ; gói đã cài thì
 # `make seed` áp lại và `make smoke` kiểm lệch như bảng của lõi (scripts/hasura-metadata.py).
-# Vai trò `user` chỉ đọc, thêm, sửa, xóa dòng có tenant_id bằng tenant trong token; khi thêm,
-# tenant_id gán từ token (set), không nhận từ dữ liệu gửi lên.
-# Quan hệ cha–con chưa khai vì scripts/hasura-metadata.py chưa quản lý quan hệ; thành phần danh
-# mục lọc con theo facility_id, building_id.
+#
+# Luật quyền nằm ở đây và chỉ đổi qua pull request; ai phụ trách cơ sở nào là dữ liệu trong bảng
+# facility_assignments, xã tự sửa (ADR 0015). Mọi quyền lọc theo tenant trong token trước, rồi mới xét phân công:
+#   user          thấy cơ sở có phân công của mình (custodian hay approver), cùng tòa, phòng của cơ sở đó;
+#                 custodian sửa cơ sở, thêm, sửa, xóa tòa và phòng; không tạo hay xóa cơ sở
+#   manager       chỉ đọc toàn xã (lãnh đạo xã, người duyệt)
+#   tenant_admin  đọc, ghi toàn xã và ghi bảng phân công
+# Vai trò khác user phải gửi kèm header X-Hasura-Role; Hasura chỉ nhận vai trò có trong realm_access.roles của
+# token. Khi thêm, tenant_id gán từ token (set), không nhận từ dữ liệu gửi lên.
+# Quan hệ khai tay (manual_configuration) theo cặp (tenant_id, khóa) cho khớp khóa ngoại ghép; quyền của tòa và
+# phòng đi qua quan hệ tới cơ sở rồi tới bảng phân công. Quyền check của update cũng xét phân công, để custodian
+# không chuyển được tòa hay phòng sang cơ sở mình không phụ trách.
 
 - table: { schema: app_facilities_commune, name: facilities }
+  array_relationships:
+    - name: assignments
+      using:
+        manual_configuration:
+          remote_table: { schema: app_facilities_commune, name: facility_assignments }
+          column_mapping: { tenant_id: tenant_id, id: facility_id }
   select_permissions:
     - role: user
       permission:
-        columns: [id, tenant_id, code, name, address, status, created_at]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        columns: &facility_columns [id, tenant_id, code, name, address, status, created_at]
+        filter: &facility_assigned
+          _and:
+            - &tenant { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+            - { assignments: { user_id: { _eq: X-Hasura-User-Id } } }
+    - role: manager
+      permission: { columns: *facility_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *facility_columns, filter: *tenant }
   insert_permissions:
-    - role: user
+    - role: tenant_admin
       permission:
-        columns: [code, name, address, status]
-        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
-        set: { tenant_id: X-Hasura-Tenant-Id }
+        columns: &facility_input [code, name, address, status]
+        check: *tenant
+        set: &tenant_from_token { tenant_id: X-Hasura-Tenant-Id }
   update_permissions:
     - role: user
       permission:
-        columns: [code, name, address, status]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
-        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        columns: *facility_input
+        filter: &facility_custodian
+          _and:
+            - *tenant
+            - assignments: { _and: [{ user_id: { _eq: X-Hasura-User-Id } }, { duty: { _eq: custodian } }] }
+        check: *facility_custodian
+    - role: tenant_admin
+      permission: { columns: *facility_input, filter: *tenant, check: *tenant }
   delete_permissions:
-    - role: user
-      permission:
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+    - role: tenant_admin
+      permission: { filter: *tenant }
 
 - table: { schema: app_facilities_commune, name: buildings }
+  object_relationships:
+    - name: facility
+      using:
+        manual_configuration:
+          remote_table: { schema: app_facilities_commune, name: facilities }
+          column_mapping: { tenant_id: tenant_id, facility_id: id }
   select_permissions:
     - role: user
       permission:
-        columns: [id, tenant_id, facility_id, code, name, floors, created_at]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        columns: &building_columns [id, tenant_id, facility_id, code, name, floors, created_at]
+        filter: { _and: [*tenant, { facility: *facility_assigned }] }
+    - role: manager
+      permission: { columns: *building_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *building_columns, filter: *tenant }
   insert_permissions:
     - role: user
       permission:
-        columns: [facility_id, code, name, floors]
-        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
-        set: { tenant_id: X-Hasura-Tenant-Id }
+        columns: &building_input [facility_id, code, name, floors]
+        check: &building_custodian { _and: [*tenant, { facility: *facility_custodian }] }
+        set: *tenant_from_token
+    - role: tenant_admin
+      permission: { columns: *building_input, check: *tenant, set: *tenant_from_token }
   update_permissions:
     - role: user
-      permission:
-        columns: [facility_id, code, name, floors]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
-        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+      permission: { columns: *building_input, filter: *building_custodian, check: *building_custodian }
+    - role: tenant_admin
+      permission: { columns: *building_input, filter: *tenant, check: *tenant }
   delete_permissions:
     - role: user
-      permission:
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+      permission: { filter: *building_custodian }
+    - role: tenant_admin
+      permission: { filter: *tenant }
 
 - table: { schema: app_facilities_commune, name: rooms }
+  object_relationships:
+    - name: building
+      using:
+        manual_configuration:
+          remote_table: { schema: app_facilities_commune, name: buildings }
+          column_mapping: { tenant_id: tenant_id, building_id: id }
   select_permissions:
     - role: user
       permission:
-        columns: [id, tenant_id, building_id, code, name, floor, area_type, clear_area_m2, created_at]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        columns: &room_columns [id, tenant_id, building_id, code, name, floor, area_type, clear_area_m2, created_at]
+        filter: { _and: [*tenant, { building: { facility: *facility_assigned } }] }
+    - role: manager
+      permission: { columns: *room_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *room_columns, filter: *tenant }
   insert_permissions:
     - role: user
       permission:
-        columns: [building_id, code, name, floor, area_type, clear_area_m2]
-        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
-        set: { tenant_id: X-Hasura-Tenant-Id }
+        columns: &room_input [building_id, code, name, floor, area_type, clear_area_m2]
+        check: &room_custodian { _and: [*tenant, { building: { facility: *facility_custodian } }] }
+        set: *tenant_from_token
+    - role: tenant_admin
+      permission: { columns: *room_input, check: *tenant, set: *tenant_from_token }
   update_permissions:
     - role: user
-      permission:
-        columns: [building_id, code, name, floor, area_type, clear_area_m2]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
-        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+      permission: { columns: *room_input, filter: *room_custodian, check: *room_custodian }
+    - role: tenant_admin
+      permission: { columns: *room_input, filter: *tenant, check: *tenant }
   delete_permissions:
     - role: user
+      permission: { filter: *room_custodian }
+    - role: tenant_admin
+      permission: { filter: *tenant }
+
+# Cán bộ đọc được phân công của chính mình (để giao diện biết mình phụ trách gì); lãnh đạo đọc toàn xã; chỉ
+# tenant_admin thêm và xóa. Đổi nhiệm vụ là xóa rồi thêm, nên không có quyền update.
+- table: { schema: app_facilities_commune, name: facility_assignments }
+  select_permissions:
+    - role: user
       permission:
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        columns: &assignment_columns [id, tenant_id, facility_id, user_id, duty, created_at]
+        filter: { _and: [*tenant, { user_id: { _eq: X-Hasura-User-Id } }] }
+    - role: manager
+      permission: { columns: *assignment_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *assignment_columns, filter: *tenant }
+  insert_permissions:
+    - role: tenant_admin
+      permission: { columns: [facility_id, user_id, duty], check: *tenant, set: *tenant_from_token }
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *tenant }
 
 # Biên chế và diện tích chuyên dùng do xã nhập; mức m² theo chức danh (working_area_norms) là dữ liệu chung, không
-# đăng ký, xã đọc qua view staffing_allowances.
+# đăng ký, xã đọc qua view staffing_allowances. Không gắn với cơ sở nên không xét phân công: user đọc ghi toàn xã như
+# trước; manager chỉ đọc; tenant_admin đọc ghi (seed-demo nạp biên chế bằng vai trò này).
 - table: { schema: app_facilities_commune, name: staffing }
   select_permissions:
     - role: user
       permission:
-        columns: [id, tenant_id, position, norm_row, headcount, created_at]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        columns: &staffing_columns [id, tenant_id, position, norm_row, headcount, created_at]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *staffing_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *staffing_columns, filter: *tenant }
   insert_permissions:
     - role: user
       permission:
-        columns: [position, norm_row, headcount]
-        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
-        set: { tenant_id: X-Hasura-Tenant-Id }
+        columns: &staffing_input [position, norm_row, headcount]
+        check: *tenant
+        set: *tenant_from_token
+    - role: tenant_admin
+      permission: { columns: *staffing_input, check: *tenant, set: *tenant_from_token }
   update_permissions:
     - role: user
-      permission:
-        columns: [position, norm_row, headcount]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
-        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+      permission: { columns: *staffing_input, filter: *tenant, check: *tenant }
+    - role: tenant_admin
+      permission: { columns: *staffing_input, filter: *tenant, check: *tenant }
   delete_permissions:
     - role: user
-      permission:
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+      permission: { filter: *tenant }
+    - role: tenant_admin
+      permission: { filter: *tenant }
 
 - table: { schema: app_facilities_commune, name: specialized_allowances }
   select_permissions:
     - role: user
       permission:
-        columns: [id, tenant_id, name, area_m2, basis, created_at]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        columns: &specialized_columns [id, tenant_id, name, area_m2, basis, created_at]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *specialized_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *specialized_columns, filter: *tenant }
   insert_permissions:
     - role: user
       permission:
-        columns: [name, area_m2, basis]
-        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
-        set: { tenant_id: X-Hasura-Tenant-Id }
+        columns: &specialized_input [name, area_m2, basis]
+        check: *tenant
+        set: *tenant_from_token
+    - role: tenant_admin
+      permission: { columns: *specialized_input, check: *tenant, set: *tenant_from_token }
   update_permissions:
     - role: user
-      permission:
-        columns: [name, area_m2, basis]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
-        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+      permission: { columns: *specialized_input, filter: *tenant, check: *tenant }
+    - role: tenant_admin
+      permission: { columns: *specialized_input, filter: *tenant, check: *tenant }
   delete_permissions:
     - role: user
-      permission:
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+      permission: { filter: *tenant }
+    - role: tenant_admin
+      permission: { filter: *tenant }
 
 # Hai view chỉ đọc: mức của từng dòng biên chế kèm trích dẫn, và kết quả của từng xã (được phép, thực tế, phần vượt).
+# Số tổng của cả xã, không lộ cơ sở nào, nên mọi vai trò trong xã đều đọc được, không xét phân công.
 - table: { schema: app_facilities_commune, name: staffing_allowances }
   select_permissions:
     - role: user
       permission:
-        columns: [tenant_id, position, headcount, norm_row, norm_title, max_m2, allowed_m2, source, norm_note]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        columns: &staffing_allowance_columns [tenant_id, position, headcount, norm_row, norm_title, max_m2, allowed_m2,
+                                             source, norm_note]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *staffing_allowance_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *staffing_allowance_columns, filter: *tenant }
 
 - table: { schema: app_facilities_commune, name: area_summary }
   select_permissions:
     - role: user
       permission:
-        columns: [tenant_id, working_allowed_m2, shared_allowed_m2, specialized_allowed_m2, allowed_m2, in_use_m2,
-                  surplus_m2, excess_m2]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        columns: &area_summary_columns [tenant_id, working_allowed_m2, shared_allowed_m2, specialized_allowed_m2,
+                                       allowed_m2, in_use_m2, surplus_m2, excess_m2]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *area_summary_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *area_summary_columns, filter: *tenant }

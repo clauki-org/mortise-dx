@@ -49,14 +49,18 @@ if [[ "$public_url" =~ ^http://(localhost|127\.0\.0\.1)(:|/|$) ]]; then
   echo "keycloak: mortise-web nhận thêm $web_dev_url cho máy chủ phát triển giao diện"
 fi
 
-# username  tenant   vai trò thêm
+# username  tenant   vai trò thêm. admin.<x> quản trị một tenant (tenant_admin): gói dùng vai trò này để tenant tự
+# sửa dữ liệu cấu hình của mình, ví dụ phân công cán bộ.
 users=(
   "user.a  xa-a  -"
   "manager.a  xa-a  manager"
+  "admin.a  xa-a  tenant_admin"
   "user.b  xa-b  -"
   "manager.b  xa-b  manager"
+  "admin.b  xa-b  tenant_admin"
   "user.c  xa-c  -"
   "manager.c  xa-c  manager"
+  "admin.c  xa-c  tenant_admin"
 )
 
 for entry in "${users[@]}"; do

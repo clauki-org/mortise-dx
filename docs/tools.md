@@ -98,15 +98,17 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - Dùng bản Community Edition (`-ce`, Apache-2.0); bản không có `-ce` chứa mã Enterprise.
   - Hasura kiểm JWT lần nữa sau APISIX, để một lớp cấu hình sai không làm lộ dữ liệu.
   - Claim trong token được ánh xạ sang biến phiên: `X-Hasura-User-Id` từ `sub`, `X-Hasura-Tenant-Id` từ `tenant`,
-    vai trò từ `realm_access.roles`.
+    vai trò từ `realm_access.roles`. Mặc định truy vấn chạy với vai trò `user`; muốn dùng vai trò khác có trong token
+    (`manager`, `tenant_admin`) thì gửi kèm header `X-Hasura-Role`.
   - Quyền mẫu: vai trò `user` chỉ đọc được dòng của `core.tenants` có `id` bằng tenant trong token.
 - **Cấu hình:** biến môi trường trong `compose.yaml`. Bảng được đăng ký và quyền theo vai trò khai báo trong
   `core/hasura/tables.yaml`, `platform/schema/hasura/tables.yaml` và `apps/<gói>/hasura/*.yaml` của gói đã cài
   (`make app-install`), cùng định dạng Hasura xuất ra; tệp của gói chỉ được khai bảng trong lược đồ của gói. `make seed` áp
   các tệp này theo kiểu ghi đè (quyền đã bị sửa sai cũng về đúng), `make smoke` báo lỗi khi Hasura lệch khỏi tệp,
   `make check-fast` báo lỗi khi một quyền không lọc theo tenant (`scripts/hasura-metadata.py`). Kiểm theo cấu trúc:
-  phải có một nhánh AND so `_eq` với `X-Hasura-Tenant-Id`; quyền sửa phải có cả `filter` lẫn `check`. Tệp chỉ quản lý
-  bảng và quyền. Quan hệ và computed field chưa quản lý: tạo tay trong Hasura thì `make smoke` báo lệch. Action,
+  phải có một nhánh AND so `_eq` với `X-Hasura-Tenant-Id`; quyền sửa phải có cả `filter` lẫn `check`. Tệp quản lý
+  bảng, quan hệ và quyền; quan hệ cần khi quyền phải đi qua bảng khác (ví dụ phân công cán bộ của gói xã). Computed
+  field chưa quản lý: tạo tay trong Hasura thì `make smoke` báo lệch. Action,
   remote schema và cron trigger chưa được kiểm.
 - **Xem:** `http://127.0.0.1:8082/console`, admin secret `HASURA_ADMIN_SECRET`.
 

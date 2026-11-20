@@ -36,7 +36,9 @@ Token mang các claim lõi dùng để phân quyền (hợp đồng: [`contracts
 
 ## Dữ liệu: `POST /v1/graphql`
 
-API GraphQL do Hasura tự sinh từ CSDL. Mỗi truy vấn chỉ thấy các dòng thuộc tenant trong token.
+API GraphQL do Hasura tự sinh từ CSDL. Mỗi truy vấn chỉ thấy các dòng thuộc tenant trong token; gói có thể giới hạn
+thêm, ví dụ gói xã chỉ cho cán bộ thấy cơ sở mình được phân công. Truy vấn chạy với vai trò `user`; muốn dùng vai trò
+khác có trong token (`manager`, `tenant_admin`) thì gửi kèm header `X-Hasura-Role: <vai trò>`.
 
 ```bash
 curl -fsS -X POST http://localhost:9080/v1/graphql \
