@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e audit-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query seed-demo
+  check-fast web-check e2e audit-verify backup-under-load files-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query seed-demo
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -52,8 +52,14 @@ migrate-status: ## Migration nào của lõi đã áp, nào còn chờ (cần l�
 audit-verify: ## Kiểm nhật ký thay đổi không bị sửa lén; ANCHOR=<thư mục sao lưu> để đối chiếu băm lúc sao lưu
 	@scripts/audit-verify.sh "$(ANCHOR)"
 
-backup: ## Sao lưu CSDL, tệp và .env ra ngoài repo (BACKUP_DIR để đổi nơi lưu)
+backup: ## Sao lưu CSDL, tệp và .env ra ngoài repo (BACKUP_DIR để đổi nơi lưu); dịch vụ ghi dữ liệu dừng trong lúc sao lưu
 	@scripts/backup.sh
+
+backup-under-load: ## Sao lưu trong khi tải tệp lên liên tục qua cổng; khôi phục bản này để kiểm core.files khớp kho tệp
+	@scripts/backup-under-load.sh
+
+files-verify: ## Kiểm mỗi dòng core.files có đúng một đối tượng trong kho tệp, không có đối tượng mồ côi (cần lõi đang chạy)
+	@scripts/files-verify.sh
 
 simulate: ## Chạy bộ giả lập thiết bị demo, gửi số đo mỗi 5 giây; thêm ARGS="--set xa-a/archive-01:humidity=78"
 	docker compose --profile simulator run --rm --build simulator $(ARGS)

@@ -144,6 +144,10 @@ từng đặt giá trị khác mặc định; `make env` tự thêm hai biến m
 
 ### Fixed
 
+- `make backup` dừng các dịch vụ ghi dữ liệu (cổng, files-api, iot-bridge…) trong lúc sao lưu rồi bật lại; trước đây
+  tệp tải lên giữa lúc dump CSDL và lúc chép kho tệp thành đối tượng không có dòng `core.files`. `make restore` kiểm
+  `core.files` khớp kho tệp sau khi khôi phục (`make files-verify`) và báo lỗi nếu lệch: bản sao lưu cũ có đối tượng
+  mồ côi vẫn được nạp đủ, nhưng lệnh thoát mã lỗi kèm danh sách đối tượng lệch.
 - `make restore` dừng cả files-api trong lúc nạp dữ liệu; trước đây nó vẫn chạy và có thể ghi tệp xen vào dữ liệu đang
   bị ghi đè.
 - Cổng trả lỗi `401` của `/v1/graphql` và `/v1/workflow/*` dạng JSON `{"error": "..."}` như hợp đồng ghi, thay vì

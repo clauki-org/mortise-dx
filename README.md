@@ -81,12 +81,16 @@ make e2e     # kịch bản demo trên trình duyệt (cần Node)
 Trang quản trị Keycloak, Hasura và Flowable là công cụ kỹ thuật cho người vận hành, chỉ mở trong máy chủ; lõi không có giao
 diện cho người dùng nghiệp vụ. Cách gọi API kèm ví dụ và ý nghĩa mã lỗi: [docs/api.md](docs/api.md).
 
-Sao lưu và khôi phục (đã kiểm: sao lưu, xóa sạch lõi, dựng lại, khôi phục, `make smoke` qua):
+Sao lưu và khôi phục (đã kiểm: sao lưu trong lúc đang tải tệp lên, xóa sạch lõi, dựng lại, khôi phục, `core.files`
+khớp kho tệp, `make smoke` qua):
 
 ```bash
 make backup                                       # CSDL, tệp, .env → ~/.local/share/mortise-dx/backups/<thời điểm>
 make restore FROM=<thư mục sao lưu> CONFIRM=yes   # GHI ĐÈ dữ liệu hiện tại
 ```
+
+Trong lúc sao lưu, các dịch vụ ghi dữ liệu dừng, kể cả cổng: người dùng và thiết bị không gọi được lõi cho tới khi sao
+lưu xong. Nhờ vậy CSDL, CSDL của Scorpio và kho tệp trong bản sao lưu cùng một thời điểm.
 
 Tài khoản demo: `user.a`, `manager.a`, `admin.a` (tenant `xa-a`), tương tự `.b` cho `xa-b` và `.c` cho `xa-c`, ba xã
 của "Tỉnh Mẫu", tỉnh hư cấu; mật khẩu là `DEMO_USER_PASSWORD` trong `.env`. `admin.*` có vai trò `tenant_admin`
