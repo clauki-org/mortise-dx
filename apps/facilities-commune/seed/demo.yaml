@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Dữ liệu demo HƯ CẤU của ba xã thuộc "Tỉnh Mẫu" (#58): tên, địa chỉ, diện tích đều đặt ra để minh họa, không lấy
-# từ cơ quan nào. `make seed-demo` nạp tệp này qua cổng bằng tài khoản của từng xã (load.py).
+# từ cơ quan nào. `make seed-demo` nạp tệp này qua cổng bằng tài khoản quản trị của từng xã (`admin`, vai trò
+# tenant_admin), rồi phân công cán bộ: mỗi tài khoản trong `custodians` phụ trách cơ sở đó (load.py).
 # Tổng diện tích thông thủy của cơ sở đang dùng: xã A 1.000 m², xã B 730 m², xã C 460 m²; xã C còn một cơ sở dôi dư
 # 250 m². Biên chế hư cấu, chỉ dùng hai dòng của phụ lục NĐ 369/2026/NĐ-CP có ghi thẳng chức danh (STT 9: chuyên
 # viên chính, 20 m²; STT 10: chuyên viên, 15 m²), để không phải xếp chức danh lãnh đạo xã vào bậc nào. Kết quả
@@ -10,7 +11,7 @@
 # vượt 130 m²; xã C được phép 480 m², không vượt, cơ sở dôi dư 250 m² tính riêng.
 
 xa-a:
-  user: user.a
+  admin: admin.a
   staffing:
     - { position: Chuyên viên chính, norm_row: 9, headcount: 4 }
     - { position: Chuyên viên, norm_row: 10, headcount: 14 }
@@ -19,6 +20,7 @@ xa-a:
       name: Trụ sở UBND xã A
       address: Thôn 1, xã A, Tỉnh Mẫu
       status: in_use
+      custodians: [user.a]
       buildings:
         - code: NLV
           name: Nhà làm việc
@@ -41,6 +43,7 @@ xa-a:
       name: Trụ sở xã cũ (tiếp nhận khi sắp xếp)
       address: Thôn 5, xã A, Tỉnh Mẫu
       status: in_use
+      custodians: [user.a]
       buildings:
         - code: NLV
           name: Nhà làm việc
@@ -52,7 +55,7 @@ xa-a:
             - { code: P04, name: Kho, floor: 1, area_type: shared, clear_area_m2: 50 }
 
 xa-b:
-  user: user.b
+  admin: admin.b
   staffing:
     - { position: Chuyên viên chính, norm_row: 9, headcount: 6 }
     - { position: Chuyên viên, norm_row: 10, headcount: 12 }
@@ -61,6 +64,7 @@ xa-b:
       name: Trụ sở UBND xã B
       address: Thôn 2, xã B, Tỉnh Mẫu
       status: in_use
+      custodians: [user.b]
       buildings:
         - code: NLV
           name: Nhà làm việc
@@ -77,7 +81,7 @@ xa-b:
             - { code: P205, name: Kho lưu trữ, floor: 2, area_type: shared, clear_area_m2: 100 }
 
 xa-c:
-  user: user.c
+  admin: admin.c
   staffing:
     - { position: Chuyên viên chính, norm_row: 9, headcount: 3 }
     - { position: Chuyên viên, norm_row: 10, headcount: 12 }
@@ -86,6 +90,7 @@ xa-c:
       name: Trụ sở UBND xã C
       address: Thôn 3, xã C, Tỉnh Mẫu
       status: in_use
+      custodians: [user.c]
       buildings:
         - code: NLV
           name: Nhà làm việc
@@ -101,6 +106,7 @@ xa-c:
       name: Trụ sở xã cũ (không còn sử dụng)
       address: Thôn 7, xã C, Tỉnh Mẫu
       status: surplus
+      custodians: [user.c]
       buildings:
         - code: NLV
           name: Nhà làm việc cũ

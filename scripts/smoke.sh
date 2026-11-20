@@ -122,7 +122,7 @@ for pair in "user.a xa-a" "user.b xa-b"; do
 done
 
 # Quyền Hasura đang chạy phải khớp tệp khai báo (core/hasura/, platform/schema/hasura/); ai sửa tay trên trang quản
-# trị thì báo ở đây. Quyền sai thì `make seed` đưa về đúng; bảng hay quan hệ tạo thừa thì thông báo chỉ cách gỡ.
+# trị thì báo ở đây. Quyền hay quan hệ sai thì `make seed` đưa về đúng; bảng đăng ký thừa thì thông báo chỉ cách gỡ.
 if uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py check; then
   status=khớp
 else

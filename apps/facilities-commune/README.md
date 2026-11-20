@@ -14,9 +14,10 @@ với diện tích thông thủy và loại diện tích của từng phòng đ�
 ```
 app.yaml             khai báo gói theo contracts/app.schema.json: lược đồ, thư mục migration và Hasura
 schema/migrations/   migration dbmate của gói; bảng theo dõi public.facilities_commune_schema_migrations (ADR 0005)
-hasura/tables.yaml   bảng đăng ký và quyền theo tenant cho vai trò `user`, cùng định dạng với core/hasura/
+hasura/tables.yaml   bảng đăng ký, quan hệ và quyền theo tenant và phân công, cùng định dạng với core/hasura/
 catalog/             cấu hình thành phần danh mục (cơ sở → tòa → phòng) theo contracts/catalog.schema.json
-tests/smoke.sh       kiểm qua cổng: cách ly tenant, tenant lấy từ token, khóa ngoại ghép, RESTRICT, nhật ký, phần vượt
+tests/smoke.sh       kiểm qua cổng: cách ly tenant, tenant lấy từ token, phân công, khóa ngoại ghép, RESTRICT,
+                     nhật ký, phần vượt
 ```
 
 ## Dữ liệu
@@ -33,11 +34,24 @@ Lược đồ `app_facilities_commune`.
 | `specialized_allowances` | Diện tích chuyên dùng do cấp có thẩm quyền quyết định, kèm căn cứ | `UNIQUE (tenant_id, name)` |
 | `staffing_allowances` (view) | Mỗi dòng biên chế kèm mức m², diện tích được phép và trích dẫn dòng phụ lục | Chỉ đọc |
 | `area_summary` (view) | Mỗi xã một dòng: làm việc, sử dụng chung, chuyên dùng, được phép, đang dùng, dôi dư, phần vượt | Chỉ đọc |
+| `facility_assignments` | Phân công: `user_id` (`sub` của cán bộ trong token) phụ trách (`custodian`) hay duyệt (`approver`) một cơ sở | Khóa ngoại ghép `(tenant_id, facility_id)`, `ON DELETE CASCADE`; `UNIQUE (tenant_id, facility_id, user_id, duty)` |
 
-Khóa ngoại ghép kèm `tenant_id` làm CSDL tự chặn việc nối tòa hay phòng vào cơ sở của xã khác, dù lớp API có lọt.
-Quyền Hasura cho vai trò `user`: chỉ đọc, thêm, sửa, xóa dòng có `tenant_id` bằng claim trong token; cột
-`tenant_id` không nhận từ dữ liệu gửi lên mà gán từ token. Mọi bảng xã nhập gắn nhật ký thay đổi
-(`core.audit_attach`, ADR 0009): mỗi thao tác qua Hasura ghi lại `sub` của token và vai trò.
+Khóa ngoại ghép kèm `tenant_id` làm CSDL tự chặn việc nối tòa, phòng hay phân công vào cơ sở của xã khác, dù lớp
+API có lọt. Mọi quyền Hasura lọc theo tenant trong token trước, rồi xét phân công
+([ADR 0015](../../docs/adr/0015-assignment-as-data.md)):
+
+| Vai trò | Được làm |
+|---|---|
+| `user` | Thấy cơ sở có phân công của mình cùng tòa, phòng của nó; nhiệm vụ `custodian` sửa cơ sở, thêm, sửa, xóa tòa và phòng; đọc phân công của chính mình |
+| `manager` | Chỉ đọc toàn xã |
+| `tenant_admin` | Đọc, ghi toàn xã; thêm, xóa phân công |
+
+Vai trò khác `user` gửi kèm header `X-Hasura-Role`. Cột `tenant_id` không nhận từ dữ liệu gửi lên mà gán từ token.
+Mọi bảng xã nhập gắn nhật ký thay đổi (`core.audit_attach`, ADR 0009): mỗi thao tác qua Hasura ghi lại `sub` của
+token và vai trò.
+
+Biên chế, diện tích chuyên dùng và hai view diện tích không gắn với cơ sở nên không xét phân công: mọi vai trò
+trong xã đọc được; `user` và `tenant_admin` sửa được biên chế, diện tích chuyên dùng.
 
 ## Diện tích được phép và phần vượt
 
@@ -89,8 +103,8 @@ nhiều cơ quan chung một trụ sở (Điều 6 khoản 2 điểm a, sửa b�
 1.000 m² (xã A), 730 m² (xã B), 460 m² (xã C); xã C còn một cơ sở dôi dư 250 m². Biên chế hư cấu chỉ dùng hai dòng
 phụ lục có ghi thẳng chức danh (STT 9 chuyên viên chính 20 m², STT 10 chuyên viên 15 m²); kết quả: xã A được phép
 580 m², vượt 420 m²; xã B được phép 600 m², vượt 130 m²; xã C được phép 480 m², không vượt. `make seed-demo` nạp qua
-cổng bằng tài khoản của từng xã (`seed/load.py`), chạy lại không tạo bản trùng; smoke của gói kiểm các số này khi
-đã nạp.
+cổng bằng tài khoản quản trị của từng xã (`admin.*`, `seed/load.py`) rồi phân công `user.*` phụ trách mọi cơ sở của
+xã mình; chạy lại không tạo bản trùng; smoke của gói kiểm các số này khi đã nạp.
 
 Mục `menu` `facilities` trong `app.yaml` khai cấu hình danh mục và được `make check-fast` kiểm theo schema, nhưng
 chưa hiện trên giao diện: đưa menu của gói vào khung giao diện thuộc lệnh cài gói đầy đủ ở Sprint 2.

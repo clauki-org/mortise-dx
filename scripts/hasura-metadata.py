@@ -3,7 +3,8 @@
 #
 # Quyền dữ liệu của Hasura khai báo trong repo (core/hasura/, platform/schema/hasura/) là bản gốc; Hasura đang
 # chạy là bản sao. Ba lệnh:
-#   apply  đưa Hasura về đúng tệp: đăng ký bảng còn thiếu, thay quyền sai, bỏ quyền không khai (make seed)
+#   apply  đưa Hasura về đúng tệp: đăng ký bảng còn thiếu, thay quyền và quan hệ sai, bỏ phần không khai
+#          (make seed)
 #   check  báo lỗi khi Hasura lệch khỏi tệp, kể cả bảng đăng ký mà không khai (make smoke)
 #   lint   không cần Hasura: mọi quyền phải lọc theo tenant trong token (make check-fast)
 # Không truyền tệp thì dùng mọi tệp *.yaml trong DECLARATIONS, để danh sách tệp chỉ nằm một chỗ, cộng tệp của
@@ -28,10 +29,12 @@ PACKAGE_DECLARATIONS = ("apps/*/hasura",)
 TENANT = "X-Hasura-Tenant-Id"
 
 
-# Phần metadata của một bảng mà script quản lý. Quan hệ và computed field chưa quản lý: khai trong tệp thì báo
-# lỗi thay vì lặng lẽ không áp, có trong Hasura thì check báo lệch để không ai tạo tay.
-MANAGED = {"table"} | {f"{kind}_permissions" for kind in KINDS}
-UNMANAGED = ("object_relationships", "array_relationships", "computed_fields")
+# Phần metadata của một bảng mà script quản lý. Quan hệ được quản lý vì quyền cần đi qua quan hệ (ví dụ chỉ
+# thấy phòng của cơ sở mình được phân công). Computed field chưa quản lý: khai trong tệp thì báo lỗi thay vì
+# lặng lẽ không áp, có trong Hasura thì check báo lệch để không ai tạo tay.
+RELATIONSHIPS = {"object_relationships": "object", "array_relationships": "array"}
+MANAGED = {"table"} | {f"{kind}_permissions" for kind in KINDS} | RELATIONSHIPS.keys()
+UNMANAGED = ("computed_fields",)
 
 
 def package_schema(path: str) -> str | None:
@@ -111,28 +114,81 @@ def permissions(entry: dict | None, kind: str) -> dict[str, dict]:
     return found
 
 
+def without_nulls(value: object) -> object:
+    # Hasura xuất kèm khóa không đặt dưới dạng null (ví dụ insertion_order của quan hệ khai tay); bỏ đi để so
+    # khớp với tệp khai báo không báo lệch giả.
+    if isinstance(value, dict):
+        return {k: without_nulls(v) for k, v in value.items() if v is not None}
+    if isinstance(value, list):
+        return [without_nulls(v) for v in value]
+    return value
+
+
+def relationships(entry: dict | None, part: str) -> dict[str, dict]:
+    return {item["name"]: without_nulls(item["using"]) for item in (entry or {}).get(part, [])}
+
+
+def relationship_actions(key: tuple[str, str], entry: dict, current: dict) -> tuple[list, list, list]:
+    """Lệnh bỏ và tạo quan hệ của một bảng để khớp khai báo, kèm mô tả chỗ lệch."""
+    table = {"schema": key[0], "name": key[1]}
+    drops, creates, drift = [], [], []
+    for part, kind in RELATIONSHIPS.items():
+        want, have = relationships(entry, part), relationships(current.get(key), part)
+        for name in sorted(want.keys() | have.keys()):
+            if want.get(name) == have.get(name):
+                continue
+            drift.append(f"{key[0]}.{key[1]}: quan hệ {name} khác khai báo")
+            args = {"source": "default", "table": table}
+            if name in have:
+                # cascade chỉ kéo theo quyền cùng bảng; quyền ở bảng khác đi qua quan hệ này thì Hasura từ
+                # chối cả lô. plan vì vậy bỏ mọi quyền trước khi bỏ quan hệ rồi tạo lại sau.
+                drop = args | {"relationship": name, "cascade": True}
+                drops.append({"type": "pg_drop_relationship", "args": drop})
+            if name in want:
+                create = args | {"name": name, "using": want[name]}
+                creates.append({"type": f"pg_create_{kind}_relationship", "args": create})
+    return drops, creates, drift
+
+
 def plan(declared: dict, current: dict) -> tuple[list[dict], list[str]]:
-    """Các lệnh metadata đưa Hasura về đúng khai báo, và mô tả từng chỗ lệch."""
-    actions, drift = [], []
+    """Các lệnh metadata đưa Hasura về đúng khai báo, và mô tả từng chỗ lệch.
+
+    Thứ tự trong lô: đăng ký bảng, bỏ quyền, bỏ quan hệ, tạo quan hệ, tạo quyền. Quan hệ trỏ tới bảng khác nên
+    cần mọi bảng đã đăng ký; quyền có thể đi qua quan hệ nên tạo sau quan hệ và bỏ trước quan hệ.
+    """
+    tracks, rel_drops, rel_creates, drift = [], [], [], []
+    for key, entry in declared.items():
+        if key not in current:
+            table = {"schema": key[0], "name": key[1]}
+            tracks.append({"type": "pg_track_table", "args": {"source": "default", "table": table}})
+            drift.append(f"{key[0]}.{key[1]}: chưa đăng ký")
+        drops, creates, changed = relationship_actions(key, entry, current)
+        rel_drops, rel_creates, drift = rel_drops + drops, rel_creates + creates, drift + changed
+    # Quyền ở bất kỳ bảng nào cũng có thể đi qua quan hệ sắp bỏ, và Hasura từ chối bỏ quan hệ khi còn quyền
+    # như vậy; dựng lại toàn bộ quyền thì không phải dò quyền nào phụ thuộc quan hệ nào.
+    rebuild = bool(rel_drops)
+    perm_drops, perm_creates = [], []
     for key, entry in declared.items():
         table = {"schema": key[0], "name": key[1]}
         name = f"{key[0]}.{key[1]}"
-        if key not in current:
-            actions.append({"type": "pg_track_table", "args": {"source": "default", "table": table}})
-            drift.append(f"{name}: chưa đăng ký")
         for kind in KINDS:
             want, have = permissions(entry, kind), permissions(current.get(key), kind)
             for role in sorted(want.keys() | have.keys()):
-                if want.get(role) == have.get(role):
+                same = want.get(role) == have.get(role)
+                if not same:
+                    drift.append(f"{name}: quyền {kind} của vai trò {role} khác khai báo")
+                if same and not rebuild:
                     continue
-                drift.append(f"{name}: quyền {kind} của vai trò {role} khác khai báo")
                 args = {"source": "default", "table": table, "role": role}
                 if role in have:
-                    actions.append({"type": f"pg_drop_{kind}_permission", "args": args})
+                    perm_drops.append({"type": f"pg_drop_{kind}_permission", "args": args})
                 if role in want:
-                    actions.append(
+                    perm_creates.append(
                         {"type": f"pg_create_{kind}_permission", "args": args | {"permission": want[role]}}
                     )
+    actions = tracks + perm_drops + rel_drops + rel_creates + perm_creates
+    for key in declared:
+        name = f"{key[0]}.{key[1]}"
         for part in UNMANAGED:
             if current.get(key, {}).get(part):
                 drift.append(f"{name}: có {part} tạo ngoài khai báo; gỡ trên trang quản trị Hasura")

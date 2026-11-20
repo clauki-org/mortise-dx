@@ -12,6 +12,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Phân công cán bộ theo cơ sở trong gói `facilities-commune` (ADR 0015): cán bộ chỉ thấy và sửa cơ sở mình được
+  phân công; `manager` đọc toàn xã; `tenant_admin` (tài khoản demo `admin.a`, `admin.b`, `admin.c`) tạo cơ sở và tự
+  sửa phân công qua GraphQL. `scripts/hasura-metadata.py` quản lý cả quan hệ Hasura.
 - Gói `facilities-commune` tính diện tích được phép và phần vượt tiêu chuẩn, định mức của từng xã theo NĐ 155/2025
   sửa bởi NĐ 369/2026 (view `area_summary`), từ biên chế theo dòng phụ lục mức m² có trích dẫn và diện tích
   chuyên dùng; dữ liệu demo có biên chế, xã A vượt 420 m².

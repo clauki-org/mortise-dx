@@ -35,6 +35,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0012](0012-device-context-ngsi-ld.md) | Dữ liệu thiết bị: nhận qua MQTT, giữ theo NGSI-LD trong Scorpio, đọc qua context-api | Chấp nhận |
 | [0013](0013-component-config-contracts.md) | Thành phần Tầng 2 chỉ biết cấu hình của nó; schema cấu hình và bản mô tả trong `contracts/` | Chấp nhận |
 | [0014](0014-cold-audit-archive.md) | Kho lạnh cho nhật ký thay đổi: Parquet trên SeaweedFS, truy vấn bằng DuckDB, chuỗi băm nối qua đoạn | Chấp nhận |
+| [0015](0015-assignment-as-data.md) | Luật quyền là khai báo, phân công cán bộ theo cơ sở là dữ liệu xã tự sửa | Chấp nhận |
 
 ## Quyết định còn mở
 
