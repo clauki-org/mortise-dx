@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e audit-verify backup-under-load files-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query seed-demo
+  check-fast web-check e2e audit-verify backup-under-load files-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -72,6 +72,8 @@ device-remove: ## Thu hồi tài khoản MQTT của thiết bị: make device-re
 archive: ## Xuất nhật ký thay đổi cũ sang kho lạnh: make archive BEFORE=<ngày, ví dụ 2026-11-01>
 	@test -n "$(BEFORE)" || { echo "Cách dùng: make archive BEFORE=2026-11-01" >&2; exit 1; }
 	@docker compose --profile tools run --rm --build cold-archive archive --before "$(BEFORE)"
+cold-verify: ## Tính lại chuỗi băm của mọi đoạn nhật ký trong kho lạnh từ tệp; thêm ANCHOR=<id>:<băm> để đối chiếu neo
+	@docker compose --profile tools run --rm --build cold-archive verify $(if $(ANCHOR),--anchor "$(ANCHOR)")
 cold-query: ## Truy vấn nhật ký gộp kho lạnh và CSDL bằng DuckDB: make cold-query SQL="SELECT count(*) FROM audit_all"
 	@test -n "$(SQL)" || { echo 'Cách dùng: make cold-query SQL="SELECT count(*) FROM audit_all"' >&2; exit 1; }
 	@docker compose --profile tools run --rm --build cold-archive query "$(SQL)"

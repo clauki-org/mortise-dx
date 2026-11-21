@@ -536,16 +536,42 @@ level 10 0
 close_rule_cases
 check "Đóng hồ sơ xong không còn việc nào của luật mẫu" "$(rule_cases "$manager_a" | grep -c . || true)" 0
 # Kho lạnh (ADR 0014): xuất mọi dòng nhật ký tới lúc này sang Parquet; công cụ chỉ ghi nhận đoạn khi băm tính lại
-# từ tệp khớp từng dòng. Chưa xóa gì khỏi CSDL (#97), nên bảng ảo audit_all phải có đúng số dòng như CSDL.
+# từ tệp khớp từng dòng, rồi xóa các dòng đó khỏi CSDL trong cùng giao dịch (#97). Sau đó chuỗi băm vẫn phải nối
+# qua đoạn đã xóa, ở CSDL (audit-verify) lẫn ở kho lạnh (cold verify), và mọi đường xóa khác vẫn bị chặn.
 cold() { docker compose --profile tools run --rm --build --quiet-pull cold-archive "$@" 2>/dev/null; }
-archived=$(cold archive --before "$(date -u -d '+1 minute' +%FT%TZ)" | grep -c -e 'băm từng dòng khớp' -e 'Không có dòng' || true)
-check "Xuất nhật ký sang kho lạnh, băm tính lại từ tệp khớp" "$archived" 1
+# Dòng sẽ được chuyển đi, làm neo như băm cuối ghi trong một bản sao lưu cũ.
+cold_anchor=$(sql -c "SELECT id || ':' || encode(hash, 'hex') FROM core.audit_log
+  WHERE id > coalesce((SELECT max(last_id) FROM core.audit_segments), 0) ORDER BY id LIMIT 1")
+# audit_all gồm mọi đoạn (từ tệp) cộng các dòng trong CSDL sau đoạn cuối; con số này không được đổi khi chuyển.
+total=$(sql -c "SELECT (SELECT coalesce(sum(rows), 0) FROM core.audit_segments) + (SELECT count(*)
+  FROM core.audit_log WHERE id > coalesce((SELECT max(last_id) FROM core.audit_segments), 0))")
+archived=$(cold archive --before "$(date -u -d '+1 minute' +%FT%TZ)" | grep -c -e 'đã xóa' -e 'Không có dòng' || true)
+check "Xuất nhật ký sang kho lạnh, băm tính lại từ tệp khớp, xóa khỏi CSDL" "$archived" 1
 # Phòng trường hợp lệnh trên chỉ trả "Không có dòng" (đồng hồ lệch): phải có ít nhất một đoạn đã ghi nhận.
-segments=$(docker compose exec -T postgres psql -qAtX -U postgres -d mortise -c 'SELECT count(*) > 0 FROM core.audit_segments')
+segments=$(sql -c 'SELECT count(*) > 0 FROM core.audit_segments')
 check "Có đoạn nhật ký đã ghi nhận trong core.audit_segments" "$segments" t
-in_db=$(docker compose exec -T postgres psql -qAtX -U postgres -d mortise -c 'SELECT count(*) FROM core.audit_log')
+check "Các dòng vừa lưu trữ không còn trong CSDL" "$(sql -c "SELECT count(*) FROM core.audit_log
+  WHERE id <= (SELECT max(last_id) FROM core.audit_segments) AND id >= ${cold_anchor%%:*}")" 0
 in_all=$(cold query "SELECT count(*) AS n FROM audit_all" | grep -oE '│ +[0-9]+ +│' | tr -dc '0-9')
-check "Truy vấn gộp kho lạnh và CSDL đếm đúng số dòng nhật ký" "$in_all" "$in_db"
+check "Truy vấn gộp kho lạnh và CSDL vẫn đếm đủ số dòng nhật ký" "$in_all" "$total"
+check "Kho lạnh: tính lại chuỗi băm của mọi đoạn từ tệp" "$(cold verify >/dev/null && echo khớp || echo lệch)" khớp
+check "Chuỗi băm trong CSDL nối qua đoạn đã xóa" "$(scripts/audit-verify.sh >/dev/null 2>&1 && echo khớp || echo lệch)" khớp
+check "Neo của bản sao lưu cũ trỏ vào đoạn đã xóa: đối chiếu qua tệp" \
+  "$(scripts/audit-verify.sh "$cold_anchor" >/dev/null 2>&1 && echo khớp || echo lệch)" khớp
+check "Neo sai trỏ vào đoạn đã xóa bị phát hiện" \
+  "$(scripts/audit-verify.sh "${cold_anchor%%:*}:$(printf '0%.0s' {1..64})" >/dev/null 2>&1 && echo khớp || echo lệch)" lệch
+# Ghi tiếp sau khi đã xóa hết dòng cũ: dòng mới phải nối vào băm cuối của đoạn, không bắt đầu lại chuỗi.
+sql -c "UPDATE core.files SET name = name WHERE id = '$file_id'" >/dev/null
+check "Ghi sau khi xóa vẫn nối vào chuỗi" "$(scripts/audit-verify.sh >/dev/null 2>&1 && echo khớp || echo lệch)" khớp
+# Chủ bảng (hasura, tài khoản của Hasura) cũng không xóa được: xóa thẳng, hay gọi lại hàm xóa cho đoạn đã lưu.
+as_owner() {
+  docker compose exec -T -e PGPASSWORD="$HASURA_DB_PASSWORD" postgres \
+    psql -qAtX -h 127.0.0.1 -U hasura -d mortise -c "$1" 2>&1 | grep -c 'không' || true
+}
+check "Chủ bảng không xóa thẳng được dòng nhật ký" \
+  "$(as_owner 'DELETE FROM core.audit_log WHERE id = (SELECT max(id) FROM core.audit_log)')" 1
+check "Không xóa được qua hàm xóa ngoài giao dịch lưu trữ" \
+  "$(as_owner 'SELECT core.audit_purge((SELECT max(id) FROM core.audit_segments))')" 1
 
 # Bộ giả lập (devices/simulator) gửi một lượt cho mọi thiết bị demo bằng tài khoản của từng thiết bị: số đo của
 # thiết bị xa-a tới được /v1/context của user.a. Mã riêng, khác số đo bài MQTT ở trên đã ghi, để bài này chỉ

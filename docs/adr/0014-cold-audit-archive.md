@@ -41,7 +41,17 @@ kho rẻ hơn, vẫn truy vấn được, và vẫn kiểm được chuỗi băm
 - SeaweedFS chạy với `-volume.max=100`: mặc định 8 volume, mà mỗi bucket chiếm vài volume ngay lần ghi đầu, nên
   bucket thứ hai không ghi được (đã gặp: lỗi 500 "No writable volumes").
 
-Phần này chưa xóa dòng nào khỏi CSDL; xóa có kiểm soát, nối `make audit-verify` qua đoạn và đo trước, sau là #97.
+Bổ sung ngày 2026-11-21 (#97):
+
+- Ghi nhận đoạn xong, cùng giao dịch đó `core.audit_purge` xóa các dòng của đoạn khỏi `core.audit_log`. Trigger của
+  `core.audit_log` chỉ cho xóa khi hàm này đang xóa đúng đoạn nó nhận và đoạn được ghi nhận trong chính giao dịch
+  đó; mọi đường xóa khác, kể cả của chủ bảng, vẫn bị chặn. Đoạn ghi nhận trước khi có bổ sung này không bao giờ
+  được xóa: dòng của chúng ở lại CSDL.
+- Chuỗi băm nối qua phần đã xóa: dòng mới ghi sau khi bảng trống nối vào băm cuối của đoạn cuối; `core.audit_verify`
+  nối dòng đầu tiên sau một đoạn vào băm cuối của đoạn đó. `make cold-verify` tính lại chuỗi bên trong mọi đoạn từ
+  tệp, so SHA-256 của tệp và kiểm các đoạn nối liền nhau.
+- Băm neo của bản sao lưu: CSDL đã xóa hết dòng thì lấy băm cuối của đoạn cuối. Neo trùng dòng cuối của một đoạn
+  thì đối chiếu với `core.audit_segments`; neo nằm giữa một đoạn đã xóa thì `make audit-verify` đối chiếu qua tệp.
 
 Đã thử ngày 2026-11-17: xuất 24 dòng rồi nạp lại, 24 băm khớp; hai đoạn liên tiếp (1–5, 8–8, id 6, 7 bỏ trống do
 rollback) nối đúng chuỗi; truy vấn gộp đếm 6 dòng ở kho lạnh cộng 1 dòng trong CSDL, bằng 7 dòng của CSDL; sửa

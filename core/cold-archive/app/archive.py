@@ -5,7 +5,8 @@
 # cùng cũ hơn mốc thời gian; cắt theo id vì các dòng được ghi lần lượt dưới một khóa (ADR 0009) nên thứ tự id
 # là thứ tự của chuỗi, và một dòng đã thấy được thì mọi dòng có id nhỏ hơn đã xong (id bỏ trống do rollback
 # không làm đứt chuỗi). Chỉ ghi nhận đoạn sau khi đọc lại tệp vừa ghi, nạp lại vào PostgreSQL và tính lại băm
-# từng dòng; dòng nào sai thì không ghi nhận gì. Chưa xóa gì khỏi CSDL (#97).
+# từng dòng; dòng nào sai thì không ghi nhận gì. Ghi nhận xong, cùng giao dịch đó xóa các dòng của đoạn khỏi
+# core.audit_log bằng core.audit_purge (#97); lỗi ở bất kỳ bước nào thì không ghi nhận, không xóa gì.
 
 import csv
 import io
@@ -102,9 +103,9 @@ def archive(
         pg.run("COPY cold_rows FROM STDIN WITH (FORMAT csv)", stream=as_csv(rows))
         count = check(pg, first_prev, first_id, last_id)
         last_hash = pg.run("SELECT hash FROM cold_rows ORDER BY id DESC LIMIT 1")[0][0]
-        pg.run(
+        segment = pg.run(
             "INSERT INTO core.audit_segments (first_id, last_id, first_prev, last_hash, rows, object_key, "
-            "file_sha256) VALUES (:f, :l, :p, :h, :n, :k, :s)",
+            "file_sha256) VALUES (:f, :l, :p, :h, :n, :k, :s) RETURNING id",
             f=first_id,
             l=last_id,
             p=first_prev,
@@ -112,9 +113,13 @@ def archive(
             n=count,
             k=object_key(first_id, last_id),
             s=file_sha256,
-        )
+        )[0][0]
+        purged = pg.run("SELECT core.audit_purge(:s)", s=segment)[0][0]
         pg.run("COMMIT")
     except Exception:
         pg.run("ROLLBACK")
         raise
-    return f"Đã lưu trữ {count} dòng nhật ký ({first_id}–{last_id}) vào {path}; băm từng dòng khớp."
+    return (
+        f"Đã lưu trữ {count} dòng nhật ký ({first_id}–{last_id}) vào {path}; băm từng dòng khớp; "
+        f"đã xóa {purged} dòng khỏi CSDL."
+    )

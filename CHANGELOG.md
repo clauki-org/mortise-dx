@@ -12,6 +12,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- `make archive` xóa đoạn nhật ký đã lưu trữ khỏi CSDL trong cùng giao dịch ghi nhận đoạn (`core.audit_purge`);
+  mọi đường xóa khác vẫn bị chặn. Chuỗi băm nối qua phần đã xóa: `make audit-verify` đối chiếu cả neo nằm trong
+  đoạn đã chuyển đi, `make cold-verify` tính lại chuỗi của mọi đoạn từ tệp.
 - Menu của giao diện dựng từ các gói đã cài (`platform_menu_items`); mục của gói mở thành phần danh mục theo
   cấu hình của gói tại `/apps/<gói>/<mục>`. Cán bộ xã mở "Cơ sở nhà, đất" xem cơ sở, tòa, phòng mình được phân
   công. `make e2e` cần gói `facilities-commune` đã cài.

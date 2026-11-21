@@ -11,7 +11,7 @@ import pytest
 
 from app.archive import as_csv
 from app.columns import live_rows, object_key
-from app.main import cutoff
+from app.main import anchor_of, cutoff
 
 
 def test_csv_keeps_empty_string_apart_from_null():
@@ -38,3 +38,10 @@ def test_cutoff_date_is_utc_midnight_and_time_needs_a_zone():
         cutoff("2026-11-01T07:00:00")
     with pytest.raises(SystemExit):
         cutoff("hôm qua")
+
+
+def test_anchor_must_be_id_and_sha256():
+    assert anchor_of("12:" + "ab" * 32) == (12, bytes.fromhex("ab" * 32))
+    for bad in ["12", "x:" + "ab" * 32, "12:" + "ab" * 31, "12:" + "AB" * 32]:
+        with pytest.raises(SystemExit):
+            anchor_of(bad)
