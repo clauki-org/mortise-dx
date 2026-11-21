@@ -256,10 +256,11 @@ check "Xóa cơ sở thì phân công của nó đi theo" "$(gql "$admin_a" "$le
 
 # Menu của gói (app.yaml, nạp khi cài): mỗi tenant thấy mục của mình kèm nội dung cấu hình danh mục, không thấy dòng
 # của tenant khác.
-menu='{ platform_menu_items(where: {app: {_eq: "facilities-commune"}}) { tenant_id item component config } }'
-check "Menu của gói: user.a thấy mục danh mục cơ sở kèm cấu hình, chỉ của xã mình" \
-  "$(gql "$token_a" "$menu" | jq -c '[.data.platform_menu_items[] | [.tenant_id, .item, .component, .config.source]]')" \
-  '[["xa-a","facilities","catalog","app_facilities_commune_facilities"]]'
+menu='{ platform_menu_items(where: {app: {_eq: "facilities-commune"}}, order_by: {position: asc}) {
+  tenant_id item component config } }'
+check "Menu của gói: user.a thấy mục danh mục và bản đồ kèm cấu hình, chỉ của xã mình" \
+  "$(gql "$token_a" "$menu" | jq -c '[.data.platform_menu_items[] | [.tenant_id, .item, .component, .config.title]]')" \
+  '[["xa-a","facilities","catalog","Cơ sở nhà, đất"],["xa-a","map","map","Bản đồ trụ sở"]]'
 check "Menu của gói: user.b chỉ thấy mục của xã mình" \
   "$(gql "$token_b" "$menu" | jq -c '[.data.platform_menu_items[].tenant_id] | unique')" '["xa-b"]'
 

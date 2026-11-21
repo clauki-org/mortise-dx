@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình thành phần bản đồ cho trụ sở của xã và của các xã con, theo contracts/map.schema.json; app.yaml trỏ tới
+# tệp này ở mục menu `map` và `make check-fast` kiểm. Phần vượt tính cho cả xã (view area_summary), nên mọi trụ sở
+# đang dùng của một xã cùng một màu; cơ sở dôi dư không tính vào phần vượt nên có lớp riêng màu xám (ADR 0020).
+
+title: Bản đồ trụ sở
+layers:
+  # Cán bộ thấy cơ sở mình được phân công, lãnh đạo và quản trị xã thấy toàn xã (quyền ở hasura/tables.yaml).
+  - id: in-use
+    label: Trụ sở đang dùng
+    source: app_facilities_commune_facilities
+    latitude: latitude
+    longitude: longitude
+    title: name
+    where: { field: status, equals: in_use }
+    fields:
+      - { name: code, label: Mã }
+      - { name: address, label: Địa chỉ }
+      - { name: summary.excess_m2, label: Phần vượt của xã (m²), type: number }
+    color:
+      by: summary.excess_m2
+      label: Phần vượt của xã
+      steps:
+        - { color: teal, label: Không vượt }
+        - { above: 0, color: red, label: "Vượt tiêu chuẩn, định mức" }
+  - id: surplus
+    label: Cơ sở dôi dư
+    source: app_facilities_commune_facilities
+    latitude: latitude
+    longitude: longitude
+    title: name
+    where: { field: status, equals: surplus }
+    fields:
+      - { name: code, label: Mã }
+      - { name: address, label: Địa chỉ }
+    color: { fixed: gray }
+  # Tỉnh (tenant cha): trụ sở đang dùng của các xã con qua view facility_rollup, không đọc được bảng gốc của xã.
+  - id: communes
+    label: Trụ sở đang dùng của các xã
+    source: app_facilities_commune_facility_rollup
+    role: rollup_reader
+    latitude: latitude
+    longitude: longitude
+    title: name
+    fields:
+      - { name: tenant_name, label: Xã }
+      - { name: code, label: Mã }
+      - { name: excess_m2, label: Phần vượt của xã (m²), type: number }
+    color:
+      by: excess_m2
+      label: Phần vượt của xã
+      steps:
+        - { color: teal, label: Không vượt }
+        - { above: 0, color: red, label: "Vượt tiêu chuẩn, định mức" }

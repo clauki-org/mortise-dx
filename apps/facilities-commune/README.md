@@ -17,6 +17,7 @@ app.yaml             khai báo gói theo contracts/app.schema.json: lược đ�
 schema/migrations/   migration dbmate của gói; bảng theo dõi public.facilities_commune_schema_migrations (ADR 0005)
 hasura/tables.yaml   bảng đăng ký, quan hệ và quyền theo tenant và phân công, cùng định dạng với core/hasura/
 catalog/             cấu hình thành phần danh mục (cơ sở → tòa → phòng) theo contracts/catalog.schema.json
+map-layers/          cấu hình thành phần bản đồ (trụ sở tô theo phần vượt) theo contracts/map.schema.json
 bpmn/                quy trình BPMN của gói, deploy cho từng tenant khi cài
 workflows/           khai báo bước của từng quy trình theo contracts/workflow.schema.json
 rules/               luật ngưỡng của số đo thiết bị theo contracts/threshold-rule.schema.json
@@ -167,3 +168,14 @@ Mục `menu` `facilities` trong `app.yaml` khai cấu hình danh mục, được
 thì mục "Cơ sở nhà, đất" hiện trên menu của giao diện và mở danh sách cơ sở → tòa → phòng dựng từ
 `catalog/facilities.yaml`; gói không có mã giao diện riêng. Cán bộ thấy cơ sở mình được phân công; giao diện chưa
 chọn vai trò khác `user`, nên quản trị xã và lãnh đạo xã trên giao diện cũng chỉ thấy như cán bộ.
+
+Mục `menu` `map` mở bản đồ trụ sở dựng từ `map-layers/facilities.yaml` ([ADR 0024](../../docs/adr/0024-map-component.md)),
+trên nền trơn, không tải tile:
+
+- Lớp "Trụ sở đang dùng": cơ sở cán bộ thấy được, tô theo phần vượt của xã (quan hệ `summary`): xanh khi không vượt,
+  đỏ khi vượt.
+- Lớp "Cơ sở dôi dư": màu xám, vì cơ sở dôi dư không tính vào phần vượt.
+- Lớp "Trụ sở đang dùng của các xã": đọc view `facility_rollup` với vai trò `rollup_reader`, nên chỉ hiện cho
+  `leader.tinh`.
+
+Cơ sở chưa có tọa độ không có trên bản đồ; trang báo số dòng như vậy.
