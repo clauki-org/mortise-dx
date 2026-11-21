@@ -12,6 +12,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Gói `facilities-commune` mở việc "Kiểm tra kho lưu trữ" cho người duyệt của xã khi độ ẩm kho vượt 75% liên tục 5
+  phút (ngưỡng minh họa, chưa theo văn bản nào): luật `rules/archive-humidity.yaml`, quy trình
+  `archive-inspection`. `/v1/context/temporal/entities/{id}` đọc lịch sử số đo theo NGSI-LD.
 - Luật ngưỡng (`contracts/threshold-rule.schema.json`): số đo của thiết bị vượt ngưỡng liên tục đủ lâu thì
   iot-bridge mở quy trình cho tenant của thiết bị qua workflow-api, không mở thêm khi hồ sơ cũ còn mở. Gói khai luật
   ở mục `rules` của app.yaml; bộ cài gói nạp vào `core.threshold_rules`; `make seed` nạp luật mẫu của lõi.

@@ -12,6 +12,10 @@ database:
   schema: app_facilities_commune
   migrations: schema/migrations
 hasura: hasura
+workflows:
+  - bpmn/archive-inspection.bpmn20.xml
+rules:
+  - rules/archive-humidity.yaml
 menu:
   - id: facilities
     label: Cơ sở nhà, đất

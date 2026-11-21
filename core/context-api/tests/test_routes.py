@@ -29,6 +29,15 @@ def calls(monkeypatch) -> list[tuple]:
         seen.append((tenant, entity_id))
         return {"id": entity_id, "type": "Device"}
 
+    def history(tenant, entity_id, params):
+        seen.append((tenant, entity_id, params))
+        return {
+            "id": entity_id,
+            "type": "Device",
+            "humidity": [{"value": 78, "observedAt": "2026-11-21T10:00:00Z"}],
+        }
+
+    monkeypatch.setattr(scorpio, "history", history)
     monkeypatch.setattr(scorpio, "entities", entities)
     monkeypatch.setattr(scorpio, "entity", entity)
     monkeypatch.setitem(app.dependency_overrides, caller_from_token, lambda: USER_A)
@@ -74,3 +83,22 @@ def test_unknown_path_answers_in_the_same_error_shape(calls):
     response = client.get("/v1/context/entities/urn:ngsi-ld:Device:a/b")
     assert response.status_code == 404
     assert response.json() == {"error": "Không có đường này."}
+
+
+def test_history_uses_tenant_of_token(calls):
+    response = client.get(
+        "/v1/context/temporal/entities/urn:ngsi-ld:Device:kho-01",
+        params={"attrs": "humidity", "lastN": "10"},
+        headers={"NGSILD-Tenant": "xa-b"},
+    )
+    assert response.status_code == 200
+    assert calls == [("xa-a", "urn:ngsi-ld:Device:kho-01", {"attrs": "humidity", "lastN": "10"})]
+    assert response.json()["humidity"][0]["value"] == 78
+
+
+def test_history_without_last_n_never_reaches_scorpio(calls):
+    response = client.get(
+        "/v1/context/temporal/entities/urn:ngsi-ld:Device:kho-01", params={"attrs": "humidity"}
+    )
+    assert response.status_code == 400
+    assert calls == []

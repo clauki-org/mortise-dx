@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Luật ngưỡng theo contracts/threshold-rule.schema.json: độ ẩm kho lưu trữ cao liên tục thì mở hồ sơ kiểm tra cho
+# xã có thiết bị. Ngưỡng 75% và 5 phút là số minh họa cho demo, không lấy từ quy định hay tiêu chuẩn nào; thay bằng
+# mức trong văn bản chính thức khi đã tra được.
+
+id: archive-humidity-high
+title: Kiểm tra kho lưu trữ
+entityType: Device
+measurement: humidity
+above: 75
+holdSeconds: 300
+process: archive-inspection

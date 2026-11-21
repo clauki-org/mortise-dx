@@ -37,7 +37,7 @@ biệt.
 | Workflow BPMN (Flowable sau lớp workflow-api): cách ly tenant, phân quyền theo vai trò, quy tắc bốn mắt | Đã chạy | `make smoke`, `make test` |
 | Tệp qua cổng (`/v1/files`, SeaweedFS): tải lên, tải xuống theo tenant, giới hạn cỡ, quét mã độc trước khi lưu (ClamAV) | Đã chạy | `make smoke` (tệp thử EICAR), `make test` |
 | Đăng nhập hai bước (OTP) cho người có quyền duyệt; workflow-api từ chối duyệt khi token không có bước OTP | Đã chạy | `make smoke`, `make test`, `make e2e` |
-| Dữ liệu thiết bị: nhận số đo qua MQTT trong mạng riêng (mỗi thiết bị một tài khoản, chỉ gửi vào chủ đề của mình), giữ theo NGSI-LD (Scorpio), đọc qua `/v1/context` chỉ thấy thiết bị của đơn vị mình; bộ giả lập thiết bị (`make simulate`); số đo vượt ngưỡng liên tục đủ lâu thì tự mở hồ sơ trên bảng việc của đúng đơn vị theo luật khai báo (`contracts/threshold-rule.schema.json`), không mở trùng khi hồ sơ cũ còn mở | Đã chạy | `make smoke` (gồm bộ giả lập, luật mẫu), `make test` |
+| Dữ liệu thiết bị: nhận số đo qua MQTT trong mạng riêng (mỗi thiết bị một tài khoản, chỉ gửi vào chủ đề của mình), giữ theo NGSI-LD (Scorpio), đọc trạng thái và lịch sử số đo qua `/v1/context` chỉ thấy thiết bị của đơn vị mình; bộ giả lập thiết bị (`make simulate`); số đo vượt ngưỡng liên tục đủ lâu thì tự mở hồ sơ trên bảng việc của đúng đơn vị theo luật khai báo (`contracts/threshold-rule.schema.json`), không mở trùng khi hồ sơ cũ còn mở | Đã chạy | `make smoke` (gồm bộ giả lập, luật mẫu), `make test` |
 | Cơ chế đăng nhập theo chính sách từng tenant, Passkey | Kế hoạch | |
 | Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
 | Nhật ký thay đổi: ai sửa gì, lúc nào, trước và sau; chuỗi băm phát hiện sửa lén, đối chiếu băm trong bản sao lưu | Đã chạy | `make smoke`, `make audit-verify` |
@@ -47,10 +47,11 @@ biệt.
 | Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy | `make smoke` (cổng, CSP, luồng PKCE), `make web-check`, `make e2e` |
 | Bảng việc: danh sách việc đang chờ người đăng nhập theo hạn; màn hình xử lý với biểu mẫu và nút theo khai báo của bước | Đã chạy | `make e2e` (trình duyệt: duyệt, bốn mắt, cách ly đơn vị), `make web-check` |
 | Thành phần Tầng 2 khác (danh mục, biểu mẫu nhập liệu, bản đồ) | Kế hoạch | |
-| Gói minh họa `apps/facilities-commune`: bảng cơ sở, tòa, phòng cách ly theo tenant, cán bộ chỉ thấy và sửa cơ sở được phân công (xã tự sửa phân công), có nhật ký; cài vào, gỡ ra bằng `make app-install`, `make app-uninstall`, kèm menu của gói; quy trình và khai báo bước của gói nạp cùng lúc bằng bộ nạp chung với `make seed` (gói minh họa chưa có quy trình) | Đã chạy | CI: cài gói → smoke gói (gồm menu theo tenant) → `make seed`, `make smoke` khi gói đang cài → gỡ gói → `make smoke` |
+| Gói minh họa `apps/facilities-commune`: bảng cơ sở, tòa, phòng cách ly theo tenant, cán bộ chỉ thấy và sửa cơ sở được phân công (xã tự sửa phân công), có nhật ký; cài vào, gỡ ra bằng `make app-install`, `make app-uninstall`, kèm menu của gói; quy trình, khai báo bước và luật ngưỡng của gói nạp cùng lúc bằng bộ nạp chung với `make seed` | Đã chạy | CI: cài gói → smoke gói (gồm menu theo tenant) → `make seed`, `make smoke` khi gói đang cài → gỡ gói → `make smoke` |
 | Gói minh họa: dữ liệu demo ba xã của "Tỉnh Mẫu" (hư cấu), nạp qua cổng bằng `make seed-demo` | Đã chạy | CI: `make seed-demo`, smoke gói kiểm tổng diện tích từng xã |
 | Gói minh họa: diện tích được phép và phần vượt tiêu chuẩn, định mức của từng xã theo NĐ 155/2025 sửa bởi NĐ 369/2026, mức m² có trích dẫn | Đã chạy | CI: smoke gói kiểm kết quả ba xã |
 | Gói minh họa: tỉnh xem tổng hợp diện tích của các xã (tenant cha, vai trò `rollup_reader`), không đọc được dữ liệu gốc của xã | Đã chạy | CI: smoke gói kiểm tỉnh thấy đúng ba xã, số khớp số của xã, không đọc được bảng phòng |
+| Gói minh họa: độ ẩm kho lưu trữ vượt ngưỡng (ngưỡng minh họa) liên tục 5 phút thì người duyệt của xã có việc "Kiểm tra kho lưu trữ" | Đã chạy | CI: smoke gói gửi số đo qua MQTT, kiểm việc mở đúng xã, không mở trùng |
 | Gói minh họa: quy trình rà soát, bản đồ | Kế hoạch | |
 
 ## Chạy từ mã nguồn

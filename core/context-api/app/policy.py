@@ -16,6 +16,10 @@ from dataclasses import dataclass
 # lớp này chỉ mở phần cần để đọc thiết bị của đơn vị mình.
 QUERY_PARAMETERS = frozenset({"type", "id", "idPattern", "attrs", "q", "limit", "offset"})
 MAX_LIMIT = 1000
+# Lịch sử số đo (API temporal của NGSI-LD): chỉ nhận số đo cần đọc và số lần đo gần nhất. Không mở truy vấn
+# theo khoảng thời gian: không có lastN thì Scorpio trả mọi lần đo đã lưu, có thể rất lớn.
+HISTORY_PARAMETERS = frozenset({"attrs", "lastN"})
+MAX_HISTORY = 1000
 # `q` và `idPattern` (biểu thức chính quy) chạy trên Scorpio dùng chung cho mọi tenant; giới hạn độ dài để
 # một truy vấn quá lớn không làm chậm tenant khác. Không chặn được hết biểu thức chạy lâu (ADR 0012).
 MAX_PARAMETER_LENGTH = 300
@@ -41,9 +45,29 @@ class Denied(Exception):
 
 def clean_query(params: list[tuple[str, str]]) -> dict[str, str]:
     """Tham số được chuyển cho Scorpio; tham số lạ, lặp lại hay limit ngoài khoảng thì Denied(400)."""
-    unknown = sorted({name for name, _ in params} - QUERY_PARAMETERS)
+    cleaned = _known(params, QUERY_PARAMETERS)
+    if "limit" in cleaned and not (cleaned["limit"].isdigit() and 1 <= int(cleaned["limit"]) <= MAX_LIMIT):
+        raise Denied(400, f"limit phải là số từ 1 tới {MAX_LIMIT}.")
+    if "offset" in cleaned and not cleaned["offset"].isdigit():
+        raise Denied(400, "offset phải là số không âm.")
+    return cleaned
+
+
+def clean_history(params: list[tuple[str, str]]) -> dict[str, str]:
+    """Tham số đọc lịch sử: attrs bắt buộc, lastN từ 1 tới MAX_HISTORY; thiếu lastN thì Denied(400)."""
+    cleaned = _known(params, HISTORY_PARAMETERS)
+    if not cleaned.get("attrs"):
+        raise Denied(400, "Thiếu attrs: tên số đo cần đọc lịch sử, ví dụ attrs=humidity.")
+    last = cleaned.get("lastN", "")
+    if not (last.isdigit() and 1 <= int(last) <= MAX_HISTORY):
+        raise Denied(400, f"lastN phải là số từ 1 tới {MAX_HISTORY}: số lần đo gần nhất cần đọc.")
+    return cleaned
+
+
+def _known(params: list[tuple[str, str]], allowed_names: frozenset[str]) -> dict[str, str]:
+    unknown = sorted({name for name, _ in params} - allowed_names)
     if unknown:
-        allowed = ", ".join(sorted(QUERY_PARAMETERS))
+        allowed = ", ".join(sorted(allowed_names))
         raise Denied(400, f"Tham số không hỗ trợ: {', '.join(unknown)}. Chỉ nhận: {allowed}.")
     names = [name for name, _ in params]
     repeated = sorted({name for name in names if names.count(name) > 1})
@@ -53,10 +77,6 @@ def clean_query(params: list[tuple[str, str]]) -> dict[str, str]:
     too_long = sorted(name for name, value in cleaned.items() if len(value) > MAX_PARAMETER_LENGTH)
     if too_long:
         raise Denied(400, f"Tham số dài quá {MAX_PARAMETER_LENGTH} ký tự: {', '.join(too_long)}.")
-    if "limit" in cleaned and not (cleaned["limit"].isdigit() and 1 <= int(cleaned["limit"]) <= MAX_LIMIT):
-        raise Denied(400, f"limit phải là số từ 1 tới {MAX_LIMIT}.")
-    if "offset" in cleaned and not cleaned["offset"].isdigit():
-        raise Denied(400, "offset phải là số không âm.")
     return cleaned
 
 

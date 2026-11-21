@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Mortise DX contributors
+SPDX-License-Identifier: Apache-2.0
+
+Kiểm tra kho lưu trữ của xã. Không ai gửi hồ sơ này bằng tay: iot-bridge mở khi độ ẩm kho vượt ngưỡng đủ lâu theo
+luật rules/archive-humidity.yaml (ADR 0018), với các biến title, device, measurement, value, threshold, observedAt.
+Người có vai trò manager trong xã ghi kết quả kiểm tra. Khai báo bước ở workflows/archive-inspection.yaml.
+-->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="https://mortise-dx/apps/facilities-commune">
+  <process id="archive-inspection" name="Kiểm tra kho lưu trữ" isExecutable="true">
+    <startEvent id="opened"/>
+    <sequenceFlow id="toInspect" sourceRef="opened" targetRef="inspect"/>
+
+    <!-- Hạn 1 ngày: độ ẩm cao kéo dài làm hỏng hồ sơ giấy, nên việc này không để lâu như việc duyệt thường. -->
+    <userTask id="inspect" name="Kiểm tra kho lưu trữ" flowable:candidateGroups="manager" flowable:dueDate="P1D"/>
+    <sequenceFlow id="toDone" sourceRef="inspect" targetRef="inspected"/>
+
+    <endEvent id="inspected" name="Đã kiểm tra"/>
+  </process>
+</definitions>

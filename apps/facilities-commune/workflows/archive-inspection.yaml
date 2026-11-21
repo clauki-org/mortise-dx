@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Khai báo bước của quy trình bpmn/archive-inspection.bpmn20.xml theo contracts/workflow.schema.json: bảng việc vẽ
+# biểu mẫu ghi kết quả kiểm tra. `title` do iot-bridge đặt khi mở hồ sơ, gồm tên luật và mã thiết bị.
+
+process: archive-inspection
+steps:
+  inspect:
+    title: title
+    form:
+      type: object
+      required: [finding]
+      properties:
+        finding:
+          type: string
+          title: Kết quả kiểm tra và việc đã làm
+    ui:
+      finding:
+        ui:widget: textarea
+    actions:
+      - id: done
+        label: Đã kiểm tra
+        variables:
+          inspected: true

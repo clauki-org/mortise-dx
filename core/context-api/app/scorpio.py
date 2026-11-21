@@ -81,3 +81,14 @@ def entity(tenant: str, entity_id: str) -> dict:
     if not response.is_success:
         raise _fail(response)
     return _json(response, dict)
+
+
+def history(tenant: str, entity_id: str, params: dict[str, str]) -> dict:
+    response = _get(f"/temporal/entities/{entity_id}", tenant, params)
+    if response.status_code == 404:
+        # Như entity(): entity không có, số đo chưa có lần đo nào, hay tenant chưa có dữ liệu đều trả cùng
+        # một câu.
+        raise Denied(404, "Không tìm thấy lịch sử của entity hay số đo này.")
+    if not response.is_success:
+        raise _fail(response)
+    return _json(response, dict)
