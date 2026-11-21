@@ -221,9 +221,10 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Làm gì:** xuất dòng nhật ký thay đổi cũ sang tệp Parquet trong bucket `mortise-cold` của SeaweedFS, và truy vấn
   gộp kho lạnh với CSDL bằng DuckDB (CSDL phân tích chạy trong tiến trình, đọc được Parquet trên S3 và PostgreSQL).
 - **Trong dự án:** chỉ ghi nhận một đoạn vào `core.audit_segments` khi băm tính lại từ tệp khớp từng dòng và chuỗi
-  nối với đoạn trước ([ADR 0014](adr/0014-cold-audit-archive.md)). Chưa xóa dòng khỏi CSDL.
+  nối với đoạn trước ([ADR 0014](adr/0014-cold-audit-archive.md)), rồi xóa các dòng đó khỏi CSDL trong cùng giao
+  dịch. `make cold-verify` tính lại chuỗi băm của mọi đoạn từ tệp.
 - **Cấu hình:** dịch vụ `cold-archive` (profile `tools`) trong `compose.yaml`; mã ở `core/cold-archive/`.
-- **Xem:** `make archive BEFORE=2026-11-01`; `make cold-query SQL="SELECT source, count(*) FROM audit_all GROUP BY
+- **Xem:** `make archive BEFORE=2026-11-01`; `make cold-verify`; `make cold-query SQL="SELECT source, count(*) FROM audit_all GROUP BY
   source"`.
 
 ### context-api: đọc dữ liệu thiết bị (tự viết)

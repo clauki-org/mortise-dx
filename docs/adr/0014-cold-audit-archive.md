@@ -41,7 +41,25 @@ kho rẻ hơn, vẫn truy vấn được, và vẫn kiểm được chuỗi băm
 - SeaweedFS chạy với `-volume.max=100`: mặc định 8 volume, mà mỗi bucket chiếm vài volume ngay lần ghi đầu, nên
   bucket thứ hai không ghi được (đã gặp: lỗi 500 "No writable volumes").
 
-Phần này chưa xóa dòng nào khỏi CSDL; xóa có kiểm soát, nối `make audit-verify` qua đoạn và đo trước, sau là #97.
+Bổ sung ngày 2026-11-21 (#97):
+
+- Ghi nhận đoạn xong, cùng giao dịch đó `core.audit_purge` xóa các dòng của đoạn khỏi `core.audit_log`. Trigger của
+  `core.audit_log` chỉ cho xóa khi superuser chạy hàm này, hàm xóa đúng đoạn nó nhận, và đoạn được ghi nhận trong
+  chính giao dịch đó. Chỉ superuser ghi nhận được đoạn: đoạn nối chuỗi qua các dòng đã xóa, nên ai ghi được đoạn
+  giả là che được việc xóa. cold-archive chạy bằng tài khoản `postgres`; `hasura` (tài khoản Hasura dùng, chủ các
+  bảng) không xóa được bằng lệnh DML nào. Đoạn ghi nhận trước khi có bổ sung này không bao giờ được xóa: dòng của
+  chúng ở lại CSDL.
+- Chuỗi băm nối qua phần đã xóa: băm trước của mỗi dòng mới lấy từ `core.audit_head` (băm của dòng mới nhất, dù dòng
+  đó còn trong bảng hay đã chuyển đi), và mỗi lần ghi cập nhật dòng này. Ở REPEATABLE READ hay SERIALIZABLE, ràng
+  buộc UNIQUE trên `prev_hash` không còn đủ chặn snapshot cũ khi dòng trùng đã bị xóa; cập nhật `core.audit_head`
+  thì PostgreSQL báo lỗi tuần tự hóa. `core.audit_verify` nối dòng đầu tiên sau một đoạn vào băm cuối của đoạn đó.
+  `make cold-verify` tính lại chuỗi bên trong mọi đoạn từ tệp, so SHA-256 của tệp và kiểm các đoạn nối liền nhau;
+  `make restore` chạy bước này khi có đoạn.
+- Băm neo của bản sao lưu: CSDL đã xóa hết dòng thì lấy băm cuối của đoạn cuối. Neo trùng dòng cuối của một đoạn thì
+  đối chiếu với `core.audit_segments`; neo nằm giữa một đoạn đã xóa thì `core.audit_verify` trả một dòng riêng và
+  `make audit-verify` đối chiếu neo qua tệp.
+- Chủ bảng vẫn tắt được trigger bằng DDL (ADR 0009). Khi đó một đoạn giả che được việc xóa trong CSDL, nhưng
+  `make cold-verify` không tìm được tệp khớp với đoạn đó, trừ khi người làm có cả quyền ghi bucket kho lạnh.
 
 Đã thử ngày 2026-11-17: xuất 24 dòng rồi nạp lại, 24 băm khớp; hai đoạn liên tiếp (1–5, 8–8, id 6, 7 bỏ trống do
 rollback) nối đúng chuỗi; truy vấn gộp đếm 6 dòng ở kho lạnh cộng 1 dòng trong CSDL, bằng 7 dòng của CSDL; sửa
