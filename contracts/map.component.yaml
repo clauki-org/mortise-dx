@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bản mô tả thành phần bản đồ theo contracts/component.schema.json; `make check-fast` kiểm tệp này.
+# Mã của thành phần ở platform/web/src/ (MapPanel.tsx, MapCanvas.tsx, mapConfig.ts). Mỗi dòng dưới đây đã được chạy
+# thử trên giao diện; đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
+
+component: map
+summary: Các lớp điểm đọc qua GraphQL theo cấu hình của gói, đặt lên nền bản đồ trơn và tô màu theo một giá trị, kèm chú giải và danh sách điểm.
+config_schema: map.schema.json
+example: examples/map.example.yaml
+capabilities:
+  - Mỗi lớp đọc một bảng hay view; mỗi dòng có tọa độ (latitude, longitude, WGS 84) thành một điểm mang tên lấy từ title.
+  - Lọc dòng của lớp theo một cột bằng một giá trị (where).
+  - Tô màu cả lớp một màu (color.fixed), hoặc theo giá trị số của một cột qua các bậc tăng dần (color.by, color.steps); dòng chưa có giá trị hiện màu xám.
+  - Cột ở fields, title, tọa độ và color.by đi được qua quan hệ của Hasura bằng dấu chấm, ví dụ summary.excess_m2.
+  - Lớp khai role chỉ được truy vấn khi token của người xem có vai trò đó, và truy vấn gửi kèm header X-Hasura-Role; lớp khác dùng vai trò mặc định.
+  - Mỗi điểm là một nút đọc được bằng trình đọc màn hình (tên và nhãn màu); bấm một điểm thì dòng của nó được tô trong danh sách.
+  - Chú giải màu và danh sách điểm của từng lớp với các trường trong fields; số dòng chưa có tọa độ được báo riêng.
+  - Khung bản đồ tự căn để thấy mọi điểm; kéo, phóng to, thu nhỏ được bằng chuột và bằng nút "Phóng to", "Thu nhỏ".
+  - Trình duyệt không vẽ được bản đồ (thiếu WebGL) thì báo lý do, danh sách điểm vẫn hiện.
+limits:
+  - Chỉ đọc; không thêm, sửa hay di chuyển điểm.
+  - Nền trơn, không có ảnh nền, đường, địa danh hay ranh giới hành chính.
+  - Chỉ có điểm; không vẽ đường, vùng hay cụm điểm.
+  - Mỗi lớp tối đa limit dòng (mặc định 200, trần 1000); lớp nhiều dòng hơn chỉ hiện các dòng đầu và báo ra.
+  - Lọc chỉ theo một cột bằng một giá trị; không có ô lọc hay tìm cho người xem.
+  - Kiểu của trường chỉ có text và number; number luôn viết có dấu ngăn hàng nghìn và tối đa ba chữ số thập phân.
+  - Cấu hình không cấp và không giới hạn quyền; người xem thấy dòng nào do quyền Hasura của bảng và vai trò quyết định.

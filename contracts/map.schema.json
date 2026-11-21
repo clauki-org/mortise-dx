@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/map.schema.json",
+  "title": "Cấu hình thành phần bản đồ (component: map)",
+  "description": "Tệp cấu hình mà gói viết cho thành phần bản đồ. Mỗi lớp đọc một bảng qua GraphQL, vẽ mỗi dòng có tọa độ thành một điểm và tô màu điểm theo một giá trị. Nền bản đồ trơn, không tải ảnh nền từ máy chủ nào (ADR 0024). Quyền đọc không khai ở đây: Hasura lọc theo token của người gọi. Thứ tự lớp là thứ tự vẽ và thứ tự trong chú giải.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "layers"],
+  "properties": {
+    "title": { "description": "Tiêu đề của trang bản đồ", "$ref": "#/$defs/text" },
+    "layers": {
+      "description": "Các lớp điểm, mỗi lớp một bảng",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/layer" }
+    }
+  },
+  "$defs": {
+    "layer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "source", "latitude", "longitude", "title", "color"],
+      "properties": {
+        "id": { "description": "Tên ngắn của lớp, không trùng với lớp khác", "$ref": "#/$defs/slug" },
+        "label": { "description": "Tên lớp trong chú giải", "$ref": "#/$defs/text" },
+        "source": {
+          "description": "Trường gốc GraphQL của bảng hay view trong Hasura: <lược đồ>_<bảng>",
+          "$ref": "#/$defs/identifier"
+        },
+        "role": {
+          "description": "Vai trò Hasura gửi kèm truy vấn của lớp (header X-Hasura-Role). Token của người xem không có vai trò này thì lớp không được truy vấn và không hiện. Khai vai trò không cấp quyền gì: Hasura vẫn kiểm vai trò với token. Bỏ trống là vai trò mặc định.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "latitude": { "description": "Cột vĩ độ (WGS 84, độ thập phân)", "$ref": "#/$defs/path" },
+        "longitude": { "description": "Cột kinh độ (WGS 84, độ thập phân)", "$ref": "#/$defs/path" },
+        "title": { "description": "Cột làm tên của điểm", "$ref": "#/$defs/path" },
+        "where": {
+          "description": "Chỉ lấy dòng có một cột bằng một giá trị, ví dụ chỉ cơ sở đang dùng",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["field", "equals"],
+          "properties": {
+            "field": { "$ref": "#/$defs/identifier" },
+            "equals": { "type": "string" }
+          }
+        },
+        "fields": {
+          "description": "Các trường hiện khi chọn một điểm và trong danh sách điểm, theo thứ tự khai",
+          "type": "array",
+          "items": { "$ref": "#/$defs/field" }
+        },
+        "color": { "$ref": "#/$defs/color" },
+        "limit": {
+          "description": "Số điểm tối đa của lớp. Bỏ trống là 200. Có trần để một lớp không tải cả bảng về trình duyệt.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      }
+    },
+    "color": {
+      "description": "Màu của điểm: một màu cho cả lớp (fixed), hoặc theo giá trị số của một cột (by và steps)",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fixed"],
+          "properties": { "fixed": { "$ref": "#/$defs/swatch" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["by", "label", "steps"],
+          "properties": {
+            "by": { "description": "Cột số quyết định màu", "$ref": "#/$defs/path" },
+            "label": { "description": "Tên của giá trị trong chú giải", "$ref": "#/$defs/text" },
+            "steps": {
+              "description": "Bậc màu theo thứ tự tăng dần. Bậc đầu không có above và nhận mọi giá trị; mỗi bậc sau áp khi giá trị lớn hơn above của nó. Dòng chưa có giá trị hiện màu xám.",
+              "type": "array",
+              "minItems": 1,
+              "prefixItems": [{ "$ref": "#/$defs/base_step" }],
+              "items": { "$ref": "#/$defs/step" }
+            }
+          }
+        }
+      ]
+    },
+    "base_step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["color", "label"],
+      "properties": {
+        "color": { "$ref": "#/$defs/swatch" },
+        "label": { "$ref": "#/$defs/text" }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["above", "color", "label"],
+      "properties": {
+        "above": { "type": "number" },
+        "color": { "$ref": "#/$defs/swatch" },
+        "label": { "$ref": "#/$defs/text" }
+      }
+    },
+    "swatch": {
+      "description": "Tên màu trong bảng màu của giao diện; không nhận mã màu tự do để màu đi theo theme của bản cài",
+      "enum": ["dark", "gray", "red", "pink", "grape", "violet", "indigo", "blue", "cyan", "teal", "green", "lime", "yellow", "orange"]
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "label"],
+      "properties": {
+        "name": { "$ref": "#/$defs/path" },
+        "label": { "$ref": "#/$defs/text" },
+        "type": { "description": "Cách hiển thị giá trị. Bỏ trống là text.", "enum": ["text", "number"] }
+      }
+    },
+    "path": {
+      "description": "Tên cột theo luật của GraphQL, hoặc quan hệ rồi cột, nối bằng dấu chấm (ví dụ summary.excess_m2). Thành phần ghép các tên này vào câu truy vấn, nên ký tự ngoài chữ không dấu, số, gạch dưới và dấu chấm sẽ đổi nghĩa của câu truy vấn.",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+    },
+    "identifier": {
+      "description": "Tên theo luật của GraphQL",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "text": {
+      "description": "Chữ hiển thị cho người dùng: có ít nhất một ký tự không phải khoảng trắng",
+      "type": "string",
+      "pattern": "\\S"
+    }
+  }
+}

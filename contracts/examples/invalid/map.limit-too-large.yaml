@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/map.schema.json từ chối: limit vượt trần.
+# Nếu lọt, một lớp tải cả bảng về trình duyệt.
+
+title: Bản đồ
+layers:
+  - id: sites
+    label: Điểm
+    source: app_example_sites
+    latitude: lat
+    longitude: lon
+    title: name
+    color: { fixed: gray }
+    limit: 1001

@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ cấu hình bản đồ hợp lệ theo contracts/map.schema.json; `make check-fast` kiểm tệp này. Lớp đầu tô điểm theo
+# một giá trị đọc qua quan hệ (group.score) theo ba bậc; lớp sau một màu, chỉ truy vấn khi token có vai trò
+# rollup_reader. Gói thật đặt tệp trong thư mục của gói (map-layers/).
+
+title: Bản đồ
+layers:
+  - id: sites
+    label: Điểm đang dùng
+    source: app_example_sites
+    latitude: lat
+    longitude: lon
+    title: name
+    where: { field: status, equals: active }
+    fields:
+      - { name: code, label: Mã }
+      - { name: group.score, label: Điểm của nhóm, type: number }
+    color:
+      by: group.score
+      label: Điểm của nhóm
+      steps:
+        - { color: teal, label: Thấp }
+        - { above: 10, color: orange, label: Vừa }
+        - { above: 20, color: red, label: Cao }
+    limit: 100
+  - id: summary
+    label: Tổng hợp của đơn vị con
+    source: app_example_rollup
+    role: rollup_reader
+    latitude: lat
+    longitude: lon
+    title: name
+    color: { fixed: gray }

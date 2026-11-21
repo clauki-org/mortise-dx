@@ -1,0 +1,164 @@
+// SPDX-FileCopyrightText: 2026 Mortise DX contributors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Thành phần bản đồ: các lớp điểm đọc qua GraphQL theo cấu hình của gói (contracts/map.schema.json), chú giải màu,
+// khung bản đồ (MapCanvas.tsx, nạp khi cần) và danh sách điểm của từng lớp. Danh sách đi kèm để người không xem được
+// bản đồ, hay trình duyệt không có WebGL, vẫn đọc đủ các điểm. Ở đây không có tên bảng hay chữ của một lĩnh vực nào.
+
+import { Alert, ColorSwatch, Group, Loader, Paper, Stack, Table, Text, Title } from "@mantine/core";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery } from "urql";
+import { display } from "./catalog";
+import {
+  type Layer,
+  layerQuery,
+  limitOf,
+  type MapConfig,
+  MISSING_COLOR,
+  MISSING_LABEL,
+  mapProblems,
+  type Point,
+  pointsOf,
+  type Row,
+  valueAt,
+  visibleLayers,
+} from "./mapConfig";
+import { rolesOf } from "./menu";
+import { useSession } from "./session";
+
+const MapCanvas = lazy(() => import("./MapCanvas"));
+
+const swatch = (color: string) => `var(--mantine-color-${color}-6)`;
+
+/** Một lớp: đọc dòng với vai trò của lớp, đổi thành điểm; danh sách điểm của lớp hiện ngay dưới tên lớp. */
+function useLayer(layer: Layer) {
+  const { query, variables } = useMemo(() => layerQuery(layer), [layer]);
+  // Truy vấn mang vai trò riêng; bộ nhớ đệm của urql không phân biệt vai trò nên luôn đọc lại từ máy chủ.
+  const context = useMemo(() => (layer.role ? { role: layer.role } : {}), [layer.role]);
+  const [{ data, fetching, error }] = useQuery<{ rows: Row[] }>({
+    query,
+    variables,
+    context,
+    requestPolicy: "network-only",
+  });
+  // Dựng điểm theo data chứ không theo một mảng tạo mới mỗi lần vẽ, để khung bản đồ chỉ vẽ lại khi dữ liệu đổi.
+  const placed = useMemo(() => pointsOf(layer, data?.rows.slice(0, limitOf(layer)) ?? []), [layer, data]);
+  return { ...placed, more: (data?.rows.length ?? 0) > limitOf(layer), fetching, error };
+}
+
+function Legend({ layer }: { layer: Layer }) {
+  const items =
+    "fixed" in layer.color
+      ? [{ color: layer.color.fixed, label: layer.label }]
+      : [...layer.color.steps, { color: MISSING_COLOR, label: MISSING_LABEL }];
+  return (
+    <Group gap="md">
+      {"by" in layer.color && <Text size="sm">{layer.color.label}:</Text>}
+      {items.map((item) => (
+        <Group key={item.label} gap={6}>
+          <ColorSwatch color={swatch(item.color)} size={14} aria-hidden />
+          <Text size="sm">{item.label}</Text>
+        </Group>
+      ))}
+    </Group>
+  );
+}
+
+type LayerProps = { layer: Layer; selected?: string; onPoints: (id: string, points: Point[]) => void };
+
+function LayerSection({ layer, selected, onPoints }: LayerProps) {
+  const { points, unplaced, more, fetching, error } = useLayer(layer);
+  // Báo điểm lên khung bản đồ chung mỗi khi tập điểm của lớp đổi.
+  useEffect(() => onPoints(layer.id, points), [layer.id, points, onPoints]);
+  const fields = layer.fields ?? [];
+  return (
+    <Stack gap="xs" aria-label={layer.label} component="section">
+      <Title order={2} size="h4">
+        {layer.label}
+      </Title>
+      <Legend layer={layer} />
+      {error && (
+        <Alert color="red" title={`Không đọc được lớp ${layer.label}`}>
+          {error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
+        </Alert>
+      )}
+      {fetching && points.length === 0 && <Loader size="sm" aria-label={`Đang tải lớp ${layer.label}`} />}
+      {!fetching && !error && points.length === 0 && unplaced === 0 && <Text c="dimmed">Không có điểm nào.</Text>}
+      {unplaced > 0 && <Text size="sm">{unplaced} dòng chưa có tọa độ nên không hiện trên bản đồ.</Text>}
+      {more && (
+        <Text size="sm">
+          Lớp có hơn {limitOf(layer)} dòng; chỉ hiện {limitOf(layer)} dòng đầu.
+        </Text>
+      )}
+      {points.length > 0 && (
+        <Table.ScrollContainer minWidth={480}>
+          <Table>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Tên</Table.Th>
+                <Table.Th>Màu</Table.Th>
+                {fields.map((field) => (
+                  <Table.Th key={field.name}>{field.label}</Table.Th>
+                ))}
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {points.map((point) => (
+                <Table.Tr key={point.key} bg={point.key === selected ? "gray.1" : undefined}>
+                  <Table.Td>{point.title}</Table.Td>
+                  <Table.Td>
+                    <Group gap={6} wrap="nowrap">
+                      <ColorSwatch color={swatch(point.color)} size={12} aria-hidden />
+                      {point.colorLabel}
+                    </Group>
+                  </Table.Td>
+                  {fields.map((field) => (
+                    <Table.Td key={field.name}>{display(field, valueAt(point.row, field.name))}</Table.Td>
+                  ))}
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
+      )}
+    </Stack>
+  );
+}
+
+export function MapPanel({ config }: { config: MapConfig }) {
+  const { getToken } = useSession();
+  const [byLayer, setByLayer] = useState<Record<string, Point[]>>({});
+  const [selected, setSelected] = useState<string>();
+  const onPoints = useCallback(
+    (id: string, points: Point[]) =>
+      setByLayer((current) => (current[id] === points ? current : { ...current, [id]: points })),
+    [],
+  );
+  const problems = mapProblems(config);
+  // Token được làm mới vài phút một lần; so theo danh sách vai trò để các lớp không bị coi là mới mỗi lần làm mới.
+  const roles = rolesOf(getToken()).join(" ");
+  const layers = useMemo(() => visibleLayers(config, roles.split(" ")), [config, roles]);
+  const points = useMemo(() => layers.flatMap((layer) => byLayer[layer.id] ?? []), [layers, byLayer]);
+  if (problems.length > 0) {
+    return (
+      <Alert color="red" title="Cấu hình bản đồ sai">
+        {problems.join("; ")}. Báo người quản trị sửa cấu hình của gói.
+      </Alert>
+    );
+  }
+  return (
+    <Stack>
+      <Title order={1} size="h2">
+        {config.title}
+      </Title>
+      <Paper withBorder radius="md">
+        <Suspense fallback={<Loader m="md" aria-label="Đang tải bản đồ" />}>
+          <MapCanvas points={points} selected={selected} onSelect={setSelected} />
+        </Suspense>
+      </Paper>
+      {layers.map((layer) => (
+        <LayerSection key={layer.id} layer={layer} selected={selected} onPoints={onPoints} />
+      ))}
+    </Stack>
+  );
+}

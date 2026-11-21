@@ -44,6 +44,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0021](0021-document-assistant.md) | Trợ lý hỏi văn bản: mô hình tại chỗ, tìm bằng token người hỏi, câu trích do hệ thống chép | Chấp nhận |
 | [0022](0022-declarative-packages.md) | Gói chỉ gồm tệp khai báo: danh sách tệp được phép, dữ liệu demo nạp bằng bộ nạp chung | Chấp nhận |
 | [0023](0023-package-pages-in-the-web-shell.md) | Mục menu của gói mở ở `/apps/<gói>/<mục>`, tra thành phần theo tên; menu ẩn hiện theo vai trò, truy vấn chạy với vai trò `user` | Chấp nhận |
+| [0024](0024-map-component.md) | Thành phần bản đồ: nền trơn, điểm là nút HTML, vai trò Hasura khai theo lớp và chỉ gửi khi token có | Chấp nhận |
 | [0025](0025-decision-variables.md) | Người lập không đặt sẵn được biến quyết định: workflow-api đọc tên từ điều kiện rẽ nhánh sau userTask trong BPMN đã deploy | Chấp nhận |
 | [0026](0026-start-process-from-catalog-row.md) | Nút của danh mục khởi tạo quy trình của cùng gói, biến lấy từ dòng đang xem; Idempotency-Key ngẫu nhiên cho mỗi lần mở hộp xác nhận | Chấp nhận |
 

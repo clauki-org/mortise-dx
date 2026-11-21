@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/map.schema.json từ chối: cột tọa độ chứa dấu ngoặc.
+# Nếu lọt, tên được ghép vào câu truy vấn và đổi nghĩa của nó.
+
+title: Bản đồ
+layers:
+  - id: sites
+    label: Điểm
+    source: app_example_sites
+    latitude: "lat } secret { id"
+    longitude: lon
+    title: name
+    color: { fixed: gray }

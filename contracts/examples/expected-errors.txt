@@ -54,6 +54,12 @@ knowledge.passage-id-not-slug.yaml	$.passages[0].id	'No Such Passage' does not m
 knowledge.sha256-not-hex.yaml	$.source.sha256	'no-such-hash' does not match '^[0-9a-f]{64}$'
 knowledge.superseded-without-passage.yaml	$.passages[0].superseded_by	'passage' is a required property
 knowledge.unknown-key.yaml	$.passages[0]	Additional properties are not allowed ('no_such_key' was unexpected)
+map.first-step-above.yaml	$.layers[0].color	{'by': 'score', 'label': 'Điểm', 'steps': [{'above': 0, 'color': 'red', 'label': 'Cao'}]} is not valid under any of the given schemas
+map.free-color.yaml	$.layers[0].color	{'fixed': '#ff0000'} is not valid under any of the given schemas
+map.limit-too-large.yaml	$.layers[0].limit	1001 is greater than the maximum of 1000
+map.no-layers.yaml	$.layers	[] should be non-empty
+map.path-not-identifier.yaml	$.layers[0].latitude	'lat } secret { id' does not match '^[A-Za-z_][A-Za-z0-9_]*(\\\\.[A-Za-z_][A-Za-z0-9_]*)*$'
+map.role-not-name.yaml	$.layers[0].role	'Rollup Reader' does not match '^[a-z][a-z0-9_]*$'
 service-token-claims.has-tenant.json	$.tenant	['xa-a'] should not be valid under {}
 service-token-claims.user-role.json	$.realm_access.roles	['default-roles-mortise', 'user'] should not be valid under {'contains': {'const': 'user'}}
 threshold-rule.no-threshold.yaml	$	{'id': 'test-level-high', 'title': 'Thiếu ngưỡng', 'entityType': 'Device', 'measurement': 'testLevel', 'holdSeconds': 5, 'process': 'core-approval'} is not valid under any of the given schemas
