@@ -50,19 +50,21 @@ def check(pg: pg8000.native.Connection, first_prev: bytes, first_id: int, last_i
         raise Mismatch(f"tệp có {rows} dòng, CSDL có {expected} dòng trong đoạn {first_id}–{last_id}")
     recomputed = pg.run(
         f"SELECT count(*) FROM cold_rows WHERE core.audit_hash(hash_version, prev_hash, id, {AT}, tenant_id, "
-        "table_name, op, row_key, before, after, actor, actor_role, db_role) <> hash"
+        "table_name, op, row_key, before, after, actor, actor_role, db_role) IS DISTINCT FROM hash "
+        "OR hash IS NULL OR prev_hash IS NULL"
     )[0][0]
     if recomputed:
         raise Mismatch(f"{recomputed} dòng trong tệp tính lại băm không khớp")
     broken = pg.run(
         "SELECT count(*) FROM (SELECT prev_hash, coalesce(lag(hash) OVER (ORDER BY id), :p) AS expected "
-        "FROM cold_rows) c WHERE prev_hash <> expected",
+        "FROM cold_rows) c WHERE prev_hash IS DISTINCT FROM expected",
         p=first_prev,
     )[0][0]
     if broken:
         raise Mismatch(f"chuỗi băm trong tệp đứt ở {broken} chỗ (so với đoạn trước)")
     differs = pg.run(
-        "SELECT count(*) FROM cold_rows c JOIN core.audit_log l USING (id) WHERE l.hash <> c.hash"
+        "SELECT count(*) FROM cold_rows c JOIN core.audit_log l USING (id) "
+        "WHERE l.hash IS DISTINCT FROM c.hash"
     )[0][0]
     if differs:
         raise Mismatch(f"{differs} dòng trong tệp khác dòng cùng id trong CSDL")

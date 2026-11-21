@@ -41,13 +41,14 @@ def check_segment(pg: pg8000.native.Connection, segment: tuple) -> list[str]:
         )
     recomputed = pg.run(
         f"SELECT count(*) FROM cold_rows WHERE core.audit_hash(hash_version, prev_hash, id, {AT}, tenant_id, "
-        "table_name, op, row_key, before, after, actor, actor_role, db_role) <> hash"
+        "table_name, op, row_key, before, after, actor, actor_role, db_role) IS DISTINCT FROM hash "
+        "OR hash IS NULL OR prev_hash IS NULL"
     )[0][0]
     if recomputed:
         problems.append(f"{recomputed} dòng tính lại băm không khớp")
     broken = pg.run(
         "SELECT count(*) FROM (SELECT prev_hash, coalesce(lag(hash) OVER (ORDER BY id), :p) AS expected "
-        "FROM cold_rows) c WHERE prev_hash <> expected",
+        "FROM cold_rows) c WHERE prev_hash IS DISTINCT FROM expected",
         p=bytes(first_prev),
     )[0][0]
     if broken:
@@ -68,18 +69,23 @@ def verify(
     problems: list[str] = []
     previous = b""
     total = 0
-    anchor_found = anchor is None
+    covered = anchor_found = False
     for segment in segments(pg):
-        segment_id, first_id, last_id, first_prev, _, _, key, sha = segment
+        segment_id, first_id, last_id, first_prev, last_hash, _, key, sha = segment
         label = f"đoạn {segment_id} ({first_id}–{last_id})"
-        if not OBJECT_KEY.fullmatch(key):
-            problems.append(f"{label}: khóa tệp không đúng dạng")
-            continue
         # Đoạn sau phải bắt đầu đúng ở băm cuối của đoạn trước: thiếu hay chèn cả một đoạn thì đứt ở đây.
         if bytes(first_prev) != previous:
             problems.append(f"{label}: không nối vào băm cuối của đoạn trước")
-        previous = bytes(segment[4])
-        digest, rows = file_rows(duck, f"s3://{bucket}/{key}")
+        previous = bytes(last_hash)
+        if not OBJECT_KEY.fullmatch(key):
+            problems.append(f"{label}: khóa tệp không đúng dạng")
+            continue
+        # Tệp mất hay hỏng là vấn đề của riêng đoạn đó, không dừng việc kiểm các đoạn còn lại.
+        try:
+            digest, rows = file_rows(duck, f"s3://{bucket}/{key}")
+        except duckdb.Error as error:
+            problems.append(f"{label}: không đọc được tệp {key} ({str(error)[:200]})")
+            continue
         if digest != bytes(sha):
             problems.append(f"{label}: SHA-256 của tệp khác bản ghi; tệp đã bị thay")
         pg.run("START TRANSACTION")
@@ -88,14 +94,21 @@ def verify(
             pg.run("COPY cold_rows FROM STDIN WITH (FORMAT csv)", stream=as_csv(rows))
             problems += [f"{label}: {problem}" for problem in check_segment(pg, segment)]
             if anchor and first_id <= anchor[0] <= last_id:
+                covered = True
                 anchor_found = bool(
                     pg.run("SELECT 1 FROM cold_rows WHERE id = :i AND hash = :h", i=anchor[0], h=anchor[1])
                 )
         finally:
             pg.run("ROLLBACK")
         total += len(rows)
+    summary = f"kho lạnh: {total} dòng trong các đoạn, chuỗi băm khớp"
+    if anchor is None:
+        return problems, summary
+    if not covered:
+        # Dòng neo chưa được lưu trữ: make audit-verify đối chiếu trong CSDL, không phải việc của kho lạnh.
+        return problems, summary + f"; neo {anchor[0]} không thuộc đoạn nào, đối chiếu bằng make audit-verify"
     if not anchor_found:
         problems.append(
             f"neo {anchor[0]} không khớp dòng nào trong kho lạnh: dòng bị sửa, bị xóa, hay tệp bị thay"
         )
-    return problems, f"kho lạnh: {total} dòng trong các đoạn, chuỗi băm khớp"
+    return problems, summary + f"; khớp neo tại dòng {anchor[0]}"

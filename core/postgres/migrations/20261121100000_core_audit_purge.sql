@@ -9,17 +9,36 @@
 -- migrate:up
 CREATE INDEX audit_segments_last_id ON core.audit_segments (last_id);
 
+-- Một đoạn trong core.audit_segments nối chuỗi băm qua các dòng đã xóa (core.audit_verify tin băm cuối của đoạn), nên
+-- ai ghi được một đoạn là che được việc xóa dòng. Chỉ superuser được ghi: cold-archive chạy bằng tài khoản postgres
+-- (lệnh của người vận hành), còn hasura, tài khoản Hasura dùng và chủ các bảng, thì không. Chủ bảng vẫn tắt được
+-- trigger bằng DDL, như ADR 0009 đã ghi; khi đó `make cold-verify` không tìm được tệp khớp với đoạn giả.
+CREATE FUNCTION core.audit_segments_guard() RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+BEGIN
+    IF current_setting('is_superuser') <> 'on' THEN
+        RAISE EXCEPTION 'Chỉ make archive (tài khoản postgres) được ghi nhận đoạn nhật ký (ADR 0014)';
+    END IF;
+    RETURN NEW;
+END
+$$;
+
+CREATE TRIGGER audit_segments_superuser_only BEFORE INSERT ON core.audit_segments
+    FOR EACH ROW EXECUTE FUNCTION core.audit_segments_guard();
+
 -- Thay core.audit_refuse cho riêng core.audit_log (các bảng khác vẫn dùng hàm cũ): UPDATE vẫn luôn bị chặn; DELETE
--- chỉ qua được khi core.audit_purge đang xóa đúng đoạn nó nhận, và đoạn đó được ghi nhận trong chính giao dịch này.
--- created_at mặc định now(), tức thời điểm bắt đầu giao dịch, nên đoạn ghi nhận ở giao dịch trước không khớp; và
--- ràng buộc loại trừ của core.audit_segments không cho ghi nhận lại một đoạn chồng lên đoạn cũ để mở khóa lại.
--- Superuser tắt trigger (session_replication_role) thì vẫn xóa được, như ADR 0009 đã ghi.
+-- chỉ qua được khi superuser chạy core.audit_purge, xóa đúng đoạn hàm nhận, và đoạn đó được ghi nhận trong chính
+-- giao dịch này. created_at mặc định now(), tức thời điểm bắt đầu giao dịch, nên đoạn ghi nhận ở giao dịch trước
+-- không khớp; ràng buộc loại trừ của core.audit_segments không cho ghi nhận lại một đoạn chồng lên đoạn cũ. Kiểm
+-- superuser ở đây chứ không chỉ trong core.audit_purge: ai cũng tự đặt được biến mortise.audit_purge rồi DELETE.
 CREATE FUNCTION core.audit_log_guard() RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = pg_catalog
 AS $$
 BEGIN
-    IF TG_OP = 'DELETE' AND EXISTS (
+    IF TG_OP = 'DELETE' AND current_setting('is_superuser') = 'on' AND EXISTS (
         SELECT FROM core.audit_segments s
         WHERE s.id = nullif(current_setting('mortise.audit_purge', true), '')::bigint
           AND OLD.id BETWEEN s.first_id AND s.last_id
@@ -36,6 +55,23 @@ DROP TRIGGER audit_log_append_only ON core.audit_log;
 CREATE TRIGGER audit_log_append_only BEFORE UPDATE OR DELETE ON core.audit_log
     FOR EACH ROW EXECUTE FUNCTION core.audit_log_guard();
 
+-- Đầu chuỗi: băm của dòng mới nhất, dù dòng đó còn trong bảng hay đã chuyển sang kho lạnh. core.audit_row đọc băm
+-- trước từ đây và cập nhật dòng này mỗi lần ghi. Ở REPEATABLE READ hay SERIALIZABLE, snapshot cũ có thể không thấy
+-- dòng vừa ghi; trước kia ràng buộc UNIQUE trên prev_hash chặn lại, nhưng dòng trùng có thể đã bị xóa khỏi bảng
+-- (#97). Cập nhật dòng đầu chuỗi mà giao dịch khác đã đổi sau snapshot thì PostgreSQL báo lỗi tuần tự hóa (40001),
+-- nên chuỗi vẫn không rẽ nhánh.
+CREATE TABLE core.audit_head (
+    singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+    hash      bytea NOT NULL
+);
+INSERT INTO core.audit_head (hash)
+SELECT coalesce((
+    SELECT t.hash FROM (
+        (SELECT l.id, l.hash FROM core.audit_log l ORDER BY l.id DESC LIMIT 1)
+        UNION ALL
+        (SELECT s.last_id, s.last_hash FROM core.audit_segments s ORDER BY s.last_id DESC LIMIT 1)
+    ) t ORDER BY t.id DESC LIMIT 1), '\x'::bytea);
+
 -- Xóa các dòng của một đoạn vừa ghi nhận; trả số dòng đã xóa. Số dòng phải bằng số dòng ghi trong đoạn, nếu không
 -- cả giao dịch hủy và đoạn không được ghi nhận.
 CREATE FUNCTION core.audit_purge(segment bigint) RETURNS bigint
@@ -46,6 +82,9 @@ DECLARE
     expected bigint;
     deleted  bigint;
 BEGIN
+    IF current_setting('is_superuser') <> 'on' THEN
+        RAISE EXCEPTION 'Chỉ make archive (tài khoản postgres) được xóa nhật ký đã lưu trữ (ADR 0014)';
+    END IF;
     SELECT s.rows INTO expected FROM core.audit_segments s WHERE s.id = segment AND s.created_at = now();
     IF expected IS NULL THEN
         RAISE EXCEPTION 'Đoạn % không được ghi nhận trong giao dịch này; chỉ xóa được ngay khi lưu trữ (ADR 0014)',
@@ -77,6 +116,7 @@ DECLARE
     actor      text;
     actor_role text;
     prev       bytea;
+    head       bytea;
     next_id    bigint;
     stamp      timestamptz;
 BEGIN
@@ -96,17 +136,12 @@ BEGIN
     FROM pg_index i JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY (i.indkey)
     WHERE i.indrelid = TG_RELID AND i.indisprimary;
 
-    -- Ghi lần lượt (khóa đã lấy ở core.audit_lock; lấy lại ở đây không tốn gì). Ở READ COMMITTED, câu SELECT sau
-    -- thấy băm cuối mà giao dịch trước vừa commit. Ở REPEATABLE READ hay SERIALIZABLE, snapshot có thể cũ hơn:
-    -- khi đó băm trước trùng và ràng buộc UNIQUE chặn lại, chuỗi không rẽ nhánh, giao dịch phải chạy lại.
+    -- Ghi lần lượt (khóa đã lấy ở core.audit_lock; lấy lại ở đây không tốn gì). Băm trước lấy từ core.audit_head,
+    -- không từ dòng mới nhất của bảng: sau khi đoạn cuối bị xóa khỏi bảng (#97), lấy riêng bảng thì chuỗi bắt đầu
+    -- lại từ rỗng. Ở READ COMMITTED, câu SELECT sau thấy đầu chuỗi mà giao dịch trước vừa commit; ở mức cô lập cao
+    -- hơn, lệnh UPDATE core.audit_head bên dưới báo lỗi tuần tự hóa nếu snapshot đã cũ.
     PERFORM pg_advisory_xact_lock(hashtext('core.audit_log'));
-    -- Dòng liền trước là dòng mới nhất còn trong bảng hay dòng cuối của đoạn đã chuyển sang kho lạnh, cái nào
-    -- có id lớn hơn (#97): sau khi đoạn cuối bị xóa khỏi bảng, lấy riêng bảng thì chuỗi bắt đầu lại từ rỗng.
-    SELECT t.hash INTO prev FROM (
-        (SELECT l.id, l.hash FROM core.audit_log l ORDER BY l.id DESC LIMIT 1)
-        UNION ALL
-        (SELECT s.last_id, s.last_hash FROM core.audit_segments s ORDER BY s.last_id DESC LIMIT 1)
-    ) t ORDER BY t.id DESC LIMIT 1;
+    SELECT h.hash INTO prev FROM core.audit_head h;
     prev := coalesce(prev, '\x'::bytea);
     next_id := nextval('core.audit_log_id_seq');
     -- clock_timestamp: thời điểm ghi thật, không phải thời điểm bắt đầu giao dịch.
@@ -118,7 +153,9 @@ BEGIN
         VALUES (next_id, stamp, tenant, TG_TABLE_SCHEMA || '.' || TG_TABLE_NAME, TG_OP, key, before_row,
                 after_row, actor, actor_role, session_user, 1, prev,
                 core.audit_hash(1::smallint, prev, next_id, stamp, tenant, TG_TABLE_SCHEMA || '.' || TG_TABLE_NAME,
-                                TG_OP, key, before_row, after_row, actor, actor_role, session_user::text));
+                                TG_OP, key, before_row, after_row, actor, actor_role, session_user::text))
+        RETURNING core.audit_log.hash INTO head;
+        UPDATE core.audit_head SET hash = head;
     EXCEPTION WHEN unique_violation THEN
         -- Mã 40001 (serialization_failure): thư viện và người gọi hiểu là "chạy lại giao dịch".
         RAISE EXCEPTION 'Ghi nhật ký trùng lúc với giao dịch khác ở mức cô lập REPEATABLE READ/SERIALIZABLE; chạy lại giao dịch'
@@ -161,15 +198,17 @@ AS $$
     WHERE c.prev_hash <> c.expected_prev OR c.recomputed <> c.hash
     UNION ALL
     -- Neo trùng dòng cuối của một đoạn thì đối chiếu với băm cuối ghi trong core.audit_segments. Neo nằm giữa
-    -- một đoạn đã xóa khỏi bảng thì hàm này không đọc được tệp: scripts/audit-verify.sh đối chiếu qua tệp
-    -- (cold-archive verify --anchor).
-    SELECT anchor_id, 'không khớp băm ghi trong bản sao lưu: dòng bị sửa, bị xóa, hoặc chuỗi bị tính lại'
+    -- một đoạn đã xóa khỏi bảng thì hàm này không đọc được tệp: trả một dòng riêng (COLD_ANCHOR) để người gọi
+    -- đối chiếu qua tệp, không coi là khớp; scripts/audit-verify.sh làm việc đó (cold-archive verify --anchor).
+    SELECT anchor_id, CASE WHEN cold.inside THEN 'neo nằm trong đoạn đã lưu trữ: đối chiếu bằng make cold-verify'
+                           ELSE 'không khớp băm ghi trong bản sao lưu: dòng bị sửa, bị xóa, hoặc chuỗi bị tính lại' END
+    FROM (SELECT EXISTS (
+              SELECT FROM core.audit_segments s WHERE anchor_id BETWEEN s.first_id AND s.last_id
+                AND s.last_id <> anchor_id AND NOT EXISTS (SELECT FROM core.audit_log l WHERE l.id = anchor_id)
+          ) AS inside) cold
     WHERE anchor_id IS NOT NULL
       AND NOT EXISTS (SELECT FROM core.audit_log l WHERE l.id = anchor_id AND l.hash = anchor_hash)
       AND NOT EXISTS (SELECT FROM core.audit_segments s WHERE s.last_id = anchor_id AND s.last_hash = anchor_hash)
-      AND NOT EXISTS (
-          SELECT FROM core.audit_segments s WHERE anchor_id BETWEEN s.first_id AND s.last_id
-            AND s.last_id <> anchor_id AND NOT EXISTS (SELECT FROM core.audit_log l WHERE l.id = anchor_id))
     ORDER BY 1
 $$;
 
@@ -263,4 +302,7 @@ CREATE TRIGGER audit_log_append_only BEFORE UPDATE OR DELETE ON core.audit_log
     FOR EACH ROW EXECUTE FUNCTION core.audit_refuse();
 DROP FUNCTION core.audit_purge(bigint);
 DROP FUNCTION core.audit_log_guard();
+DROP TABLE core.audit_head;
+DROP TRIGGER audit_segments_superuser_only ON core.audit_segments;
+DROP FUNCTION core.audit_segments_guard();
 DROP INDEX core.audit_segments_last_id;

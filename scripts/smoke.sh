@@ -545,11 +545,9 @@ cold_anchor=$(sql -c "SELECT id || ':' || encode(hash, 'hex') FROM core.audit_lo
 # audit_all gồm mọi đoạn (từ tệp) cộng các dòng trong CSDL sau đoạn cuối; con số này không được đổi khi chuyển.
 total=$(sql -c "SELECT (SELECT coalesce(sum(rows), 0) FROM core.audit_segments) + (SELECT count(*)
   FROM core.audit_log WHERE id > coalesce((SELECT max(last_id) FROM core.audit_segments), 0))")
-archived=$(cold archive --before "$(date -u -d '+1 minute' +%FT%TZ)" | grep -c -e 'đã xóa' -e 'Không có dòng' || true)
+# Bài tải tệp ở trên vừa ghi nhật ký, nên lần xuất này luôn có dòng: chỉ nhận kết quả "đã xóa".
+archived=$(cold archive --before "$(date -u -d '+1 minute' +%FT%TZ)" | grep -c 'đã xóa' || true)
 check "Xuất nhật ký sang kho lạnh, băm tính lại từ tệp khớp, xóa khỏi CSDL" "$archived" 1
-# Phòng trường hợp lệnh trên chỉ trả "Không có dòng" (đồng hồ lệch): phải có ít nhất một đoạn đã ghi nhận.
-segments=$(sql -c 'SELECT count(*) > 0 FROM core.audit_segments')
-check "Có đoạn nhật ký đã ghi nhận trong core.audit_segments" "$segments" t
 check "Các dòng vừa lưu trữ không còn trong CSDL" "$(sql -c "SELECT count(*) FROM core.audit_log
   WHERE id <= (SELECT max(last_id) FROM core.audit_segments) AND id >= ${cold_anchor%%:*}")" 0
 in_all=$(cold query "SELECT count(*) AS n FROM audit_all" | grep -oE '│ +[0-9]+ +│' | tr -dc '0-9')
@@ -558,20 +556,27 @@ check "Kho lạnh: tính lại chuỗi băm của mọi đoạn từ tệp" "$(c
 check "Chuỗi băm trong CSDL nối qua đoạn đã xóa" "$(scripts/audit-verify.sh >/dev/null 2>&1 && echo khớp || echo lệch)" khớp
 check "Neo của bản sao lưu cũ trỏ vào đoạn đã xóa: đối chiếu qua tệp" \
   "$(scripts/audit-verify.sh "$cold_anchor" >/dev/null 2>&1 && echo khớp || echo lệch)" khớp
-check "Neo sai trỏ vào đoạn đã xóa bị phát hiện" \
-  "$(scripts/audit-verify.sh "${cold_anchor%%:*}:$(printf '0%.0s' {1..64})" >/dev/null 2>&1 && echo khớp || echo lệch)" lệch
+check "Neo sai trỏ vào đoạn đã xóa bị phát hiện" "$(scripts/audit-verify.sh \
+  "${cold_anchor%%:*}:$(printf '0%.0s' {1..64})" 2>&1 | grep -c 'không khớp dòng nào trong kho lạnh' || true)" 1
 # Ghi tiếp sau khi đã xóa hết dòng cũ: dòng mới phải nối vào băm cuối của đoạn, không bắt đầu lại chuỗi.
 sql -c "UPDATE core.files SET name = name WHERE id = '$file_id'" >/dev/null
+check "Dòng ghi sau khi xóa nối vào băm cuối của đoạn" "$(sql -c "SELECT (SELECT prev_hash FROM core.audit_log
+  WHERE id > (SELECT max(last_id) FROM core.audit_segments) ORDER BY id LIMIT 1)
+  = (SELECT last_hash FROM core.audit_segments ORDER BY last_id DESC LIMIT 1)")" t
 check "Ghi sau khi xóa vẫn nối vào chuỗi" "$(scripts/audit-verify.sh >/dev/null 2>&1 && echo khớp || echo lệch)" khớp
-# Chủ bảng (hasura, tài khoản của Hasura) cũng không xóa được: xóa thẳng, hay gọi lại hàm xóa cho đoạn đã lưu.
+# Chủ bảng (hasura, tài khoản của Hasura) cũng không xóa được: xóa thẳng, gọi hàm xóa, hay tự ghi nhận một đoạn
+# giả để che dòng đã xóa (đoạn giả làm core.audit_verify nối chuỗi qua chỗ trống).
 as_owner() {
   docker compose exec -T -e PGPASSWORD="$HASURA_DB_PASSWORD" postgres \
-    psql -qAtX -h 127.0.0.1 -U hasura -d mortise -c "$1" 2>&1 | grep -c 'không' || true
+    psql -qAtX -h 127.0.0.1 -U hasura -d mortise -c "$1" 2>&1 | grep -c 'ADR 0014' || true
 }
 check "Chủ bảng không xóa thẳng được dòng nhật ký" \
   "$(as_owner 'DELETE FROM core.audit_log WHERE id = (SELECT max(id) FROM core.audit_log)')" 1
 check "Không xóa được qua hàm xóa ngoài giao dịch lưu trữ" \
   "$(as_owner 'SELECT core.audit_purge((SELECT max(id) FROM core.audit_segments))')" 1
+check "Chủ bảng không ghi nhận được đoạn giả" "$(as_owner "INSERT INTO core.audit_segments (first_id, last_id,
+  first_prev, last_hash, rows, object_key, file_sha256) SELECT id, id, prev_hash, hash, 1, 'audit_log/gia.parquet',
+  '\\x00' FROM core.audit_log ORDER BY id DESC LIMIT 1")" 1
 
 # Bộ giả lập (devices/simulator) gửi một lượt cho mọi thiết bị demo bằng tài khoản của từng thiết bị: số đo của
 # thiết bị xa-a tới được /v1/context của user.a. Mã riêng, khác số đo bài MQTT ở trên đã ghi, để bài này chỉ

@@ -71,12 +71,14 @@ def main() -> int:
             problems, summary = verify(
                 pg, duck, settings.bucket, anchor_of(args.anchor) if args.anchor else None
             )
-        except duckdb.Error as error:
-            raise SystemExit(f"Không đọc được tệp kho lạnh ({error}); kiểm tra seaweedfs.") from error
+        except (pg8000.exceptions.DatabaseError, pg8000.exceptions.InterfaceError) as error:
+            raise SystemExit(
+                f"PostgreSQL báo lỗi khi kiểm kho lạnh ({error}); kiểm tra `make ps`."
+            ) from error
         if problems:
             print("Kho lạnh không còn nguyên vẹn:", *problems, sep="\n", file=sys.stderr)
             return 1
-        print(summary + (f"; khớp neo tại dòng {args.anchor.split(':')[0]}" if args.anchor else ""))
+        print(summary)
         return 0
     query.define(pg, duck, settings.bucket)
     print(query.run(duck, args.sql))

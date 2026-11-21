@@ -32,20 +32,17 @@ if [[ -n "$anchor" ]]; then
 fi
 
 psql() { docker compose exec -T postgres psql -qAtX -v ON_ERROR_STOP=1 -U postgres -d mortise "$@"; }
-# Neo nằm giữa một đoạn đã xóa khỏi CSDL: core.audit_verify không đọc được tệp nên bỏ qua neo đó, còn ở đây đối
-# chiếu qua tệp. Neo trùng dòng cuối của đoạn thì core.audit_verify so với băm cuối ghi trong core.audit_segments.
-cold=""
-if [[ "$id" != NULL ]]; then
-  cold=$(psql -c "SELECT 1 FROM core.audit_segments s WHERE $id BETWEEN s.first_id AND s.last_id
-    AND s.last_id <> $id AND NOT EXISTS (SELECT FROM core.audit_log l WHERE l.id = $id)")
-fi
-if [[ -n "$cold" ]]; then
+problems=$(psql -F ': ' -c "SELECT id, problem FROM core.audit_verify($id, $hash)")
+# Neo nằm giữa một đoạn đã xóa khỏi CSDL: core.audit_verify không đọc được tệp nên trả một dòng riêng thay vì coi
+# là khớp; đối chiếu neo đó qua tệp của đoạn (cold-archive verify), xong thì bỏ dòng đó khỏi danh sách vấn đề.
+cold_note='neo nằm trong đoạn đã lưu trữ'
+if grep -q "$cold_note" <<<"$problems"; then
   if ! docker compose --profile tools run --rm --build --quiet-pull cold-archive verify --anchor "$anchor"; then
     echo "Neo $anchor không khớp kho lạnh." >&2
     exit 1
   fi
+  problems=$(grep -v "$cold_note" <<<"$problems" || true)
 fi
-problems=$(psql -F ': ' -c "SELECT id, problem FROM core.audit_verify($id, $hash)")
 if [[ -n "$problems" ]]; then
   echo "Nhật ký thay đổi không còn nguyên vẹn (dòng: vấn đề):" >&2
   echo "$problems" >&2
