@@ -5,7 +5,7 @@
 # từng xã (vai trò tenant_admin, thấy và ghi toàn xã) rồi ghi bằng GraphQL, sau đó phân công cán bộ phụ trách
 # từng cơ sở. Gói không đụng thẳng vào CSDL (AGENTS.md), và nhật ký thay đổi ghi đúng người làm của từng xã.
 # Dòng đã có (trùng mã, trùng phân công, hay trùng chức danh với biên chế) thì giữ nguyên, nên chạy lại không
-# tạo bản trùng.
+# tạo bản trùng; riêng tọa độ của cơ sở đã có thì được ghi theo demo.yaml khi khác.
 # Gọi bằng `make seed-demo` sau `make seed` và `make app-install APP=facilities-commune`.
 
 import base64
@@ -15,6 +15,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from operator import itemgetter
 from pathlib import Path
 
 import yaml
@@ -26,6 +27,8 @@ TABLE = "app_facilities_commune"
 # Cán bộ (vai trò user) chỉ thấy cơ sở mình được phân công, nên nạp và phân công chạy bằng vai trò quản trị
 # xã.
 ROLE = "tenant_admin"
+# (vĩ độ, kinh độ) của một dòng cơ sở hay một mục location trong demo.yaml, không phụ thuộc thứ tự khóa.
+point = itemgetter("latitude", "longitude")
 
 
 def post(path: str, body: bytes, headers: dict[str, str]) -> dict:
@@ -74,6 +77,23 @@ def codes(access: str, table: str, where: dict) -> dict[str, str]:
     return {row["code"]: row["id"] for row in graphql(access, query, {"w": where})[name]}
 
 
+def locations(access: str) -> dict[str, tuple]:
+    """Mã → (vĩ độ, kinh độ) của các cơ sở đã có; cơ sở chưa có tọa độ cho (None, None)."""
+    name = f"{TABLE}_facilities"
+    rows = graphql(access, f"{{ {name} {{ code latitude longitude }} }}", {})[name]
+    return {row["code"]: point(row) for row in rows}
+
+
+def place(access: str, facility_id: str, location: dict) -> None:
+    name = f"{TABLE}_facilities"
+    mutation = (
+        f"mutation($id: uuid!, $set: {name}_set_input!) {{"
+        f" update_{name}_by_pk(pk_columns: {{id: $id}}, _set: $set) {{ id }} }}"
+    )
+    if graphql(access, mutation, {"id": facility_id, "set": location})[f"update_{name}_by_pk"] is None:
+        raise SystemExit(f"Không ghi được tọa độ cho cơ sở {facility_id}: quản trị xã không thấy dòng này.")
+
+
 def claims(access: str) -> dict:
     payload = access.split(".")[1]
     return json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
@@ -110,13 +130,20 @@ def load_tenant(tenant: str, spec: dict) -> int:
         raise SystemExit(f"demo.yaml: tài khoản {spec['admin']} thuộc {actual}, không phải {tenant}.")
     # Kiểm từng tầng (cơ sở, tòa, phòng) thay vì chỉ cơ sở: lần chạy trước dừng giữa chừng (mất mạng) thì lần
     # sau thêm nốt phần còn thiếu, không để lại cây dở dang.
-    added = 0
+    added = placed = 0
     facilities = codes(access, "facilities", {})
+    stored = locations(access)
     for facility in spec["facilities"]:
         facility_id = facilities.get(facility["code"])
         if facility_id is None:
             fields = {k: facility[k] for k in ("code", "name", "address", "status")}
+            fields |= facility.get("location", {})
             facility_id, added = insert(access, "facilities", fields), added + 1
+        elif "location" in facility and stored[facility["code"]] != point(facility["location"]):
+            # Cơ sở nạp trước khi gói có cột tọa độ: ghi thêm vị trí, không đụng cột khác. Hasura và YAML
+            # cùng đọc 0.021500 thành một số thực, nên chạy lại không ghi lại vị trí không đổi.
+            place(access, facility_id, facility["location"])
+            placed += 1
         # Phân công cả cho cơ sở đã có từ lần nạp trước, khi gói chưa có bảng phân công.
         for username in facility.get("custodians", []):
             added += assign(access, facility_id, custodian_sub(tenant, username))
@@ -137,7 +164,10 @@ def load_tenant(tenant: str, spec: dict) -> int:
         if row["position"] not in existing:
             insert(access, "staffing", row)
             added += 1
-    print(f"{tenant}: thêm {added} dòng (cơ sở, tòa, phòng, phân công, biên chế); phần đã có giữ nguyên")
+    print(
+        f"{tenant}: thêm {added} dòng (cơ sở, tòa, phòng, phân công, biên chế), ghi tọa độ {placed} cơ sở;"
+        " phần đã có giữ nguyên"
+    )
     return added
 
 

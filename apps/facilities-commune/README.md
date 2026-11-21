@@ -21,8 +21,8 @@ bpmn/                quy trình BPMN của gói, deploy cho từng tenant khi c�
 workflows/           khai báo bước của từng quy trình theo contracts/workflow.schema.json
 rules/               luật ngưỡng của số đo thiết bị theo contracts/threshold-rule.schema.json
 tests/smoke.sh       kiểm qua cổng: cách ly tenant, tenant lấy từ token, phân công, khóa ngoại ghép, RESTRICT,
-                     nhật ký, phần vượt; mở việc kiểm tra kho khi độ ẩm vượt ngưỡng (số đo gửi qua MQTT);
-                     gọi tests/workflow.sh kiểm quy trình rà soát
+                     nhật ký, phần vượt, tọa độ, tổng hợp cho tỉnh; mở việc kiểm tra kho khi độ ẩm vượt ngưỡng
+                     (số đo gửi qua MQTT); gọi tests/workflow.sh kiểm quy trình rà soát
 ```
 
 ## Dữ liệu
@@ -31,7 +31,7 @@ Lược đồ `app_facilities_commune`.
 
 | Bảng | Nội dung | Ràng buộc chính |
 |---|---|---|
-| `facilities` | Cơ sở nhà, đất của một xã; `status` là `in_use` (đang dùng) hoặc `surplus` (dôi dư, không còn dùng) | `UNIQUE (tenant_id, code)`; `tenant_id` tham chiếu `core.tenants` |
+| `facilities` | Cơ sở nhà, đất của một xã; `status` là `in_use` (đang dùng) hoặc `surplus` (dôi dư, không còn dùng); `latitude`, `longitude` là tọa độ WGS 84, trống khi chưa đo ([ADR 0020](../../docs/adr/0020-facility-locations.md)) | `UNIQUE (tenant_id, code)`; `tenant_id` tham chiếu `core.tenants`; tọa độ trong miền hợp lệ, có đủ cả hai hoặc trống cả hai |
 | `buildings` | Tòa trong một cơ sở | Khóa ngoại ghép `(tenant_id, facility_id)`, `ON DELETE RESTRICT` |
 | `rooms` | Phòng, với `clear_area_m2` (thông thủy) và `area_type`: `working`, `shared`, `specialized` | Khóa ngoại ghép `(tenant_id, building_id)`, `ON DELETE RESTRICT` |
 | `working_area_norms` | Phụ lục mức m² theo chức danh của NĐ 369/2026/NĐ-CP, STT 1–10, chép nguyên văn cả ghi chú; dữ liệu chung, không đăng ký trong Hasura | Khóa chính `row_no` (STT) |
@@ -41,6 +41,7 @@ Lược đồ `app_facilities_commune`.
 | `area_summary` (view) | Mỗi xã một dòng: làm việc, sử dụng chung, chuyên dùng, được phép, đang dùng, dôi dư, phần vượt | Chỉ đọc |
 | `facility_assignments` | Phân công: `user_id` (`sub` của cán bộ trong token) phụ trách (`custodian`) hay duyệt (`approver`) một cơ sở | Khóa ngoại ghép `(tenant_id, facility_id)`, `ON DELETE CASCADE`; `UNIQUE (tenant_id, facility_id, user_id, duty)` |
 | `area_rollup` (view) | Mỗi xã có tenant cha một dòng, lấy nguyên số của `area_summary`, kèm `parent_tenant_id` và tên xã | Chỉ đọc; chỉ vai trò `rollup_reader` của tenant cha đọc ([ADR 0016](../../docs/adr/0016-parent-tenant-rollup.md)) |
+| `facility_rollup` (view) | Mỗi cơ sở đang dùng của xã có tenant cha một dòng: mã, tên, tọa độ, phần vượt của cả xã | Chỉ đọc; chỉ vai trò `rollup_reader` của tenant cha đọc ([ADR 0020](../../docs/adr/0020-facility-locations.md)) |
 
 Khóa ngoại ghép kèm `tenant_id` làm CSDL tự chặn việc nối tòa, phòng hay phân công vào cơ sở của xã khác, dù lớp
 API có lọt. Mọi quyền Hasura lọc theo tenant trong token trước, rồi xét phân công
@@ -58,6 +59,9 @@ token và vai trò.
 
 Biên chế, diện tích chuyên dùng và hai view diện tích không gắn với cơ sở nên không xét phân công: mọi vai trò
 trong xã đọc được; `user` và `tenant_admin` sửa được biên chế, diện tích chuyên dùng.
+
+Mỗi cơ sở có quan hệ `summary` tới dòng `area_summary` của xã mình, nên đọc được phần vượt của xã cùng với cơ sở
+(ví dụ để tô màu cơ sở trên bản đồ) mà quyền vẫn là quyền của từng bên.
 
 ## Diện tích được phép và phần vượt
 
@@ -146,7 +150,9 @@ nhiều cơ quan chung một trụ sở (Điều 6 khoản 2 điểm a, sửa b�
 phụ lục có ghi thẳng chức danh (STT 9 chuyên viên chính 20 m², STT 10 chuyên viên 15 m²); kết quả: xã A được phép
 580 m², vượt 420 m²; xã B được phép 600 m², vượt 130 m²; xã C được phép 480 m², không vượt. `make seed-demo` nạp qua
 cổng bằng tài khoản quản trị của từng xã (`admin.*`, `seed/load.py`) rồi phân công `user.*` phụ trách mọi cơ sở của
-xã mình; chạy lại không tạo bản trùng; smoke của gói kiểm các số này khi đã nạp.
+xã mình; chạy lại không tạo bản trùng; smoke của gói kiểm các số này khi đã nạp. Tọa độ của các cơ sở cũng hư
+cấu, nằm trong vài km quanh điểm vĩ độ 0, kinh độ 0, giữa biển, để không trỏ vào địa điểm có thật; chạy lại
+`make seed-demo` thì cơ sở đã nạp từ trước nhận tọa độ.
 
 Mục `menu` `facilities` trong `app.yaml` khai cấu hình danh mục, được `make check-fast` kiểm theo schema. Cài gói
 thì mục "Cơ sở nhà, đất" hiện trên menu của giao diện và mở danh sách cơ sở → tòa → phòng dựng từ

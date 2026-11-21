@@ -40,6 +40,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0017](0017-service-account-for-tenant.md) | Tài khoản dịch vụ mở quy trình thay cho tenant ghi ở header, chỉ được khởi tạo | Chấp nhận |
 | [0018](0018-threshold-rules-in-bridge.md) | Luật ngưỡng do gói khai, iot-bridge xét sau khi ghi số đo và mở hồ sơ qua workflow-api | Chấp nhận |
 | [0019](0019-workflow-settings-at-deploy.md) | Ngưỡng và thời hạn của quy trình gói là `settings`, bộ cài thay vào BPMN lúc deploy | Chấp nhận |
+| [0020](0020-facility-locations.md) | Tọa độ cơ sở là hai cột số; tenant cha thấy vị trí trụ sở đang dùng của tenant con qua view | Chấp nhận |
 | [0023](0023-package-pages-in-the-web-shell.md) | Mục menu của gói mở ở `/apps/<gói>/<mục>`, tra thành phần theo tên; menu ẩn hiện theo vai trò, truy vấn chạy với vai trò `user` | Chấp nhận |
 
 ## Quyết định còn mở
