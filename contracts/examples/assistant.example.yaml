@@ -1,10 +1,13 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Ví dụ cấu hình trợ lý hỏi văn bản hợp lệ theo contracts/assistant.schema.json; `make check-fast` kiểm tệp này.
-# `documents` trỏ tới văn bản ở contracts/examples/knowledge.example.yaml.
+# Ví dụ cấu hình trợ lý hỏi văn bản hợp lệ theo contracts/assistant.schema.json; `make check-fast` kiểm tệp này,
+# `make seed` dùng nó cho mục menu mẫu của lõi (/apps/core/ask-example). `documents` trỏ tới hai văn bản hư cấu ở
+# contracts/examples/knowledge.example.yaml và knowledge-amendment.example.yaml; văn bản sau sửa một khoản của văn
+# bản trước, nên phải hỏi cả hai.
 
-intro: Hỏi về quy chế đặt phòng họp; câu trả lời kèm câu trích nguyên văn, không đủ căn cứ thì trợ lý từ chối.
+intro: Hỏi về quy chế mẫu đặt phòng họp (hư cấu); câu trả lời kèm câu trích nguyên văn, thiếu căn cứ thì trợ lý từ chối.
 examples:
+  - Phòng họp được đặt trước tối đa bao nhiêu ngày?
   - Mỗi lần đặt phòng họp được dùng bao lâu?
-documents: [example-rules]
+documents: [example-rules, example-rules-amendment]

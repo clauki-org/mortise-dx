@@ -25,6 +25,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Thành phần bản đồ Tầng 2 (ADR 0024, `contracts/map.schema.json`): lớp điểm đọc qua GraphQL theo cấu hình của gói,
   nền trơn không tải tile, tô màu theo giá trị qua các bậc, chú giải và danh sách điểm; lớp khai `role` chỉ truy vấn
   khi token có vai trò đó và gửi kèm `X-Hasura-Role`. Mục menu `component: map` mở thành phần này.
+- Thành phần giao diện `assistant` (ADR 0021): mục menu của gói mở khung hỏi văn bản, câu trả lời hiện kèm từng câu
+  trích nguyên văn với tên văn bản và nhãn vị trí, từ chối hiện lý do, mô hình chưa bật thì hiện cách bật. `make seed`
+  thêm mục menu mẫu của lõi "Hỏi văn bản mẫu" (`/apps/core/ask-example`) trên hai văn bản mẫu hư cấu.
 - Trợ lý hỏi văn bản (ADR 0021): `POST /v1/assistant/questions` tìm đoạn qua GraphQL bằng token người hỏi, hỏi Qwen3.5
   4B qua Ollama với JSON Schema, chỉ trả lời khi mọi câu trích có trong đoạn đã tìm và mọi con số có trong câu được
   trích, không thì từ chối có lý do. Chưa bật Ollama (`make ai-up`) thì câu hỏi cần mô hình nhận 503 kèm cách bật.

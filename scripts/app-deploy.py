@@ -4,7 +4,7 @@
 # Nạp phần chạy lúc dùng của một gói vào lõi, cho mọi tenant đang có trong core.tenants: deploy BPMN lên
 # Flowable, khai báo bước vào platform.workflow_steps, mục menu kèm nội dung tệp cấu hình vào
 # platform.menu_items, luật ngưỡng vào core.threshold_rules, văn bản cho trợ lý vào bảng knowledge của
-# platform (scripts/app_knowledge.py). Năm lệnh:
+# platform (scripts/app_knowledge.py). Sáu lệnh:
 #   install <thư mục gói>   đọc app.yaml (workflows, menu, rules, knowledge) và <gói>/workflows/*.yaml;
 #                           app.sh gọi khi cài
 #   remove <thư mục gói>    xóa deployment (kèm hồ sơ đang chạy), khai báo bước, menu, luật, văn bản của
@@ -12,6 +12,8 @@
 #   workflows --bpmn ... --steps ...   chỉ deploy và nạp khai báo bước; make seed gọi cho quy trình mẫu
 #   rules --owner core <tệp> ...       chỉ nạp luật ngưỡng; make seed gọi cho luật mẫu
 #   knowledge --owner core <tệp> ...   chỉ nạp văn bản; make seed gọi cho văn bản mẫu
+#   menu --owner core --id ... --label ... --component ... <tệp cấu hình>
+#                                      chỉ nạp một mục menu; make seed gọi cho mục hỏi văn bản mẫu
 # Chạy lại không tạo bản trùng: tên deployment mang băm của tệp, nên tệp không đổi thì không deploy lại.
 # BPMN của gói có thể chứa {{tên}}: được thay bằng giá trị trong `settings` của app.yaml, ghi đè lúc cài
 # bằng biến môi trường APP_SETTINGS (make app-install SETTINGS=tên=giá trị), trước khi băm và deploy
@@ -281,6 +283,10 @@ def main() -> int:
         command = commands.add_parser(name)
         command.add_argument("--owner", required=True)
         command.add_argument("files", nargs="+")
+    menu = commands.add_parser("menu")
+    for flag in ("--owner", "--id", "--label", "--component"):
+        menu.add_argument(flag, required=True)
+    menu.add_argument("config")
     args = parser.parse_args()
 
     every = tenants()
@@ -293,6 +299,11 @@ def main() -> int:
         return 0
     if args.command == "knowledge":
         load_knowledge(args.owner, read_knowledge(args.owner, args.files))
+        return 0
+    if args.command == "menu":
+        # Mục menu của lõi không có app.yaml; dựng đúng dạng một mục của `menu` để dùng chung bộ nạp với gói.
+        entry = {"id": args.id, "label": args.label, "component": args.component, "config": args.config}
+        load_menu(".", {"id": args.owner, "menu": [entry]})
         return 0
     app, bpmn, steps = package(args.directory)
     if args.command == "install":
