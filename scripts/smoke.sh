@@ -558,8 +558,9 @@ check "Neo của bản sao lưu cũ trỏ vào đoạn đã xóa: đối chiếu
   "$(scripts/audit-verify.sh "$cold_anchor" >/dev/null 2>&1 && echo khớp || echo lệch)" khớp
 # Neo ở giữa đoạn thì đối chiếu qua tệp, neo trùng dòng cuối đoạn (đoạn một dòng) thì qua core.audit_segments; cả hai
 # báo "không khớp". Lỗi hạ tầng (không dựng được công cụ, S3 lỗi) không có câu đó nên không được tính là bắt được.
-check "Neo sai trỏ vào đoạn đã xóa bị phát hiện" "$(scripts/audit-verify.sh \
-  "${cold_anchor%%:*}:$(printf '0%.0s' {1..64})" 2>&1 | grep -q 'không khớp' && echo bắt || echo lọt)" bắt
+# audit-verify thoát mã lỗi là điều chờ đợi ở đây; `|| true` để pipefail của smoke không tính đó là lọt.
+check "Neo sai trỏ vào đoạn đã xóa bị phát hiện" "$({ scripts/audit-verify.sh \
+  "${cold_anchor%%:*}:$(printf '0%.0s' {1..64})" 2>&1 || true; } | grep -q 'không khớp' && echo bắt || echo lọt)" bắt
 # Ghi tiếp sau khi đã xóa hết dòng cũ: dòng mới phải nối vào băm cuối của đoạn, không bắt đầu lại chuỗi.
 sql -c "UPDATE core.files SET name = name WHERE id = '$file_id'" >/dev/null
 check "Dòng ghi sau khi xóa nối vào băm cuối của đoạn" "$(sql -c "SELECT (SELECT prev_hash FROM core.audit_log
