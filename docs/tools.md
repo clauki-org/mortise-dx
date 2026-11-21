@@ -254,9 +254,10 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Làm gì:** dịch vụ Python (FastAPI) tại `/v1/assistant/questions`: tìm đoạn trong văn bản của gói, nhờ mô hình
   trả lời, kiểm câu trả lời rồi trả kèm câu trích nguyên văn, hoặc từ chối có lý do
   ([ADR 0021](adr/0021-document-assistant.md)).
-- **Trong dự án:** đọc đoạn qua cổng bằng token người hỏi, nên Hasura lọc theo tenant; không có tài khoản CSDL. Mô
-  hình chỉ chọn mã câu; số trong câu trả lời phải có trong câu được trích. Mỗi lúc chỉ một lượt sinh. Chạy cùng
-  lõi; Ollama chưa bật thì câu hỏi cần mô hình nhận 503 kèm cách bật.
+- **Trong dự án:** đọc đoạn qua cổng bằng token người hỏi, nên Hasura lọc theo tenant. Mỗi câu hỏi một dòng trong
+  `platform.assistant_questions`, ghi bằng vai trò CSDL `assistant` chỉ được thêm dòng; không ghi được thì không trả
+  lời. Mô hình chỉ chọn mã câu; số trong câu trả lời phải có trong câu được trích. Mỗi lúc chỉ một lượt sinh. Chạy
+  cùng lõi; Ollama chưa bật thì câu hỏi cần mô hình nhận 503 kèm cách bật.
 - **Cấu hình:** dịch vụ `assistant` trong `compose.yaml`: ngưỡng điểm tìm, số đoạn, độ dài câu hỏi,
   thời gian chờ. Mã ở `platform/services/assistant/`; route và giới hạn tần suất ở `core/apisix/apisix.yaml`.
 - **Xem:** `make test` (mô hình giả); `make smoke` kiểm cả khi Ollama tắt và khi đang chạy.

@@ -25,6 +25,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Thành phần bản đồ Tầng 2 (ADR 0024, `contracts/map.schema.json`): lớp điểm đọc qua GraphQL theo cấu hình của gói,
   nền trơn không tải tile, tô màu theo giá trị qua các bậc, chú giải và danh sách điểm; lớp khai `role` chỉ truy vấn
   khi token có vai trò đó và gửi kèm `X-Hasura-Role`. Mục menu `component: map` mở thành phần này.
+- Nhật ký câu hỏi của trợ lý (ADR 0021): mỗi câu hỏi một dòng ở `platform.assistant_questions`, có nhật ký thay
+  đổi; dịch vụ ghi bằng vai trò CSDL `assistant` chỉ được thêm dòng (`ASSISTANT_DB_PASSWORD`, bản cài cũ chạy
+  `make env` rồi `make up`); không ghi được thì không trả lời; `tenant_admin` đọc nhật ký của tenant mình.
 - Thành phần giao diện `assistant` (ADR 0021): mục menu của gói mở khung hỏi văn bản, câu trả lời hiện kèm từng câu
   trích nguyên văn với tên văn bản và nhãn vị trí, từ chối hiện lý do, mô hình chưa bật thì hiện cách bật. `make seed`
   thêm mục menu mẫu của lõi "Hỏi văn bản mẫu" (`/apps/core/ask-example`) trên hai văn bản mẫu hư cấu.

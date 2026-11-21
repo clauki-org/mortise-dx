@@ -4,6 +4,7 @@
 # Trợ lý hỏi văn bản (ADR 0021), đứng sau APISIX tại /v1/assistant, chạy trong profile `ai` cùng Ollama. Một
 # đường: gửi câu hỏi, nhận câu trả lời kèm câu trích đã kiểm hoặc lời từ chối có lý do (pipeline.py).
 
+import time
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
@@ -11,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
+from . import journal
 from .auth import caller_from_token
 from .errors import Denied
 from .model import Model, Ollama
@@ -68,6 +70,20 @@ def healthz() -> dict:
 def questions(question: Question, caller: CallerDep, chosen: ModelDep) -> Answer:
     """Trả lời từ các văn bản được hỏi, chỉ trong các đoạn mà token người hỏi đọc được.
 
-    Không đủ căn cứ hay câu trả lời không qua bước kiểm thì `outcome` là `refused` kèm lý do (mã 200).
+    Không đủ căn cứ hay câu trả lời không qua bước kiểm thì `outcome` là `refused` kèm lý do (mã 200). Mỗi câu
+    hỏi được ghi nhật ký; không ghi được thì trả 503 thay cho câu trả lời.
     """
-    return ask(caller, question, chosen)
+    started = time.monotonic()
+    try:
+        answer = ask(caller, question, chosen)
+    except Denied as error:
+        # Lỗi đầu vào (4xx) không phải câu hỏi đã được xử lý; lỗi phía máy chủ thì có, và phải để lại dấu vết.
+        if error.status >= 500:
+            journal.record(caller, question, _elapsed(started), None, error.reason)
+        raise
+    journal.record(caller, question, _elapsed(started), answer)
+    return answer
+
+
+def _elapsed(started: float) -> int:
+    return round((time.monotonic() - started) * 1000)

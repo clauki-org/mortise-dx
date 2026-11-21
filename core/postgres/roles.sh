@@ -21,3 +21,10 @@ WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'iot_bridge') \gexec
 ALTER ROLE iot_bridge PASSWORD :'bridge_password';
 SQL
 echo "db-roles: vai trò iot_bridge sẵn sàng"
+
+psql -v ON_ERROR_STOP=1 -v assistant_password="$ASSISTANT_DB_PASSWORD" --host postgres --username postgres --dbname mortise <<'SQL'
+SELECT 'CREATE ROLE assistant LOGIN'
+WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'assistant') \gexec
+ALTER ROLE assistant PASSWORD :'assistant_password';
+SQL
+echo "db-roles: vai trò assistant sẵn sàng"

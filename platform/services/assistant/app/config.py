@@ -49,6 +49,10 @@ class Settings:
     top_passages: int
     num_predict: int
     timeout_seconds: float
+    db_host: str
+    db_name: str
+    db_user: str
+    db_password: str
 
 
 settings = Settings(
@@ -62,4 +66,8 @@ settings = Settings(
     top_passages=int(_number("ASSISTANT_TOP_PASSAGES")),
     num_predict=int(_number("ASSISTANT_NUM_PREDICT")),
     timeout_seconds=_number("ASSISTANT_TIMEOUT_SECONDS"),
+    db_host=_required("ASSISTANT_DB_HOST"),
+    db_name=_required("ASSISTANT_DB_NAME"),
+    db_user=_required("ASSISTANT_DB_USER"),
+    db_password=_required("ASSISTANT_DB_PASSWORD"),
 )

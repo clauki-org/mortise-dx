@@ -7,4 +7,4 @@
 # trong lúc nạp để không có gì ghi xen vào dữ liệu đang bị ghi đè. Thêm dịch vụ mới có ghi thì thêm vào đây; thiếu
 # một dịch vụ thì bản sao lưu có thể có dòng trỏ tới tệp không có, hoặc tệp không còn dòng nào trỏ tới.
 # shellcheck disable=SC2034  # dùng ở tệp source tệp này
-writers=(apisix workflow-api files-api flowable hasura keycloak context-api iot-bridge mosquitto scorpio seaweedfs)
+writers=(apisix workflow-api files-api flowable hasura keycloak context-api iot-bridge mosquitto scorpio seaweedfs assistant)

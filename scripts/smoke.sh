@@ -169,6 +169,25 @@ reply=$(ask "Lương cơ sở hiện nay là bao nhiêu?" "$user_a_token")
 check "Trợ lý: câu hỏi ngoài văn bản bị từ chối vì không có căn cứ" \
   "$(tail -1 <<<"$reply") $(sed '$d' <<<"$reply" | jq -r --arg p "$no_evidence" \
     '[.outcome, (.reason | startswith($p))] | @tsv')" "200 refused"$'\t'"true"
+# Nhật ký câu hỏi: câu vừa hỏi có một dòng; chỉ tenant_admin của chính tenant đọc được; vai trò CSDL của trợ lý chỉ
+# thêm được dòng, không xóa được.
+log_query=$(jq -nc '{query: "{ platform_assistant_questions(where: {question: {_eq: \"Lương cơ sở hiện nay là bao nhiêu?\"}},
+  order_by: {asked_at: desc}, limit: 1) { tenant_id outcome } }"}')
+read_log() {
+  curl -fsS -X POST "$base/v1/graphql" -H "Authorization: Bearer $1" -H "X-Hasura-Role: $2" \
+    -H 'Content-Type: application/json' -d "$log_query"
+}
+check "Nhật ký câu hỏi: quản trị xã A thấy câu vừa hỏi" \
+  "$(read_log "$(token admin.a)" tenant_admin | jq -c '.data.platform_assistant_questions')" \
+  '[{"tenant_id":"xa-a","outcome":"refused"}]'
+check "Nhật ký câu hỏi: quản trị xã B không thấy câu của xã A" \
+  "$(read_log "$(token admin.b)" tenant_admin | jq -c '[.data.platform_assistant_questions[].tenant_id] | unique - ["xa-b"]')" '[]'
+check "Nhật ký câu hỏi: cán bộ (vai trò user) không đọc được nhật ký" \
+  "$(read_log "$user_a_token" user | jq -r '.errors[0].extensions.code // "không lỗi"')" validation-failed
+check "Nhật ký câu hỏi: vai trò CSDL của trợ lý không xóa được dòng" \
+  "$(docker compose exec -T postgres psql -qAtX -U postgres -d mortise \
+    -c 'SET ROLE assistant; DELETE FROM platform.assistant_questions' 2>&1 | grep -o 'permission denied' | head -1)" \
+  "permission denied"
 reply=$(ask "Phòng họp được đặt trước tối đa bao nhiêu ngày?" "$user_a_token")
 if docker compose --profile ai ps --status running --services 2>/dev/null | grep -qx ollama; then
   check "Trợ lý: câu hỏi có trong văn bản tìm được đoạn và tới mô hình" \
