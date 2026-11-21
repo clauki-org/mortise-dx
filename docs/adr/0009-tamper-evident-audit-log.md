@@ -75,3 +75,7 @@ truyền băm neo sai thì lệnh kiểm báo lỗi.
 - Giá trị trước và sau sao chép dữ liệu cá nhân vào nhật ký và giữ mãi; cần chính sách lưu giữ trước khi dùng thật.
 - Ngoài phạm vi: thao tác trong Flowable (CSDL riêng), sự kiện quản trị của Keycloak, lượt tải tệp xuống.
 - Không đặt khóa ngoại từ nhật ký tới `core.tenants`: xóa tenant thì nhật ký của nó vẫn còn.
+- Bổ sung ngày 2026-11-21 (#97, ADR 0014): chuyển nhật ký cũ sang kho lạnh không làm mạnh thêm khả năng phát hiện
+  sửa. Phần đã chuyển chỉ còn trong tệp Parquet; ai có quyền ghi bucket kho lạnh và quyền superuser trên CSDL vẫn thay
+  được tệp rồi sửa `core.audit_segments` cho khớp. Băm neo trong bản sao lưu vẫn bắt được việc đó, tới thời điểm sao
+  lưu, khi `make audit-verify` đối chiếu neo qua tệp và `make cold-verify` tính lại chuỗi của các đoạn.

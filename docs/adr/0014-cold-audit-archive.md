@@ -65,6 +65,25 @@ Bổ sung ngày 2026-11-21 (#97):
 rollback) nối đúng chuỗi; truy vấn gộp đếm 6 dòng ở kho lạnh cộng 1 dòng trong CSDL, bằng 7 dòng của CSDL; sửa
 `core.audit_segments` bị từ chối; DuckDB nạp tiện ích trong container không có mạng.
 
+Đo ngày 2026-11-21 (#97) bằng `scripts/audit-measure.sh 2000` trên bản cài vừa `make reset`, `make seed`, cài gói
+facilities-commune và `make seed-demo`; PostgreSQL 17.11, một máy phát triển 16 nhân. Nhật ký sinh bằng thao tác thật:
+`user.a` sửa diện tích mọi phòng của xã A qua GraphQL ở cổng, 4.000 lần sửa (cộng rồi trừ 0,5 m²) trong 41 giây.
+Truy vấn phân tích là số thay đổi theo bảng và ngày; thời gian do chính PostgreSQL (`EXPLAIN ANALYZE`, trung vị 5
+lần) và DuckDB (`EXPLAIN ANALYZE` trên `audit_all`, trung vị 3 lần, không tính thời gian khởi động container) đo.
+
+| | Số dòng trong CSDL | `core.audit_log` (gồm chỉ mục) | Truy vấn phân tích |
+|---|---|---|---|
+| Trước khi chuyển | 52.077 | 56.672.256 byte | PostgreSQL 16,7 ms |
+| Ngay sau `make archive` | 0 | 56.672.256 byte | PostgreSQL 2,9 ms (bảng rỗng, còn trang chết) |
+| Sau `VACUUM` | 0 | 9.273.344 byte | |
+| Sau `VACUUM FULL` | 0 | 32.768 byte | |
+| Kho lạnh | 52.077 dòng trong 1 tệp | 4.091.474 byte Parquet | DuckDB 7,4 ms trên `audit_all` |
+
+- Xóa không trả lại chỗ ngay: `make archive` không chạy `VACUUM`. Autovacuum hay `VACUUM` cắt phần cuối bảng; chỉ
+  `VACUUM FULL` (khóa bảng, chặn mọi lần ghi có nhật ký trong lúc chạy) mới thu gọn cả chỉ mục.
+- Cùng 52.077 dòng, tệp Parquet nhỏ hơn bảng trong CSDL khoảng 14 lần.
+- Số đo một lần trên một máy, một tập dữ liệu; chưa đo với đoạn nhiều triệu dòng hay bộ nhớ của lần xuất.
+
 ## Hệ quả
 
 - Tự động chuyển theo lịch là kế hoạch; hiện người vận hành chạy `make archive`.
@@ -74,4 +93,4 @@ rollback) nối đúng chuỗi; truy vấn gộp đếm 6 dòng ở kho lạnh c
   dump PostgreSQL. `-volume.max` chỉ là trần số volume, volume tạo khi cần.
 - Hai lần `make archive` cùng lúc: lần sau dừng ngay (khóa advisory), không ghi đè tệp của lần trước.
 - Công cụ dùng tài khoản `postgres` như `make backup`, vì nó là lệnh của người vận hành.
-- Mỗi lần xuất đọc cả đoạn vào bộ nhớ để kiểm; chưa đo với đoạn lớn (#97 đo).
+- Mỗi lần xuất đọc cả đoạn vào bộ nhớ để kiểm; đã xuất một đoạn 52.077 dòng (bảng trên), chưa đo bộ nhớ hay đoạn lớn hơn.
