@@ -12,6 +12,9 @@ fields:
   - { name: code, label: Mã }
   - { name: name, label: Tên cơ sở }
   - { name: address, label: Địa chỉ }
+  # Tọa độ khai kiểu text: kiểu number làm tròn còn ba chữ số thập phân, lệch tới khoảng 55 m.
+  - { name: latitude, label: Vĩ độ }
+  - { name: longitude, label: Kinh độ }
   - name: status
     label: Tình trạng
     choices:

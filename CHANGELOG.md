@@ -15,6 +15,10 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Quy trình rà soát của gói `facilities-commune`: bốn mắt; phần vượt trên ngưỡng thì công khai một thời hạn rồi
   trình người có thẩm quyền, từ ngưỡng trở xuống thì báo cáo để tiếp tục sử dụng. Ngưỡng và thời hạn là `settings`
   trong `app.yaml`, ghi đè khi cài bằng `make app-install SETTINGS=...` (ADR 0019).
+- Tọa độ cơ sở trong gói `facilities-commune` (ADR 0020): cột `latitude`, `longitude` (WGS 84) có kiểm miền giá
+  trị, quan hệ `summary` để mỗi cơ sở đọc phần vượt của xã mình, view `facility_rollup` cho `leader.tinh` thấy mã,
+  tên, vị trí trụ sở đang dùng của ba xã kèm phần vượt mà không đọc được bảng gốc. Dữ liệu demo có tọa độ hư cấu;
+  bản cài đã nạp demo chạy lại `make seed-demo` để nhận tọa độ.
 - `make archive` xóa đoạn nhật ký đã lưu trữ khỏi CSDL trong cùng giao dịch ghi nhận đoạn (`core.audit_purge`);
   mọi đường xóa khác vẫn bị chặn. Chuỗi băm nối qua phần đã xóa: `make audit-verify` đối chiếu cả neo nằm trong
   đoạn đã chuyển đi, `make cold-verify` tính lại chuỗi của mọi đoạn từ tệp.

@@ -9,6 +9,8 @@
 # viên chính, 20 m²; STT 10: chuyên viên, 15 m²), để không phải xếp chức danh lãnh đạo xã vào bậc nào. Kết quả
 # (view area_summary): xã A được phép 580 m² (290 làm việc + 290 sử dụng chung), vượt 420 m²; xã B được phép 600 m²,
 # vượt 130 m²; xã C được phép 480 m², không vượt, cơ sở dôi dư 250 m² tính riêng.
+# Tọa độ (WGS 84) cũng hư cấu: mọi cơ sở nằm trong vài km quanh điểm vĩ độ 0, kinh độ 0, giữa biển, để không trỏ vào
+# địa điểm có thật nào. load.py cập nhật tọa độ cho cơ sở đã nạp từ trước khi gói có cột này.
 
 xa-a:
   admin: admin.a
@@ -20,6 +22,7 @@ xa-a:
       name: Trụ sở UBND xã A
       address: Thôn 1, xã A, Tỉnh Mẫu
       status: in_use
+      location: { latitude: 0.021500, longitude: 0.012300 }
       custodians: [user.a]
       buildings:
         - code: NLV
@@ -43,6 +46,7 @@ xa-a:
       name: Trụ sở xã cũ (tiếp nhận khi sắp xếp)
       address: Thôn 5, xã A, Tỉnh Mẫu
       status: in_use
+      location: { latitude: 0.043800, longitude: 0.031600 }
       custodians: [user.a]
       buildings:
         - code: NLV
@@ -64,6 +68,7 @@ xa-b:
       name: Trụ sở UBND xã B
       address: Thôn 2, xã B, Tỉnh Mẫu
       status: in_use
+      location: { latitude: -0.018400, longitude: 0.047200 }
       custodians: [user.b]
       buildings:
         - code: NLV
@@ -90,6 +95,7 @@ xa-c:
       name: Trụ sở UBND xã C
       address: Thôn 3, xã C, Tỉnh Mẫu
       status: in_use
+      location: { latitude: 0.009700, longitude: -0.036500 }
       custodians: [user.c]
       buildings:
         - code: NLV
@@ -106,6 +112,7 @@ xa-c:
       name: Trụ sở xã cũ (không còn sử dụng)
       address: Thôn 7, xã C, Tỉnh Mẫu
       status: surplus
+      location: { latitude: 0.027300, longitude: -0.052100 }
       custodians: [user.c]
       buildings:
         - code: NLV

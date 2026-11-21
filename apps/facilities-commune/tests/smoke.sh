@@ -56,6 +56,7 @@ sub_of() {
 }
 
 errors() { jq 'has("errors")' <<<"$1"; }
+error_code() { jq -r '.errors[0].extensions.code // "không lỗi"'; }
 created() { jq -r --arg f "$2" '.data[$f].id' <<<"$1"; }
 
 token_a=$(token "$user_a")
@@ -157,6 +158,35 @@ out=$(gql "$token_a" "$insert_building" "{\"f\":\"$fac_a\",\"code\":\"$code-u\"}
 bld_u=$(created "$out" insert_app_facilities_commune_buildings_one)
 check "$user_a phụ trách cơ sở: nối được tòa vào cơ sở" "$([[ -n "$bld_u" && "$bld_u" != null ]] && echo yes)" yes
 
+# Tọa độ của cơ sở (ADR 0020): CSDL chặn giá trị ngoài miền và cặp thiếu một vế; custodian sửa được; mỗi cơ sở đọc
+# được phần vượt của xã mình qua quan hệ summary; tỉnh thấy cơ sở đang dùng của xã con qua view facility_rollup, kể cả
+# cơ sở chưa có tọa độ (để biết còn thiếu), còn xã không đọc được view đó.
+locate='mutation($id: uuid!, $set: app_facilities_commune_facilities_set_input!) {
+  update_app_facilities_commune_facilities_by_pk(pk_columns: {id: $id}, _set: $set) { id } }'
+locate_a() { gql "$1" "$locate" "{\"id\":\"$fac_a\",\"set\":$2}" "${3:-user}"; }
+check "Vĩ độ ngoài khoảng -90..90 bị từ chối" \
+  "$(errors "$(locate_a "$admin_a" '{"latitude":91,"longitude":0}' "$admin")")" true
+check "Có vĩ độ mà thiếu kinh độ bị từ chối" "$(errors "$(locate_a "$admin_a" '{"latitude":0.5}' "$admin")")" true
+check "$user_a phụ trách cơ sở: ghi được tọa độ" "$(locate_a "$token_a" '{"latitude":0.5,"longitude":0.25}' |
+  jq -r '.data.update_app_facilities_commune_facilities_by_pk.id')" "$fac_a"
+check "$user_a đọc tọa độ và dòng tổng hợp của xã mình qua quan hệ summary" \
+  "$(gql "$token_a" 'query($id: uuid!) { app_facilities_commune_facilities_by_pk(id: $id) {
+    latitude longitude summary { tenant_id } } }' "{\"id\":\"$fac_a\"}" |
+    jq -c '.data.app_facilities_commune_facilities_by_pk | [.latitude + 0, .longitude + 0, .summary.tenant_id]')" \
+  "[0.5,0.25,\"$tenant_a\"]"
+leader=$(token leader.tinh)
+facility_rollup='query($code: String!) { app_facilities_commune_facility_rollup(where: {code: {_eq: $code}},
+  order_by: {tenant_id: asc}) { parent_tenant_id tenant_id latitude } }'
+check "Tỉnh thấy cơ sở đang dùng của hai xã trong facility_rollup, cơ sở chưa có tọa độ để trống" \
+  "$(gql "$leader" "$facility_rollup" "{\"code\":\"$code\"}" rollup_reader |
+    jq -c '[.data.app_facilities_commune_facility_rollup[] |
+      [.parent_tenant_id, .tenant_id, (if .latitude == null then null else .latitude + 0 end)]]')" \
+  '[["tinh-mau","xa-a",0.5],["tinh-mau","xa-b",null]]'
+check "Tỉnh (rollup_reader) không đọc được bảng cơ sở" \
+  "$(gql "$leader" "$list" "{\"code\":\"$code\"}" rollup_reader | error_code)" validation-failed
+check "Xã không đọc được facility_rollup, view chỉ dành cho tenant cha" \
+  "$(gql "$token_a" "$facility_rollup" "{\"code\":\"$code\"}" | error_code)" validation-failed
+
 # Phòng: loại diện tích và diện tích thông thủy là căn cứ tính định mức, CSDL chặn giá trị sai.
 room() { gql "$token_a" "$insert_room" "{\"b\":\"$bld_u\",\"code\":\"$1\",\"type\":\"$2\",\"area\":$3}"; }
 out=$(room "$code-1" working 18.5)
@@ -235,10 +265,8 @@ check "Menu của gói: user.b chỉ thấy mục của xã mình" \
 
 # Tổng hợp cho tenant cha (ADR 0016): leader.tinh (tenant tinh-mau, vai trò rollup_reader) thấy đúng ba xã con trong
 # view area_rollup, không đọc được bảng gốc dưới vai trò nào; xã không đọc được view tổng hợp.
-error_code() { jq -r '.errors[0].extensions.code // "không lỗi"'; }
 rollup='{ app_facilities_commune_area_rollup(order_by: {tenant_id: asc}) { parent_tenant_id tenant_id tenant_name
   allowed_m2 in_use_m2 surplus_m2 excess_m2 } }'
-leader=$(token leader.tinh)
 check "Tỉnh thấy đúng ba xã con trong tổng hợp" \
   "$(gql "$leader" "$rollup" "{}" rollup_reader | jq -c '[.data.app_facilities_commune_area_rollup[] |
     [.parent_tenant_id, .tenant_id]]')" '[["tinh-mau","xa-a"],["tinh-mau","xa-b"],["tinh-mau","xa-c"]]'
@@ -315,6 +343,22 @@ if ((loaded > 0)); then
       "\(.tenant_id) allowed=\(.allowed_m2 | tonumber + 0) in_use=\(.in_use_m2 | tonumber + 0)"
       + " surplus=\(.surplus_m2 | tonumber + 0) excess=\(.excess_m2 | tonumber + 0)"' | paste -sd ';')" \
     "$(for access in "$token_a" "$token_b" "$(token user.c)"; do summary "$access"; done | paste -sd ';')"
+  # Bản đồ cần mọi cơ sở demo có tọa độ, kể cả cơ sở dôi dư; tỉnh thấy đúng các trụ sở đang dùng kèm phần vượt của xã,
+  # không thấy cơ sở dôi dư; cán bộ thấy phần vượt của xã trên từng cơ sở mình phụ trách.
+  unplaced='{ app_facilities_commune_facilities(where: {code: {_like: "TS-%"}, latitude: {_is_null: true}}) { code } }'
+  check "Dữ liệu demo: mọi cơ sở của ba xã có tọa độ" "$(for access in "$admin_a" "$admin_b" "$admin_c"; do
+    gql "$access" "$unplaced" "{}" "$admin" | jq -c '.data.app_facilities_commune_facilities'; done | paste -sd ' ')" \
+    "[] [] []"
+  check "Tỉnh thấy trụ sở đang dùng của ba xã có tọa độ, kèm phần vượt của xã, không thấy cơ sở dôi dư" \
+    "$(gql "$leader" '{ app_facilities_commune_facility_rollup(where: {code: {_like: "TS-%"}},
+      order_by: [{tenant_id: asc}, {code: asc}]) { tenant_id code latitude excess_m2 } }' "{}" rollup_reader |
+      jq -c '[.data.app_facilities_commune_facility_rollup[] | [.tenant_id, .code, .latitude != null,
+        (.excess_m2 | tonumber + 0)]]')" \
+    '[["xa-a","TS-A1",true,420],["xa-a","TS-A2",true,420],["xa-b","TS-B1",true,130],["xa-c","TS-C1",true,0]]'
+  check "$user_a thấy phần vượt của xã A trên từng cơ sở demo mình phụ trách" \
+    "$(gql "$token_a" '{ app_facilities_commune_facilities(where: {code: {_like: "TS-%"}}, order_by: {code: asc}) {
+      code summary { excess_m2 } } }' | jq -c '[.data.app_facilities_commune_facilities[] |
+        [.code, (.summary.excess_m2 | tonumber + 0)]]')" '[["TS-A1",420],["TS-A2",420]]'
 else
   echo "SKIP  Dữ liệu demo chưa nạp (make seed-demo)"
 fi

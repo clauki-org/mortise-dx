@@ -24,10 +24,18 @@
         manual_configuration:
           remote_table: { schema: app_facilities_commune, name: facility_assignments }
           column_mapping: { tenant_id: tenant_id, id: facility_id }
+  # Phần vượt tính cho cả xã (view area_summary), không cho từng cơ sở. Quan hệ này cho mỗi cơ sở đọc được số của xã
+  # mình (ví dụ để tô màu trên bản đồ) mà vẫn đi qua quyền của view, không chép quyền sang một view riêng.
+  object_relationships:
+    - name: summary
+      using:
+        manual_configuration:
+          remote_table: { schema: app_facilities_commune, name: area_summary }
+          column_mapping: { tenant_id: tenant_id }
   select_permissions:
     - role: user
       permission:
-        columns: &facility_columns [id, tenant_id, code, name, address, status, created_at]
+        columns: &facility_columns [id, tenant_id, code, name, address, status, latitude, longitude, created_at]
         filter: &facility_assigned
           _and:
             - &tenant { tenant_id: { _eq: X-Hasura-Tenant-Id } }
@@ -39,7 +47,7 @@
   insert_permissions:
     - role: tenant_admin
       permission:
-        columns: &facility_input [code, name, address, status]
+        columns: &facility_input [code, name, address, status, latitude, longitude]
         check: *tenant
         set: &tenant_from_token { tenant_id: X-Hasura-Tenant-Id }
   update_permissions:
@@ -234,10 +242,19 @@
       permission: { columns: *area_summary_columns, filter: *tenant }
 
 # Tổng hợp cho tenant cha (ADR 0016): chỉ vai trò rollup_reader đọc, chỉ dòng của tenant con có cha là tenant trong
-# token. Vai trò này không có quyền ở bảng nào khác của gói.
+# token. Ngoài view này, vai trò này chỉ đọc facility_rollup ở cuối tệp; không có quyền ở bảng gốc nào của gói.
 - table: { schema: app_facilities_commune, name: area_rollup }
   select_permissions:
     - role: rollup_reader
       permission:
         columns: [parent_tenant_id, tenant_id, tenant_name, allowed_m2, in_use_m2, surplus_m2, excess_m2]
+        filter: { parent_tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+# Vị trí trụ sở đang dùng của các xã con, kèm phần vượt của xã (ADR 0020): cùng điều kiện với area_rollup. Tỉnh thấy
+# mã, tên, tọa độ của cơ sở, không thấy tòa, phòng hay phân công.
+- table: { schema: app_facilities_commune, name: facility_rollup }
+  select_permissions:
+    - role: rollup_reader
+      permission:
+        columns: [parent_tenant_id, tenant_id, tenant_name, code, name, latitude, longitude, excess_m2]
         filter: { parent_tenant_id: { _eq: X-Hasura-Tenant-Id } }
