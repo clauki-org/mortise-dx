@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Đường demo của bảng việc trên trình duyệt: người ở đơn vị A gửi hồ sơ, người duyệt của đơn vị A duyệt trên web,
-// người gửi không tự duyệt được, đơn vị B không thấy gì của đơn vị A. Danh mục cơ sở và hồ sơ của gói xã thêm vào
-// đây khi có (#55, #53); hiện chạy trên quy trình mẫu core-approval của lõi.
+// người gửi không tự duyệt được, đơn vị B không thấy gì của đơn vị A. Chạy trên quy trình mẫu core-approval của
+// lõi; danh mục của gói ở catalog.spec.ts.
 
 import { expect, test } from "@playwright/test";
 import { complete, outcome, signIn, submitApproval, taskOf, uniqueTitle, visibleTenants } from "./support.ts";

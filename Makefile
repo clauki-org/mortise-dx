@@ -141,7 +141,7 @@ WEB_LICENSES_TOOLING := $(WEB_LICENSES_SHIPPED);BlueOak-1.0.0;MPL-2.0;CC0-1.0;CC
 
 # Bài kiểm chỉ nhận mật khẩu demo và địa chỉ cổng, không nhận các bí mật khác của .env. Trình duyệt Chromium do
 # Playwright tải đúng phiên bản nó cần; đã có thì bước cài chỉ kiểm rồi bỏ qua.
-e2e: ## Kiểm thử trên trình duyệt qua cổng (Playwright); cần lõi đang chạy và đã seed (cần Node)
+e2e: ## Kiểm thử trên trình duyệt qua cổng (Playwright); cần lõi đang chạy, đã seed và cài gói facilities-commune (cần Node)
 	cd platform/web && npm ci --no-audit --no-fund && npx playwright install chromium
 	cd platform/web && DEMO_USER_PASSWORD="$$(sed -n 's/^DEMO_USER_PASSWORD=//p' ../../.env)" \
 	  MORTISE_PUBLIC_URL="$$(sed -n 's/^MORTISE_PUBLIC_URL=//p' ../../.env)" npx playwright test

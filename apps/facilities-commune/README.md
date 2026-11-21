@@ -124,5 +124,7 @@ phụ lục có ghi thẳng chức danh (STT 9 chuyên viên chính 20 m², STT 
 cổng bằng tài khoản quản trị của từng xã (`admin.*`, `seed/load.py`) rồi phân công `user.*` phụ trách mọi cơ sở của
 xã mình; chạy lại không tạo bản trùng; smoke của gói kiểm các số này khi đã nạp.
 
-Mục `menu` `facilities` trong `app.yaml` khai cấu hình danh mục và được `make check-fast` kiểm theo schema, nhưng
-chưa hiện trên giao diện: đưa menu của gói vào khung giao diện thuộc lệnh cài gói đầy đủ ở Sprint 2.
+Mục `menu` `facilities` trong `app.yaml` khai cấu hình danh mục, được `make check-fast` kiểm theo schema. Cài gói
+thì mục "Cơ sở nhà, đất" hiện trên menu của giao diện và mở danh sách cơ sở → tòa → phòng dựng từ
+`catalog/facilities.yaml`; gói không có mã giao diện riêng. Cán bộ thấy cơ sở mình được phân công; giao diện chưa
+chọn vai trò khác `user`, nên quản trị xã và lãnh đạo xã trên giao diện cũng chỉ thấy như cán bộ.

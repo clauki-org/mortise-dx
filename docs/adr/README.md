@@ -39,6 +39,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0016](0016-parent-tenant-rollup.md) | Tenant cha đọc tổng hợp của tenant con qua view của gói và vai trò `rollup_reader` | Chấp nhận |
 | [0017](0017-service-account-for-tenant.md) | Tài khoản dịch vụ mở quy trình thay cho tenant ghi ở header, chỉ được khởi tạo | Chấp nhận |
 | [0018](0018-threshold-rules-in-bridge.md) | Luật ngưỡng do gói khai, iot-bridge xét sau khi ghi số đo và mở hồ sơ qua workflow-api | Chấp nhận |
+| [0023](0023-package-pages-in-the-web-shell.md) | Mục menu của gói mở ở `/apps/<gói>/<mục>`, tra thành phần theo tên; menu ẩn hiện theo vai trò, truy vấn chạy với vai trò `user` | Chấp nhận |
 
 ## Quyết định còn mở
 
