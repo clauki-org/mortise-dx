@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ dữ liệu demo hợp lệ theo contracts/seed.schema.json, cho một gói có bảng cha `groups` và bảng con `entries`
+# nối về cha bằng mã (`group_code`). Gói thật đặt tệp ở apps/<gói>/seed/demo.yaml; `make seed-demo` nạp qua cổng.
+
+xa-a:
+  account: admin.a
+  tables:
+    - table: groups
+      key: [code]
+      rows:
+        - { code: G1, name: Nhóm thứ nhất }
+    - table: entries
+      key: [group_code, code]
+      rows:
+        - { group_code: G1, code: E1, name: Mục thứ nhất, quantity: 3 }
+        - { group_code: G1, code: E2, name: Mục thứ hai, quantity: 0, note: null }

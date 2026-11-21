@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Sai: bảng không khai cột khóa, nên bộ nạp không biết dòng nào đã có và chạy lại sẽ tạo bản trùng.
+
+xa-a:
+  account: admin.a
+  tables:
+    - table: groups
+      rows:
+        - { code: G1, name: Nhóm thứ nhất }

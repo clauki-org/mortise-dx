@@ -59,7 +59,10 @@ Ranh giới bắt buộc:
   nằm trong gói ở `apps/`.
 - Gói chỉ nói chuyện với lõi qua cổng APISIX bằng giao thức chuẩn (OIDC, GraphQL, REST, MQTT, NGSI-LD, BPMN) và dùng
   thành phần Tầng 2 qua cấu hình. Không import code của `core/` hay `platform/`, không truy cập thẳng CSDL.
-- Gói ưu tiên khai báo; chỉ viết giao diện riêng khi thành phần dùng chung không đáp ứng được, và ghi lý do.
+- Gói ưu tiên khai báo; chỉ viết giao diện riêng khi thành phần dùng chung không đáp ứng được, và ghi lý do. Gói
+  liệt kê trong `DECLARATIVE_APPS` của Makefile chỉ được chứa tệp khai báo, trừ `tests/`; dữ liệu demo của gói đó
+  là `seed/demo.yaml` (`contracts/seed.schema.json`). `make check-fast` kiểm
+  ([ADR 0022](docs/adr/0022-declarative-packages.md)).
 - Gỡ một gói thì lõi và các gói khác vẫn chạy, `make smoke` vẫn qua.
 - Không commit tệp mô hình AI, dữ liệu lớn hay bản sao lưu; chúng được tải hoặc sinh ra khi chạy.
 - Bảng chứa dữ liệu người dùng thay đổi được thì gắn nhật ký trong migration của nó: `SELECT core.audit_attach(...)`

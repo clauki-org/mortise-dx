@@ -12,6 +12,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Gói chỉ gồm tệp khai báo (ADR 0022): `make check-fast` kiểm gói trong `DECLARATIVE_APPS` của Makefile không có tệp
+  mã (`scripts/check-declarative.sh`); `make seed-demo` nạp `seed/demo.yaml` của gói không có bộ nạp riêng bằng bộ
+  nạp chung `scripts/app-seed.py`, theo `contracts/seed.schema.json`.
 - Quy trình rà soát của gói `facilities-commune`: bốn mắt; phần vượt trên ngưỡng thì công khai một thời hạn rồi
   trình người có thẩm quyền, từ ngưỡng trở xuống thì báo cáo để tiếp tục sử dụng. Ngưỡng và thời hạn là `settings`
   trong `app.yaml`, ghi đè khi cài bằng `make app-install SETTINGS=...` (ADR 0019).

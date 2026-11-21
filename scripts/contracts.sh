@@ -44,6 +44,7 @@ esac
 "${checker[@]}" --schemafile contracts/workflow.schema.json contracts/examples/workflow.example.yaml
 "${checker[@]}" --schemafile contracts/catalog.schema.json contracts/examples/catalog.example.yaml
 "${checker[@]}" --schemafile contracts/threshold-rule.schema.json contracts/examples/threshold-rule.example.yaml
+"${checker[@]}" --schemafile contracts/seed.schema.json contracts/examples/seed.example.yaml
 # Bản mô tả của từng thành phần Tầng 2. Tên tệp, tên thành phần và hai đường dẫn trong tệp phải khớp nhau: bản mô tả
 # trỏ tới schema hay ví dụ đã đổi tên là thứ người đọc và công cụ không tự phát hiện được.
 for description in contracts/*.component.yaml; do
@@ -100,6 +101,11 @@ for path in app.get("rules", []):
   if ((${#rules[@]})); then
     "${checker[@]}" --schemafile contracts/threshold-rule.schema.json "${rules[@]}"
   fi
+  # Dữ liệu demo khai báo: chỉ gói không có bộ nạp riêng (seed/load.py) mới dùng định dạng chung, vì make seed-demo
+  # chạy bộ nạp riêng nếu có và bỏ qua demo.yaml của gói đó.
+  if [[ -f "${app}seed/demo.yaml" && ! -f "${app}seed/load.py" ]]; then
+    "${checker[@]}" --schemafile contracts/seed.schema.json "${app}seed/demo.yaml"
+  fi
 done
 # Khóa quy trình là duy nhất trên cả lõi và mọi gói: bộ cài gói (scripts/app-deploy.py) xóa khai báo bước và
 # deployment theo khóa, nên một gói khai trùng khóa với lõi hay gói khác sẽ xóa luôn quy trình của bên kia khi cài
@@ -145,6 +151,7 @@ reject contracts/app.schema.json contracts/examples/invalid/app.*.yaml
 reject contracts/workflow.schema.json contracts/examples/invalid/workflow.*.yaml
 reject contracts/catalog.schema.json contracts/examples/invalid/catalog.*.yaml
 reject contracts/threshold-rule.schema.json contracts/examples/invalid/threshold-rule.*.yaml
+reject contracts/seed.schema.json contracts/examples/invalid/seed.*.yaml
 reject contracts/component.schema.json contracts/examples/invalid/component.*.yaml
 reject contracts/device-message.schema.json contracts/examples/invalid/device-message.*.json
 # Các mẫu tên ở trên quyết định tệp nào được kiểm. Tệp đặt sai tên sẽ nằm trong invalid/
@@ -152,10 +159,10 @@ reject contracts/device-message.schema.json contracts/examples/invalid/device-me
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
     token-claims.*.json | service-token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml | \
-    threshold-rule.*.yaml) ;;
+    threshold-rule.*.yaml | seed.*.yaml) ;;
     *)
       echo "$file không được kiểm: tên phải theo mẫu <token-claims|service-token-claims|device-message>.<lỗi>.json hoặc" \
-        "<app|workflow|catalog|component|threshold-rule>.<lỗi>.yaml." >&2
+        "<app|workflow|catalog|component|threshold-rule|seed>.<lỗi>.yaml." >&2
       exit 1
       ;;
   esac
