@@ -12,6 +12,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Quy trình rà soát của gói `facilities-commune`: bốn mắt; phần vượt trên ngưỡng thì công khai một thời hạn rồi
+  trình người có thẩm quyền, từ ngưỡng trở xuống thì báo cáo để tiếp tục sử dụng. Ngưỡng và thời hạn là `settings`
+  trong `app.yaml`, ghi đè khi cài bằng `make app-install SETTINGS=...` (ADR 0019).
 - `make archive` xóa đoạn nhật ký đã lưu trữ khỏi CSDL trong cùng giao dịch ghi nhận đoạn (`core.audit_purge`);
   mọi đường xóa khác vẫn bị chặn. Chuỗi băm nối qua phần đã xóa: `make audit-verify` đối chiếu cả neo nằm trong
   đoạn đã chuyển đi, `make cold-verify` tính lại chuỗi của mọi đoạn từ tệp.

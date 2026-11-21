@@ -87,8 +87,8 @@ seed-demo: ## Nạp dữ liệu demo của các gói (apps/*/seed/load.py) qua c
 	    uv run --quiet --no-project --with pyyaml==6.0.3 python "$$loader" || exit 1; \
 	done
 
-app-install: ## Cài một gói Tầng 3 lên lõi đang chạy: make app-install APP=<gói>
-	@scripts/app.sh "$(APP)" install
+app-install: ## Cài một gói Tầng 3 lên lõi đang chạy: make app-install APP=<gói> [SETTINGS=tên=giá trị,...]
+	@APP_SETTINGS="$(SETTINGS)" scripts/app.sh "$(APP)" install
 
 app-uninstall: ## Gỡ gói, XÓA dữ liệu của gói ở mọi tenant: make app-uninstall APP=<gói> CONFIRM=yes
 	@CONFIRM="$(CONFIRM)" scripts/app.sh "$(APP)" uninstall

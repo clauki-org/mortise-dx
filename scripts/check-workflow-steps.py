@@ -5,13 +5,17 @@
 # Schema không diễn đạt được: mỗi quy trình có bước người làm thì có đúng một tệp khai báo, mỗi userTask
 # có khai báo, không khai bước mà BPMN không có, `id` nút không trùng trong một bước, trường bắt buộc của
 # biểu mẫu có trong biểu mẫu. Thiếu bước này, task của bước quên khai báo hiện ra trên bảng việc mà không
-# có nút để xử lý. Gọi từ scripts/contracts.sh: --bpmn <tệp BPMN...> --steps <tệp khai báo...>.
+# có nút để xử lý. BPMN của gói chỉ được dùng {{tên}} đã khai trong `settings` của app.yaml cùng gói
+# (ADR 0019); BPMN của lõi không có settings. Gọi từ scripts/contracts.sh: --bpmn <tệp BPMN...>
+# --steps <tệp khai báo...>.
 
 import argparse
+import os
 import sys
 import xml.etree.ElementTree as ET
 
 import yaml
+from workflow_settings import placeholders
 
 BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
 
@@ -93,6 +97,21 @@ def problems(processes: dict[str, set[str]], declarations: list[str]) -> list[st
     return errors
 
 
+def settings_problems(bpmn_files: list[str]) -> list[str]:
+    errors = []
+    for path in bpmn_files:
+        parts = os.path.normpath(path).split(os.sep)
+        declared: dict = {}
+        if len(parts) > 2 and parts[0] == "apps":
+            with open(os.path.join("apps", parts[1], "app.yaml"), encoding="utf-8") as file:
+                declared = yaml.safe_load(file).get("settings") or {}
+        with open(path, encoding="utf-8") as file:
+            missing = sorted(placeholders(file.read()) - declared.keys())
+        if missing:
+            errors.append(f"{path}: dùng {', '.join(missing)} mà settings của app.yaml chưa khai")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--bpmn", nargs="*", default=[], required=True)
@@ -101,6 +120,7 @@ def main() -> int:
     try:
         processes, errors = user_tasks(args.bpmn)
         errors += problems(processes, args.steps)
+        errors += settings_problems(args.bpmn)
     except Unreadable as error:
         errors = [str(error)]
     for error in errors:

@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: giá trị của settings có khoảng trắng và ký tự ngoài danh
+# sách cho phép. Nếu lọt, bộ cài chép thẳng giá trị vào BPMN và làm đổi nghĩa biểu thức của Flowable (ADR 0019).
+
+id: example
+name: Example package
+version: 0.1.0
+database:
+  schema: app_example
+  migrations: schema/migrations
+settings:
+  approval_limit: 1000 || true

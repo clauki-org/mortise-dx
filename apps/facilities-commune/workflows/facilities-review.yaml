@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Khai báo bước của quy trình rà soát (facilities-review.bpmn20.xml) theo contracts/workflow.schema.json: bảng việc
+# đọc tệp này để hiện biểu mẫu và nút của từng bước. Hồ sơ được lập với biến title (tên hồ sơ), facilityId (cơ sở)
+# và excessM2 (phần vượt, m²).
+
+process: facilities-review
+steps:
+  review_report:
+    title: title
+    form: &review_form
+      type: object
+      required: [comment]
+      properties:
+        comment:
+          type: string
+          title: Ý kiến
+    ui: &review_ui
+      comment:
+        ui:widget: textarea
+    actions: &review_actions
+      - id: approve
+        label: Duyệt
+        variables:
+          approved: true
+      - id: reject
+        label: Trả lại
+        variables:
+          approved: false
+    record: &review_record
+      menu: facilities
+      variable: facilityId
+  review_publish:
+    title: title
+    form: *review_form
+    ui: *review_ui
+    actions: *review_actions
+    record: *review_record
+  submit:
+    title: title
+    form:
+      type: object
+      required: [recipient]
+      properties:
+        recipient:
+          type: string
+          title: Đơn vị đề nghị nhận (theo thứ tự ưu tiên)
+        comment:
+          type: string
+          title: Ý kiến
+    ui:
+      comment:
+        ui:widget: textarea
+    actions:
+      - id: submit
+        label: Trình
+        variables:
+          submitted: true
+    record:
+      menu: facilities
+      variable: facilityId

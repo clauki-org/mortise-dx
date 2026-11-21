@@ -50,6 +50,17 @@
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/path", "pattern": "\\.yaml$" }
     },
+    "settings": {
+      "description": "Giá trị cấu hình của quy trình (ngưỡng, thời hạn): BPMN của gói viết {{tên}}, bộ cài thay bằng giá trị lúc deploy, ghi đè được khi cài bằng SETTINGS (ADR 0019). Giá trị là số hoặc chuỗi như thời hạn ISO 8601, chỉ gồm chữ, số và . : + _ -",
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "number" },
+          { "type": "string", "pattern": "^[A-Za-z0-9.:+_-]{1,64}$" }
+        ]
+      }
+    },
     "menu": {
       "description": "Mục menu gói thêm vào khung giao diện; mỗi mục mở một thành phần Tầng 2 với cấu hình của gói",
       "type": "array",
