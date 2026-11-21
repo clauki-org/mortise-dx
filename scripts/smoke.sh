@@ -152,6 +152,34 @@ for pair in "user.a xa-a" "user.b xa-b"; do
 [\"$tenant\",\"example-rules-amendment\",\"art-1\",null,\"$tenant\"]]"
 done
 
+# Trợ lý hỏi văn bản (ADR 0021) trên văn bản mẫu, chạy cùng lõi: cổng đòi token; câu hỏi ngoài văn bản bị từ chối vì
+# không có căn cứ mà không cần mô hình. Câu hỏi có trong văn bản tìm được đoạn rồi tới mô hình: Ollama (profile `ai`)
+# tắt thì dịch vụ trả 503 dạng JSON chỉ cách bật; bật thì trả lời kèm câu trích, hay từ chối với lý do khác "không tìm
+# thấy đoạn". Không đòi đúng một câu trả lời: độ đúng của mô hình đo bằng bộ câu hỏi có đáp án, không bằng smoke.
+ask_url="$base/v1/assistant/questions"
+ask() {
+  jq -nc --arg q "$1" '{question: $q, app: "core", documents: ["example-rules", "example-rules-amendment"]}' |
+    curl -s -w '\n%{http_code}' -X POST "$ask_url" ${2:+-H "Authorization: Bearer $2"} \
+      -H 'Content-Type: application/json' -d @-
+}
+no_evidence='Không tìm thấy đoạn nào'
+check "Trợ lý: không token bị chặn tại cổng" "$(ask "Phòng họp đặt trước bao lâu?" | tail -1)" 401
+user_a_token=$(token user.a)
+reply=$(ask "Lương cơ sở hiện nay là bao nhiêu?" "$user_a_token")
+check "Trợ lý: câu hỏi ngoài văn bản bị từ chối vì không có căn cứ" \
+  "$(tail -1 <<<"$reply") $(sed '$d' <<<"$reply" | jq -r --arg p "$no_evidence" \
+    '[.outcome, (.reason | startswith($p))] | @tsv')" "200 refused"$'\t'"true"
+reply=$(ask "Phòng họp được đặt trước tối đa bao nhiêu ngày?" "$user_a_token")
+if docker compose --profile ai ps --status running --services 2>/dev/null | grep -qx ollama; then
+  check "Trợ lý: câu hỏi có trong văn bản tìm được đoạn và tới mô hình" \
+    "$(tail -1 <<<"$reply") $(sed '$d' <<<"$reply" | jq -r --arg p "$no_evidence" 'if .outcome == "answered"
+      then (.citations | length > 0) else ((.reason // "") | startswith($p) | not) end')" \
+    "200 true"
+else
+  check "Trợ lý: Ollama chưa bật thì câu hỏi cần mô hình nhận 503 dạng JSON chỉ cách bật" \
+    "$(tail -1 <<<"$reply") $(sed '$d' <<<"$reply" | jq -r '.error | contains("make ai-up")')" "503 true"
+fi
+
 # Quyền Hasura đang chạy phải khớp tệp khai báo (core/hasura/, platform/schema/hasura/); ai sửa tay trên trang quản
 # trị thì báo ở đây. Quyền hay quan hệ sai thì `make seed` đưa về đúng; bảng đăng ký thừa thì thông báo chỉ cách gỡ.
 if uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py check; then

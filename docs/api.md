@@ -67,6 +67,18 @@ curl -fsS -X POST http://localhost:9080/v1/graphql \
   -d '{"query":"{ platform_workflow_steps { process step config } }"}'
 ```
 
+Trợ lý hỏi văn bản (`contracts/assistant.openapi.json`, [ADR 0021](adr/0021-document-assistant.md)) nhận câu hỏi tại
+`POST /v1/assistant/questions`. Câu hỏi cần mô hình mà chưa bật profile `ai` thì nhận 503 kèm cách bật. Câu trả lời có
+`outcome` `answered` kèm `citations` (văn bản, nhãn vị trí, câu nguyên văn), hoặc `refused` kèm `reason`: không có
+đoạn nào đủ gần câu hỏi, mô hình nói không đủ căn cứ, hay câu trả lời không qua bước kiểm. Trợ lý chỉ đọc được đoạn
+của tenant trong token. Mỗi lúc chỉ trả lời một câu (đang bận thì 503); mô hình quá thời gian thì 504.
+
+```bash
+curl -fsS -X POST http://localhost:9080/v1/assistant/questions \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"question":"Phòng họp được đặt trước tối đa bao nhiêu ngày?","app":"core","documents":["example-rules","example-rules-amendment"]}'
+```
+
 Văn bản cho trợ lý hỏi văn bản (`contracts/knowledge.schema.json`, [ADR 0021](adr/0021-document-assistant.md)) nằm ở
 `platform_knowledge_documents` (một dòng mỗi văn bản: tên, nguồn, băm và ngày tải bản gốc) và
 `platform_knowledge_passages` (một dòng mỗi đoạn: `label` là nhãn vị trí, `text` là nguyên văn, `position` là thứ tự

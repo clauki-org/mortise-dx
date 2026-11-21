@@ -12,6 +12,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Trợ lý hỏi văn bản (ADR 0021): `POST /v1/assistant/questions` tìm đoạn qua GraphQL bằng token người hỏi, hỏi Qwen3.5
+  4B qua Ollama với JSON Schema, chỉ trả lời khi mọi câu trích có trong đoạn đã tìm và mọi con số có trong câu được
+  trích, không thì từ chối có lý do. Chưa bật Ollama (`make ai-up`) thì câu hỏi cần mô hình nhận 503 kèm cách bật.
 - Văn bản cho trợ lý hỏi văn bản (ADR 0021): bộ cài gói nạp các tệp ở mục `knowledge` của app.yaml vào
   `platform.knowledge_documents` và `platform.knowledge_passages` cho mọi tenant, có nhật ký thay đổi, kiểm mã đoạn
   trùng, `superseded_by` trỏ tới đoạn có thật và văn bản mà cấu hình trợ lý hỏi; gỡ gói thì xóa. Mỗi người chỉ đọc
