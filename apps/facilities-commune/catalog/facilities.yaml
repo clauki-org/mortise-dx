@@ -4,7 +4,8 @@
 # Cấu hình thành phần danh mục cho cơ sở → tòa → phòng, theo contracts/catalog.schema.json; app.yaml trỏ tới tệp
 # này ở mục menu `facilities` và `make check-fast` kiểm. Tên bảng là tên GraphQL mà Hasura sinh từ
 # hasura/tables.yaml (<lược đồ>_<bảng>); cột khai ở đây phải nằm trong quyền đọc của vai trò `user` ở tệp đó.
-# Khóa của cơ sở và tòa là id vì bảng con nối về cha bằng uuid (facility_id, building_id).
+# Khóa của cơ sở và tòa là id vì bảng con nối về cha bằng uuid (facility_id, building_id). Nút "Lập hồ sơ rà soát"
+# mở quy trình bpmn/facilities-review.bpmn20.xml cho cơ sở đang xem (ADR 0026).
 
 title: Cơ sở nhà, đất
 source: app_facilities_commune_facilities
@@ -21,12 +22,25 @@ fields:
       - { value: in_use, label: Đang sử dụng }
       - { value: surplus, label: Dôi dư }
   - { name: created_at, label: Ngày tạo, type: datetime }
+  # Phần vượt tính trên tổng diện tích các trụ sở của cả xã (view area_summary, qua quan hệ summary ở
+  # hasura/tables.yaml), không tính riêng từng cơ sở; hồ sơ rà soát của mọi cơ sở trong xã mang cùng số này.
+  - { name: summary.excess_m2, label: Phần vượt tiêu chuẩn của xã (m²), type: number }
 list:
   columns: [code, name, address, status]
   search: [code, name, address]
   filters: [status]
 detail:
   title: name
+  # Biến theo workflows/facilities-review.yaml: title hiện trên bảng việc, facilityId để mở lại cơ sở, excessM2 chọn
+  # nhánh báo cáo hay công khai ngay khi lập.
+  actions:
+    - id: review
+      label: Lập hồ sơ rà soát
+      process: facilities-review
+      variables:
+        title: name
+        facilityId: id
+        excessM2: summary.excess_m2
   children:
     - id: buildings
       label: Tòa nhà

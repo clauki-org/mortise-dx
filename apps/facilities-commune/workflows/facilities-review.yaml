@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Khai báo bước của quy trình rà soát (facilities-review.bpmn20.xml) theo contracts/workflow.schema.json: bảng việc
-# đọc tệp này để hiện biểu mẫu và nút của từng bước. Hồ sơ được lập với biến title (tên hồ sơ), facilityId (cơ sở)
-# và excessM2 (phần vượt, m²).
+# đọc tệp này để hiện biểu mẫu và nút của từng bước. Hồ sơ được lập từ nút "Lập hồ sơ rà soát" của
+# catalog/facilities.yaml với biến title (tên cơ sở), facilityId (cơ sở) và excessM2 (phần vượt của xã, m²).
 
 process: facilities-review
 steps:
