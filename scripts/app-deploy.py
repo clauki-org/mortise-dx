@@ -3,10 +3,13 @@
 #
 # Nạp phần chạy lúc dùng của một gói vào lõi, cho mọi tenant đang có trong core.tenants: deploy BPMN lên
 # Flowable, khai báo bước vào platform.workflow_steps, mục menu kèm nội dung tệp cấu hình vào
-# platform.menu_items. Ba lệnh:
-#   install <thư mục gói>   đọc app.yaml (workflows, menu) và <gói>/workflows/*.yaml; app.sh gọi khi cài
-#   remove <thư mục gói>    xóa deployment (kèm hồ sơ đang chạy), khai báo bước và menu của gói; gọi khi gỡ
+# platform.menu_items, luật ngưỡng vào core.threshold_rules. Bốn lệnh:
+#   install <thư mục gói>   đọc app.yaml (workflows, menu, rules) và <gói>/workflows/*.yaml; app.sh gọi
+#                           khi cài
+#   remove <thư mục gói>    xóa deployment (kèm hồ sơ đang chạy), khai báo bước, menu và luật của gói;
+#                           gọi khi gỡ
 #   workflows --bpmn ... --steps ...   chỉ deploy và nạp khai báo bước; make seed gọi cho quy trình mẫu
+#   rules --owner core <tệp> ...       chỉ nạp luật ngưỡng; make seed gọi cho luật mẫu
 # Chạy lại không tạo bản trùng: tên deployment mang băm của tệp, nên tệp không đổi thì không deploy lại.
 # Tenant tạo sau khi cài gói chưa có gì cho tới khi chạy lại `make app-install`. Biến môi trường lấy từ .env
 # (scripts/app.sh, scripts/seed.sh nạp sẵn); `make check-fast` đã kiểm app.yaml, khai báo bước, cấu hình danh
@@ -176,6 +179,32 @@ def load_menu(directory: str, app: dict) -> None:
     print(f"postgres: {len(items)} mục menu của {app['id']}")
 
 
+RULES_SQL = """
+BEGIN;
+CREATE TEMP TABLE rule ON COMMIT DROP AS SELECT * FROM jsonb_to_recordset(:'rules'::jsonb)
+    AS x(rule text, definition jsonb);
+DELETE FROM core.threshold_rules r WHERE r.app = :'app' AND r.rule NOT IN (SELECT rule FROM rule);
+INSERT INTO core.threshold_rules (tenant_id, app, rule, definition)
+SELECT t.id, :'app', r.rule, r.definition
+FROM core.tenants t, rule r
+ON CONFLICT (tenant_id, app, rule) DO UPDATE SET definition = EXCLUDED.definition, updated_at = now()
+    WHERE core.threshold_rules.definition IS DISTINCT FROM EXCLUDED.definition;
+COMMIT;
+"""
+
+
+def load_rules(owner: str, files: list[str]) -> None:
+    # Luật không còn trong danh sách bị xóa, như menu, để chạy lại sau khi sửa cho kết quả như trên dữ liệu
+    # trắng.
+    definitions = [load_yaml(path) for path in files]
+    ids = [definition["id"] for definition in definitions]
+    if len(ids) != len(set(ids)):
+        raise SystemExit(f"Luật ngưỡng của {owner} trùng id ({', '.join(sorted(ids))}).")
+    rules = [{"rule": definition["id"], "definition": definition} for definition in definitions]
+    psql(RULES_SQL, app=owner, rules=json.dumps(rules))
+    print(f"postgres: {len(rules)} luật ngưỡng của {owner}")
+
+
 def package(directory: str) -> tuple[dict, list[str], list[str]]:
     app = load_yaml(os.path.join(directory, "app.yaml"))
     # Kiểm trước khi ghi gì: schema không buộc id menu duy nhất, và trùng id làm câu INSERT báo lỗi khó hiểu
@@ -196,6 +225,9 @@ def main() -> int:
     workflows = commands.add_parser("workflows")
     workflows.add_argument("--bpmn", nargs="+", required=True)
     workflows.add_argument("--steps", nargs="+", required=True)
+    rules = commands.add_parser("rules")
+    rules.add_argument("--owner", required=True)
+    rules.add_argument("files", nargs="+")
     args = parser.parse_args()
 
     every = tenants()
@@ -203,21 +235,26 @@ def main() -> int:
         deploy(args.bpmn, every)
         load_steps(args.steps)
         return 0
+    if args.command == "rules":
+        load_rules(args.owner, args.files)
+        return 0
     app, bpmn, steps = package(args.directory)
     if args.command == "install":
         deploy(bpmn, every)
         load_steps(steps)
         load_menu(args.directory, app)
+        load_rules(app["id"], [os.path.join(args.directory, path) for path in app.get("rules", [])])
         return 0
     undeploy(bpmn, every)
     processes = [load_yaml(path)["process"] for path in steps]
     psql(
         "DELETE FROM platform.workflow_steps WHERE process = ANY(string_to_array(:'processes', ','));"
-        "DELETE FROM platform.menu_items WHERE app = :'app';",
+        "DELETE FROM platform.menu_items WHERE app = :'app';"
+        "DELETE FROM core.threshold_rules WHERE app = :'app';",
         processes=",".join(processes),
         app=app["id"],
     )
-    print(f"postgres: xóa khai báo bước và menu của {app['id']}")
+    print(f"postgres: xóa khai báo bước, menu và luật ngưỡng của {app['id']}")
     return 0
 
 

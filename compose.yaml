@@ -445,7 +445,8 @@ services:
       retries: 20
 
   iot-bridge:
-    # Cầu nối MQTT sang Scorpio: tenant lấy từ chủ đề, chỉ ghi cho tenant có trong core.tenants (ADR 0012).
+    # Cầu nối MQTT sang Scorpio: tenant lấy từ chủ đề, chỉ ghi cho tenant có trong core.tenants (ADR 0012); sau đó
+    # xét luật ngưỡng và mở hồ sơ qua workflow-api.
     # Nằm ở cả hai mạng: nhận tin trong `ot`, ghi vào Scorpio và đọc CSDL trong mạng mặc định.
     build: core/iot-bridge
     restart: unless-stopped
@@ -459,6 +460,12 @@ services:
       BRIDGE_DB_NAME: mortise
       BRIDGE_DB_USER: iot_bridge
       BRIDGE_DB_PASSWORD: ${IOT_BRIDGE_DB_PASSWORD:?run make env}
+      # Mở hồ sơ khi số đo vượt ngưỡng (core.threshold_rules), bằng tài khoản dịch vụ do `make seed` tạo (ADR 0017).
+      # Gọi thẳng trong mạng nội bộ; token xin ở đây vẫn mang issuer công khai vì Keycloak đặt KC_HOSTNAME.
+      WORKFLOW_URL: http://workflow-api:8000
+      KEYCLOAK_TOKEN_URL: http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/token
+      BRIDGE_CLIENT_ID: mortise-iot-bridge
+      BRIDGE_CLIENT_SECRET: ${IOT_BRIDGE_CLIENT_SECRET:?run make env}
     depends_on:
       mosquitto:
         condition: service_healthy

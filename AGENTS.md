@@ -33,7 +33,8 @@ core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp 
   workflow-api/       dịch vụ tự viết: kiểm quyền trước Flowable (Python, uv)
   files-api/          dịch vụ tự viết: tải lên, tải xuống tệp theo tenant trước SeaweedFS (Python, uv)
   context-api/        dịch vụ tự viết: đọc dữ liệu thiết bị (NGSI-LD) theo tenant trước Scorpio (Python, uv)
-  iot-bridge/         dịch vụ tự viết: nhận số đo qua MQTT, ghi vào Scorpio theo tenant của chủ đề (Python, uv)
+  iot-bridge/         dịch vụ tự viết: nhận số đo qua MQTT, ghi vào Scorpio theo tenant của chủ đề, xét luật
+                      ngưỡng (Python, uv)
   mosquitto/          cấu hình Mosquitto (MQTT) trong mạng thiết bị riêng
   cold-archive/       công cụ tự viết: xuất nhật ký cũ sang kho lạnh (Parquet), truy vấn bằng DuckDB (Python, uv)
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi

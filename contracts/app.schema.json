@@ -44,6 +44,12 @@
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/path", "pattern": "\\.bpmn20\\.xml$" }
     },
+    "rules": {
+      "description": "Tệp luật ngưỡng theo contracts/threshold-rule.schema.json; bộ cài gói nạp cho mọi tenant, core/iot-bridge xét luật với số đo của thiết bị",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/path", "pattern": "\\.yaml$" }
+    },
     "menu": {
       "description": "Mục menu gói thêm vào khung giao diện; mỗi mục mở một thành phần Tầng 2 với cấu hình của gói",
       "type": "array",

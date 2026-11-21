@@ -12,6 +12,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Luật ngưỡng (`contracts/threshold-rule.schema.json`): số đo của thiết bị vượt ngưỡng liên tục đủ lâu thì
+  iot-bridge mở quy trình cho tenant của thiết bị qua workflow-api, không mở thêm khi hồ sơ cũ còn mở. Gói khai luật
+  ở mục `rules` của app.yaml; bộ cài gói nạp vào `core.threshold_rules`; `make seed` nạp luật mẫu của lõi.
 - Tài khoản dịch vụ cho workflow-api (ADR 0017): client Keycloak `mortise-iot-bridge` (client credentials, secret
   `IOT_BRIDGE_CLIENT_SECRET`, tạo bằng `make seed`) mở quy trình thay cho tenant ghi ở header `X-Mortise-Tenant`, chỉ
   được khởi tạo; `Idempotency-Key` của dịch vụ chỉ khớp quy trình còn mở. Hợp đồng
