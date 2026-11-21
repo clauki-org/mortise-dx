@@ -8,8 +8,8 @@
 #   next <tên>   in một mã chưa dùng cho tài khoản đó (smoke, e2e)
 # Keycloak không nhận lại mã đã dùng (otpPolicyCodeReusable false) và nhận mã của khung 30 giây trước, hiện
 # tại và sau (otpPolicyLookAheadWindow 1). `next` nhớ khung đã dùng của từng tài khoản trong thư mục tạm, lấy
-# khung kế tiếp, và chờ sang khung mới khi đã dùng hết, để các lần đăng nhập liên tiếp không bị từ chối vì
-# dùng lại mã.
+# khung kế tiếp trong hai khung hiện tại và sau, và chờ sang khung mới khi đã dùng hết, để các lần đăng nhập
+# liên tiếp không bị từ chối vì dùng lại mã.
 
 import base64
 import fcntl
@@ -63,7 +63,10 @@ def fresh_counter(username: str) -> int:
         last = int(recorded) if recorded.isdigit() else 0
         while True:
             now = int(time.time()) // PERIOD
-            counter = max(now - 1, last + 1)
+            # Không dùng khung trước dù Keycloak còn nhận: lấy mã ở cuối khung thì tới lúc Keycloak kiểm,
+            # khung đã sang và mã thành quá cũ, đăng nhập bị từ chối ngẫu nhiên (smoke, e2e đỏ khi lời gọi rơi
+            # đúng ranh giới 30 giây). Mã của khung hiện tại vẫn được nhận khi khung đã sang.
+            counter = max(now, last + 1)
             if counter <= now + 1:
                 state.seek(0)
                 state.truncate()
