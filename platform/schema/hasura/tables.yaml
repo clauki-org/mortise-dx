@@ -17,3 +17,32 @@
       permission:
         columns: [tenant_id, app, item, position, label, component, config, roles]
         filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+# Văn bản cho trợ lý hỏi văn bản (ADR 0021): trợ lý đọc bằng token người hỏi, nên quyền ở đây quyết định đoạn nào được
+# tìm và được trích.
+- table: { schema: platform, name: knowledge_documents }
+  array_relationships:
+    - name: passages
+      using:
+        manual_configuration:
+          remote_table: { schema: platform, name: knowledge_passages }
+          column_mapping: { tenant_id: tenant_id, app: app, document_id: document_id }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [tenant_id, app, document_id, title, source_url, source_sha256, retrieved]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+- table: { schema: platform, name: knowledge_passages }
+  object_relationships:
+    - name: document
+      using:
+        manual_configuration:
+          remote_table: { schema: platform, name: knowledge_documents }
+          column_mapping: { tenant_id: tenant_id, app: app, document_id: document_id }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [tenant_id, app, document_id, passage_id, position, label, text, superseded_by_document,
+                  superseded_by_passage]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }

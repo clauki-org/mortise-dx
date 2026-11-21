@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/clauki-org/mortise-dx/contracts/knowledge.schema.json",
   "title": "Một văn bản cho trợ lý hỏi văn bản (apps/<gói>/knowledge/*.yaml)",
-  "description": "Gói liệt kê tệp ở mục `knowledge` của app.yaml; mỗi tệp một văn bản, chia thành các đoạn có mã, nhãn vị trí và nguyên văn (ADR 0021). Trợ lý chỉ trích câu lấy từ `text` của đoạn, nên `text` phải chép đúng bản gốc ở `source`. Luật nhiều tệp (mã đoạn không trùng trong văn bản, `superseded_by` trỏ tới đoạn có thật) do bộ cài gói kiểm khi nạp (kế hoạch).",
+  "description": "Gói liệt kê tệp ở mục `knowledge` của app.yaml; mỗi tệp một văn bản, chia thành các đoạn có mã, nhãn vị trí và nguyên văn (ADR 0021). Trợ lý chỉ trích câu lấy từ `text` của đoạn, nên `text` phải chép đúng bản gốc ở `source`. Luật nhiều tệp (mã đoạn không trùng trong văn bản, `superseded_by` trỏ tới đoạn có thật) do bộ cài gói (scripts/app_knowledge.py) kiểm trước khi nạp.",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "title", "source", "passages"],

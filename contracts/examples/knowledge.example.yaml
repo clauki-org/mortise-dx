@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Ví dụ văn bản hợp lệ theo contracts/knowledge.schema.json; `make check-fast` kiểm tệp này. Văn bản hư cấu, chỉ để
-# minh họa định dạng: địa chỉ thuộc example.org, băm là SHA-256 của tệp rỗng. Gói thật đặt tệp ở
+# Ví dụ văn bản hợp lệ theo contracts/knowledge.schema.json; `make check-fast` kiểm tệp này, `make seed` nạp nó làm
+# văn bản mẫu của lõi. Văn bản hư cấu: địa chỉ thuộc example.org, băm là SHA-256 của tệp rỗng. Gói thật đặt tệp ở
 # apps/<gói>/knowledge/ và chép nguyên văn từ bản gốc đã băm.
 
 id: example-rules
@@ -15,7 +15,7 @@ passages:
   - id: art-1-cl-1
     label: Điều 1 khoản 1
     text: Phòng họp được đặt trước tối đa 7 ngày.
-    # Đoạn thay nó nằm ở một văn bản khác của cùng gói.
+    # Đoạn thay nó nằm ở văn bản khác: contracts/examples/knowledge-amendment.example.yaml.
     superseded_by:
       document: example-rules-amendment
       passage: art-1

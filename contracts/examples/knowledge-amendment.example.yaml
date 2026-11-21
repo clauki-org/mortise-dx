@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Văn bản hư cấu thứ hai theo contracts/knowledge.schema.json: thay khoản 1 Điều 1 của
+# contracts/examples/knowledge.example.yaml (`superseded_by` ở tệp đó trỏ tới đoạn `art-1` dưới đây). `make seed` nạp
+# cả hai tệp làm văn bản mẫu của lõi cho mọi tenant; `make smoke` kiểm mỗi tenant chỉ đọc được đoạn của mình. Địa chỉ
+# thuộc example.org, băm là SHA-256 của tệp rỗng.
+
+id: example-rules-amendment
+title: Quyết định mẫu sửa quy chế đặt phòng họp (hư cấu)
+source:
+  url: https://example.org/quyet-dinh-mau.pdf
+  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  retrieved: 2026-11-21
+passages:
+  - id: art-1
+    label: Điều 1
+    text: Sửa khoản 1 Điều 1 của Quy chế mẫu như sau. Phòng họp được đặt trước tối đa 14 ngày.

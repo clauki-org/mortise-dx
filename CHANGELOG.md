@@ -12,6 +12,10 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Văn bản cho trợ lý hỏi văn bản (ADR 0021): bộ cài gói nạp các tệp ở mục `knowledge` của app.yaml vào
+  `platform.knowledge_documents` và `platform.knowledge_passages` cho mọi tenant, có nhật ký thay đổi, kiểm mã đoạn
+  trùng, `superseded_by` trỏ tới đoạn có thật và văn bản mà cấu hình trợ lý hỏi; gỡ gói thì xóa. Mỗi người chỉ đọc
+  được bản của tenant mình qua GraphQL. `make seed` nạp hai văn bản mẫu hư cấu của lõi.
 - Profile `ai` (ADR 0021): `make ai-up` chạy Ollama 0.40.16, tải Qwen3.5 4B và dừng nếu trọng số khác digest ghim
   trong `core/ollama/models.txt`. Hợp đồng cho trợ lý hỏi văn bản: cấu hình thành phần
   (`contracts/assistant.schema.json`) và văn bản của gói (`contracts/knowledge.schema.json`, mục `knowledge` trong

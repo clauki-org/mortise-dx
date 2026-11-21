@@ -3,13 +3,15 @@
 #
 # Nạp phần chạy lúc dùng của một gói vào lõi, cho mọi tenant đang có trong core.tenants: deploy BPMN lên
 # Flowable, khai báo bước vào platform.workflow_steps, mục menu kèm nội dung tệp cấu hình vào
-# platform.menu_items, luật ngưỡng vào core.threshold_rules. Bốn lệnh:
-#   install <thư mục gói>   đọc app.yaml (workflows, menu, rules) và <gói>/workflows/*.yaml; app.sh gọi
-#                           khi cài
-#   remove <thư mục gói>    xóa deployment (kèm hồ sơ đang chạy), khai báo bước, menu và luật của gói;
-#                           gọi khi gỡ
+# platform.menu_items, luật ngưỡng vào core.threshold_rules, văn bản cho trợ lý vào bảng knowledge của
+# platform (scripts/app_knowledge.py). Năm lệnh:
+#   install <thư mục gói>   đọc app.yaml (workflows, menu, rules, knowledge) và <gói>/workflows/*.yaml;
+#                           app.sh gọi khi cài
+#   remove <thư mục gói>    xóa deployment (kèm hồ sơ đang chạy), khai báo bước, menu, luật, văn bản của
+#                           gói; gọi khi gỡ
 #   workflows --bpmn ... --steps ...   chỉ deploy và nạp khai báo bước; make seed gọi cho quy trình mẫu
 #   rules --owner core <tệp> ...       chỉ nạp luật ngưỡng; make seed gọi cho luật mẫu
+#   knowledge --owner core <tệp> ...   chỉ nạp văn bản; make seed gọi cho văn bản mẫu
 # Chạy lại không tạo bản trùng: tên deployment mang băm của tệp, nên tệp không đổi thì không deploy lại.
 # BPMN của gói có thể chứa {{tên}}: được thay bằng giá trị trong `settings` của app.yaml, ghi đè lúc cài
 # bằng biến môi trường APP_SETTINGS (make app-install SETTINGS=tên=giá trị), trước khi băm và deploy
@@ -33,6 +35,7 @@ import urllib.request
 import uuid
 import xml.etree.ElementTree as ET
 
+import app_knowledge
 import yaml
 from workflow_settings import SettingsError, merge, parse_overrides, render
 
@@ -228,6 +231,21 @@ def load_rules(owner: str, files: list[str]) -> None:
     print(f"postgres: {len(rules)} luật ngưỡng của {owner}")
 
 
+def read_knowledge(owner: str, files: list[str]) -> list[dict]:
+    documents = [load_yaml(path) for path in files]
+    problems = app_knowledge.problems(documents)
+    if problems:
+        raise SystemExit(f"Văn bản của {owner} chưa nạp được:\n  " + "\n  ".join(problems))
+    return documents
+
+
+def load_knowledge(owner: str, documents: list[dict]) -> None:
+    # Văn bản và đoạn không còn trong danh sách bị xóa, như luật ngưỡng.
+    rows, passages = app_knowledge.rows(documents)
+    psql(app_knowledge.SQL, app=owner, documents=json.dumps(rows), passages=json.dumps(passages))
+    print(f"postgres: {len(rows)} văn bản, {len(passages)} đoạn của {owner}")
+
+
 def package(directory: str) -> tuple[dict, list[str], list[str]]:
     app = load_yaml(os.path.join(directory, "app.yaml"))
     # Kiểm trước khi ghi gì: schema không buộc id menu duy nhất, và trùng id làm câu INSERT báo lỗi khó hiểu
@@ -259,9 +277,10 @@ def main() -> int:
     workflows = commands.add_parser("workflows")
     workflows.add_argument("--bpmn", nargs="+", required=True)
     workflows.add_argument("--steps", nargs="+", required=True)
-    rules = commands.add_parser("rules")
-    rules.add_argument("--owner", required=True)
-    rules.add_argument("files", nargs="+")
+    for name in ("rules", "knowledge"):
+        command = commands.add_parser(name)
+        command.add_argument("--owner", required=True)
+        command.add_argument("files", nargs="+")
     args = parser.parse_args()
 
     every = tenants()
@@ -272,23 +291,35 @@ def main() -> int:
     if args.command == "rules":
         load_rules(args.owner, args.files)
         return 0
+    if args.command == "knowledge":
+        load_knowledge(args.owner, read_knowledge(args.owner, args.files))
+        return 0
     app, bpmn, steps = package(args.directory)
     if args.command == "install":
+        # Văn bản và cấu hình trợ lý kiểm trước khi ghi gì, như id menu trong package().
+        files = [os.path.join(args.directory, path) for path in app.get("knowledge", [])]
+        documents = read_knowledge(app["id"], files)
+        problems = app_knowledge.menu_problems(args.directory, app, documents)
+        if problems:
+            raise SystemExit(f"{args.directory}/app.yaml: " + "; ".join(problems))
         deploy(bpmn, every, package_settings(app))
         load_steps(steps)
         load_menu(args.directory, app)
         load_rules(app["id"], [os.path.join(args.directory, path) for path in app.get("rules", [])])
+        load_knowledge(app["id"], documents)
         return 0
     undeploy(bpmn, every)
     processes = [load_yaml(path)["process"] for path in steps]
     psql(
         "DELETE FROM platform.workflow_steps WHERE process = ANY(string_to_array(:'processes', ','));"
         "DELETE FROM platform.menu_items WHERE app = :'app';"
-        "DELETE FROM core.threshold_rules WHERE app = :'app';",
+        "DELETE FROM core.threshold_rules WHERE app = :'app';"
+        "DELETE FROM platform.knowledge_passages WHERE app = :'app';"
+        "DELETE FROM platform.knowledge_documents WHERE app = :'app';",
         processes=",".join(processes),
         app=app["id"],
     )
-    print(f"postgres: xóa khai báo bước, menu và luật ngưỡng của {app['id']}")
+    print(f"postgres: xóa khai báo bước, menu, luật ngưỡng và văn bản của {app['id']}")
     return 0
 
 

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/clauki-org/mortise-dx/contracts/assistant.schema.json",
   "title": "Cấu hình thành phần trợ lý hỏi văn bản",
-  "description": "Tệp mà một mục menu `component: assistant` trong app.yaml trỏ tới (ADR 0013, ADR 0021). Trợ lý chỉ tìm trong các văn bản liệt kê ở `documents`, là `id` của văn bản gói khai ở mục `knowledge` của app.yaml; bộ cài gói kiểm các văn bản đó có thật (kế hoạch). Cấu hình không cấp quyền: người hỏi thấy đoạn nào do quyền Hasura quyết định.",
+  "description": "Tệp mà một mục menu `component: assistant` trong app.yaml trỏ tới (ADR 0013, ADR 0021). Trợ lý chỉ tìm trong các văn bản liệt kê ở `documents`, là `id` của văn bản gói khai ở mục `knowledge` của app.yaml; bộ cài gói kiểm các văn bản đó có thật trước khi ghi gì. Cấu hình không cấp quyền: người hỏi thấy đoạn nào do quyền Hasura quyết định.",
   "type": "object",
   "additionalProperties": false,
   "required": ["intro", "documents"],

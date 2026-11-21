@@ -145,6 +145,9 @@ uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py wo
 # Luật ngưỡng mẫu của lõi, mở core-approval; `make smoke` kiểm đường mở hồ sơ khi vượt ngưỡng bằng luật này.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py rules \
   --owner core contracts/examples/threshold-rule.example.yaml
+# Văn bản mẫu của lõi (hư cấu) cho trợ lý hỏi văn bản; `make smoke` kiểm mỗi tenant chỉ đọc được đoạn của mình.
+uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py knowledge \
+  --owner core contracts/examples/knowledge.example.yaml contracts/examples/knowledge-amendment.example.yaml
 echo "flowable: quy trình đã sẵn sàng"
 
 # Tài khoản MQTT của các thiết bị demo (ADR 0012), cùng mật khẩu DEMO_DEVICE_PASSWORD để bộ giả lập đăng nhập

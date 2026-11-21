@@ -67,6 +67,19 @@ curl -fsS -X POST http://localhost:9080/v1/graphql \
   -d '{"query":"{ platform_workflow_steps { process step config } }"}'
 ```
 
+Văn bản cho trợ lý hỏi văn bản (`contracts/knowledge.schema.json`, [ADR 0021](adr/0021-document-assistant.md)) nằm ở
+`platform_knowledge_documents` (một dòng mỗi văn bản: tên, nguồn, băm và ngày tải bản gốc) và
+`platform_knowledge_passages` (một dòng mỗi đoạn: `label` là nhãn vị trí, `text` là nguyên văn, `position` là thứ tự
+trong văn bản; đoạn đã bị thay có `superseded_by_document` và `superseded_by_passage`). `app` là gói, hay `core` cho
+văn bản mẫu hư cấu mà `make seed` nạp; `make app-install` nạp văn bản gói khai ở `knowledge`. Mỗi người chỉ đọc được
+bản của tenant mình.
+
+```bash
+curl -fsS -X POST http://localhost:9080/v1/graphql \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"query":"{ platform_knowledge_passages(order_by: [{document_id: asc}, {position: asc}]) { document_id label text superseded_by_passage document { title } } }"}'
+```
+
 | Mã trả về | Khi nào |
 |---|---|
 | `200` | Truy vấn hợp lệ; lỗi nghiệp vụ nằm trong trường `errors` của GraphQL |
