@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ cấu hình trợ lý hỏi văn bản hợp lệ theo contracts/assistant.schema.json; `make check-fast` kiểm tệp này.
+# `documents` trỏ tới văn bản ở contracts/examples/knowledge.example.yaml.
+
+intro: Hỏi về quy chế đặt phòng họp; câu trả lời kèm câu trích nguyên văn, không đủ căn cứ thì trợ lý từ chối.
+examples:
+  - Mỗi lần đặt phòng họp được dùng bao lâu?
+documents: [example-rules]

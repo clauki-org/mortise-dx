@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/assistant.schema.json",
+  "title": "Cấu hình thành phần trợ lý hỏi văn bản",
+  "description": "Tệp mà một mục menu `component: assistant` trong app.yaml trỏ tới (ADR 0013, ADR 0021). Trợ lý chỉ tìm trong các văn bản liệt kê ở `documents`, là `id` của văn bản gói khai ở mục `knowledge` của app.yaml; bộ cài gói kiểm các văn bản đó có thật (kế hoạch). Cấu hình không cấp quyền: người hỏi thấy đoạn nào do quyền Hasura quyết định.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intro", "documents"],
+  "properties": {
+    "intro": {
+      "description": "Lời giới thiệu hiện trên khung hỏi: hỏi được về những gì",
+      "$ref": "#/$defs/text"
+    },
+    "examples": {
+      "description": "Câu hỏi mẫu người dùng bấm để hỏi ngay",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "documents": {
+      "description": "Mã các văn bản được hỏi",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64 }
+    }
+  },
+  "$defs": {
+    "text": {
+      "description": "Chữ cho người đọc: có ít nhất một ký tự không phải khoảng trắng",
+      "type": "string",
+      "pattern": "\\S"
+    }
+  }
+}

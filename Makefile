@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e audit-verify backup-under-load files-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo
+  check-fast web-check e2e audit-verify backup-under-load files-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -63,6 +63,9 @@ files-verify: ## Kiểm mỗi dòng core.files có đúng một đối tượng 
 
 simulate: ## Chạy bộ giả lập thiết bị demo, gửi số đo mỗi 5 giây; thêm ARGS="--set xa-a/archive-01:humidity=78"
 	docker compose --profile simulator run --rm --build simulator $(ARGS)
+
+ai-up: env ## Chạy Ollama (profile ai), tải mô hình ghim trong core/ollama/models.txt và kiểm digest; lần đầu cần mạng
+	@scripts/ai.sh
 
 device-add: ## Cấp tài khoản MQTT cho thiết bị, in mật khẩu: make device-add TENANT=<tenant> DEVICE=<thiết bị>
 	@scripts/device.sh add "$(TENANT)" "$(DEVICE)"

@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/assistant.schema.json từ chối: lời giới thiệu chỉ có khoảng trắng.
+# Nếu lọt, khung hỏi không cho người dùng biết hỏi được về gì.
+
+intro: '   '
+documents: [example-rules]

@@ -38,6 +38,12 @@
       "description": "Thư mục metadata Hasura khai báo: bảng được đăng ký, quan hệ, quyền",
       "$ref": "#/$defs/path"
     },
+    "knowledge": {
+      "description": "Tệp văn bản cho trợ lý hỏi văn bản theo contracts/knowledge.schema.json, mỗi tệp một văn bản (ADR 0021); `make check-fast` kiểm từng tệp. Bộ cài gói nạp vào bảng của Tầng 2 theo tenant (kế hoạch).",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/path", "pattern": "\\.yaml$" }
+    },
     "workflows": {
       "description": "Tệp BPMN, deploy cho từng tenant khi cài gói; mỗi tệp khai một lần",
       "type": "array",

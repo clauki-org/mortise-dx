@@ -239,6 +239,16 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Cấu hình:** mã ở `core/context-api/`; quy tắc ở `app/policy.py`, có kiểm thử ở `tests/`.
 - **Xem:** `make test`, `make smoke`; các endpoint ở [api.md](api.md).
 
+### Ollama: chạy mô hình ngôn ngữ tại chỗ (tùy chọn)
+
+- **Làm gì:** chạy mô hình ngôn ngữ trên CPU của máy chủ, nhận yêu cầu qua HTTP trong mạng nội bộ; nhận một JSON
+  Schema để buộc câu trả lời đúng dạng.
+- **Trong dự án:** profile `ai`, không chạy cùng `make up`; không mở cổng ra máy chủ hay qua cổng APISIX. Mô hình và
+  lý do chọn ở [ADR 0021](adr/0021-document-assistant.md); trợ lý hỏi văn bản gọi Ollama là kế hoạch.
+- **Cấu hình:** dịch vụ `ollama` trong `compose.yaml`, trọng số trong volume `ollama`; tên mô hình và digest lớp
+  trọng số ở `core/ollama/models.txt`.
+- **Xem:** `make ai-up` (tải và đối chiếu digest); `docker compose exec ollama ollama list`.
+
 ## Giao diện Tầng 2
 
 ### Khung giao diện (`platform/web/`, tự viết)

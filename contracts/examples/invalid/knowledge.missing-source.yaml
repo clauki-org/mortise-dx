@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/knowledge.schema.json từ chối: thiếu nguồn của bản gốc.
+# Nếu lọt, câu trích không truy được về văn bản đã chép.
+
+id: example-rules
+title: Quy chế mẫu
+passages:
+  - id: art-1
+    label: Điều 1
+    text: Phòng họp được đặt trước tối đa 7 ngày.

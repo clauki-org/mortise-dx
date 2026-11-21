@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/assistant.schema.json từ chối: mã văn bản là một đường dẫn tệp.
+# Nếu lọt, cấu hình trỏ tới tệp thay vì `id` của văn bản và không khớp văn bản nào.
+
+intro: Hỏi về quy chế đặt phòng họp.
+documents: [knowledge/example-rules.yaml]

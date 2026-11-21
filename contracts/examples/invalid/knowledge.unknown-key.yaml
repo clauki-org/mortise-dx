@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/knowledge.schema.json từ chối: đoạn có khóa không thuộc hợp đồng.
+# Nếu lọt, gõ nhầm `superseded` thay vì `superseded_by` làm đoạn hết hiệu lực vẫn được tìm.
+
+id: example-rules
+title: Quy chế mẫu
+source:
+  url: https://example.org/quy-che-mau.pdf
+  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  retrieved: 2026-11-21
+passages:
+  - id: art-1
+    label: Điều 1
+    text: Phòng họp được đặt trước tối đa 7 ngày.
+    no_such_key: true

@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/knowledge.schema.json từ chối: băm của bản gốc không phải 64 chữ số hệ mười sáu.
+# Nếu lọt, không ai đối chiếu được văn bản đã nạp với bản gốc.
+
+id: example-rules
+title: Quy chế mẫu
+source:
+  url: https://example.org/quy-che-mau.pdf
+  sha256: no-such-hash
+  retrieved: 2026-11-21
+passages:
+  - id: art-1
+    label: Điều 1
+    text: Phòng họp được đặt trước tối đa 7 ngày.

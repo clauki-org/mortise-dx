@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Mô hình mà `make ai-up` (scripts/ai.sh) tải vào Ollama, mỗi dòng: tên trên registry của Ollama, digest lớp trọng số.
+# Digest là băm của tệp trọng số, tức tệp ở dòng FROM đầu tiên của `ollama show --modelfile`; tải về mà khác thì
+# lệnh dừng. Chỉ trọng số được ghim; mẫu prompt và tham số mặc định đi kèm trên registry không được đối chiếu. Đổi
+# mô hình hay digest thì đo lại và ghi kết quả theo ADR 0021.
+qwen3.5:4b sha256:a9d0a3e1d8c91732a3812becd31f8d4a8ff57414903f226306069f0437e2ac50

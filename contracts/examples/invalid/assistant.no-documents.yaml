@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/assistant.schema.json từ chối: không có văn bản nào để hỏi.
+# Nếu lọt, mọi câu hỏi đều bị từ chối vì không có đoạn nào để tìm.
+
+intro: Hỏi về quy chế đặt phòng họp.
+documents: []
