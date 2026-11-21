@@ -36,6 +36,8 @@ component.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key
 device-message.reserved-name.json	$.measurements	'type' should not be valid under {'enum': ['id', 'type', 'scope', 'location', 'observationSpace', 'operationSpace', 'createdAt', 'modifiedAt', 'deletedAt', 'observedAt']}
 device-message.tenant-in-body.json	$	Additional properties are not allowed ('tenant' was unexpected)
 device-message.text-value.json	$.measurements.humidity	'71' is not of type 'number', 'boolean'
+seed.missing-key.yaml	$['xa-a'].tables[0]	'key' is a required property
+seed.tenant-id-in-row.yaml	$['xa-a'].tables[0].rows[0]	'tenant_id' should not be valid under {'const': 'tenant_id'}
 service-token-claims.has-tenant.json	$.tenant	['xa-a'] should not be valid under {}
 service-token-claims.user-role.json	$.realm_access.roles	['default-roles-mortise', 'user'] should not be valid under {'contains': {'const': 'user'}}
 threshold-rule.no-threshold.yaml	$	{'id': 'test-level-high', 'title': 'Thiếu ngưỡng', 'entityType': 'Device', 'measurement': 'testLevel', 'holdSeconds': 5, 'process': 'core-approval'} is not valid under any of the given schemas

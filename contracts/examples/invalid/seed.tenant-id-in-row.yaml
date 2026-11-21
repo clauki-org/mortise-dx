@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Sai: dòng tự ghi tenant_id. Tenant phải lấy từ token của tài khoản nạp, không từ dữ liệu.
+
+xa-a:
+  account: admin.a
+  tables:
+    - table: groups
+      key: [code]
+      rows:
+        - { code: G1, name: Nhóm thứ nhất, tenant_id: xa-b }

@@ -78,14 +78,19 @@ cold-query: ## Truy vấn nhật ký gộp kho lạnh và CSDL bằng DuckDB: ma
 	@test -n "$(SQL)" || { echo 'Cách dùng: make cold-query SQL="SELECT count(*) FROM audit_all"' >&2; exit 1; }
 	@docker compose --profile tools run --rm --build cold-archive query "$(SQL)"
 
-seed-demo: ## Nạp dữ liệu demo của các gói (apps/*/seed/load.py) qua cổng; cần gói đã cài và make seed
-	@loaders=$$(ls apps/*/seed/load.py 2>/dev/null); \
-	test -n "$$loaders" || { echo "Không gói nào có seed/load.py." >&2; exit 1; }; \
-	for loader in $$loaders; do \
+# Gói có bộ nạp riêng (seed/load.py) thì chạy nó; gói chỉ có seed/demo.yaml thì nạp bằng bộ nạp chung
+# scripts/app-seed.py (ADR 0022). APP=<gói> nạp riêng một gói, khi các gói khác có dữ liệu demo chưa được cài.
+seed-demo: ## Nạp dữ liệu demo của các gói (hoặc APP=<gói>) qua cổng; cần gói đã cài và make seed
+	@found=; for dir in $(if $(APP),apps/$(APP)/,apps/*/); do \
+	  if [ -f "$${dir}seed/load.py" ]; then run="$${dir}seed/load.py"; \
+	  elif [ -f "$${dir}seed/demo.yaml" ]; then run="scripts/app-seed.py $${dir%/}"; \
+	  else continue; fi; \
+	  found=1; \
 	  DEMO_USER_PASSWORD="$$(sed -n 's/^DEMO_USER_PASSWORD=//p' .env)" \
 	  MORTISE_PUBLIC_URL="$$(sed -n 's/^MORTISE_PUBLIC_URL=//p' .env)" \
-	    uv run --quiet --no-project --with pyyaml==6.0.3 python "$$loader" || exit 1; \
-	done
+	    uv run --quiet --no-project --with pyyaml==6.0.3 python $$run || exit 1; \
+	done; \
+	test -n "$$found" || { echo "Không gói nào có dữ liệu demo (seed/load.py hoặc seed/demo.yaml)." >&2; exit 1; }
 
 app-install: ## Cài một gói Tầng 3 lên lõi đang chạy: make app-install APP=<gói> [SETTINGS=tên=giá trị,...]
 	@APP_SETTINGS="$(SETTINGS)" scripts/app.sh "$(APP)" install
@@ -116,6 +121,10 @@ test: ## Kiểm thử đơn vị các dịch vụ tự viết của lõi và b�
 contracts: ## Xuất lại OpenAPI của workflow-api, files-api và context-api vào contracts/ sau khi đổi route hay model
 	@scripts/contracts.sh write
 
+# Gói chỉ được chứa tệp khai báo, không có mã chạy (ADR 0022); scripts/check-declarative.sh kiểm trong check-fast.
+# Gói có mã riêng (ví dụ bộ nạp seed/load.py) không nằm trong danh sách này.
+DECLARATIVE_APPS :=
+
 # shellcheck, yamllint và ruff chạy qua uvx để không phải cài sẵn; chỉ cần uv.
 check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp đồng API; không cần dựng lõi
 	@test -f .env || cp .env.example .env.check-fast
@@ -133,6 +142,7 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	uvx ruff format --no-cache --check --config core/workflow-api/pyproject.toml scripts apps
 	@scripts/contracts.sh check
 	uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py lint
+	$(if $(DECLARATIVE_APPS),@scripts/check-declarative.sh $(DECLARATIVE_APPS))
 
 # Giấy phép phụ thuộc của giao diện (ADR 0006). Thư viện đóng gói vào tệp giao diện gửi tới người dùng chỉ được mang
 # giấy phép dễ dãi. Công cụ chỉ chạy lúc phát triển và build, không đóng gói vào sản phẩm, được thêm: BlueOak-1.0.0
