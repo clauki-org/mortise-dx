@@ -86,6 +86,21 @@ def process_keys(path: str) -> list[str]:
     return [process.get("id") for process in root.iter(f"{BPMN}process")]
 
 
+def is_latest(name: str, keys: list[str], tenant: str) -> bool:
+    # workflow-api mở hồ sơ theo khóa quy trình, tức phiên bản mới nhất. Chỉ hỏi "đã có deployment tên này
+    # chưa" là chưa đủ: đổi settings A sang B rồi về A thì deployment của A đã có từ trước, bộ cài bỏ qua và
+    # in A trong khi hồ sơ mới vẫn chạy B. Vì vậy chỉ bỏ qua khi phiên bản mới nhất của mọi khóa trong tệp
+    # thuộc một deployment mang đúng tên này.
+    for key in keys:
+        query = urllib.parse.urlencode({"key": key, "tenantId": tenant, "latest": "true"})
+        latest = flowable("GET", f"/repository/process-definitions?{query}")["data"]
+        if not latest:
+            return False
+        if flowable("GET", f"/repository/deployments/{latest[0]['deploymentId']}")["name"] != name:
+            return False
+    return True
+
+
 def deploy(files: list[str], every: list[str], settings: dict[str, str]) -> None:
     # Flowable đặt tên deployment theo tên tệp tải lên (bỏ qua trường deploymentName), nên băm của tệp
     # được gắn vào tên tệp: tệp không đổi thì không tạo phiên bản mới. Băm tính trên tệp đã thay giá trị: đổi
@@ -98,9 +113,9 @@ def deploy(files: list[str], every: list[str], settings: dict[str, str]) -> None
                 raise SystemExit(str(error)) from error
         stem = os.path.basename(path).removesuffix(".bpmn20.xml")
         name = f"{stem}-{hashlib.sha256(content).hexdigest()[:12]}"
+        keys = process_keys(path)
         for tenant in every:
-            query = urllib.parse.urlencode({"name": name, "tenantId": tenant})
-            if flowable("GET", f"/repository/deployments?{query}")["total"]:
+            if is_latest(name, keys, tenant):
                 continue
             boundary = uuid.uuid4().hex
             body = (

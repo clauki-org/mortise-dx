@@ -96,11 +96,11 @@ xã duyệt; người lập không tự duyệt được (bốn mắt).
 Nhánh được chọn ngay khi lập hồ sơ, trước bước duyệt: người duyệt gửi kèm biến khi duyệt cũng không đổi được nhánh.
 
 Ngưỡng và thời hạn là `settings` trong `app.yaml` (ADR 0019): `review_threshold_m2: 300`, `publication_period: P30D`
-theo câu chuyện ở #58. Demo và CI ghi đè thời hạn khi cài:
+theo Điều 3a khoản 2, 3 NĐ 155/2025/NĐ-CP, bổ sung bởi Điều 3 NĐ 369/2026/NĐ-CP. Demo và CI ghi đè thời hạn khi cài:
 `make app-install APP=facilities-commune SETTINGS=publication_period=PT20S`.
 
-**Giới hạn:** `excessM2` do giao diện gửi khi lập hồ sơ, người duyệt đối chiếu với hồ sơ. Quy trình chưa tự lấy phần
-vượt từ view `area_summary`; lấy số ở phía máy chủ là việc sau.
+**Giới hạn:** `excessM2` do client gửi khi lập hồ sơ (chưa có màn hình nào mở quy trình này), người duyệt đối chiếu
+với hồ sơ. Quy trình chưa tự lấy phần vượt từ view `area_summary`; lấy số ở phía máy chủ là việc sau.
 
 ## Cài và gỡ
 
@@ -108,7 +108,7 @@ Cần lõi đang chạy và đã `make seed`. Cài gói chạy migration, áp qu
 báo bước và menu:
 
 ```bash
-make app-install APP=facilities-commune                  # thời hạn công khai theo app.yaml (P30D)
+make app-install APP=facilities-commune                  # P30D theo app.yaml: smoke không chờ hết hạn công khai
 make app-install APP=facilities-commune SETTINGS=publication_period=PT20S   # demo, CI: thời hạn 20 giây
 make seed-demo                                           # dữ liệu demo ba xã (seed/demo.yaml), qua cổng
 make app-smoke APP=facilities-commune                    # kiểm qua cổng

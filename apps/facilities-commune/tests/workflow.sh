@@ -5,9 +5,11 @@
 # Kiểm quy trình rà soát của gói (bpmn/facilities-review.bpmn20.xml) qua cổng, bằng API quy trình như giao
 # diện: phần vượt trên ngưỡng thì sau khi duyệt chờ hết thời hạn công khai rồi mới sang bước trình, từ ngưỡng trở
 # xuống thì duyệt xong là kết thúc; người lập không tự duyệt; biến gửi kèm khi lập hay khi duyệt không đổi được
-# nhánh. Ngưỡng và thời hạn đọc từ settings của app.yaml (ADR 0019): gói phải được cài với thời hạn ngắn, ví dụ
-# make app-install APP=facilities-commune SETTINGS=publication_period=PT20S. Mọi hồ sơ tạo ra đều được đưa tới
-# kết thúc. smoke.sh của gói gọi tệp này; cần lõi đang chạy, đã `make seed` và đã cài gói.
+# nhánh. Ngưỡng 300 m² là giá trị trong app.yaml; thời hạn công khai đọc từ quy trình đã deploy (ADR 0019): chỉ chờ
+# hết hạn khi gói được cài với thời hạn ngắn, ví dụ make app-install APP=facilities-commune
+# SETTINGS=publication_period=PT20S, còn không thì báo SKIP phần đó. Mọi hồ sơ tạo ra đều được đưa tới kết thúc
+# hoặc bị xóa.
+# smoke.sh của gói gọi tệp này; cần lõi đang chạy, đã `make seed` và đã cài gói.
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
 # .env do `make env` sinh ra và không có trong repo, nên shellcheck không đọc theo.
@@ -18,6 +20,8 @@ set +a
 
 base="${MORTISE_PUBLIC_URL:-http://localhost:9080}"
 process=facilities-review
+# Xã của user.a và manager.a (scripts/seed.sh).
+tenant=xa-a
 # Chờ hết thời hạn công khai tối đa chừng này giây; thời hạn của demo và CI là PT20S.
 wait_limit="${PUBLICATION_WAIT_LIMIT:-90}"
 fail=0
@@ -59,29 +63,70 @@ complete() {
 
 status() { api "$manager" GET "/instances/$1" | sed '$d' | jq -r '"\(.ended) \(.outcome)"'; }
 
+# Gọi thẳng Flowable trong máy chủ bằng tài khoản rest-admin, như scripts/smoke.sh của lõi, chỉ ở hai chỗ API quy
+# trình qua cổng không làm được: đọc thời hạn công khai đã deploy, và xóa hồ sơ không ai trong xã còn duyệt được.
+flowable() {
+  curl -fsS -X "$1" -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" \
+    "http://127.0.0.1:${FLOWABLE_PORT:-8083}/flowable-rest/service$2"
+}
+
 user=$(token user.a)
 # Người duyệt phải gửi kèm mã OTP (ADR 0011); một token dùng cho cả bài để không tốn mã.
 manager=$(token manager.a "$(uv run --quiet --no-project python scripts/otp.py next manager.a)")
 title="Rà soát kiểm thử $(date +%s)"
 
+definition=$(flowable GET "/repository/process-definitions?key=$process&tenantId=$tenant&latest=true" |
+  jq -r '.data[0].id // empty')
+if [[ -z "$definition" ]]; then
+  echo "FAIL  Chưa có quy trình $process cho $tenant: make app-install APP=facilities-commune"
+  exit 1
+fi
+period=$(flowable GET "/repository/process-definitions/$definition/resourcedata" |
+  sed -n 's:.*<timeDuration>\(.*\)</timeDuration>.*:\1:p')
+# Không đọc được thời hạn là lỗi, không phải SKIP: SKIP thì CI vẫn xanh mà không kiểm phần công khai.
+if [[ -z "$period" ]]; then
+  echo "FAIL  Không đọc được thời hạn công khai (timeDuration) trong quy trình $process đã deploy cho $tenant"
+  exit 1
+fi
+# Chỉ thời hạn dạng PT<n>S ngắn hơn thời gian chờ mới chờ được; thời hạn theo văn bản (P30D) thì bỏ qua phần chờ.
+short=false
+if [[ "$period" =~ ^PT([0-9]+)S$ ]] && ((BASH_REMATCH[1] < wait_limit)); then short=true; fi
+
+# Bốn mắt: manager.a có vai trò duyệt nhưng là người lập thì không tự duyệt được. Phải là người có vai trò manager,
+# vì người không có vai trò bị chặn ở bước kiểm vai trò trước khi tới quy tắc bốn mắt.
+own=$(api "$manager" POST "/processes/$process/instances" \
+  "{\"variables\": {\"title\": \"$title G\", \"excessM2\": 100}}" | sed '$d' | jq -r .id)
+out=$(api "$manager" POST "/tasks/$(task_of "$own")/complete" '{"variables": {"approved": true}}')
+check "Người lập là manager cũng không tự duyệt hồ sơ của mình (bốn mắt)" \
+  "$(tail -1 <<<"$out") $(sed '$d' <<<"$out" | jq -r '.error // "" | startswith("Quy tắc bốn mắt")')" "403 true"
+# Xã không còn manager nào khác để trả lại hồ sơ, và API quy trình không có lệnh hủy: xóa thẳng ở Flowable. Đây là
+# lần ghi duy nhất đi vòng qua cổng, chỉ trong bài kiểm; không xóa thì mỗi lần chạy, bảng việc của manager.a tích thêm
+# một hồ sơ cho tới khi gỡ gói.
+flowable DELETE "/runtime/process-instances/$own" >/dev/null
+
 # Vượt 420 m², trên ngưỡng 300: bước duyệt để công khai.
 above=$(file "{\"title\": \"$title A\", \"excessM2\": 420}")
 check "Vượt 420 m² (trên ngưỡng): hồ sơ vào bước duyệt để công khai" "$(step_of "$above")" review_publish
-check "Người lập không tự duyệt hồ sơ của mình (bốn mắt)" "$(complete "$user" "$above" '{"approved": true}')" 403
-# Người duyệt gửi kèm excessM2 = 0: nhánh đã chọn lúc lập hồ sơ nên không đổi.
-check "Người duyệt duyệt hồ sơ" "$(complete "$manager" "$above" '{"approved": true, "excessM2": 0}')" 204
-check "Đang công khai: chưa kết thúc, chưa có bước nào cho người dùng" "$(status "$above") [$(step_of "$above")]" \
-  "false null []"
-waited=0
-while [[ -z "$(step_of "$above")" && $waited -lt $wait_limit ]]; do sleep 5; waited=$((waited + 5)); done
-if [[ -z "$(step_of "$above")" ]]; then
-  echo "FAIL  Hết ${wait_limit} giây vẫn đang công khai: gói có thể được cài với thời hạn thật (P30D). Cài lại:" \
-    "make app-install APP=facilities-commune SETTINGS=publication_period=PT20S"
-  fail=1
+if [[ $short == false ]]; then
+  # Duyệt thì hồ sơ nằm chờ hết thời hạn thật; trả lại để hồ sơ kết thúc ngay.
+  echo "SKIP  Thời hạn công khai đang deploy là '${period}', smoke chỉ chờ ${wait_limit} giây: bỏ qua phần công" \
+    "khai và trình. Kiểm cả phần này: make app-install APP=facilities-commune SETTINGS=publication_period=PT20S"
+  complete "$manager" "$above" '{"approved": false}' >/dev/null
 else
-  check "Hết thời hạn công khai: hồ sơ sang bước trình người có thẩm quyền" "$(step_of "$above")" submit
-  complete "$manager" "$above" '{"recipient": "Đơn vị kiểm thử", "submitted": true}' >/dev/null
-  check "Trình xong: hồ sơ kết thúc ở bước đã trình" "$(status "$above")" "true submitted"
+  # Người duyệt gửi kèm excessM2 = 0: nhánh đã chọn lúc lập hồ sơ nên không đổi.
+  check "Người duyệt duyệt hồ sơ" "$(complete "$manager" "$above" '{"approved": true, "excessM2": 0}')" 204
+  check "Đang công khai: chưa kết thúc, chưa có bước nào cho người dùng" "$(status "$above") [$(step_of "$above")]" \
+    "false null []"
+  waited=0
+  while [[ -z "$(step_of "$above")" && $waited -lt $wait_limit ]]; do sleep 5; waited=$((waited + 5)); done
+  if [[ -z "$(step_of "$above")" ]]; then
+    echo "FAIL  Thời hạn công khai ${period} nhưng hết ${wait_limit} giây hồ sơ vẫn đang công khai"
+    fail=1
+  else
+    check "Hết thời hạn công khai: hồ sơ sang bước trình người có thẩm quyền" "$(step_of "$above")" submit
+    complete "$manager" "$above" '{"recipient": "Đơn vị kiểm thử", "submitted": true}' >/dev/null
+    check "Trình xong: hồ sơ kết thúc ở bước đã trình" "$(status "$above")" "true submitted"
+  fi
 fi
 
 # Đúng bằng ngưỡng: không công khai, duyệt xong là báo cáo để tiếp tục sử dụng.

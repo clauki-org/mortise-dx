@@ -11,7 +11,7 @@ SPDX-License-Identifier: Apache-2.0
 ## Bối cảnh
 
 Quy trình rà soát của gói xã rẽ nhánh theo một ngưỡng (phần vượt trên 300 m² thì phải công khai) và chờ một thời
-hạn (công khai 30 ngày). Các yêu cầu:
+hạn (công khai 30 ngày), theo Điều 3a khoản 2, 3 NĐ 155/2025/NĐ-CP, bổ sung bởi Điều 3 NĐ 369/2026/NĐ-CP. Các yêu cầu:
 
 - **Không viết cứng trong logic:** hai số này là cấu hình (AGENTS.md).
 - **Demo và CI cần thời hạn ngắn**, vì không ai chờ 30 ngày để thấy bước tiếp theo.
@@ -41,7 +41,8 @@ Chọn cách cuối.
     cũ.
   - Giá trị đang dùng được in ra khi cài.
 - **Ghi đè khi cài:** `make app-install APP=<gói> SETTINGS=tên=giá trị,...`. Tên ghi đè không có trong `app.yaml` là
-  lỗi, không lặng lẽ bỏ qua.
+  lỗi, không lặng lẽ bỏ qua. Giá trị ghi đè phải cùng loại với giá trị trong `app.yaml`: số thay số, thời hạn ISO 8601
+  thay thời hạn.
 - **Kiểm ở `make check-fast`:** BPMN của gói chỉ được dùng tên đã khai trong `app.yaml` của chính gói; BPMN của lõi
   không có settings. Bộ cài cũng dừng khi gặp tên chưa khai, không để chuỗi `{{tên}}` lọt vào Flowable.
 - **Giá trị mặc định là giá trị theo văn bản.** Demo và CI ghi đè thời hạn:
@@ -52,7 +53,8 @@ Chọn cách cuối.
 - **Người lập hay người duyệt hồ sơ không đổi được ngưỡng và thời hạn qua API**, vì chúng là hằng số trong định
   nghĩa quy trình.
 - **Muốn đổi giá trị thì chạy lại `make app-install`.** Chạy lại mà quên `SETTINGS` thì bản cài quay về giá trị
-  trong `app.yaml`. Smoke của gói báo lỗi kèm lệnh sửa khi thời hạn công khai không hết trong thời gian chờ.
+  trong `app.yaml`. Smoke của gói đọc thời hạn từ quy trình đã deploy; thời hạn không hết trong thời gian chờ thì
+  báo SKIP phần công khai và trình, kèm lệnh cài lại với thời hạn ngắn.
 - **Một giá trị cho mọi tenant của bản cài.** Ngưỡng và thời hạn hiện là quy định chung. Giá trị riêng cho từng
   tenant (ví dụ mỗi tỉnh phân cấp khác nhau, #111) cần dữ liệu theo tenant, không dùng cơ chế này.
 - **Cơ chế chỉ thay chuỗi trong tệp.** Nó không cho tính toán, điều kiện hay giá trị lấy từ dữ liệu của hồ sơ.

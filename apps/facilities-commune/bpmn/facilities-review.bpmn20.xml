@@ -9,11 +9,11 @@ chặn). Phần vượt từ ngưỡng trở xuống: duyệt xong là báo cáo
 công khai một thời hạn, hết hạn mới sang bước trình người có thẩm quyền. Bước sau khi trình (tỉnh duyệt, bảng phân
 cấp) thuộc #110, #111.
 
-Ngưỡng và thời hạn là {{review_threshold_m2}} và {{publication_period}}: bộ cài thay bằng settings của app.yaml lúc
+Ngưỡng và thời hạn là settings review_threshold_m2 và publication_period của app.yaml: bộ cài thay vào tệp này lúc
 deploy (ADR 0019), nên chúng nằm trong định nghĩa quy trình, người lập hay người duyệt không ghi đè được bằng biến.
 
 Nhánh được chọn ngay khi lập hồ sơ, trước bước duyệt: workflow-api cho người hoàn thành bước gửi kèm biến, nên nếu
-rẽ nhánh sau bước duyệt thì người duyệt gửi excessM2 = 0 là né được bước công khai. excessM2 do giao diện gửi lúc
+rẽ nhánh sau bước duyệt thì người duyệt gửi excessM2 = 0 là né được bước công khai. excessM2 do client gửi lúc
 lập, người duyệt đối chiếu với hồ sơ; lấy số ở phía máy chủ là việc sau (README của gói).
 -->
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
