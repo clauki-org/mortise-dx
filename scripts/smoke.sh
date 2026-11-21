@@ -404,9 +404,11 @@ check "Tệp tải lên sau khi quét có trạng thái clean" \
 # qua cổng chỉ mở trong máy chủ, như cầu nối MQTT sẽ làm, rồi đọc qua cổng chung bằng token.
 context="$base/v1/context/entities"
 device=urn:ngsi-ld:Device:smoke-a
+# Giá trị mới mỗi lần chạy: bài lịch sử bên dưới phải thấy chính lần ghi này, không phải lần ghi của lần chạy trước.
+reading=$((RANDOM % 40 + 41))
 status=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:${SCORPIO_PORT:-9090}/ngsi-ld/v1/entityOperations/upsert" \
   -H 'Content-Type: application/json' -H 'NGSILD-Tenant: xa-a' \
-  -d "[{\"id\":\"$device\",\"type\":\"Device\",\"humidity\":{\"type\":\"Property\",\"value\":61,\"observedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}}]")
+  -d "[{\"id\":\"$device\",\"type\":\"Device\",\"humidity\":{\"type\":\"Property\",\"value\":$reading,\"observedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}}]")
 check "Scorpio nhận số đo của thiết bị (cổng máy chủ)" "$([[ $status == 20[14] ]] && echo yes)" yes
 seen() { curl -s -H "Authorization: Bearer $1" "${@:2}" "$context?type=Device" | jq -r --arg d "$device" '[.[].id] | index($d) != null'; }
 check "user.a đọc được thiết bị của tenant mình qua /v1/context" "$(seen "$user_a")" true
@@ -417,10 +419,16 @@ status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_
 check "user.b đọc thẳng theo mã thiết bị của tenant A nhận 404" "$status" 404
 status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_a" "$context?local=false")
 check "/v1/context từ chối tham số NGSI-LD ngoài danh sách cho phép" "$status" 400
-# Lịch sử số đo (API temporal của NGSI-LD) qua cùng lớp, cùng cách ly tenant.
+# Lịch sử số đo (API temporal của NGSI-LD) qua cùng lớp, cùng cách ly tenant. Scorpio ghi lịch sử sau khi đã trả lời
+# lệnh ghi (khoảng 2,5 giây, ADR 0018), nên chờ tới khi lần ghi vừa rồi có trong lịch sử, tối đa 15 giây.
 history="$base/v1/context/temporal/entities/$device?attrs=humidity&lastN=5"
-check "user.a đọc lịch sử số đo của thiết bị tenant mình" \
-  "$(curl -s -H "Authorization: Bearer $user_a" "$history" | jq -c '[.humidity] | flatten | .[0].value')" 61
+latest=""
+for _ in $(seq 1 30); do
+  latest=$(curl -s -H "Authorization: Bearer $user_a" "$history" | jq -c '[.humidity] | flatten | .[0].value' 2>/dev/null || true)
+  [[ "$latest" == "$reading" ]] && break
+  sleep 0.5
+done
+check "user.a đọc lịch sử số đo của thiết bị tenant mình" "$latest" "$reading"
 check "user.b đọc lịch sử thiết bị của tenant A nhận 404" \
   "$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_b" "$history")" 404
 check "Đọc lịch sử phải giới hạn số lần đo (lastN)" "$(curl -s -o /dev/null -w '%{http_code}' \
