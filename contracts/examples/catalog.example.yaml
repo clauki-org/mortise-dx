@@ -3,7 +3,8 @@
 #
 # Ví dụ cấu hình danh mục hợp lệ theo contracts/catalog.schema.json; `make check-fast` kiểm tệp này.
 # Đây là tệp catalog/items.yaml mà mục menu `items` trong app.example.yaml trỏ tới. Đối tượng con
-# khai lồng trong đối tượng cha: mỗi danh mục có các thành phần, mỗi thành phần có các lần kiểm.
+# khai lồng trong đối tượng cha: mỗi danh mục có các thành phần, mỗi thành phần có các lần kiểm. Nút trên màn hình
+# chi tiết mở quy trình approval của gói (bpmn/approval.bpmn20.xml trong app.example.yaml) cho dòng đang xem.
 # Gói thật đặt tệp trong thư mục của gói.
 
 title: Danh mục
@@ -27,6 +28,9 @@ fields:
   - name: created_at
     label: Ngày tạo
     type: datetime
+  # Cột của bảng khác, đọc qua quan hệ một-một `category` mà Hasura khai cho bảng: chỉ hiện ở màn hình chi tiết.
+  - name: category.name
+    label: Nhóm
 list:
   columns: [code, name, status, quantity]
   search: [code, name]
@@ -37,6 +41,14 @@ list:
   page_size: 20
 detail:
   title: name
+  actions:
+    - id: request
+      label: Đề nghị kiểm tra
+      process: approval
+      variables:
+        itemId: id
+        title: name
+        quantity: quantity
   children:
     - id: parts
       label: Thành phần

@@ -33,6 +33,22 @@ export const completeTask = (token: string | undefined, taskId: string, variable
     body: JSON.stringify({ variables }),
   });
 
+/**
+ * Khởi tạo quy trình `process` của tenant mình. Cùng người gửi lại cùng `idempotencyKey` thì workflow-api trả quy
+ * trình đã tạo thay vì tạo thêm, nên bấm đúp hay gửi lại sau lỗi mạng không sinh hai hồ sơ.
+ */
+export const startProcess = (
+  token: string | undefined,
+  process: string,
+  variables: Record<string, unknown>,
+  idempotencyKey: string,
+) =>
+  callApi<{ id: string; process: string }>(`/v1/workflow/processes/${encodeURIComponent(process)}/instances`, token, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ variables }),
+  });
+
 /** Khai báo của một bước (contracts/workflow.schema.json, $defs.step), đọc từ platform_workflow_steps. */
 export type StepConfig = {
   /** Biến chứa tên hồ sơ */
@@ -42,3 +58,11 @@ export type StepConfig = {
   actions: { id: string; label: string; variables: Record<string, unknown> }[];
   record?: { menu: string; variable: string };
 };
+
+/**
+ * Mã Idempotency-Key mới cho một lần định lập hồ sơ: 32 chữ số hex, trong luật 8–100 ký tự của workflow-api. Không
+ * dùng crypto.randomUUID vì hàm đó chỉ có trên trang HTTPS hay localhost.
+ */
+export function idempotencyKey(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}

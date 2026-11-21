@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: nút không nói mở quy trình nào.
+# Nếu lọt, nút hiện trên màn hình mà bấm vào không gọi được quy trình nào.
+
+title: Danh mục
+source: app_example_items
+fields:
+  - name: name
+    label: Tên
+list:
+  columns: [name]
+detail:
+  actions:
+    - id: request
+      label: Đề nghị
+      variables:
+        title: name
