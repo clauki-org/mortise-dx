@@ -77,6 +77,7 @@ make e2e     # kịch bản demo trên trình duyệt (cần Node và gói xã: 
 | `http://localhost:9080/v1/workflow/...` | API quy trình, bắt buộc token |
 | `http://localhost:9080/v1/files` | API tệp, bắt buộc token |
 | `http://localhost:9080/v1/context/entities` | Dữ liệu thiết bị (NGSI-LD), chỉ đọc, bắt buộc token |
+| `http://localhost:9080/v1/assistant/questions` | Trợ lý hỏi văn bản, bắt buộc token; trả lời cần bật profile `ai` |
 | `http://127.0.0.1:8081/auth/admin` | Quản trị Keycloak (chỉ máy chủ) |
 | `http://127.0.0.1:8082/console` | Quản trị Hasura (chỉ máy chủ) |
 | `http://127.0.0.1:8083/flowable-rest/docs` | REST API của Flowable (chỉ máy chủ) |
@@ -104,9 +105,10 @@ nhập vào ứng dụng OTP trên điện thoại ([ADR 0011](docs/adr/0011-app
 `devices/simulator/devices.yaml`, mật khẩu MQTT `DEMO_DEVICE_PASSWORD`; `make simulate` gửi số đo giả cho chúng.
 Thiết bị khác cấp tài khoản bằng `make device-add TENANT=<tenant> DEVICE=<thiết bị>`. Mọi lệnh khác: `make help`.
 
-Mô hình ngôn ngữ cho trợ lý AI chạy tại chỗ bằng Ollama, tách khỏi lõi trong profile `ai`: `make ai-up` chạy Ollama,
-tải mô hình đã ghim (lần đầu cần mạng) và dừng nếu trọng số khác digest đã ghim
-([ADR 0021](docs/adr/0021-document-assistant.md)). Trợ lý hỏi văn bản dùng nó là kế hoạch.
+Mô hình ngôn ngữ của trợ lý hỏi văn bản chạy tại chỗ bằng Ollama, tách khỏi lõi trong profile `ai`: `make ai-up` chạy
+Ollama, tải mô hình đã ghim (lần đầu cần mạng) và dừng nếu trọng số khác digest đã ghim
+([ADR 0021](docs/adr/0021-document-assistant.md)). Trợ lý chạy cùng lõi; chưa bật profile thì câu hỏi cần mô hình
+nhận 503 kèm cách bật.
 
 ## Kiến trúc
 
@@ -153,6 +155,7 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Công cụ kho lạnh (tự viết) | Python 3.13, DuckDB, pg8000, boto3 | khóa trong `core/cold-archive/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
 | Chạy mô hình ngôn ngữ tại chỗ, tùy chọn: profile `ai` ([ADR 0021](docs/adr/0021-document-assistant.md)) | Ollama | 0.40.16 | MIT |
 | Mô hình ngôn ngữ, tải khi `make ai-up` | Qwen3.5 4B | digest trọng số ghim trong `core/ollama/models.txt` | Apache-2.0 |
+| Trợ lý hỏi văn bản (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT | khóa trong `platform/services/assistant/uv.lock` | MIT / BSD-3-Clause |
 | Phục vụ giao diện | nginx | 1.30.6 | BSD-2-Clause |
 | Giao diện Tầng 2 (tự viết) | React, Mantine, oidc-client-ts, urql, React Router, TanStack Query, rjsf ([ADR 0006](docs/adr/0006-frontend-stack.md)) | khóa trong `platform/web/package-lock.json` | MIT / Apache-2.0 |
 
@@ -178,6 +181,7 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
 platform/             Tầng 2
   web/                khung giao diện (React, Vite), phục vụ bằng nginx sau cổng
+  services/assistant/ trợ lý hỏi văn bản: tìm đoạn theo quyền người hỏi, sinh tại chỗ, kiểm câu trích (Python)
   schema/migrations/  migration lược đồ `platform` (dbmate): khai báo bước của quy trình, menu của gói
 apps/facilities-commune/  Tầng 3: gói cơ sở vật chất xã (app.yaml, migration, quyền Hasura, smoke của gói)
 devices/simulator/    bộ giả lập và danh sách thiết bị demo (Python)

@@ -43,7 +43,7 @@ core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp 
 platform/             TẦNG 2: thành phần dùng chung, không chứa từ nghiệp vụ
   web/                khung giao diện: đăng nhập, menu, thương hiệu theo bản cài, nạp thành phần và gói
   components/<tên>/   kế hoạch: mã của một thành phần khi tách khỏi web/; schema cấu hình ở contracts/ (ADR 0013)
-  services/<tên>/     kế hoạch: dịch vụ dùng chung tự viết (trợ lý AI, OCR, lưu trữ lạnh)
+  services/<tên>/     dịch vụ dùng chung tự viết: assistant (trợ lý hỏi văn bản); OCR, lưu trữ lạnh là kế hoạch
   schema/             lược đồ CSDL của Tầng 2 (migration dbmate riêng) và quyền Hasura (`schema/hasura/`)
 apps/<gói>/           TẦNG 3: gói nghiệp vụ; `app.yaml` khai báo gói, phần còn lại ưu tiên là khai
                       báo (schema/, hasura/, bpmn/, forms/, rules/, map-layers/, dashboards/, knowledge/, seed/, tests/)

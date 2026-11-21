@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Hợp đồng API trong contracts/: kiểm schema và ví dụ, và giữ OpenAPI của các dịch vụ tự viết
-# (workflow-api, files-api, context-api) khớp với mã. `check` (gọi từ make check-fast) báo lỗi khi lệch; `write` (make contracts)
+# (workflow-api, files-api, context-api, assistant) khớp với mã. `check` (gọi từ make check-fast) báo lỗi khi lệch; `write` (make contracts)
 # xuất lại OpenAPI sau khi đổi route hay model; `token <tệp>` (gọi từ make smoke) kiểm claim
 # của một token thật, để phiên bản công cụ kiểm chỉ ghim ở tệp này.
 set -euo pipefail
@@ -186,18 +186,18 @@ done <"$expected"
 # OpenAPI sinh từ mã của từng dịch vụ. Nhập app.main cần biến môi trường của config.py; giá trị
 # không được dùng vì không gọi mạng. Mỗi dịch vụ một môi trường ảo ngoài repo (xem Makefile).
 openapi_of() {
-  local service="$1"
+  local dir="$1" service="${1##*/}"
   shift
-  (cd "core/$service" && env "$@" PYTHONDONTWRITEBYTECODE=1 UV_PROJECT_ENVIRONMENT="${MORTISE_VENVS:-$HOME/.cache/mortise-dx}/$service-venv" \
+  (cd "$dir" && env "$@" PYTHONDONTWRITEBYTECODE=1 UV_PROJECT_ENVIRONMENT="${MORTISE_VENVS:-$HOME/.cache/mortise-dx}/$service-venv" \
     uv run --quiet --frozen python -c \
     'import json; from app.main import app; print(json.dumps(app.openapi(), ensure_ascii=False, indent=2, sort_keys=True))')
 }
 
 unused_keycloak=(KEYCLOAK_JWKS_URL=http://unused KEYCLOAK_ISSUER=http://unused)
 check_openapi() {
-  local service="$1" file="contracts/$1.openapi.json" generated
+  local dir="$1" service="${1##*/}" file="contracts/${1##*/}.openapi.json" generated
   shift
-  generated=$(openapi_of "$service" "${unused_keycloak[@]}" "$@")
+  generated=$(openapi_of "$dir" "${unused_keycloak[@]}" "$@")
   if [[ "$mode" == write ]]; then
     printf '%s\n' "$generated" >"$file"
     echo "Đã xuất $file"
@@ -207,8 +207,12 @@ check_openapi() {
   fi
 }
 
-check_openapi workflow-api FLOWABLE_URL=http://unused FLOWABLE_USER=unused FLOWABLE_PASSWORD=unused
-check_openapi files-api FILES_DB_HOST=unused FILES_DB_NAME=unused FILES_DB_USER=unused FILES_DB_PASSWORD=unused \
+check_openapi core/workflow-api FLOWABLE_URL=http://unused FLOWABLE_USER=unused FLOWABLE_PASSWORD=unused
+check_openapi core/files-api FILES_DB_HOST=unused FILES_DB_NAME=unused FILES_DB_USER=unused FILES_DB_PASSWORD=unused \
   S3_URL=http://unused S3_ACCESS_KEY=unused S3_SECRET_KEY=unused FILES_BUCKET=unused FILES_MAX_BYTES=1 \
   CLAMD_HOST=unused CLAMD_PORT=1 FILES_SCAN_TIMEOUT=1
-check_openapi context-api SCORPIO_URL=http://unused
+check_openapi core/context-api SCORPIO_URL=http://unused
+# Tên mô hình đọc từ tệp ghim thật lúc import, như trong container.
+check_openapi platform/services/assistant ASSISTANT_GRAPHQL_URL=http://unused OLLAMA_URL=http://unused \
+  ASSISTANT_MODELS_FILE="$PWD/core/ollama/models.txt" ASSISTANT_MAX_QUESTION_CHARS=1 ASSISTANT_MIN_SCORE=1 \
+  ASSISTANT_TOP_PASSAGES=1 ASSISTANT_NUM_PREDICT=1 ASSISTANT_TIMEOUT_SECONDS=1

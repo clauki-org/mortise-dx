@@ -115,13 +115,14 @@ lint: ## Kiểm tra giấy phép từng tệp (REUSE)
 	uvx reuse lint
 
 test: ## Kiểm thử đơn vị các dịch vụ tự viết của lõi và bộ giả lập thiết bị
-	@for dir in core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive devices/simulator; do \
+	@for dir in core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive \
+	  platform/services/assistant devices/simulator; do \
 	  echo "== $$dir"; \
 	  (cd $$dir && UV_PROJECT_ENVIRONMENT=$(MORTISE_VENVS)/$$(basename $$dir)-venv PYTHONDONTWRITEBYTECODE=1 \
 	    uv run --frozen pytest -q -p no:cacheprovider) || exit 1; \
 	done
 
-contracts: ## Xuất lại OpenAPI của workflow-api, files-api và context-api vào contracts/ sau khi đổi route hay model
+contracts: ## Xuất lại OpenAPI của workflow-api, files-api, context-api và assistant vào contracts/ sau khi đổi route hay model
 	@scripts/contracts.sh write
 
 # Gói chỉ được chứa tệp khai báo, không có mã chạy (ADR 0022); scripts/check-declarative.sh kiểm trong check-fast.
@@ -138,9 +139,9 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	  apps/*/tests/*.sh
 	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps .github
 	uvx ruff check --no-cache core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive \
-	  devices/simulator
+	  platform/services/assistant devices/simulator
 	uvx ruff format --no-cache --check core/workflow-api core/files-api core/context-api core/iot-bridge \
-	  core/cold-archive devices/simulator
+	  core/cold-archive platform/services/assistant devices/simulator
 	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts apps
 	uvx ruff format --no-cache --check --config core/workflow-api/pyproject.toml scripts apps
 	@scripts/contracts.sh check

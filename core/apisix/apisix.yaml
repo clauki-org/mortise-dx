@@ -29,6 +29,13 @@ upstreams:
     type: roundrobin
     nodes:
       "web:8080": 1
+  # Thời gian chờ đọc lớn hơn ASSISTANT_TIMEOUT_SECONDS (compose.yaml), để dịch vụ tự trả 504 có lý do khi mô hình
+  # chậm, thay vì cổng cắt kết nối và trả trang lỗi HTML.
+  - id: assistant
+    type: roundrobin
+    timeout: { connect: 5, send: 30, read: 200 }
+    nodes:
+      "assistant:8000": 1
 
 # Xác thực dùng chung cho mọi API dưới /v1. Hai route graphql và workflow tham chiếu bộ này, để một token và một lỗi
 # 401 có cùng nghĩa ở mọi API.
@@ -140,6 +147,21 @@ routes:
     plugins:
       limit-count:
         count: 300
+        time_window: 60
+        key_type: var
+        key: http_authorization
+        rejected_code: 429
+
+  # Trợ lý hỏi văn bản (ADR 0021). Giới hạn tần suất chặt hơn các API khác: mỗi câu hỏi có thể chiếm mô hình hàng
+  # chục giây.
+  - id: assistant
+    uri: /v1/assistant/*
+    methods: ["POST"]
+    upstream_id: assistant
+    plugin_config_id: bearer-token
+    plugins:
+      limit-count:
+        count: 20
         time_window: 60
         key_type: var
         key: http_authorization

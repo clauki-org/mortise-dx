@@ -284,6 +284,8 @@ services:
         condition: service_healthy
       context-api:
         condition: service_healthy
+      assistant:
+        condition: service_healthy
       web:
         condition: service_healthy
     # Không có healthcheck thì `docker compose up --wait` trả về ngay khi container vừa
@@ -508,6 +510,45 @@ services:
     healthcheck:
       # `ollama list` hỏi máy chủ Ollama trong container; thoát 0 khi máy chủ đã nhận lệnh.
       test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  assistant:
+    # Trợ lý hỏi văn bản (ADR 0021), sau cổng tại /v1/assistant. Đọc văn bản qua cổng bằng token của người hỏi, không
+    # có tài khoản CSDL nào; gọi Ollama trong mạng nội bộ. Chạy cùng lõi; Ollama ở profile `ai` (`make ai-up`), chưa bật
+    # thì dịch vụ trả 503 kèm cách bật cho câu hỏi cần mô hình.
+    build: platform/services/assistant
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER: ${MORTISE_PUBLIC_URL:-http://localhost:9080}/auth/realms/mortise
+      ASSISTANT_GRAPHQL_URL: http://apisix:9080/v1/graphql
+      OLLAMA_URL: http://ollama:11434
+      ASSISTANT_MODELS_FILE: /srv/models.txt
+      # Giới hạn và ngưỡng là điểm xuất phát, chưa đo; đo lại bằng bộ câu hỏi có đáp án trước khi dùng thật.
+      # Độ dài câu hỏi tối đa, ký tự.
+      ASSISTANT_MAX_QUESTION_CHARS: "500"
+      # Đoạn phải có ít nhất phần này của trọng số từ khóa trong câu hỏi (0 tới 1) mới được làm căn cứ.
+      ASSISTANT_MIN_SCORE: "0.35"
+      # Số đoạn tối đa đưa cho mô hình.
+      ASSISTANT_TOP_PASSAGES: "4"
+      ASSISTANT_NUM_PREDICT: "400"
+      # Thời gian chờ mô hình, giây; nhỏ hơn thời gian chờ đọc của upstream assistant trong core/apisix/apisix.yaml.
+      ASSISTANT_TIMEOUT_SECONDS: "150"
+    volumes:
+      - ./core/ollama/models.txt:/srv/models.txt:ro
+    # Không chờ Ollama: lõi phải khởi động được khi không bật profile `ai`. Không phụ thuộc apisix: cổng chỉ cần lúc có
+    # câu hỏi, và apisix đã chờ dịch vụ này.
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"
       interval: 5s
       timeout: 5s
       retries: 20
