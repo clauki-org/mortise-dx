@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Dữ liệu demo HƯ CẤU của kho vật tư hai xã thuộc "Tỉnh Mẫu", theo contracts/seed.schema.json: tên kho, vật tư và
+# số lượng đặt ra để minh họa. `make seed-demo` nạp qua cổng bằng tài khoản quản trị của từng xã
+# (scripts/app-seed.py); chạy lại không tạo bản trùng.
+
+xa-a:
+  account: admin.a
+  tables:
+    - table: stores
+      key: [code]
+      rows:
+        - { code: KHO-A1, name: Kho văn phòng phẩm, location: "Nhà làm việc, tầng 1" }
+        - { code: KHO-A2, name: Kho thiết bị, location: Nhà phụ trợ }
+    - table: items
+      key: [store_code, code]
+      rows:
+        - { store_code: KHO-A1, code: GIAY-A4, name: Giấy in A4, unit: ram, kind: consumable, quantity: 40 }
+        - { store_code: KHO-A1, code: MUC-IN, name: Hộp mực máy in, unit: hộp, kind: consumable, quantity: 6 }
+        - { store_code: KHO-A2, code: MAY-CHIEU, name: Máy chiếu, unit: cái, kind: equipment, quantity: 2 }
+        - { store_code: KHO-A2, code: LOA-KEO, name: Loa kéo, unit: cái, kind: equipment, quantity: 1 }
+xa-b:
+  account: admin.b
+  tables:
+    - table: stores
+      key: [code]
+      rows:
+        - { code: KHO-B1, name: Kho chung, location: Trụ sở UBND xã B }
+    - table: items
+      key: [store_code, code]
+      rows:
+        - { store_code: KHO-B1, code: GIAY-A4, name: Giấy in A4, unit: ram, kind: consumable, quantity: 25 }
+        - { store_code: KHO-B1, code: MAY-IN, name: Máy in, unit: cái, kind: equipment, quantity: 3 }

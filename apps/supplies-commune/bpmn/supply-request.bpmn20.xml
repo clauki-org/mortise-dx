@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Mortise DX contributors
+SPDX-License-Identifier: Apache-2.0
+
+Đề nghị cấp vật tư từ kho của xã. Cán bộ lập đề nghị qua API quy trình với các biến title (tên đề nghị), storeCode,
+itemCode (vật tư trong kho nào), quantity và reason; người có vai trò manager trong cùng xã duyệt hoặc từ chối, người
+lập không tự duyệt được (category four-eyes, workflow-api chặn). Khai báo bước ở workflows/supply-request.yaml.
+
+Gói chỉ gồm tệp khai báo (ADR 0022) nên quy trình không có bước chạy mã: duyệt xong không tự trừ số lượng trong kho,
+quản trị xã cập nhật số lượng sau khi giao.
+-->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             targetNamespace="https://mortise-dx/apps/supplies-commune">
+  <process id="supply-request" name="Đề nghị cấp vật tư" isExecutable="true">
+    <startEvent id="requested"/>
+    <sequenceFlow id="toApprove" sourceRef="requested" targetRef="approve"/>
+
+    <userTask id="approve" name="Duyệt đề nghị cấp vật tư" flowable:candidateGroups="manager"
+              flowable:category="four-eyes" flowable:dueDate="P3D"/>
+    <sequenceFlow id="toDecision" sourceRef="approve" targetRef="decision"/>
+
+    <!-- Nhánh mặc định là từ chối: thiếu biến approved thì không coi là đã duyệt. -->
+    <exclusiveGateway id="decision" default="toRejected"/>
+    <sequenceFlow id="toApproved" sourceRef="decision" targetRef="approved">
+      <conditionExpression xsi:type="tFormalExpression">${execution.getVariable("approved") == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="toRejected" sourceRef="decision" targetRef="rejected"/>
+
+    <endEvent id="approved" name="Đã duyệt"/>
+    <endEvent id="rejected" name="Từ chối"/>
+  </process>
+</definitions>

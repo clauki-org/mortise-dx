@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Khai báo gói theo contracts/app.schema.json; `make check-fast` kiểm. Gói chỉ gồm tệp khai báo (ADR 0022):
+# scripts/app.sh đọc tệp này để chạy migration, áp quyền Hasura, deploy quy trình và nạp menu; dữ liệu demo ở
+# seed/demo.yaml.
+
+id: supplies-commune
+name: Kho vật tư xã
+version: 0.1.0
+description: Kho vật tư, thiết bị của xã, số lượng đang có trong từng kho và đề nghị cấp vật tư.
+database:
+  schema: app_supplies_commune
+  migrations: schema/migrations
+hasura: hasura
+workflows:
+  - bpmn/supply-request.bpmn20.xml
+menu:
+  - id: stores
+    label: Kho vật tư
+    component: catalog
+    config: catalog/stores.yaml

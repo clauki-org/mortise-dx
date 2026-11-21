@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bảng của gói mà Hasura đăng ký và quyền trên chúng; cùng định dạng và cùng cách kiểm như core/hasura/tables.yaml.
+# make app-install áp khi cài gói, bỏ đăng ký khi gỡ. Mọi quyền lọc theo tenant trong token:
+#   user, manager  chỉ đọc toàn xã (giao diện đọc bằng vai trò user)
+#   tenant_admin   đọc, thêm, sửa, xóa; tenant_id gán từ token
+# Mã kho không nằm trong cột sửa được: vật tư trỏ về kho bằng mã, đổi mã sẽ bị khóa ngoại chặn.
+
+- table: { schema: app_supplies_commune, name: stores }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &store_columns [id, tenant_id, code, name, location, created_at]
+        filter: &tenant { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+    - role: manager
+      permission: { columns: *store_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *store_columns, filter: *tenant }
+  insert_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [code, name, location]
+        check: *tenant
+        set: &tenant_from_token { tenant_id: X-Hasura-Tenant-Id }
+  update_permissions:
+    - role: tenant_admin
+      permission: { columns: [name, location], filter: *tenant, check: *tenant }
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *tenant }
+
+- table: { schema: app_supplies_commune, name: items }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &item_columns [id, tenant_id, store_code, code, name, unit, kind, quantity, created_at]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *item_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *item_columns, filter: *tenant }
+  insert_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [store_code, code, name, unit, kind, quantity]
+        check: *tenant
+        set: *tenant_from_token
+  update_permissions:
+    - role: tenant_admin
+      permission: { columns: [name, unit, kind, quantity], filter: *tenant, check: *tenant }
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *tenant }

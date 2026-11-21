@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Khai báo bước của quy trình bpmn/supply-request.bpmn20.xml theo contracts/workflow.schema.json: bảng việc vẽ biểu
+# mẫu ý kiến và hai nút cho người duyệt; tên đề nghị lấy từ biến title đặt lúc lập.
+
+process: supply-request
+steps:
+  approve:
+    title: title
+    form:
+      type: object
+      required: [comment]
+      properties:
+        comment:
+          type: string
+          title: Ý kiến
+    ui:
+      comment:
+        ui:widget: textarea
+    actions:
+      - id: approve
+        label: Duyệt
+        variables:
+          approved: true
+      - id: reject
+        label: Từ chối
+        variables:
+          approved: false

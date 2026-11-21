@@ -127,7 +127,7 @@ contracts: ## Xuất lại OpenAPI của workflow-api, files-api, context-api v�
 
 # Gói chỉ được chứa tệp khai báo, không có mã chạy (ADR 0022); scripts/check-declarative.sh kiểm trong check-fast.
 # Gói có mã riêng (ví dụ bộ nạp seed/load.py) không nằm trong danh sách này.
-DECLARATIVE_APPS :=
+DECLARATIVE_APPS := supplies-commune
 
 # shellcheck, yamllint và ruff chạy qua uvx để không phải cài sẵn; chỉ cần uv.
 check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp đồng API; không cần dựng lõi
