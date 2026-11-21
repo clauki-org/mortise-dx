@@ -5,7 +5,16 @@
 
 import pytest
 
-from app.policy import MAX_LIMIT, MAX_PARAMETER_LENGTH, Denied, check_entity_id, check_tenant, clean_query
+from app.policy import (
+    MAX_HISTORY,
+    MAX_LIMIT,
+    MAX_PARAMETER_LENGTH,
+    Denied,
+    check_entity_id,
+    check_tenant,
+    clean_history,
+    clean_query,
+)
 
 
 def test_known_parameters_pass_through():
@@ -56,3 +65,22 @@ def test_tenant_must_be_a_slug():
         with pytest.raises(Denied) as denied:
             check_tenant(bad)
         assert denied.value.status == 403
+
+
+def test_history_needs_attrs_and_last_n():
+    assert clean_history([("attrs", "humidity"), ("lastN", "50")]) == {"attrs": "humidity", "lastN": "50"}
+    for params in (
+        [("lastN", "5")],
+        [("attrs", "humidity")],
+        [("attrs", "humidity"), ("lastN", "0")],
+        [("attrs", "humidity"), ("lastN", str(MAX_HISTORY + 1))],
+    ):
+        with pytest.raises(Denied) as denied:
+            clean_history(params)
+        assert denied.value.status == 400
+
+
+@pytest.mark.parametrize("name", ["timerel", "timeAt", "options", "local"])
+def test_history_rejects_other_parameters(name):
+    with pytest.raises(Denied):
+        clean_history([("attrs", "humidity"), ("lastN", "5"), (name, "x")])

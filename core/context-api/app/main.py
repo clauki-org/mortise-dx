@@ -3,8 +3,8 @@
 #
 # API đọc dữ liệu thiết bị của lõi, đứng sau APISIX tại /v1/context (ADR 0012). Scorpio giữ trạng
 # thái thiết bị theo chuẩn NGSI-LD nhưng không tự xác thực; lớp này kiểm token, gắn tenant của người
-# gọi và chỉ mở hai đường đọc entity. Ghi dữ liệu không đi qua đây (đường MQTT của thiết bị là phần sau
-# của issue #88).
+# gọi và chỉ mở ba đường đọc: danh sách entity, một entity, lịch sử số đo của một entity. Ghi dữ liệu không đi
+# qua đây mà qua MQTT (core/iot-bridge).
 
 from typing import Annotated
 
@@ -14,7 +14,7 @@ from starlette.exceptions import HTTPException
 
 from . import scorpio
 from .auth import caller_from_token
-from .policy import Caller, Denied, check_entity_id, clean_query
+from .policy import Caller, Denied, check_entity_id, clean_history, clean_query
 from .schemas import Entity, ErrorBody
 
 # openapi_url=None: không phục vụ tài liệu qua cổng; hợp đồng nằm trong contracts/.
@@ -63,3 +63,18 @@ def list_entities(request: Request, caller: CallerDep) -> list[dict]:
 def get_entity(entity_id: str, caller: CallerDep) -> dict:
     check_entity_id(entity_id)
     return scorpio.entity(caller.tenant, entity_id)
+
+
+@app.get(
+    "/v1/context/temporal/entities/{entity_id}",
+    response_model=Entity,
+    responses=_errors(400, 403, 404, 502, 503),
+)
+def get_history(entity_id: str, request: Request, caller: CallerDep) -> dict:
+    """Lịch sử số đo của một entity theo API temporal của NGSI-LD; tham số attrs và lastN bắt buộc.
+
+    Mỗi số đo là danh sách các lần đo (value, observedAt), mới nhất trước; chỉ một lần đo thì là một đối
+    tượng.
+    """
+    check_entity_id(entity_id)
+    return scorpio.history(caller.tenant, entity_id, clean_history(list(request.query_params.multi_items())))

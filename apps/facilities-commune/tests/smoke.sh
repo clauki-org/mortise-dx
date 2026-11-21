@@ -319,4 +319,51 @@ else
   echo "SKIP  Dữ liệu demo chưa nạp (make seed-demo)"
 fi
 
+# Kiểm tra kho lưu trữ (rules/archive-humidity.yaml, ADR 0018): độ ẩm kho xã A vượt 75% liên tục 5 phút thì
+# manager.a có việc "Kiểm tra kho lưu trữ". Số đo gửi qua MQTT như thiết bị thật; observedAt do thiết bị gửi nên lùi
+# thời điểm được, không phải chờ 5 phút. Dùng một thiết bị riêng cấp lúc chạy, vì số đo của thiết bị demo (bộ giả
+# lập) chen vào giữa sẽ cắt chuỗi vượt ngưỡng; thu hồi tài khoản khi xong.
+sensor=archive-smoke
+sensor_password=$(openssl rand -hex 16)
+scripts/device.sh add "$tenant_a" "$sensor" "$sensor_password" >/dev/null
+tasks() {
+  curl -fsS -H "Authorization: Bearer $1" "$base/v1/workflow/tasks" |
+    jq -r --arg d "$sensor" '.[] | select(.process == "archive-inspection" and .variables.device == $d) | .id'
+}
+inspect_done() {
+  local task
+  for task in $(tasks "$manager_a"); do
+    curl -fsS -o /dev/null -X POST -H "Authorization: Bearer $manager_a" -H 'Content-Type: application/json' \
+      -d '{"variables":{"finding":"Kiểm thử tự động","inspected":true}}' "$base/v1/workflow/tasks/$task/complete"
+  done
+}
+humidity() { # GIÁ_TRỊ GIÂY_LÙI
+  docker compose exec -T mosquitto mosquitto_pub -u "$tenant_a.$sensor" -P "$sensor_password" -q 1 \
+    -t "mortise/$tenant_a/$sensor" \
+    -m "{\"observedAt\": \"$(date -u -d "-$2 seconds" +%FT%TZ)\", \"measurements\": {\"humidity\": $1}}" \
+    >/dev/null 2>&1 || true
+}
+# Thiết bị này chỉ smoke dùng và chỉ nhận số đo vượt ngưỡng: số đo bình thường của lần chạy trước nằm trong 5 phút
+# của lần chạy sau sẽ cắt chuỗi, nên không gửi số đo bình thường nào.
+inspect_done
+humidity 80 310
+sleep 1
+# Cầu nối đọc lại luật mỗi 30 giây (core/iot-bridge/app/watch.py), nên ngay sau khi cài gói có thể chưa thấy
+# luật: gửi lại số đo vượt mới nhất cho tới khi có việc, tối đa khoảng 45 giây.
+opened=""
+for _ in $(seq 1 22); do
+  humidity 81 0
+  opened=$(tasks "$manager_a" | head -1)
+  [[ -n "$opened" ]] && break
+  sleep 2
+done
+check "Độ ẩm kho xã A vượt ngưỡng 5 phút: manager.a có việc kiểm tra kho" "$([[ -n "$opened" ]] && echo yes)" yes
+check "Chỉ một việc kiểm tra kho dù độ ẩm vẫn vượt" "$(tasks "$manager_a" | grep -c . || true)" 1
+manager_b=$(token manager.b "$(uv run --quiet --no-project python scripts/otp.py next manager.b)")
+check "manager.b (xã B) không thấy việc kiểm tra kho của xã A" "$(tasks "$manager_b" | grep -c . || true)" 0
+# Dọn: ghi kết quả để bảng việc demo không tích việc do smoke để lại.
+inspect_done
+check "Ghi kết quả kiểm tra xong, không còn việc kiểm tra kho" "$(tasks "$manager_a" | grep -c . || true)" 0
+scripts/device.sh remove "$tenant_a" "$sensor" >/dev/null
+
 exit $fail

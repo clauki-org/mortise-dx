@@ -16,8 +16,11 @@ app.yaml             khai báo gói theo contracts/app.schema.json: lược đ�
 schema/migrations/   migration dbmate của gói; bảng theo dõi public.facilities_commune_schema_migrations (ADR 0005)
 hasura/tables.yaml   bảng đăng ký, quan hệ và quyền theo tenant và phân công, cùng định dạng với core/hasura/
 catalog/             cấu hình thành phần danh mục (cơ sở → tòa → phòng) theo contracts/catalog.schema.json
+bpmn/                quy trình BPMN của gói, deploy cho từng tenant khi cài
+workflows/           khai báo bước của từng quy trình theo contracts/workflow.schema.json
+rules/               luật ngưỡng của số đo thiết bị theo contracts/threshold-rule.schema.json
 tests/smoke.sh       kiểm qua cổng: cách ly tenant, tenant lấy từ token, phân công, khóa ngoại ghép, RESTRICT,
-                     nhật ký, phần vượt
+                     nhật ký, phần vượt; mở việc kiểm tra kho khi độ ẩm vượt ngưỡng (số đo gửi qua MQTT)
 ```
 
 ## Dữ liệu
@@ -92,6 +95,20 @@ make app-uninstall APP=facilities-commune CONFIRM=yes    # XÓA dữ liệu củ
 Gói đã cài thì `make seed` áp lại quyền của gói và `make smoke` báo lệch nếu ai sửa tay trên Hasura, như bảng của
 lõi. CI cài gói, chạy smoke của gói, chạy `make seed` và `make smoke` khi gói đang cài, rồi gỡ gói và chạy lại
 `make smoke`.
+
+## Kiểm tra kho lưu trữ
+
+Luật `rules/archive-humidity.yaml` (ADR 0018): độ ẩm (`humidity`) của một thiết bị trong xã lớn hơn 75% liên tục 5
+phút thì lõi mở quy trình `archive-inspection` cho xã đó; người duyệt (`manager`) của xã thấy việc "Kiểm tra kho lưu
+trữ" trên bảng việc và ghi kết quả kiểm tra. Còn việc chưa xử lý thì không mở thêm. Ngưỡng 75% và 5 phút là số minh
+họa, không lấy từ quy định hay tiêu chuẩn nào.
+
+Thử trên bản cài demo (đã chạy ngày 2026-11-21: sau khoảng 5 phút `manager.a` có việc "Kiểm tra kho lưu trữ:
+archive-01"):
+
+```bash
+make simulate ARGS="--set xa-a/archive-01:humidity=78"   # giữ độ ẩm kho xã A ở 78%, dừng bằng Ctrl+C
+```
 
 ## Chưa có
 

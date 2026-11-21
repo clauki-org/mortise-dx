@@ -166,6 +166,7 @@ trong token. Header `NGSILD-Tenant` người gọi gửi bị bỏ qua.
 |---|---|---|
 | `GET` | `/v1/context/entities` | Entity của tenant mình; tham số NGSI-LD `type`, `id`, `idPattern`, `attrs`, `q`, `limit` (1–1000), `offset` |
 | `GET` | `/v1/context/entities/{id}` | Một entity theo mã, dạng `urn:ngsi-ld:<loại>:<mã>` |
+| `GET` | `/v1/context/temporal/entities/{id}` | Lịch sử số đo của một entity theo API temporal của NGSI-LD; bắt buộc `attrs` (tên số đo) và `lastN` (1–1000 lần đo gần nhất) |
 
 ```bash
 curl -fsS "http://localhost:9080/v1/context/entities?type=Device" -H "Authorization: Bearer $TOKEN"
@@ -175,13 +176,21 @@ Phản hồi là entity NGSI-LD dạng JSON rút gọn theo ngữ cảnh lõi, v
 `{"id": "urn:ngsi-ld:Device:kho-01", "type": "Device", "humidity": {"type": "Property", "value": 78, "observedAt": "..."}}`.
 Tenant chưa có thiết bị nào gửi số đo thì danh sách rỗng.
 
+Lịch sử trả mỗi số đo thành danh sách lần đo (`value`, `observedAt`), mới nhất trước; chỉ có một lần đo thì là một
+đối tượng. Scorpio đưa lần đo vào lịch sử sau khi đã ghi, nên lần đo vừa gửi có thể chưa có ngay (ADR 0018).
+
+```bash
+curl -fsS "http://localhost:9080/v1/context/temporal/entities/urn:ngsi-ld:Device:archive-01?attrs=humidity&lastN=20" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 | Mã trả về | Khi nào |
 |---|---|
 | `200` | Đọc thành công |
-| `400` | Tham số ngoài danh sách, lặp lại, dài quá 300 ký tự, `limit` ngoài khoảng, `offset` không phải số, mã entity sai dạng, hoặc truy vấn `q` Scorpio không nhận |
+| `400` | Tham số ngoài danh sách, lặp lại, dài quá 300 ký tự, `limit` ngoài khoảng, lịch sử thiếu `attrs` hay `lastN`, `offset` không phải số, mã entity sai dạng, hoặc truy vấn `q` Scorpio không nhận |
 | `401` | Thiếu hoặc sai token |
 | `403` | Tài khoản không thuộc đúng một tenant, hoặc mã tenant không đúng dạng slug |
-| `404` | Entity không có trong tenant mình |
+| `404` | Entity không có trong tenant mình, hoặc số đo chưa có lần đo nào |
 | `502` / `503` | Kho dữ liệu thiết bị báo lỗi (chi tiết chỉ ghi vào log) / không kết nối được |
 
 ### Thiết bị gửi số đo qua MQTT

@@ -417,6 +417,14 @@ status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_
 check "user.b đọc thẳng theo mã thiết bị của tenant A nhận 404" "$status" 404
 status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_a" "$context?local=false")
 check "/v1/context từ chối tham số NGSI-LD ngoài danh sách cho phép" "$status" 400
+# Lịch sử số đo (API temporal của NGSI-LD) qua cùng lớp, cùng cách ly tenant.
+history="$base/v1/context/temporal/entities/$device?attrs=humidity&lastN=5"
+check "user.a đọc lịch sử số đo của thiết bị tenant mình" \
+  "$(curl -s -H "Authorization: Bearer $user_a" "$history" | jq -c '[.humidity] | flatten | .[0].value')" 61
+check "user.b đọc lịch sử thiết bị của tenant A nhận 404" \
+  "$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_b" "$history")" 404
+check "Đọc lịch sử phải giới hạn số lần đo (lastN)" "$(curl -s -o /dev/null -w '%{http_code}' \
+  -H "Authorization: Bearer $user_a" "$base/v1/context/temporal/entities/$device?attrs=humidity")" 400
 status=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $user_a" -H 'Content-Type: application/json' \
   -d '{}' "$context")
 check "/v1/context không nhận ghi" "$([[ $status != 2* ]] && echo yes)" yes
