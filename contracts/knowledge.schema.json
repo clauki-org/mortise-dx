@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/knowledge.schema.json",
+  "title": "Một văn bản cho trợ lý hỏi văn bản (apps/<gói>/knowledge/*.yaml)",
+  "description": "Gói liệt kê tệp ở mục `knowledge` của app.yaml; mỗi tệp một văn bản, chia thành các đoạn có mã, nhãn vị trí và nguyên văn (ADR 0021). Trợ lý chỉ trích câu lấy từ `text` của đoạn, nên `text` phải chép đúng bản gốc ở `source`. Luật nhiều tệp (mã đoạn không trùng trong văn bản, `superseded_by` trỏ tới đoạn có thật) do bộ cài gói kiểm khi nạp (kế hoạch).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "source", "passages"],
+  "properties": {
+    "id": {
+      "description": "Mã văn bản, duy nhất trong gói; cấu hình trợ lý (contracts/assistant.schema.json) và `superseded_by` trỏ tới mã này",
+      "$ref": "#/$defs/slug"
+    },
+    "title": { "description": "Tên văn bản hiện cạnh mỗi câu trích", "$ref": "#/$defs/text" },
+    "source": {
+      "description": "Bản gốc mà `text` của các đoạn được chép từ đó, để người đọc tự đối chiếu",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "sha256", "retrieved"],
+      "properties": {
+        "url": { "description": "Nơi tải bản gốc", "type": "string", "pattern": "^https?://\\S+$" },
+        "sha256": {
+          "description": "SHA-256 của tệp bản gốc đã tải, chữ thường",
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "retrieved": {
+          "description": "Ngày tải bản gốc, YYYY-MM-DD",
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        }
+      }
+    },
+    "passages": {
+      "description": "Các đoạn theo thứ tự trong văn bản; mỗi đoạn là đơn vị được tìm và được trích",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/passage" }
+    }
+  },
+  "$defs": {
+    "passage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "text"],
+      "properties": {
+        "id": { "description": "Mã đoạn, duy nhất trong văn bản", "$ref": "#/$defs/slug" },
+        "label": {
+          "description": "Vị trí của đoạn trong văn bản, hiện nguyên như gói viết cạnh câu trích; số trong nhãn được tính là căn cứ khi kiểm số trong câu trả lời",
+          "$ref": "#/$defs/text"
+        },
+        "text": { "description": "Nguyên văn của đoạn", "$ref": "#/$defs/text" },
+        "superseded_by": {
+          "description": "Đoạn đã bị thay thế: trỏ tới đoạn thay nó, có thể ở văn bản khác của gói. Đoạn có khóa này không được tìm, để trợ lý không trả lời theo nội dung đã hết hiệu lực.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["document", "passage"],
+          "properties": {
+            "document": { "$ref": "#/$defs/slug" },
+            "passage": { "$ref": "#/$defs/slug" }
+          }
+        }
+      }
+    },
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64 },
+    "text": {
+      "description": "Chữ cho người đọc: có ít nhất một ký tự không phải khoảng trắng",
+      "type": "string",
+      "pattern": "\\S"
+    }
+  }
+}

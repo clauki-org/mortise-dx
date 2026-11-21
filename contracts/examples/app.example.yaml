@@ -12,6 +12,8 @@ database:
   schema: app_example
   migrations: schema/migrations
 hasura: hasura
+knowledge:
+  - knowledge/example-rules.yaml
 workflows:
   - bpmn/approval.bpmn20.xml
 settings:
@@ -27,3 +29,7 @@ menu:
     component: dashboard
     config: dashboards/summary.yaml
     roles: [manager]
+  - id: ask
+    label: Hỏi văn bản
+    component: assistant
+    config: assistant/ask.yaml

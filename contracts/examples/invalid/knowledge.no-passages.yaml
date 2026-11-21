@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/knowledge.schema.json từ chối: không có đoạn nào.
+# Nếu lọt, văn bản được nạp mà trợ lý không bao giờ trích được câu nào của nó.
+
+id: example-rules
+title: Quy chế mẫu
+source:
+  url: https://example.org/quy-che-mau.pdf
+  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  retrieved: 2026-11-21
+passages: []

@@ -10,6 +10,7 @@ app.blank-name.yaml	$.name	'   ' does not match '\\\\S'
 app.database-schema-too-long.yaml	$.database.schema	'app_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' is too long
 app.duplicate-workflow.yaml	$.workflows	['bpmn/approval.bpmn20.xml', 'bpmn/approval.bpmn20.xml'] has non-unique elements
 app.id-too-long.yaml	$.id	'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' is too long
+app.knowledge-not-yaml.yaml	$.knowledge[0]	'knowledge/example-rules.pdf' does not match '\\\\.yaml$'
 app.missing-id.yaml	$	'id' is a required property
 app.path-escapes-package.yaml	$.menu[0].config	'../../core/keycloak/realm.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
 app.path-is-url.yaml	$.menu[0].config	'http://no-such-host.invalid/items.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
@@ -17,6 +18,11 @@ app.settings-unsafe-value.yaml	$.settings.approval_limit	'1000 || true' is not v
 app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'documents', 'dashboard', 'rules', 'assistant']
 app.unknown-field.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
 app.version-leading-zero.yaml	$.version	'01.0.0' does not match '^(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)$'
+assistant.blank-intro.yaml	$.intro	'   ' does not match '\\\\S'
+assistant.document-not-slug.yaml	$.documents[0]	'knowledge/example-rules.yaml' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
+assistant.duplicate-document.yaml	$.documents	['example-rules', 'example-rules'] has non-unique elements
+assistant.no-documents.yaml	$.documents	[] should be non-empty
+assistant.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
 catalog.blank-field-label.yaml	$.fields[0].label	'   ' does not match '\\\\S'
 catalog.child-id-not-slug.yaml	$.detail.children[0].id	'No Such/Child' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
 catalog.child-missing-id.yaml	$.detail.children[0]	'id' is a required property
@@ -38,6 +44,13 @@ device-message.tenant-in-body.json	$	Additional properties are not allowed ('ten
 device-message.text-value.json	$.measurements.humidity	'71' is not of type 'number', 'boolean'
 seed.missing-key.yaml	$['xa-a'].tables[0]	'key' is a required property
 seed.tenant-id-in-row.yaml	$['xa-a'].tables[0].rows[0]	'tenant_id' should not be valid under {'const': 'tenant_id'}
+knowledge.blank-text.yaml	$.passages[0].text	'   ' does not match '\\\\S'
+knowledge.missing-source.yaml	$	'source' is a required property
+knowledge.no-passages.yaml	$.passages	[] should be non-empty
+knowledge.passage-id-not-slug.yaml	$.passages[0].id	'No Such Passage' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
+knowledge.sha256-not-hex.yaml	$.source.sha256	'no-such-hash' does not match '^[0-9a-f]{64}$'
+knowledge.superseded-without-passage.yaml	$.passages[0].superseded_by	'passage' is a required property
+knowledge.unknown-key.yaml	$.passages[0]	Additional properties are not allowed ('no_such_key' was unexpected)
 service-token-claims.has-tenant.json	$.tenant	['xa-a'] should not be valid under {}
 service-token-claims.user-role.json	$.realm_access.roles	['default-roles-mortise', 'user'] should not be valid under {'contains': {'const': 'user'}}
 threshold-rule.no-threshold.yaml	$	{'id': 'test-level-high', 'title': 'Thiếu ngưỡng', 'entityType': 'Device', 'measurement': 'testLevel', 'holdSeconds': 5, 'process': 'core-approval'} is not valid under any of the given schemas

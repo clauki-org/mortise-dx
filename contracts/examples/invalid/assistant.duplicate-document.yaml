@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/assistant.schema.json từ chối: một văn bản khai hai lần.
+# Nếu lọt, đoạn của văn bản đó bị đọc và xếp hạng hai lần.
+
+intro: Hỏi về quy chế đặt phòng họp.
+documents: [example-rules, example-rules]

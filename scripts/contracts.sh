@@ -43,6 +43,8 @@ esac
 "${checker[@]}" --schemafile contracts/app.schema.json contracts/examples/app.example.yaml
 "${checker[@]}" --schemafile contracts/workflow.schema.json contracts/examples/workflow.example.yaml
 "${checker[@]}" --schemafile contracts/catalog.schema.json contracts/examples/catalog.example.yaml
+"${checker[@]}" --schemafile contracts/assistant.schema.json contracts/examples/assistant.example.yaml
+"${checker[@]}" --schemafile contracts/knowledge.schema.json contracts/examples/knowledge.example.yaml
 "${checker[@]}" --schemafile contracts/threshold-rule.schema.json contracts/examples/threshold-rule.example.yaml
 "${checker[@]}" --schemafile contracts/seed.schema.json contracts/examples/seed.example.yaml
 # Bản mô tả của từng thành phần Tầng 2. Tên tệp, tên thành phần và hai đường dẫn trong tệp phải khớp nhau: bản mô tả
@@ -79,28 +81,32 @@ for app in apps/*/; do
     "${checker[@]}" --schemafile contracts/workflow.schema.json "${declarations[@]}"
   fi
   "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}"
-  # Cấu hình danh mục nằm ở đường dẫn do app.yaml khai, không theo tên thư mục cố định, nên phải đọc app.yaml
-  # để biết tệp nào cần kiểm; dò theo tên thư mục sẽ bỏ sót tệp đặt ở chỗ khác.
-  mapfile -t catalogs < <("${yaml[@]}" -c '
+  # Cấu hình của thành phần có schema nằm ở đường dẫn do app.yaml khai, không theo tên thư mục cố định, nên phải
+  # đọc app.yaml để biết tệp nào cần kiểm; dò theo tên thư mục sẽ bỏ sót tệp đặt ở chỗ khác.
+  for component in catalog assistant; do
+    mapfile -t configs < <("${yaml[@]}" -c '
 import sys, yaml
 app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
 for item in app.get("menu", []):
-    if item["component"] == "catalog":
+    if item["component"] == sys.argv[2]:
         print(sys.argv[1] + item["config"])
-' "$app")
-  if ((${#catalogs[@]})); then
-    "${checker[@]}" --schemafile contracts/catalog.schema.json "${catalogs[@]}"
-  fi
-  # Luật ngưỡng cũng nằm ở đường dẫn do app.yaml khai (mục `rules`).
-  mapfile -t rules < <("${yaml[@]}" -c '
+' "$app" "$component")
+    if ((${#configs[@]})); then
+      "${checker[@]}" --schemafile "contracts/$component.schema.json" "${configs[@]}"
+    fi
+  done
+  # Luật ngưỡng (mục `rules`) và văn bản cho trợ lý (mục `knowledge`) cũng nằm ở đường dẫn do app.yaml khai.
+  for entry in rules:threshold-rule knowledge:knowledge; do
+    mapfile -t files < <("${yaml[@]}" -c '
 import sys, yaml
 app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
-for path in app.get("rules", []):
+for path in app.get(sys.argv[2], []):
     print(sys.argv[1] + path)
-' "$app")
-  if ((${#rules[@]})); then
-    "${checker[@]}" --schemafile contracts/threshold-rule.schema.json "${rules[@]}"
-  fi
+' "$app" "${entry%%:*}")
+    if ((${#files[@]})); then
+      "${checker[@]}" --schemafile "contracts/${entry#*:}.schema.json" "${files[@]}"
+    fi
+  done
   # Dữ liệu demo khai báo: chỉ gói không có bộ nạp riêng (seed/load.py) mới dùng định dạng chung, vì make seed-demo
   # chạy bộ nạp riêng nếu có và bỏ qua demo.yaml của gói đó.
   if [[ -f "${app}seed/demo.yaml" && ! -f "${app}seed/load.py" ]]; then
@@ -150,6 +156,8 @@ reject contracts/service-token-claims.schema.json contracts/examples/invalid/ser
 reject contracts/app.schema.json contracts/examples/invalid/app.*.yaml
 reject contracts/workflow.schema.json contracts/examples/invalid/workflow.*.yaml
 reject contracts/catalog.schema.json contracts/examples/invalid/catalog.*.yaml
+reject contracts/assistant.schema.json contracts/examples/invalid/assistant.*.yaml
+reject contracts/knowledge.schema.json contracts/examples/invalid/knowledge.*.yaml
 reject contracts/threshold-rule.schema.json contracts/examples/invalid/threshold-rule.*.yaml
 reject contracts/seed.schema.json contracts/examples/invalid/seed.*.yaml
 reject contracts/component.schema.json contracts/examples/invalid/component.*.yaml
@@ -159,10 +167,10 @@ reject contracts/device-message.schema.json contracts/examples/invalid/device-me
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
     token-claims.*.json | service-token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml | \
-    threshold-rule.*.yaml | seed.*.yaml) ;;
+    threshold-rule.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml) ;;
     *)
       echo "$file không được kiểm: tên phải theo mẫu <token-claims|service-token-claims|device-message>.<lỗi>.json hoặc" \
-        "<app|workflow|catalog|component|threshold-rule|seed>.<lỗi>.yaml." >&2
+        "<app|workflow|catalog|component|threshold-rule|assistant|knowledge|seed>.<lỗi>.yaml." >&2
       exit 1
       ;;
   esac

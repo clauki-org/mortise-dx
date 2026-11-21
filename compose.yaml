@@ -496,6 +496,22 @@ services:
       mosquitto:
         condition: service_healthy
 
+  ollama:
+    # Chạy mô hình ngôn ngữ tại chỗ cho trợ lý hỏi văn bản (ADR 0021). Chỉ chạy khi bật profile `ai` bằng `make ai-up`,
+    # vì cần nhiều RAM; lõi chạy đủ khi không có nó. Không mở cổng ra máy chủ hay qua APISIX: chỉ dịch vụ trong mạng
+    # nội bộ gọi. Trọng số nằm trong volume `ollama`, tải lại được nên không nằm trong bản sao lưu.
+    image: ollama/ollama:0.40.16
+    profiles: [ai]
+    restart: unless-stopped
+    volumes:
+      - ollama:/root/.ollama
+    healthcheck:
+      # `ollama list` hỏi máy chủ Ollama trong container; thoát 0 khi máy chủ đã nhận lệnh.
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   cold-archive:
     # Công cụ kho lạnh của người vận hành (ADR 0014): xuất nhật ký thay đổi cũ sang Parquet trên SeaweedFS và truy
     # vấn bằng DuckDB. Chỉ chạy khi gọi (`make archive`, `make cold-query`); không có route qua cổng vì tệp chứa
@@ -526,3 +542,4 @@ volumes:
   mqttauth:
   scorpiodata:
   seaweed:
+  ollama:

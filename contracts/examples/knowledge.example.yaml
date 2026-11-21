@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ văn bản hợp lệ theo contracts/knowledge.schema.json; `make check-fast` kiểm tệp này. Văn bản hư cấu, chỉ để
+# minh họa định dạng: địa chỉ thuộc example.org, băm là SHA-256 của tệp rỗng. Gói thật đặt tệp ở
+# apps/<gói>/knowledge/ và chép nguyên văn từ bản gốc đã băm.
+
+id: example-rules
+title: Quy chế mẫu về đặt phòng họp (hư cấu)
+source:
+  url: https://example.org/quy-che-mau.pdf
+  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  retrieved: 2026-11-21
+passages:
+  - id: art-1-cl-1
+    label: Điều 1 khoản 1
+    text: Phòng họp được đặt trước tối đa 7 ngày.
+    # Đoạn thay nó nằm ở một văn bản khác của cùng gói.
+    superseded_by:
+      document: example-rules-amendment
+      passage: art-1
+  - id: art-1-cl-2
+    label: Điều 1 khoản 2
+    text: Mỗi lần đặt không quá 4 giờ. Người đặt hủy trước giờ họp ít nhất 1 giờ nếu không dùng.

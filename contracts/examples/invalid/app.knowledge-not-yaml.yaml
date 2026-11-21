@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: tệp văn bản ở `knowledge` không phải YAML.
+# Nếu lọt, gói trỏ thẳng tới bản PDF gốc, thứ bộ cài không đọc được thành các đoạn.
+
+id: example
+name: Example package
+version: 0.1.0
+database:
+  schema: app_example
+  migrations: schema/migrations
+knowledge:
+  - knowledge/example-rules.pdf

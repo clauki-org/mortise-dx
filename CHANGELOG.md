@@ -12,6 +12,10 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Profile `ai` (ADR 0021): `make ai-up` chạy Ollama 0.40.16, tải Qwen3.5 4B và dừng nếu trọng số khác digest ghim
+  trong `core/ollama/models.txt`. Hợp đồng cho trợ lý hỏi văn bản: cấu hình thành phần
+  (`contracts/assistant.schema.json`) và văn bản của gói (`contracts/knowledge.schema.json`, mục `knowledge` trong
+  app.yaml).
 - Gói chỉ gồm tệp khai báo (ADR 0022): `make check-fast` kiểm gói trong `DECLARATIVE_APPS` của Makefile không có tệp
   mã (`scripts/check-declarative.sh`); `make seed-demo` nạp `seed/demo.yaml` của gói không có bộ nạp riêng bằng bộ
   nạp chung `scripts/app-seed.py`, theo `contracts/seed.schema.json`.
