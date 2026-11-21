@@ -53,9 +53,13 @@ echo "Dừng dịch vụ ghi dữ liệu trong lúc sao lưu: ${stopped[*]}"
 [[ ${#stopped[@]} -eq 0 ]] || docker compose stop "${stopped[@]}" >/dev/null
 
 # Băm cuối của nhật ký thay đổi, đọc trước khi dump nên chắc chắn có trong bản dump; khôi phục xong
-# audit-verify đối chiếu với nó (ADR 0009).
+# audit-verify đối chiếu với nó (ADR 0009). Dòng cuối đã chuyển sang kho lạnh và xóa khỏi CSDL thì lấy băm cuối
+# của đoạn cuối (core.audit_segments), cũng nằm trong bản dump.
 audit_head=$(docker compose exec -T postgres psql -qAtX -U postgres -d mortise \
-  -c "SELECT id || ':' || encode(hash, 'hex') FROM core.audit_log ORDER BY id DESC LIMIT 1")
+  -c "SELECT t.id || ':' || encode(t.hash, 'hex') FROM (
+        (SELECT id, hash FROM core.audit_log ORDER BY id DESC LIMIT 1)
+        UNION ALL (SELECT last_id, last_hash FROM core.audit_segments ORDER BY last_id DESC LIMIT 1)
+      ) t ORDER BY t.id DESC LIMIT 1")
 
 docker compose exec -T postgres pg_dumpall -U postgres --clean --if-exists | gzip >"$dest/postgres.sql.gz"
 echo "  PostgreSQL: xong"

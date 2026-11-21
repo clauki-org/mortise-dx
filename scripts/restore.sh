@@ -94,6 +94,14 @@ docker compose up -d --wait
 if grep -q '^audit_head=' "$src/MANIFEST"; then
   scripts/audit-verify.sh "$src"
 fi
+# Dòng nhật ký đã chuyển sang kho lạnh chỉ còn trong tệp (ADR 0014): tính lại chuỗi của mọi đoạn từ tệp đã khôi phục.
+segments=$(docker compose exec -T postgres psql -qAtX -U postgres -d mortise -c 'SELECT count(*) FROM core.audit_segments')
+if [[ "$segments" != 0 ]]; then
+  docker compose --profile tools run --rm --build --quiet-pull cold-archive verify || {
+    echo "Kho lạnh của nhật ký không khớp core.audit_segments trong bản sao lưu này." >&2
+    exit 1
+  }
+fi
 # Bản sao lưu phải nhất quán giữa core.files và kho tệp (backup.sh dừng dịch vụ ghi trong lúc chép).
 scripts/files-verify.sh || {
   echo "core.files và kho tệp lệch nhau trong bản sao lưu này; xem danh sách ở trên." >&2

@@ -5,7 +5,8 @@
 # cùng cũ hơn mốc thời gian; cắt theo id vì các dòng được ghi lần lượt dưới một khóa (ADR 0009) nên thứ tự id
 # là thứ tự của chuỗi, và một dòng đã thấy được thì mọi dòng có id nhỏ hơn đã xong (id bỏ trống do rollback
 # không làm đứt chuỗi). Chỉ ghi nhận đoạn sau khi đọc lại tệp vừa ghi, nạp lại vào PostgreSQL và tính lại băm
-# từng dòng; dòng nào sai thì không ghi nhận gì. Chưa xóa gì khỏi CSDL (#97).
+# từng dòng; dòng nào sai thì không ghi nhận gì. Ghi nhận xong, cùng giao dịch đó xóa các dòng của đoạn khỏi
+# core.audit_log bằng core.audit_purge (#97); lỗi ở bất kỳ bước nào thì không ghi nhận, không xóa gì.
 
 import csv
 import io
@@ -49,19 +50,21 @@ def check(pg: pg8000.native.Connection, first_prev: bytes, first_id: int, last_i
         raise Mismatch(f"tệp có {rows} dòng, CSDL có {expected} dòng trong đoạn {first_id}–{last_id}")
     recomputed = pg.run(
         f"SELECT count(*) FROM cold_rows WHERE core.audit_hash(hash_version, prev_hash, id, {AT}, tenant_id, "
-        "table_name, op, row_key, before, after, actor, actor_role, db_role) <> hash"
+        "table_name, op, row_key, before, after, actor, actor_role, db_role) IS DISTINCT FROM hash "
+        "OR hash IS NULL OR prev_hash IS NULL"
     )[0][0]
     if recomputed:
         raise Mismatch(f"{recomputed} dòng trong tệp tính lại băm không khớp")
     broken = pg.run(
         "SELECT count(*) FROM (SELECT prev_hash, coalesce(lag(hash) OVER (ORDER BY id), :p) AS expected "
-        "FROM cold_rows) c WHERE prev_hash <> expected",
+        "FROM cold_rows) c WHERE prev_hash IS DISTINCT FROM expected",
         p=first_prev,
     )[0][0]
     if broken:
         raise Mismatch(f"chuỗi băm trong tệp đứt ở {broken} chỗ (so với đoạn trước)")
     differs = pg.run(
-        "SELECT count(*) FROM cold_rows c JOIN core.audit_log l USING (id) WHERE l.hash <> c.hash"
+        "SELECT count(*) FROM cold_rows c JOIN core.audit_log l USING (id) "
+        "WHERE l.hash IS DISTINCT FROM c.hash"
     )[0][0]
     if differs:
         raise Mismatch(f"{differs} dòng trong tệp khác dòng cùng id trong CSDL")
@@ -102,9 +105,9 @@ def archive(
         pg.run("COPY cold_rows FROM STDIN WITH (FORMAT csv)", stream=as_csv(rows))
         count = check(pg, first_prev, first_id, last_id)
         last_hash = pg.run("SELECT hash FROM cold_rows ORDER BY id DESC LIMIT 1")[0][0]
-        pg.run(
+        segment = pg.run(
             "INSERT INTO core.audit_segments (first_id, last_id, first_prev, last_hash, rows, object_key, "
-            "file_sha256) VALUES (:f, :l, :p, :h, :n, :k, :s)",
+            "file_sha256) VALUES (:f, :l, :p, :h, :n, :k, :s) RETURNING id",
             f=first_id,
             l=last_id,
             p=first_prev,
@@ -112,9 +115,13 @@ def archive(
             n=count,
             k=object_key(first_id, last_id),
             s=file_sha256,
-        )
+        )[0][0]
+        purged = pg.run("SELECT core.audit_purge(:s)", s=segment)[0][0]
         pg.run("COMMIT")
     except Exception:
         pg.run("ROLLBACK")
         raise
-    return f"Đã lưu trữ {count} dòng nhật ký ({first_id}–{last_id}) vào {path}; băm từng dòng khớp."
+    return (
+        f"Đã lưu trữ {count} dòng nhật ký ({first_id}–{last_id}) vào {path}; băm từng dòng khớp; "
+        f"đã xóa {purged} dòng khỏi CSDL."
+    )
