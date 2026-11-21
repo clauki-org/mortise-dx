@@ -14,6 +14,7 @@ import { ApiError } from "./api";
 import { CALLBACK_PATH, userManager } from "./auth";
 import { NotFound, RouteError } from "./Errors";
 import { createGraphqlClient } from "./graphql";
+import { PackagePage } from "./PackagePage";
 import { Shell } from "./Shell";
 import { type Session, SessionContext } from "./session";
 import { TaskList } from "./TaskList";
@@ -45,6 +46,8 @@ const createRouter = () =>
             { index: true, element: <Navigate to="/tasks" replace /> },
             { path: "tasks", element: <TaskList /> },
             { path: "tasks/:taskId", element: <TaskScreen /> },
+            // Mục menu của gói; phần đường dẫn sau mục do thành phần của mục tự đọc (ví dụ dòng chi tiết của danh mục).
+            { path: "apps/:app/:item/*", element: <PackagePage /> },
             { path: "*", element: <NotFound /> },
           ],
         },
