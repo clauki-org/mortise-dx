@@ -44,7 +44,8 @@ esac
 "${checker[@]}" --schemafile contracts/workflow.schema.json contracts/examples/workflow.example.yaml
 "${checker[@]}" --schemafile contracts/catalog.schema.json contracts/examples/catalog.example.yaml
 "${checker[@]}" --schemafile contracts/assistant.schema.json contracts/examples/assistant.example.yaml
-"${checker[@]}" --schemafile contracts/knowledge.schema.json contracts/examples/knowledge.example.yaml
+"${checker[@]}" --schemafile contracts/knowledge.schema.json contracts/examples/knowledge.example.yaml \
+  contracts/examples/knowledge-amendment.example.yaml
 "${checker[@]}" --schemafile contracts/threshold-rule.schema.json contracts/examples/threshold-rule.example.yaml
 "${checker[@]}" --schemafile contracts/seed.schema.json contracts/examples/seed.example.yaml
 # Bản mô tả của từng thành phần Tầng 2. Tên tệp, tên thành phần và hai đường dẫn trong tệp phải khớp nhau: bản mô tả

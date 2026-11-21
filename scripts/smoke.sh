@@ -136,6 +136,22 @@ for pair in "user.a xa-a" "user.b xa-b"; do
   check "$user đọc được khai báo bước của tenant mình" "$steps" "[[\"$tenant\",\"review\",2]]"
 done
 
+# Văn bản mẫu của lõi cho trợ lý hỏi văn bản (ADR 0021): trợ lý đọc bằng token người hỏi, nên mỗi tenant chỉ thấy bản
+# chép của mình; đoạn đã bị thay vẫn trỏ tới đoạn thay nó; quan hệ tới văn bản không ra ngoài tenant.
+passages_query=$(jq -nc --arg q '{ platform_knowledge_passages(where: {app: {_eq: "core"}},
+  order_by: [{document_id: asc}, {position: asc}]) { tenant_id document_id passage_id superseded_by_passage
+  document { tenant_id } } }' '{query: $q}')
+for pair in "user.a xa-a" "user.b xa-b"; do
+  read -r user tenant <<<"$pair"
+  passages=$(curl -fsS -X POST "$base/v1/graphql" -H "Authorization: Bearer $(token "$user")" \
+    -H 'Content-Type: application/json' -d "$passages_query" | jq -c '[.data.platform_knowledge_passages[] |
+      [.tenant_id, .document_id, .passage_id, .superseded_by_passage, .document.tenant_id]]')
+  check "$user chỉ đọc được văn bản mẫu của tenant mình" "$passages" \
+    "[[\"$tenant\",\"example-rules\",\"art-1-cl-1\",\"art-1\",\"$tenant\"],\
+[\"$tenant\",\"example-rules\",\"art-1-cl-2\",null,\"$tenant\"],\
+[\"$tenant\",\"example-rules-amendment\",\"art-1\",null,\"$tenant\"]]"
+done
+
 # Quyền Hasura đang chạy phải khớp tệp khai báo (core/hasura/, platform/schema/hasura/); ai sửa tay trên trang quản
 # trị thì báo ở đây. Quyền hay quan hệ sai thì `make seed` đưa về đúng; bảng đăng ký thừa thì thông báo chỉ cách gỡ.
 if uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py check; then

@@ -39,7 +39,7 @@
       "$ref": "#/$defs/path"
     },
     "knowledge": {
-      "description": "Tệp văn bản cho trợ lý hỏi văn bản theo contracts/knowledge.schema.json, mỗi tệp một văn bản (ADR 0021); `make check-fast` kiểm từng tệp. Bộ cài gói nạp vào bảng của Tầng 2 theo tenant (kế hoạch).",
+      "description": "Tệp văn bản cho trợ lý hỏi văn bản theo contracts/knowledge.schema.json, mỗi tệp một văn bản (ADR 0021); `make check-fast` kiểm từng tệp. Bộ cài gói nạp vào platform.knowledge_documents và platform.knowledge_passages cho mọi tenant, gỡ gói thì xóa.",
       "type": "array",
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/path", "pattern": "\\.yaml$" }
