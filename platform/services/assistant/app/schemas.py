@@ -36,11 +36,25 @@ class Citation(BaseModel):
     sentence: str = Field(description="Câu nguyên văn trong dữ liệu, không phải chữ của mô hình")
 
 
+class ModelInfo(BaseModel):
+    name: str = Field(description="Tên mô hình mà nhà cung cấp nhận")
+    provider: Literal["ollama", "openai-compatible"] = Field(
+        description="Cách gọi mô hình, do người vận hành chọn bằng ASSISTANT_LLM_PROVIDER"
+    )
+    location: Literal["local", "api"] = Field(
+        description="local: Ollama trong mạng nội bộ của bản cài; api: câu hỏi và đoạn văn bản gửi tới `host`"
+    )
+    host: str | None = Field(description="Tên máy của API khi `location` là `api`; null khi chạy tại chỗ")
+
+
 class Answer(BaseModel):
     outcome: Literal["answered", "refused"]
     answer: str | None = Field(description="Câu trả lời của mô hình; null khi từ chối")
     reason: str | None = Field(description="Lý do từ chối, hiển thị được cho người dùng; null khi trả lời")
     citations: list[Citation] = Field(description="Câu làm căn cứ; rỗng khi từ chối")
+    model: ModelInfo | None = Field(
+        description="Mô hình đã được hỏi; null khi từ chối mà không gọi mô hình (không có đoạn đủ gần)"
+    )
 
 
 class ErrorBody(BaseModel):

@@ -517,8 +517,8 @@ services:
 
   assistant:
     # Trợ lý hỏi văn bản (ADR 0021), sau cổng tại /v1/assistant. Đọc văn bản qua cổng bằng token của người hỏi; tài
-    # khoản CSDL `assistant` chỉ thêm được dòng vào nhật ký câu hỏi; gọi Ollama trong mạng nội bộ. Chạy cùng lõi;
-    # Ollama ở profile `ai` (`make ai-up`), chưa bật thì dịch vụ trả 503 kèm cách bật cho câu hỏi cần mô hình.
+    # khoản CSDL `assistant` chỉ thêm được dòng vào nhật ký câu hỏi. Mặc định gọi Ollama trong mạng nội bộ; chạy cùng
+    # lõi; Ollama ở profile `ai` (`make ai-up`), chưa bật thì dịch vụ trả 503 kèm cách bật cho câu hỏi cần mô hình.
     build: platform/services/assistant
     restart: unless-stopped
     environment:
@@ -527,6 +527,13 @@ services:
       ASSISTANT_GRAPHQL_URL: http://apisix:9080/v1/graphql
       OLLAMA_URL: http://ollama:11434
       ASSISTANT_MODELS_FILE: /srv/models.txt
+      # Nhà cung cấp mô hình: trống là `ollama`; `openai-compatible` gửi câu hỏi và các câu đã tìm ra API ở
+      # ASSISTANT_LLM_BASE_URL, cần đủ ba biến sau, thiếu thì trả 503 chỉ biến còn thiếu (ADR 0021, bổ sung
+      # 2026-11-22). Khai trong .env; `make env` không sinh khóa.
+      ASSISTANT_LLM_PROVIDER: ${ASSISTANT_LLM_PROVIDER:-}
+      ASSISTANT_LLM_BASE_URL: ${ASSISTANT_LLM_BASE_URL:-}
+      ASSISTANT_LLM_MODEL: ${ASSISTANT_LLM_MODEL:-}
+      ASSISTANT_LLM_API_KEY: ${ASSISTANT_LLM_API_KEY:-}
       ASSISTANT_DB_HOST: postgres
       ASSISTANT_DB_NAME: mortise
       ASSISTANT_DB_USER: assistant

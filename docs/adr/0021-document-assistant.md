@@ -111,3 +111,50 @@ ghi vào tài liệu kèm cách đo và ngày đo.
 - Chỉ lọc theo tenant; văn bản chỉ cho một số vai trò đọc là việc sau (#47).
 - `make ai-up` cần mạng lần đầu để tải trọng số; volume `ollama` không nằm trong bản sao lưu vì tải lại được.
 - Văn bản của gói phải là bản sạch chép từ bản gốc đã băm, có người đối chiếu; lỗi chép là lỗi của câu trích.
+
+## Bổ sung ngày 2026-11-22 (#147): mô hình qua API tương thích OpenAI
+
+Bối cảnh: máy chủ không đủ RAM cho Ollama (bảng trên) thì đơn vị không có trợ lý. Quyết định ở trên vẫn là mặc định:
+mô hình chạy trên máy chủ của tổ chức. Bổ sung này cho người vận hành chọn, bằng cấu hình, gửi bước sinh tới một API
+ngoài.
+
+**Cấu hình.** `ASSISTANT_LLM_PROVIDER` trong `.env`: trống hay `ollama` là Ollama như trên; `openai-compatible` gọi
+`POST {ASSISTANT_LLM_BASE_URL}/chat/completions` với khóa `ASSISTANT_LLM_API_KEY` ở header `Authorization: Bearer`,
+mô hình `ASSISTANT_LLM_MODEL`, cùng JSON Schema ở `response_format` (`json_schema`, `strict`), nhiệt độ 0, `max_tokens`
+bằng `ASSISTANT_NUM_PREDICT`, cùng thời gian chờ. `make env` không sinh khóa. Thiếu một trong ba biến, địa chỉ không
+phải `http(s)://` hay tên nhà cung cấp lạ thì dịch vụ ghi lỗi vào log lúc khởi động và trả 503 chỉ biến cần sửa cho
+mọi câu hỏi cần mô hình; không bao giờ tự chuyển sang nhà cung cấp khác, để câu hỏi không đi ra ngoài khi người vận
+hành chưa chọn, và không lặng lẽ ở lại khi người vận hành tưởng đã chọn API. Các bước 1–3, 5, 6 không đổi: chỉ lời gọi
+ở bước 4 khác, câu trả lời của cả hai qua cùng bước kiểm dạng, kiểm câu trích và kiểm số.
+
+**Khi nào bật.** Chỉ khi đơn vị đã quyết định các văn bản được hỏi, và câu hỏi của cán bộ, được phép gửi cho bên cung
+cấp API. Văn bản đã công bố công khai là trường hợp dễ quyết định nhất; văn bản nội bộ hay có dữ liệu cá nhân thì giữ
+Ollama. Người vận hành bật API chịu trách nhiệm xác định việc gửi này phù hợp với quy định về dữ liệu cá nhân và điều
+khoản của bên cung cấp API (lưu bao lâu, có dùng để huấn luyện không) mà đơn vị phải theo; dự án không đánh giá thay.
+
+**Dữ liệu rời máy chủ**, mỗi câu hỏi tới được bước sinh:
+
+- câu hỏi nguyên văn, kể cả điều người hỏi tự gõ vào;
+- các câu của tối đa `ASSISTANT_TOP_PASSAGES` đoạn đã tìm, kèm mã câu, tên văn bản và nhãn vị trí (`prompt()` trong
+  `model.py`);
+- prompt hệ thống, JSON Schema, tên mô hình, khóa API.
+
+Không gửi: token, `sub`, tenant hay tên người hỏi; đoạn ngoài quyền người hỏi; nhật ký câu hỏi. Câu hỏi bị từ chối vì
+không có đoạn đủ gần (bước 3) không gửi gì. Trợ lý hỏi dữ liệu (#116) là kế hoạch: khi làm, nó chỉ được gửi siêu dữ
+liệu (tên bảng, cột, mô tả), không gửi dòng dữ liệu, và ghi lại trong bản ghi của nó.
+
+**Hiện cho người hỏi và ghi nhật ký.** Câu trả lời có `model` (tên, nhà cung cấp, `location`, `host`), null khi không
+gọi mô hình; giao diện ghi "Trả lời bởi <mô hình>, chạy tại chỗ" hay "qua API <tên máy>". `location` theo nhà cung
+cấp, không đoán theo địa chỉ: `openai-compatible` luôn là `api` kèm tên máy, kể cả khi máy chủ API nằm trong mạng của
+đơn vị, vì dịch vụ không biết được mạng nào là "của đơn vị". Nhật ký câu hỏi thêm `model_provider` và `model_host`
+(migration của Tầng 2); dòng ghi trước đó để trống.
+
+Hệ quả của bổ sung:
+
+- Mô hình qua API không ghim theo digest: bên cung cấp đổi mô hình sau cùng tên thì câu trả lời đổi mà không lệnh nào
+  báo. Bước kiểm câu trích và số vẫn chạy, nên điều này làm đổi tỉ lệ từ chối chứ không làm lọt câu trích giả.
+- Bảng đo ở trên chỉ áp dụng cho Qwen3.5 4B; mô hình qua API chưa được đo bằng bộ câu hỏi của #114.
+- Vẫn một lượt sinh mỗi lúc: API không làm trợ lý trả lời được nhiều người cùng lúc hơn.
+- Phụ thuộc đường ra mạng ngoài, phí và hạn mức của bên cung cấp; giới hạn tần suất (429) là 503 "thử lại sau".
+- Máy chủ chỉ nhận `max_completion_tokens` thay vì `max_tokens` thì trả lỗi 400; dịch vụ trả 502 và ghi lý do vào
+  log. Đã kiểm bằng máy chủ giả trong `make test`, chưa có kiểm thử tự động với API thật.

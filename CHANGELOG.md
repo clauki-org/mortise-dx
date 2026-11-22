@@ -12,6 +12,11 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Trợ lý hỏi văn bản chọn nhà cung cấp mô hình qua cấu hình (bổ sung của ADR 0021): mặc định Ollama tại chỗ như trước;
+  `ASSISTANT_LLM_PROVIDER=openai-compatible` cùng `ASSISTANT_LLM_BASE_URL`, `ASSISTANT_LLM_MODEL`,
+  `ASSISTANT_LLM_API_KEY` gọi một API tương thích OpenAI, khai thiếu thì 503 chỉ biến cần sửa. Câu trả lời ghi mô
+  hình và nơi chạy (`model`), giao diện hiện "Trả lời bởi ..., chạy tại chỗ" hay "qua API <tên máy>"; nhật ký câu
+  hỏi thêm `model_provider`, `model_host`.
 - Gói thứ hai `supplies-commune` (kho vật tư xã), chỉ gồm tệp khai báo: kho và vật tư theo xã trên menu "Kho vật tư",
   đề nghị cấp vật tư cho người duyệt của xã, dữ liệu demo hư cấu nạp bằng `make seed-demo`. `make e2e` kiểm mọi mục
   menu của các gói đã cài mở được trang theo cấu hình.

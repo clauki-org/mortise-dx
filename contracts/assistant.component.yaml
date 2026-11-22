@@ -13,6 +13,8 @@ capabilities:
   - Ô hỏi và lời giới thiệu theo intro; câu hỏi mẫu trong examples hiện thành nút, bấm là hỏi ngay.
   - Chỉ hỏi trong các văn bản liệt kê ở documents, thuộc gói của mục menu.
   - Câu trả lời hiện kèm từng câu làm căn cứ, đúng chữ lưu trong dữ liệu, cùng tên văn bản và nhãn vị trí.
+  - Dưới câu trả lời ghi mô hình đã trả lời và nơi chạy, "chạy tại chỗ" hay "qua API <tên máy>", theo `model` của
+    dịch vụ.
   - Từ chối hiện lý do của dịch vụ, gồm không có đoạn đủ gần câu hỏi và câu trả lời không qua bước kiểm.
   - Mô hình chưa chạy, đang bận hay quá giờ thì hiện thông điệp của dịch vụ, gồm cách bật mô hình.
   - Cấu hình thiếu intro hay documents, hay quá giới hạn của hợp đồng (50 văn bản, mã văn bản 64 ký tự), thì báo lý

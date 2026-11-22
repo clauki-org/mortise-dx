@@ -11,11 +11,20 @@ export type AssistantConfig = { intro: string; examples?: string[]; documents: s
 
 export type Citation = { document_id: string; title: string; passage_id: string; label: string; sentence: string };
 
+export type ModelInfo = {
+  name: string;
+  provider: "ollama" | "openai-compatible";
+  location: "local" | "api";
+  host: string | null;
+};
+
 export type Answer = {
   outcome: "answered" | "refused";
   answer: string | null;
   reason: string | null;
   citations: Citation[];
+  // null khi dịch vụ từ chối mà không gọi mô hình.
+  model: ModelInfo | null;
 };
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -45,6 +54,15 @@ export function configProblems(config: unknown): string[] {
   )
     problems.push("examples phải là danh sách câu hỏi");
   return problems;
+}
+
+/**
+ * Dòng cho người hỏi biết câu trả lời đến từ mô hình nào và câu hỏi đã đi đâu: qua API thì câu hỏi và các câu đã
+ * tìm rời máy chủ của bản cài (ADR 0021), nên ghi cả tên máy của API.
+ */
+export function modelLine(model: ModelInfo): string {
+  const where = model.location === "local" ? "chạy tại chỗ" : `qua API ${model.host ?? "bên ngoài"}`;
+  return `Trả lời bởi ${model.name}, ${where}`;
 }
 
 /** Gửi câu hỏi. `app` là gói của mục menu: văn bản được hỏi thuộc gói đó (hay `core` cho văn bản mẫu của lõi). */

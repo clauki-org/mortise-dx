@@ -80,7 +80,7 @@ make e2e     # kịch bản demo trên trình duyệt (cần Node và gói xã: 
 | `http://localhost:9080/v1/workflow/...` | API quy trình, bắt buộc token |
 | `http://localhost:9080/v1/files` | API tệp, bắt buộc token |
 | `http://localhost:9080/v1/context/entities` | Dữ liệu thiết bị (NGSI-LD), chỉ đọc, bắt buộc token |
-| `http://localhost:9080/v1/assistant/questions` | Trợ lý hỏi văn bản, bắt buộc token; trả lời cần bật profile `ai` |
+| `http://localhost:9080/v1/assistant/questions` | Trợ lý hỏi văn bản, bắt buộc token; trả lời cần bật profile `ai` hay khai API |
 | `http://127.0.0.1:8081/auth/admin` | Quản trị Keycloak (chỉ máy chủ) |
 | `http://127.0.0.1:8082/console` | Quản trị Hasura (chỉ máy chủ) |
 | `http://127.0.0.1:8083/flowable-rest/docs` | REST API của Flowable (chỉ máy chủ) |
@@ -111,7 +111,9 @@ Thiết bị khác cấp tài khoản bằng `make device-add TENANT=<tenant> DE
 Mô hình ngôn ngữ của trợ lý hỏi văn bản chạy tại chỗ bằng Ollama, tách khỏi lõi trong profile `ai`: `make ai-up` chạy
 Ollama, tải mô hình đã ghim (lần đầu cần mạng) và dừng nếu trọng số khác digest đã ghim
 ([ADR 0021](docs/adr/0021-document-assistant.md)). Trợ lý chạy cùng lõi; chưa bật profile thì câu hỏi cần mô hình
-nhận 503 kèm cách bật.
+nhận 503 kèm cách bật. Muốn gọi một API tương thích OpenAI thay cho Ollama, khai
+`ASSISTANT_LLM_PROVIDER=openai-compatible` cùng `ASSISTANT_LLM_BASE_URL`, `ASSISTANT_LLM_MODEL`, `ASSISTANT_LLM_API_KEY`
+trong `.env` rồi chạy `make up`; câu hỏi và các câu đã tìm khi đó rời máy chủ (bổ sung của ADR 0021).
 
 ## Kiến trúc
 
@@ -185,7 +187,7 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
 platform/             Tầng 2
   web/                khung giao diện (React, Vite), phục vụ bằng nginx sau cổng
-  services/assistant/ trợ lý hỏi văn bản: tìm đoạn theo quyền người hỏi, sinh tại chỗ, kiểm câu trích (Python)
+  services/assistant/ trợ lý hỏi văn bản: tìm đoạn theo quyền người hỏi, sinh tại chỗ hay qua API, kiểm câu trích
   schema/migrations/  migration lược đồ `platform` (dbmate): khai báo bước của quy trình, menu của gói
 apps/facilities-commune/  Tầng 3: gói cơ sở vật chất xã (app.yaml, migration, quyền Hasura, smoke của gói)
 apps/supplies-commune/    Tầng 3: gói kho vật tư xã, chỉ gồm tệp khai báo (ADR 0022)

@@ -71,7 +71,10 @@ Trợ lý hỏi văn bản (`contracts/assistant.openapi.json`, [ADR 0021](adr/0
 `POST /v1/assistant/questions`. Câu hỏi cần mô hình mà chưa bật profile `ai` thì nhận 503 kèm cách bật. Câu trả lời có
 `outcome` `answered` kèm `citations` (văn bản, nhãn vị trí, câu nguyên văn), hoặc `refused` kèm `reason`: không có
 đoạn nào đủ gần câu hỏi, mô hình nói không đủ căn cứ, hay câu trả lời không qua bước kiểm. Trợ lý chỉ đọc được đoạn
-của tenant trong token. Mỗi lúc chỉ trả lời một câu (đang bận thì 503); mô hình quá thời gian thì 504.
+của tenant trong token. Mỗi lúc chỉ trả lời một câu (đang bận thì 503); mô hình quá thời gian thì 504. `model` ghi
+mô hình đã được hỏi (`name`, `provider`, `location` là `local` hay `api`, `host` là tên máy của API), null khi từ chối
+mà không gọi mô hình. Trợ lý cấu hình gọi API mà thiếu biến hay khóa bị từ chối thì 503 chỉ biến cần sửa; API giới
+hạn tần suất hay quá tải thì 503 kèm lời thử lại sau ít phút.
 
 ```bash
 curl -fsS -X POST http://localhost:9080/v1/assistant/questions \
@@ -80,7 +83,8 @@ curl -fsS -X POST http://localhost:9080/v1/assistant/questions \
 ```
 
 Mỗi câu hỏi đã qua bước kiểm đầu vào có một dòng ở `platform_assistant_questions` (người hỏi, câu hỏi, kết quả, câu
-trả lời, lý do, câu trích, mô hình, thời gian xử lý), kể cả câu không trả lời được vì lỗi (`outcome` là `failed`).
+trả lời, lý do, câu trích, mô hình, nhà cung cấp mô hình `model_provider` và tên máy của API `model_host`, thời
+gian xử lý), kể cả câu không trả lời được vì lỗi (`outcome` là `failed`).
 Chỉ vai trò `tenant_admin` đọc được, và chỉ dòng của tenant mình; không ai sửa hay xóa được qua API.
 
 ```bash

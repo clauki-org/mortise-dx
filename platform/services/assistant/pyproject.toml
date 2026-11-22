@@ -4,7 +4,7 @@
 [project]
 name = "mortise-assistant"
 version = "0.1.0"
-description = "Trợ lý hỏi văn bản: tìm đoạn theo quyền người hỏi, sinh câu trả lời tại chỗ, kiểm câu trích và con số"
+description = "Trợ lý hỏi văn bản: tìm đoạn theo quyền người hỏi, sinh câu trả lời tại chỗ hay qua API, kiểm câu trích và con số"
 license = "Apache-2.0"
 requires-python = ">=3.13"
 dependencies = [

@@ -23,6 +23,17 @@
             "title": "Citations",
             "type": "array"
           },
+          "model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mô hình đã được hỏi; null khi từ chối mà không gọi mô hình (không có đoạn đủ gần)"
+          },
           "outcome": {
             "enum": [
               "answered",
@@ -48,7 +59,8 @@
           "outcome",
           "answer",
           "reason",
-          "citations"
+          "citations",
+          "model"
         ],
         "title": "Answer",
         "type": "object"
@@ -114,6 +126,53 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ModelInfo": {
+        "properties": {
+          "host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tên máy của API khi `location` là `api`; null khi chạy tại chỗ",
+            "title": "Host"
+          },
+          "location": {
+            "description": "local: Ollama trong mạng nội bộ của bản cài; api: câu hỏi và đoạn văn bản gửi tới `host`",
+            "enum": [
+              "local",
+              "api"
+            ],
+            "title": "Location",
+            "type": "string"
+          },
+          "name": {
+            "description": "Tên mô hình mà nhà cung cấp nhận",
+            "title": "Name",
+            "type": "string"
+          },
+          "provider": {
+            "description": "Cách gọi mô hình, do người vận hành chọn bằng ASSISTANT_LLM_PROVIDER",
+            "enum": [
+              "ollama",
+              "openai-compatible"
+            ],
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "provider",
+          "location",
+          "host"
+        ],
+        "title": "ModelInfo",
         "type": "object"
       },
       "Question": {
