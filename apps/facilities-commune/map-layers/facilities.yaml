@@ -7,7 +7,8 @@
 
 title: Bản đồ trụ sở
 layers:
-  # Cán bộ thấy cơ sở mình được phân công, lãnh đạo và quản trị xã thấy toàn xã (quyền ở hasura/tables.yaml).
+  # Hai lớp của xã truy vấn với vai trò mặc định `user` của giao diện (ADR 0023), nên ai cũng chỉ thấy cơ sở mình được
+  # phân công (quyền ở hasura/tables.yaml), kể cả lãnh đạo và quản trị xã.
   - id: in-use
     label: Trụ sở đang dùng
     source: app_facilities_commune_facilities
