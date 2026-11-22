@@ -36,12 +36,13 @@ Chọn cách cuối.
 
 - **Biến quyết định** của một quy trình là mọi tên xuất hiện trong `conditionExpression` của một `sequenceFlow` đi
   được tới từ một `userTask`, đi qua bất kỳ nút nào. Sự kiện biên gắn vào một nút được tính là chạy sau nút đó. Đi
-  vào một `subProcess` thì chạy từ `startEvent` bên trong nó; luồng ra của `subProcess` được tính là chạy sau các nút
-  bên trong nó, nhưng ra khỏi nó không chạy lại từ đầu, nên cổng đứng trước bước đầu tiên trong `subProcess` vẫn là
-  dữ liệu người lập.
+  vào một sub-process (`subProcess`, `transaction`, `adHocSubProcess`) thì chạy từ `startEvent` bên trong nó; luồng
+  ra của sub-process được tính là chạy sau các nút bên trong nó, nhưng ra khỏi nó không chạy lại từ đầu, nên cổng
+  đứng trước bước đầu tiên trong sub-process vẫn là dữ liệu người lập.
 - **Tên lấy thừa, không lấy thiếu:** mọi từ có dạng tên biến trong điều kiện đều được lấy, kể cả trong chuỗi, nên
   `${approved}`, `${approved == true}` và `${execution.getVariable("approved")}` đều cho ra `approved`. Lấy thừa chỉ
-  làm người lập không đặt được biến tên `execution` hay `true`; lấy thiếu thì người lập đặt sẵn được quyết định.
+  làm người lập không đặt được biến tên `execution` hay `true`; lấy thiếu thì người lập đặt sẵn được quyết định. Tên
+  có dấu như `đãDuyệt` hợp lệ trong biểu thức của Flowable nên cũng được lấy nguyên.
 - **Khi khởi tạo,** workflow-api hỏi Flowable phiên bản mới nhất của quy trình trong tenant của người gọi, đọc BPMN
   của phiên bản đó (`/repository/process-definitions/{id}/resourcedata`) và trả `400` nếu biến gửi lên trùng một
   biến quyết định. Kết quả nhớ theo mã định nghĩa, vì định nghĩa đã deploy không đổi; không nhớ theo khóa quy trình,

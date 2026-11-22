@@ -13,8 +13,13 @@ BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
 # Mọi từ có dạng tên biến trong điều kiện, kể cả trong chuỗi: ${approved}, ${approved == true} và
 # ${execution.getVariable("approved")} đều cho ra `approved`. Lấy thừa (execution, getVariable, true) chỉ
 # làm người lập không đặt được biến mang các tên đó; lấy thiếu thì người lập đặt sẵn được quyết định, nên
-# chọn lấy thừa.
-_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# chọn lấy thừa. Định danh UEL theo quy tắc của Java nhận cả chữ có dấu: chỉ lấy chữ ASCII thì `đãDuyệt` bị
+# cắt thành mảnh và tên thật lọt qua.
+_NAME = re.compile(r"[^\W\d]\w*")
+
+# Ba dạng sub-process của BPMN chạy nút bên trong giống nhau; bỏ sót một dạng thì bước duyệt bọc trong nó
+# không có nhánh nào sau nó.
+_SUBPROCESSES = ("subProcess", "transaction", "adHocSubProcess")
 
 
 def decision_variables(bpmn: bytes, key: str) -> frozenset[str]:
@@ -36,12 +41,12 @@ def decision_variables(bpmn: bytes, key: str) -> frozenset[str]:
     for flow in process.iter(f"{BPMN}sequenceFlow"):
         outgoing.setdefault(flow.get("sourceRef", ""), []).append(flow)
     following = _following(process)
-    # Đi vào một subProcess thì chạy từ startEvent bên trong nó; ra khỏi nó (sau một nút bên trong) thì chỉ đi
-    # luồng ra. Gộp hai việc làm một thì cổng đứng trước bước đầu tiên trong subProcess thành quyết định của
-    # chính bước đó.
+    # Đi vào một sub-process thì chạy từ startEvent bên trong nó; ra khỏi nó (sau một nút bên trong) thì chỉ
+    # đi luồng ra. Gộp hai việc làm một thì cổng đứng trước bước đầu tiên trong sub-process thành quyết định
+    # của chính bước đó.
     starts = {
         sub.get("id", ""): [event.get("id", "") for event in sub.findall(f"{BPMN}startEvent")]
-        for sub in process.iter(f"{BPMN}subProcess")
+        for sub in _subprocesses(process)
     }
 
     names: set[str] = set()
@@ -74,8 +79,12 @@ def _following(process: ET.Element) -> dict[str, list[str]]:
     following: dict[str, list[str]] = {}
     for event in process.iter(f"{BPMN}boundaryEvent"):
         following.setdefault(event.get("attachedToRef", ""), []).append(event.get("id", ""))
-    for sub in process.iter(f"{BPMN}subProcess"):
+    for sub in _subprocesses(process):
         for inner in sub.iter():
             if inner is not sub and inner.get("id"):
                 following.setdefault(inner.get("id", ""), []).append(sub.get("id", ""))
     return following
+
+
+def _subprocesses(process: ET.Element) -> list[ET.Element]:
+    return [sub for tag in _SUBPROCESSES for sub in process.iter(f"{BPMN}{tag}")]

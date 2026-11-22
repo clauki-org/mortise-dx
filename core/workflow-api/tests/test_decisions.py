@@ -94,6 +94,27 @@ def test_branch_after_subprocess_with_a_task_counts():
     assert "approved" in decision_variables(bpmn(body), "p")
 
 
+@pytest.mark.parametrize("tag", ["transaction", "adHocSubProcess"])
+def test_branch_after_other_subprocess_kinds_counts(tag):
+    body = (
+        f'<{tag} id="sub"><startEvent id="ss"/><userTask id="t"/>'
+        + flow("a", "ss", "t")
+        + f'</{tag}><exclusiveGateway id="g"/>'
+        + flow("b", "sub", "g")
+        + flow("c", "g", "end", "${approved}")
+    )
+    assert "approved" in decision_variables(bpmn(body), "p")
+
+
+def test_accented_variable_name_is_kept_whole():
+    body = (
+        '<userTask id="t"/><exclusiveGateway id="g"/>'
+        + flow("a", "t", "g")
+        + flow("b", "g", "end", "${đãDuyệt}")
+    )
+    assert "đãDuyệt" in decision_variables(bpmn(body), "p")
+
+
 def test_branch_inside_subprocess_after_a_task_counts():
     # Duyệt rồi vào một subProcess có cổng đọc approved ngay đầu.
     body = (
