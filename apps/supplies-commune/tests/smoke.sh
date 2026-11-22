@@ -109,7 +109,9 @@ insert_item='mutation($store: String!, $code: String!, $quantity: numeric!) {
 item() { # TOKEN KHO MÃ SỐ_LƯỢNG
   gql "$1" "$insert_item" "{\"store\":\"$2\",\"code\":\"$3\",\"quantity\":$4}" "$admin"
 }
-check "admin.a thêm vật tư vào kho của xã mình" "$(errors "$(item "$admin_a" "$code" "$code" 5)")" false
+out=$(item "$admin_a" "$code" "$code" 5)
+check "admin.a thêm vật tư vào kho của xã mình" "$(errors "$out")" false
+item_a=$(jq -r '.data.insert_app_supplies_commune_items_one.id' <<<"$out")
 check "Khóa ngoại ghép: admin.a không đặt được vật tư vào kho chỉ có ở xã B" \
   "$(errors "$(item "$admin_a" "$code-b" "$code" 1)")" true
 check "Số lượng âm bị từ chối" "$(errors "$(item "$admin_a" "$code" "$code-neg" -1)")" true
@@ -118,6 +120,27 @@ update_item='mutation($code: String!) { update_app_supplies_commune_items(where:
 check "user.a không sửa được số lượng" "$(errors "$(gql "$user_a" "$update_item" "{\"code\":\"$code\"}")")" true
 check "admin.a sửa được số lượng" "$(gql "$admin_a" "$update_item" "{\"code\":\"$code\"}" "$admin" |
   jq '.data.update_app_supplies_commune_items.affected_rows')" 1
+
+# Quản trị xã B nhắm đúng id kho, vật tư của xã A: bộ lọc tenant của quyền sửa, xóa phải làm mutation không chạm dòng
+# nào. Giá trị ghi khác giá trị đang có, để lần đọc lại phát hiện được nếu lọt.
+cross() { # TÊN_MUTATION MUTATION ID: in affected_rows khi admin.b chạy
+  gql "$admin_b" "$2" "{\"id\":\"$3\"}" "$admin" | jq ".data.$1.affected_rows"
+}
+check "admin.b không sửa được kho của xã A" "$(cross update_app_supplies_commune_stores 'mutation($id: uuid!) {
+  update_app_supplies_commune_stores(where: {id: {_eq: $id}}, _set: {name: "bị sửa"}) { affected_rows } }' \
+  "$store_a")" 0
+check "admin.b không sửa được vật tư của xã A" "$(cross update_app_supplies_commune_items 'mutation($id: uuid!) {
+  update_app_supplies_commune_items(where: {id: {_eq: $id}}, _set: {name: "bị sửa", quantity: 99}) {
+    affected_rows } }' "$item_a")" 0
+check "admin.b không xóa được vật tư của xã A" "$(cross delete_app_supplies_commune_items 'mutation($id: uuid!) {
+  delete_app_supplies_commune_items(where: {id: {_eq: $id}}) { affected_rows } }' "$item_a")" 0
+check "admin.b không xóa được kho của xã A" "$(cross delete_app_supplies_commune_stores 'mutation($id: uuid!) {
+  delete_app_supplies_commune_stores(where: {id: {_eq: $id}}) { affected_rows } }' "$store_a")" 0
+check "Kho và vật tư của xã A giữ nguyên sau các lần admin.b thử ghi" "$(gql "$admin_a" 'query($s: uuid!, $i: uuid!) {
+  app_supplies_commune_stores_by_pk(id: $s) { name } app_supplies_commune_items_by_pk(id: $i) { name quantity } }' \
+  "{\"s\":\"$store_a\",\"i\":\"$item_a\"}" "$admin" | jq -c '.data |
+    [.app_supplies_commune_stores_by_pk.name, .app_supplies_commune_items_by_pk.name,
+      (.app_supplies_commune_items_by_pk.quantity // empty | tonumber + 0)]')" '["Kho kiểm thử","Vật tư kiểm thử",0]'
 
 delete_store='mutation($code: String!) { delete_app_supplies_commune_stores(where: {code: {_eq: $code}}) {
   affected_rows } }'

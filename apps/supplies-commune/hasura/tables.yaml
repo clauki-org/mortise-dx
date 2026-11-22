@@ -46,6 +46,9 @@
         columns: [store_code, code, name, unit, kind, quantity]
         check: *tenant
         set: *tenant_from_token
+  # Mã vật tư và mã kho của vật tư không sửa được: CSDL không chặn, nhưng cặp (store_code, code) là khóa mà
+  # seed/demo.yaml dùng để nhận ra dòng đã nạp, và đề nghị cấp vật tư trỏ về vật tư bằng storeCode, itemCode dạng
+  # chữ. Đổi mã hay chuyển kho thì make seed-demo nạp thêm bản trùng, đề nghị đang mở trỏ vào vật tư không còn.
   update_permissions:
     - role: tenant_admin
       permission: { columns: [name, unit, kind, quantity], filter: *tenant, check: *tenant }
