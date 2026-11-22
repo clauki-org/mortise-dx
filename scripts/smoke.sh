@@ -274,6 +274,12 @@ IFS=$'\t' read -r status _ < <(api POST "$user_a" /processes/core-approval/insta
   '{"variables":{"initiator":"gia-mao"}}')
 check "Không ghi đè được biến dành riêng của lõi" "$status" 400
 
+# Cổng sau bước duyệt đọc approved, nên người lập không đặt sẵn được biến này (ADR 0025): người duyệt hoàn thành
+# mà không gửi approved thì không thành đã duyệt.
+IFS=$'\t' read -r status _ < <(api POST "$user_a" /processes/core-approval/instances \
+  '{"variables":{"title":"Đặt sẵn quyết định","approved":true}}')
+check "Người lập không đặt sẵn được biến quyết định của bước duyệt" "$status" 400
+
 # Bấm gửi hai lần gần như cùng lúc với cùng Idempotency-Key: chỉ một quy trình được tạo.
 idempotency_key=$(openssl rand -hex 16)
 start_once() {

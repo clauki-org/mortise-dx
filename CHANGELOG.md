@@ -185,6 +185,10 @@ từng đặt giá trị khác mặc định; `make env` tự thêm hai biến m
 
 ### Fixed
 
+- Người lập hồ sơ không đặt sẵn được quyết định của người duyệt (ADR 0025): workflow-api trả 400 khi biến khởi tạo
+  trùng tên dùng trong điều kiện rẽ nhánh sau một bước người làm của BPMN đã deploy, ví dụ `approved`. Trước đây
+  người lập gửi `approved: true` lúc khởi tạo thì người duyệt hoàn thành mà không gửi `approved` vẫn thành đã duyệt.
+  Quy trình rà soát của gói `facilities-commune` bỏ listener xóa `approved` vì lõi đã chặn.
 - `make backup` dừng các dịch vụ ghi dữ liệu (cổng, files-api, iot-bridge…) trong lúc sao lưu rồi bật lại; trước đây
   tệp tải lên giữa lúc dump CSDL và lúc chép kho tệp thành đối tượng không có dòng `core.files`. `make restore` kiểm
   `core.files` khớp kho tệp sau khi khôi phục (`make files-verify`) và báo lỗi nếu lệch: bản sao lưu cũ có đối tượng

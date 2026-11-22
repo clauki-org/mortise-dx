@@ -146,10 +146,10 @@ check "Phần vượt âm: hồ sơ đi nhánh công khai" "$(step_of "$negative
 check "Phần vượt không phải số: không lập được hồ sơ" \
   "$(api "$user" POST "/processes/$process/instances" '{"variables": {"title": "x", "excessM2": "abc"}}' | tail -1)" 502
 
-# Người lập đặt sẵn approved = true: bước duyệt xóa biến này khi bắt đầu, nên hoàn thành mà không chọn là trả lại.
-preset=$(file "{\"title\": \"$title F\", \"excessM2\": 100, \"approved\": true}")
-complete "$manager" "$preset" '{}' >/dev/null
-check "approved đặt sẵn lúc lập không thay được quyết định của người duyệt" "$(status "$preset")" "true rejected_report"
+# Người lập đặt sẵn approved = true: workflow-api từ chối vì cổng sau bước duyệt đọc biến này (ADR 0025).
+check "Không lập được hồ sơ đặt sẵn quyết định của người duyệt" \
+  "$(api "$user" POST "/processes/$process/instances" \
+    "{\"variables\": {\"title\": \"$title F\", \"excessM2\": 100, \"approved\": true}}" | tail -1)" 400
 
 # Trả lại để các hồ sơ còn lại kết thúc.
 for instance in "$just" "$missing" "$negative"; do

@@ -20,6 +20,7 @@ from .policy import (
     TaskView,
     check_can_complete,
     check_idempotency_key,
+    check_not_preset,
     check_person,
     check_variables,
 )
@@ -91,6 +92,7 @@ def start_process(
 ) -> dict:
     variables = _variables_in(body)
     check_variables(variables)
+    check_not_preset(variables, flowable.decisions(key, caller.tenant))
     variables |= {"initiator": caller.sub, "initiatorName": caller.username, "tenant": caller.tenant}
     if idempotency_key is None:
         return {"id": flowable.start(key, caller.tenant, variables)["id"], "process": key}

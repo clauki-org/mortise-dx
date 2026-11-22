@@ -66,6 +66,7 @@ def service(monkeypatch) -> list[dict]:
 
     monkeypatch.setattr(flowable, "started_with", started_with)
     monkeypatch.setattr(flowable, "start", start)
+    monkeypatch.setattr(flowable, "decisions", lambda _key, _tenant: frozenset())
     monkeypatch.setitem(app.dependency_overrides, caller_from_token, lambda: SERVICE)
     return calls
 
@@ -95,3 +96,15 @@ def test_service_can_only_start(service, method, path):
     response = client.request(method, path)
     assert response.status_code == 403
     assert service == []
+
+
+def test_service_cannot_preset_a_decision(service, monkeypatch):
+    # iot-bridge khởi tạo quy trình bằng đường này (ADR 0017); biến quyết định bị chặn như với người dùng.
+    monkeypatch.setattr(flowable, "decisions", lambda _key, _tenant: frozenset({"approved"}))
+    response = client.post(
+        "/v1/workflow/processes/core-approval/instances",
+        headers={"Idempotency-Key": "rule-x__device-1"},
+        json={"variables": {"approved": True}},
+    )
+    assert response.status_code == 400
+    assert not [call for call in service if "start" in call]

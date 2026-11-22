@@ -68,7 +68,7 @@
         "id": { "$ref": "#/$defs/slug" },
         "label": { "$ref": "#/$defs/text" },
         "variables": {
-          "description": "Biến gửi cho quy trình khi bấm nút, ví dụ để cổng rẽ nhánh chọn đường đi",
+          "description": "Biến gửi cho quy trình khi bấm nút, ví dụ để cổng rẽ nhánh chọn đường đi. Biến mà điều kiện rẽ nhánh sau bước đọc thì người lập không gửi được lúc khởi tạo (ADR 0025)",
           "type": "object",
           "propertyNames": { "$ref": "#/$defs/variable" }
         }

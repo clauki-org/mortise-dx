@@ -14,6 +14,7 @@ from app.policy import (
     TaskView,
     check_can_complete,
     check_idempotency_key,
+    check_not_preset,
     check_variables,
 )
 
@@ -76,6 +77,13 @@ def test_reserved_variables_are_rejected():
     with pytest.raises(Denied):
         check_variables({"initiator": "fake", "title": "ok"})
     check_variables({"title": "ok", "approved": True})
+
+
+def test_initiator_cannot_preset_a_decision():
+    with pytest.raises(Denied) as error:
+        check_not_preset({"title": "ok", "approved": True}, frozenset({"approved", "execution"}))
+    assert error.value.status == 400
+    check_not_preset({"title": "ok"}, frozenset({"approved"}))
 
 
 def test_idempotency_variable_is_reserved():
