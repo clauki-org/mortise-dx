@@ -28,3 +28,9 @@ menu:
     label: Cơ sở nhà, đất
     component: catalog
     config: catalog/facilities.yaml
+  # Trụ sở trên bản đồ, tô theo phần vượt của xã; tỉnh thấy trụ sở của các xã con qua lớp có vai trò rollup_reader
+  # (ADR 0020, ADR 0024).
+  - id: map
+    label: Bản đồ trụ sở
+    component: map
+    config: map-layers/facilities.yaml

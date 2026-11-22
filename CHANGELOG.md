@@ -19,6 +19,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   cùng gói với biến lấy từ dòng đang xem, kèm hộp xác nhận và Idempotency-Key. Màn hình chi tiết hiện được cột qua
   quan hệ một-một (`<quan hệ>.<cột>`). Gói cơ sở vật chất xã có nút "Lập hồ sơ rà soát" trên màn hình chi tiết của cơ
   sở; hồ sơ hiện trên bảng việc của người duyệt cùng xã.
+- Bản đồ trụ sở trong gói `facilities-commune` (mục menu `map`, `map-layers/facilities.yaml`): cán bộ xã thấy trụ sở
+  mình phụ trách tô theo phần vượt của xã, cơ sở dôi dư màu xám; `leader.tinh` thấy trụ sở đang dùng của các xã con
+  qua view `facility_rollup`.
 - Thành phần bản đồ Tầng 2 (ADR 0024, `contracts/map.schema.json`): lớp điểm đọc qua GraphQL theo cấu hình của gói,
   nền trơn không tải tile, tô màu theo giá trị qua các bậc, chú giải và danh sách điểm; lớp khai `role` chỉ truy vấn
   khi token có vai trò đó và gửi kèm `X-Hasura-Role`. Mục menu `component: map` mở thành phần này.
