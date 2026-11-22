@@ -73,8 +73,8 @@ Trợ lý hỏi văn bản (`contracts/assistant.openapi.json`, [ADR 0021](adr/0
 đoạn nào đủ gần câu hỏi, mô hình nói không đủ căn cứ, hay câu trả lời không qua bước kiểm. Trợ lý chỉ đọc được đoạn
 của tenant trong token. Mỗi lúc chỉ trả lời một câu (đang bận thì 503); mô hình quá thời gian thì 504. `model` ghi
 mô hình đã được hỏi (`name`, `provider`, `location` là `local` hay `api`, `host` là tên máy của API), null khi từ chối
-mà không gọi mô hình. Trợ lý cấu hình gọi API mà thiếu biến, khóa bị từ chối hay API giới hạn tần suất thì 503 kèm
-cách sửa.
+mà không gọi mô hình. Trợ lý cấu hình gọi API mà thiếu biến hay khóa bị từ chối thì 503 chỉ biến cần sửa; API giới
+hạn tần suất hay quá tải thì 503 kèm lời thử lại sau ít phút.
 
 ```bash
 curl -fsS -X POST http://localhost:9080/v1/assistant/questions \
