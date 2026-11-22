@@ -21,6 +21,7 @@
       "description": "Mã các văn bản được hỏi",
       "type": "array",
       "minItems": 1,
+      "maxItems": 50,
       "uniqueItems": true,
       "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64 }
     }
