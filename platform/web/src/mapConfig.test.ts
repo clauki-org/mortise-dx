@@ -3,11 +3,21 @@
 //
 // Kiểm thử lớp đọc cấu hình của thành phần bản đồ (mapConfig.ts) và cách client GraphQL gắn vai trò (graphql.ts):
 // câu truy vấn sinh từ cấu hình, lỗi cấu hình mà schema không bắt được, lớp nào được truy vấn theo vai trò trong
-// token, màu và tọa độ của từng dòng. Cấu hình mẫu cùng dạng với contracts/examples/map.example.yaml.
+// token, màu, tọa độ và chữ hiện ra của từng dòng, header mà client thật gửi đi. Cấu hình mẫu cùng dạng với
+// contracts/examples/map.example.yaml.
 
-import { describe, expect, it } from "vitest";
-import { withRole } from "./graphql";
-import { colorOf, type Layer, layerQuery, type MapConfig, mapProblems, pointsOf, visibleLayers } from "./mapConfig";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createGraphqlClient, withRole } from "./graphql";
+import {
+  colorOf,
+  fieldText,
+  type Layer,
+  layerQuery,
+  type MapConfig,
+  mapProblems,
+  pointsOf,
+  visibleLayers,
+} from "./mapConfig";
 
 const sites: Layer = {
   id: "sites",
@@ -44,13 +54,23 @@ describe("layerQuery", () => {
   it("ghép đường dẫn qua quan hệ thành lựa chọn lồng, điều kiện đi qua biến, xin thừa một dòng", () => {
     const { query, variables } = layerQuery(sites);
     expect(query).toBe(
-      "query($where: app_example_sites_bool_exp!, $limit: Int!) { rows: app_example_sites(where: $where, limit: $limit) { lat lon name group { score } } }",
+      "query($where: app_example_sites_bool_exp!, $order_by: [app_example_sites_order_by!], $limit: Int!) " +
+        "{ rows: app_example_sites(where: $where, order_by: $order_by, limit: $limit) { lat lon name group { score } } }",
     );
-    expect(variables).toEqual({ where: { status: { _eq: "active" } }, limit: 201 });
+    expect(variables).toMatchObject({ where: { status: { _eq: "active" } }, limit: 201 });
+  });
+
+  it("xếp theo tên rồi mọi cột đang đọc, kể cả cột qua quan hệ, để các dòng đầu không đổi giữa hai lần tải", () => {
+    expect(layerQuery(sites).variables.order_by).toEqual([
+      { name: "asc" },
+      { lat: "asc" },
+      { lon: "asc" },
+      { group: { score: "asc" } },
+    ]);
   });
 
   it("không có where thì lấy mọi dòng, theo trần của lớp", () => {
-    expect(layerQuery({ ...summary, limit: 5 }).variables).toEqual({ where: {}, limit: 6 });
+    expect(layerQuery({ ...summary, limit: 5 }).variables).toMatchObject({ where: {}, limit: 6 });
   });
 });
 
@@ -120,10 +140,54 @@ describe("pointsOf", () => {
   });
 });
 
+describe("fieldText", () => {
+  const amount = { name: "a", label: "Diện tích", type: "number" } as const;
+
+  it("trường number viết số và chuỗi thập phân theo kiểu Việt Nam", () => {
+    expect([fieldText(amount, 1234.5), fieldText(amount, "1234.50"), fieldText(amount, "21.00")]).toEqual([
+      "1.234,5",
+      "1.234,5",
+      "21",
+    ]);
+  });
+
+  it("chuỗi không phải số thập phân thường thì để nguyên; trường text giữ cả số 0 ở đầu", () => {
+    expect([fieldText(amount, "chưa đo"), fieldText(amount, "1e5"), fieldText(amount, " ")]).toEqual([
+      "chưa đo",
+      "1e5",
+      " ",
+    ]);
+    expect(fieldText({ name: "code", label: "Mã" }, "00123")).toBe("00123");
+  });
+});
+
 describe("withRole", () => {
   it("thêm header vai trò mà giữ token", () => {
     expect(withRole({ headers: { Authorization: "Bearer t" } }, "rollup_reader")).toEqual({
       headers: { Authorization: "Bearer t", "X-Hasura-Role": "rollup_reader" },
     });
+  });
+});
+
+describe("createGraphqlClient", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** Header của yêu cầu mà client thật gửi đi cho một truy vấn với context cho trước. */
+  async function sentHeaders(context: Record<string, unknown>) {
+    const fetch = vi.fn(async (_url: unknown, _init?: RequestInit) => Response.json({ data: { rows: [] } }));
+    vi.stubGlobal("fetch", fetch);
+    const client = createGraphqlClient(() => "t");
+    await client.query("{ rows: example { id } }", {}, context).toPromise();
+    return new Headers(fetch.mock.calls[0]?.[1]?.headers);
+  }
+
+  it("truy vấn có role gửi kèm X-Hasura-Role mà không mất token", async () => {
+    const headers = await sentHeaders({ role: "rollup_reader" });
+    expect([headers.get("Authorization"), headers.get("X-Hasura-Role")]).toEqual(["Bearer t", "rollup_reader"]);
+  });
+
+  it("truy vấn không có role không gửi header vai trò", async () => {
+    const headers = await sentHeaders({});
+    expect([headers.get("Authorization"), headers.get("X-Hasura-Role")]).toEqual(["Bearer t", null]);
   });
 });

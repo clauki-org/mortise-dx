@@ -5,11 +5,11 @@
 // khung bản đồ (MapCanvas.tsx, nạp khi cần) và danh sách điểm của từng lớp. Danh sách đi kèm để người không xem được
 // bản đồ, hay trình duyệt không có WebGL, vẫn đọc đủ các điểm. Ở đây không có tên bảng hay chữ của một lĩnh vực nào.
 
-import { Alert, ColorSwatch, Group, Loader, Paper, Stack, Table, Text, Title } from "@mantine/core";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, Button, ColorSwatch, Group, Loader, Paper, Stack, Table, Text, Title } from "@mantine/core";
+import { Component, lazy, type ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "urql";
-import { display } from "./catalog";
 import {
+  fieldText,
   type Layer,
   layerQuery,
   limitOf,
@@ -27,6 +27,38 @@ import { rolesOf } from "./menu";
 import { useSession } from "./session";
 
 const MapCanvas = lazy(() => import("./MapCanvas"));
+
+type CanvasFailure = { error?: Error };
+
+/**
+ * Lỗi khi nạp hay vẽ khung bản đồ, ví dụ tệp MapLibre không tải được vì mất mạng hay vì bản cài vừa lên phiên bản
+ * mới, chỉ làm hỏng khung bản đồ. Không chặn ở đây thì lỗi lên tới màn hình lỗi của router và danh sách điểm, vốn
+ * không cần MapLibre, cũng mất. React nhớ lần nạp hỏng của lazy() nên chỉ tải lại trang mới nạp lại được.
+ */
+class CanvasBoundary extends Component<{ children: ReactNode }, CanvasFailure> {
+  state: CanvasFailure = {};
+
+  static getDerivedStateFromError(error: unknown): CanvasFailure {
+    return { error: error instanceof Error ? error : new Error(String(error)) };
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <Alert color="yellow" title="Không tải được bản đồ" m="md">
+        <Stack gap="xs" align="flex-start">
+          <Text size="sm">
+            {this.state.error.message}. Danh sách điểm bên dưới vẫn đủ. Tải lại trang để thử lại; nếu vẫn lỗi, báo người
+            quản trị.
+          </Text>
+          <Button size="xs" variant="light" onClick={() => window.location.reload()}>
+            Tải lại trang
+          </Button>
+        </Stack>
+      </Alert>
+    );
+  }
+}
 
 const swatch = (color: string) => `var(--mantine-color-${color}-6)`;
 
@@ -113,7 +145,7 @@ function LayerSection({ layer, selected, onPoints }: LayerProps) {
                     </Group>
                   </Table.Td>
                   {fields.map((field) => (
-                    <Table.Td key={field.name}>{display(field, valueAt(point.row, field.name))}</Table.Td>
+                    <Table.Td key={field.name}>{fieldText(field, valueAt(point.row, field.name))}</Table.Td>
                   ))}
                 </Table.Tr>
               ))}
@@ -152,9 +184,11 @@ export function MapPanel({ config }: { config: MapConfig }) {
         {config.title}
       </Title>
       <Paper withBorder radius="md">
-        <Suspense fallback={<Loader m="md" aria-label="Đang tải bản đồ" />}>
-          <MapCanvas points={points} selected={selected} onSelect={setSelected} />
-        </Suspense>
+        <CanvasBoundary>
+          <Suspense fallback={<Loader m="md" aria-label="Đang tải bản đồ" />}>
+            <MapCanvas points={points} selected={selected} onSelect={setSelected} />
+          </Suspense>
+        </CanvasBoundary>
       </Paper>
       {layers.map((layer) => (
         <LayerSection key={layer.id} layer={layer} selected={selected} onPoints={onPoints} />
