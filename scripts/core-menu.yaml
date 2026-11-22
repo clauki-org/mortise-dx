@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Mục menu mẫu của lõi, cùng dạng mục `menu` trong app.yaml; `make seed` nạp tất cả một lần bằng
+# `scripts/app-deploy.py menu --owner core`. Bộ nạp xóa mục của lõi không có trong tệp này, nên mọi mục mẫu phải
+# nằm ở đây: nạp từng mục một thì mục sau xóa mục trước. Đường dẫn cấu hình tính từ gốc repo.
+menu:
+  # Hỏi văn bản trên hai văn bản mẫu hư cấu (/apps/core/ask-example), để thử trợ lý khi chưa gói nào khai văn bản;
+  # `make e2e` hỏi qua mục này.
+  - id: ask-example
+    label: Hỏi văn bản mẫu
+    component: assistant
+    config: contracts/examples/assistant.example.yaml
+  # Hỏi dữ liệu trên bảng văn bản của Tầng 2 (/apps/core/ask-data-example, ADR 0027); `make smoke` và `make e2e`
+  # chạy câu mẫu của mục này mà không cần mô hình.
+  - id: ask-data-example
+    label: Hỏi dữ liệu mẫu
+    component: assistant
+    config: contracts/examples/assistant-data.example.yaml
