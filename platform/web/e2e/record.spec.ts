@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Lập hồ sơ từ một dòng danh mục trên trình duyệt (ADR 0026). Cán bộ xã A mở cơ sở được phân công, bấm "Lập hồ sơ
-// rà soát", xem phần vượt của xã rồi bấm đúp nút gửi. Người duyệt xã A thấy đúng một hồ sơ cho cơ sở đó trên bảng
-// việc; người duyệt xã B không thấy. Nút và biến khai trong cấu hình của gói. Cần gói đã cài
-// (`make app-install APP=facilities-commune`); bài tự tạo và tự dọn dữ liệu. Nhánh của hồ sơ (báo cáo hay công khai)
-// tùy phần vượt của xã A lúc chạy, nên bài không khẳng định bước nào.
+// rà soát", xem phần vượt của xã rồi bấm đúp nút gửi; bài gửi lại yêu cầu đó với cùng Idempotency-Key. Người duyệt
+// xã A thấy đúng một hồ sơ cho cơ sở đó trên bảng việc; người duyệt xã B không thấy. Nút và biến khai trong cấu hình
+// của gói. Cần gói đã cài (`make app-install APP=facilities-commune`); bài tự tạo và tự dọn dữ liệu. Nhánh của hồ
+// sơ (báo cáo hay công khai) tùy phần vượt của xã A lúc chạy, nên bài không khẳng định bước nào.
 
-import { type APIRequestContext, expect, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Request, test } from "@playwright/test";
 import { complete, graphql, signIn, subOf, token, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
@@ -71,24 +71,41 @@ test("cán bộ xã A lập hồ sơ rà soát từ cơ sở; người duyệt x
     await page.getByRole("button", { name: "Lập hồ sơ rà soát" }).click();
     const dialog = page.getByRole("dialog", { name: "Lập hồ sơ rà soát" });
     await expect(dialog.getByRole("row", { name: new RegExp(`Tên cơ sở\\s*${name}`) })).toBeVisible();
-    await expect(dialog.getByRole("row", { name: /Phần vượt tiêu chuẩn của xã/ })).toBeVisible();
+    // Hộp hiện đúng số Hasura trả, viết như thành phần danh mục viết kiểu number (catalog.ts, vi-VN).
+    await expect(dialog.getByRole("row", { name: /Phần vượt tiêu chuẩn của xã/ }).getByRole("cell")).toHaveText(
+      new Intl.NumberFormat("vi-VN").format(excess as number),
+    );
     // Bấm đúp. Nút khóa khi đang gửi nên lần bấm thứ hai có thể không gửi gì; khẳng định trên mọi yêu cầu đã đi để
     // biết chúng mang Idempotency-Key và cùng một mã, thay vì chỉ dựa vào việc khóa nút.
-    const keys: (string | undefined)[] = [];
-    page.on("request", (sent) => {
-      if (sent.method() === "POST" && sent.url().includes("/v1/workflow/processes/facilities-review/instances")) {
-        keys.push(sent.headers()["idempotency-key"]);
+    const sent: Request[] = [];
+    page.on("request", (call) => {
+      if (call.method() === "POST" && call.url().includes("/v1/workflow/processes/facilities-review/instances")) {
+        sent.push(call);
       }
     });
     await dialog.getByRole("button", { name: "Gửi" }).dblclick();
     await expect(page.getByText("Đã gửi: Lập hồ sơ rà soát")).toBeVisible();
     await expect(dialog).toBeHidden();
-    expect(keys.length).toBeGreaterThan(0);
+    expect(sent.length).toBeGreaterThan(0);
+    const keys = sent.map((call) => call.headers()["idempotency-key"]);
     expect(keys[0]).toMatch(/^[A-Za-z0-9_-]{8,100}$/);
     expect(new Set(keys).size, "mọi lần gửi trong cùng hộp dùng một mã").toBe(1);
 
+    // Vì lần bấm thứ hai thường bị chặn ở nút, gửi lại yêu cầu đầu với cùng người, cùng mã và cùng biến để chắc
+    // workflow-api trả quy trình đã tạo chứ không tạo thêm.
+    const call = sent[0] as Request;
+    const first = await call.response();
+    expect(first?.ok(), "trang lập được hồ sơ").toBeTruthy();
+    const started = await first?.json();
+    const again = await request.post(new URL(call.url()).pathname, {
+      headers: { Authorization: `Bearer ${await token(request, "user.a")}`, "Idempotency-Key": keys[0] ?? "" },
+      data: call.postDataJSON(),
+    });
+    expect(again.ok(), "gửi lại cùng Idempotency-Key").toBeTruthy();
+    expect(await again.json(), "gửi lại cùng mã nhận quy trình đã tạo").toEqual(started);
+
     const reviews = await reviewsOf(request, "manager.a", facilityId);
-    expect(reviews, "đúng một hồ sơ cho cơ sở sau khi bấm đúp").toHaveLength(1);
+    expect(reviews, "đúng một hồ sơ cho cơ sở sau khi bấm đúp và gửi lại").toHaveLength(1);
     expect(reviews[0]?.variables).toMatchObject({ title: name, facilityId, excessM2: excess });
     expect(await reviewsOf(request, "manager.b", facilityId)).toEqual([]);
 
