@@ -22,10 +22,8 @@ quản trị xã cập nhật số lượng sau khi giao.
               flowable:category="four-eyes" flowable:dueDate="P3D"/>
     <sequenceFlow id="toDecision" sourceRef="approve" targetRef="decision"/>
 
-    <!-- Nhánh mặc định là từ chối: không có biến approved = true thì không coi là đã duyệt. Giới hạn đã biết: biến gửi
-         lúc lập đề nghị vào thẳng quy trình, nên người lập đặt sẵn approved = true thì người duyệt hoàn thành qua API
-         mà không gửi approved cũng thành đã duyệt. Bảng việc luôn gửi approved ở cả hai nút. Chặn chung ở lõi cho mọi
-         quy trình là kế hoạch (#145). -->
+    <!-- Nhánh mặc định là từ chối: không có biến approved = true thì không coi là đã duyệt. Người lập không đặt sẵn
+         được approved lúc lập đề nghị: workflow-api từ chối khởi tạo kèm biến mà cổng này đọc (ADR 0025). -->
     <exclusiveGateway id="decision" default="toRejected"/>
     <sequenceFlow id="toApproved" sourceRef="decision" targetRef="approved">
       <conditionExpression xsi:type="tFormalExpression">${execution.getVariable("approved") == true}</conditionExpression>

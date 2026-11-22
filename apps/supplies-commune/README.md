@@ -51,11 +51,8 @@ mắt). Giao diện chưa có màn hình lập đề nghị, nên đề nghị l
 
 Gói không có mã nên duyệt xong không tự trừ số lượng trong kho; quản trị xã cập nhật số lượng sau khi giao.
 
-Giới hạn đã biết: biến gửi lúc lập đề nghị vào thẳng quy trình, kể cả `approved`. Người lập gửi sẵn
-`"approved": true` thì người duyệt hoàn thành việc qua API mà không gửi `approved` cũng làm đề nghị kết thúc ở nhánh
-đã duyệt. Bảng việc luôn gửi `approved` ở cả hai nút Duyệt và Từ chối nên duyệt trên giao diện không gặp. Lõi chặn
-chung cho mọi quy trình là kế hoạch, theo dõi ở
-[issue #145](https://github.com/clauki-org/mortise-dx/issues/145).
+Người lập không đặt sẵn được `approved` lúc lập đề nghị: workflow-api từ chối khởi tạo kèm biến mà điều kiện
+sau bước duyệt đọc ([ADR 0025](../../docs/adr/0025-decision-variables.md)).
 
 ## Cài và gỡ
 

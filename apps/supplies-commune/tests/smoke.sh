@@ -167,6 +167,9 @@ task_of() { # TOKEN MÃ_QUY_TRÌNH
 complete() { # TOKEN TASK BIẾN_JSON: in mã HTTP
   api "$1" POST "/tasks/$2/complete" "{\"variables\": $3}" | tail -1
 }
+check "user.a không lập được đề nghị đặt sẵn quyết định của người duyệt" \
+  "$(api "$user_a" POST "/processes/$process/instances" "{\"variables\": {\"title\": \"$title\", \"storeCode\": \"$code\",
+    \"itemCode\": \"$code\", \"quantity\": 2, \"reason\": \"Kiểm thử tự động\", \"approved\": true}}" | tail -1)" 400
 instance=$(request "$user_a")
 task=$(task_of "$manager_a" "$instance")
 check "Đề nghị của user.a tới bảng việc của manager.a" "$([[ -n "$task" ]] && echo yes)" yes
