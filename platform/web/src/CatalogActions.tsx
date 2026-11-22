@@ -53,11 +53,23 @@ export function CatalogActions({ node, row }: { node: CatalogNode; row: Row }) {
         ))}
       </Group>
       {done && (
-        <Alert color="green" title={`Đã gửi: ${done}`} withCloseButton onClose={() => setDone(null)}>
+        <Alert
+          color="green"
+          title={`Đã gửi: ${done}`}
+          withCloseButton
+          closeButtonLabel="Đóng thông báo"
+          onClose={() => setDone(null)}
+        >
           Hồ sơ đã được lập; người xử lý thấy việc trên bảng việc của họ.
         </Alert>
       )}
-      <Modal opened={open !== null} onClose={close} title={open?.action.label} closeOnClickOutside={!start.isPending}>
+      <Modal
+        opened={open !== null}
+        onClose={close}
+        title={open?.action.label}
+        closeOnClickOutside={!start.isPending}
+        closeButtonProps={{ "aria-label": "Đóng hộp xác nhận" }}
+      >
         {open && preview && (
           <Stack>
             {preview.shown.length > 0 && (

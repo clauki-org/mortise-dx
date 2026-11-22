@@ -3,8 +3,8 @@
 #
 # Bản mô tả thành phần danh mục theo contracts/component.schema.json; `make check-fast` kiểm tệp này.
 # Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, CatalogActions.tsx,
-# catalog.ts). Mỗi dòng dưới đây đã được chạy thử trên giao diện; đổi hành vi của thành phần thì sửa tệp này trong
-# cùng pull request.
+# catalog.ts, catalogQuery.ts). Mỗi dòng dưới đây đã được chạy thử trên giao diện; đổi hành vi của thành phần thì sửa
+# tệp này trong cùng pull request.
 
 component: catalog
 summary: Danh sách và màn hình chi tiết của một loại đối tượng cùng các đối tượng con của nó, đọc qua GraphQL theo cấu hình của gói.
