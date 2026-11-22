@@ -34,9 +34,10 @@ def test_literal_roles_are_not_authority_steps():
     assert authority_steps(bpmn('<userTask id="t" flowable:candidateGroups="manager"/>'), "p") == frozenset()
 
 
-def test_candidate_users_count_too():
+def test_candidate_users_cannot_read_the_table():
     tasks = '<userTask id="t" flowable:candidateUsers="${authority_t}"/>'
-    assert authority_steps(bpmn(tasks), "p") == {"t"}
+    with pytest.raises(ValueError, match="candidateUsers"):
+        authority_steps(bpmn(tasks), "p")
 
 
 def test_only_the_requested_process_is_scanned():

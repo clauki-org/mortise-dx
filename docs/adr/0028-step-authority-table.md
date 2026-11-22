@@ -49,12 +49,17 @@ tenant và do người sửa lúc chạy, nên không nằm trong BPMN được.
     giữ "còn dòng nào của bước thì còn dòng gốc". Không chặn hẳn việc xóa dòng gốc, vì gỡ gói và xóa tenant xóa mọi
     dòng của bước cùng lúc. Ràng buộc `(above IS NULL) = (variable IS NULL)` làm việc sửa `above` không biến được
     dòng gốc thành dòng ngưỡng.
-  - `role` theo mẫu `^[a-z][a-z0-9_]*(-[a-z0-9_]+)*$`: không có dấu phẩy (Flowable tách nhiều nhóm) hay dấu `/`.
+  - `role` theo mẫu `^[a-z][a-z0-9_]*(-[a-z0-9_]+)*$`: không có dấu phẩy (Flowable tách nhiều nhóm) hay dấu `/`, và
+    không bắt đầu bằng `authority_` (tiền tố của biến lõi đặt).
+  - `above` từ 0 tới dưới 10^15: numeric nhận NaN và số vượt float8, mà workflow-api đọc ngưỡng dưới dạng float8.
 - **BPMN của bước** ghi `flowable:candidateGroups="${authority_<id của userTask>}"`. `make check-fast` chỉ nhận
-  candidate là danh sách vai trò viết sẵn hoặc đúng dạng đó, id của bước phải là định danh, và bước nào đọc bảng thì
-  gói phải khai dòng gốc.
-- **Lúc khởi tạo**, workflow-api tìm các tên `authority_*` trong `candidateGroups` và `candidateUsers` của BPMN đã
-  deploy. BPMN đọc một lần cho mỗi định nghĩa, chung với biến quyết định. Với mỗi bước:
+  `candidateGroups` là danh sách vai trò viết sẵn (không bắt đầu bằng `authority_`) hoặc đúng dạng đó, và
+  `candidateUsers` chỉ viết sẵn. id của bước phải là định danh; bước nào đọc bảng thì gói phải khai dòng gốc. Mọi tệp ở
+  `authorities` của `app.yaml` đều được kiểm, kể cả khi BPMN của gói không dùng bảng: mã dòng trùng, thiếu dòng gốc,
+  bước hay quy trình không đọc bảng, và dòng ngưỡng so một biến quyết định của quy trình (ADR 0025 cấm người lập gửi
+  biến đó, nên mọi hồ sơ sẽ đi dòng nghiêm nhất).
+- **Lúc khởi tạo**, workflow-api tìm các tên `authority_*` trong `candidateGroups` của BPMN đã deploy; gặp tên đó ở
+  `candidateUsers` thì từ chối khởi tạo (502, deploy lại quy trình), vì vai trò ở đó thành mã người dùng. BPMN đọc một lần cho mỗi định nghĩa, chung với biến quyết định. Với mỗi bước:
   - Chọn trong các dòng của tenant: dòng có `above` cao nhất mà biến `variable` của hồ sơ lớn hơn hẳn. Biến thiếu,
     không phải số (kể cả `true`/`false`, NaN), hay âm thì coi như vượt mọi ngưỡng: hồ sơ tới người có thẩm quyền cao
     nhất, như BPMN của gói coi phần vượt thiếu hay âm là nhánh nặng. Cùng ngưỡng thì chọn theo mã dòng. Không vượt
@@ -82,6 +87,8 @@ tenant và do người sửa lúc chạy, nên không nằm trong BPMN được.
 - **Dòng mặc định do gói khai:** mục `authorities` của `app.yaml`, mỗi tệp một bước theo
   `contracts/authority.schema.json`. Bộ cài chỉ thêm dòng chưa có theo mã dòng (`ON CONFLICT DO NOTHING`), nên cài lại
   giữ dòng tenant cha đã sửa; gỡ gói xóa theo `app`. Bảng nạp trước BPMN, để quy trình mới không có lúc thiếu dòng.
+  Tệp đổi mã của dòng gốc mà CSDL đã có dòng gốc mang mã cũ thì bộ cài dừng trước khi ghi và chỉ cách sửa: giữ mã cũ,
+  hoặc người vận hành xóa mọi dòng của bước rồi cài lại.
   Quy trình mẫu `core-authority` của lõi có dòng mặc định ở `contracts/examples/authority.example.yaml`, do `make seed`
   nạp.
 
@@ -89,6 +96,10 @@ tenant và do người sửa lúc chạy, nên không nằm trong BPMN được.
 
 - **Đổi một dòng thì hồ sơ lập sau đi theo dòng mới; hồ sơ đã lập giữ người nhận cũ**, vì vai trò ghi vào biến của hồ
   sơ lúc khởi tạo. `make smoke` kiểm cả hai.
+- **Biến ngưỡng do người lập gửi thì người lập né được cấp duyệt cao** bằng cách khai thấp. Đây là giới hạn đã biết:
+  biến ngưỡng nên là dữ liệu người lập không tự khai được (do lõi hay hệ thống đặt, ví dụ iot-bridge, hay tính từ dữ
+  liệu đã kiểm). Dùng biến người lập gửi thì người duyệt cấp thấp phải đối chiếu với hồ sơ. Kiểm chéo giá trị với dữ
+  liệu nguồn là việc sau. Quy trình mẫu `core-authority` dùng `amount` do người lập gửi, chỉ để kiểm thử.
 - **Đổi mặc định trong tệp của gói không tới dòng đã nạp.** Dòng gói bỏ khỏi tệp vẫn còn tới khi gỡ gói. Muốn áp mặc
   định mới cho dòng đã có thì người vận hành sửa trong CSDL.
 - **Tenant tạo sau khi cài gói chưa có dòng** cho tới khi chạy lại `make app-install`; hồ sơ của quy trình đọc bảng ở

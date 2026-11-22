@@ -164,13 +164,15 @@ dòng có ngưỡng (`above`) cao nhất mà biến của dòng vượt hẳn; b
 ngưỡng; không vượt dòng nào thì dùng dòng gốc. Vai trò được ghi vào biến `authority_<bước>` của hồ sơ, nên đổi bảng chỉ
 áp cho hồ sơ lập sau. Hoàn thành bước đó cần đăng nhập có OTP, với mọi vai trò: Keycloak chỉ hỏi OTP người có vai trò `otp_required` của
 client `mortise-web` (mọi `manager` có sẵn), nên người vận hành gán vai trò đó cho tài khoản nhận bước, như `admin2.a`
-của bản demo. Quy trình mẫu `core-authority` dùng biến
-`amount`; quản trị (`tenant_admin`) của tenant cha sửa vai trò và ngưỡng của tenant con qua GraphQL:
+của bản demo. Biến ngưỡng nên là dữ liệu người lập không tự khai được
+(do lõi hay hệ thống đặt, ví dụ iot-bridge, hay tính từ dữ liệu đã kiểm): người lập khai thấp là né được cấp duyệt
+cao. Dùng biến người lập gửi thì người duyệt cấp thấp phải đối chiếu với hồ sơ; kiểm chéo giá trị là việc sau. Quy
+trình mẫu `core-authority` dùng biến `amount` do người lập gửi, chỉ để kiểm thử; quản trị (`tenant_admin`) của tenant cha sửa vai trò và ngưỡng của tenant con qua GraphQL:
 
 ```bash
 curl -fsS -X POST http://localhost:9080/v1/graphql \
   -H "Authorization: Bearer $ADMIN_TINH" -H 'X-Hasura-Role: tenant_admin' -H 'Content-Type: application/json' \
-  -d '{"query":"mutation { update_core_step_authorities(where: {tenant_id: {_eq: \"xa-a\"}, process: {_eq: \"core-authority\"}, rule: {_eq: \"default\"}}, _set: {role: \"tenant_admin\"}) { affected_rows } }"}'
+  -d '{"query":"mutation { update_core_step_authorities(where: {tenant_id: {_eq: \"xa-a\"}, process: {_eq: \"core-authority\"}, step: {_eq: \"decide\"}, rule: {_eq: \"default\"}}, _set: {role: \"tenant_admin\"}) { affected_rows } }"}'
 ```
 
 Tài khoản dịch vụ ([ADR 0017](adr/0017-service-account-for-tenant.md)): client Keycloak `mortise-iot-bridge` lấy

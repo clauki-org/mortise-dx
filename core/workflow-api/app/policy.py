@@ -21,9 +21,11 @@ RESERVED_PREFIX = "authority_"
 # Đủ cho UUID và mã ngẫu nhiên base64url; giới hạn độ dài để khóa không phình biến của Flowable.
 _IDEMPOTENCY_KEY = re.compile(r"[A-Za-z0-9_-]{8,100}")
 
-# Người có vai trò này phải đăng nhập hai bước (ADR 0011). Keycloak đã bắt nhập mã OTP lúc đăng nhập; kiểm lại
-# ở đây để lỡ luồng đăng nhập bị cấu hình sai thì người duyệt chỉ có mật khẩu vẫn không duyệt được. Trùng với
-# điều kiện `approver-role` trong core/keycloak/realm-mortise.json.
+# Người có vai trò này phải đăng nhập hai bước (ADR 0011). Keycloak đã bắt nhập mã OTP lúc đăng nhập, vì điều
+# kiện `approver-role` trong core/keycloak/realm-mortise.json là vai trò `otp_required` của client mortise-web
+# mà manager gộp sẵn; kiểm lại ở đây để lỡ luồng đăng nhập hay vai trò gộp bị cấu hình sai thì người duyệt
+# chỉ có mật khẩu vẫn không duyệt được. otp_required không nằm trong vai trò realm của token nên không kiểm
+# theo nó.
 APPROVER_ROLE = "manager"
 # Giá trị trong claim `amr` mà Keycloak ghi khi người dùng đã nhập đúng mã OTP (cấu hình `amr-otp` của realm).
 SECOND_FACTOR = "otp"

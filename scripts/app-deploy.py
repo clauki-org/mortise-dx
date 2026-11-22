@@ -251,12 +251,36 @@ COMMIT;
 """
 
 
+# Dòng gốc đã nạp mang mã khác mã trong tệp: ON CONFLICT theo mã không bắt được, nên câu INSERT gặp chỉ mục
+# một dòng gốc mỗi bước và báo lỗi khó hiểu giữa lúc cài.
+ROOT_RENAMED_SQL = """
+SELECT DISTINCT s.tenant_id || ' ' || s.process || ' ' || s.step || ' ' || s.rule || ' ' || a.rule
+FROM core.step_authorities s
+JOIN jsonb_to_recordset(:'rows'::jsonb) AS a(process text, step text, rule text, above numeric)
+    ON (s.process, s.step) = (a.process, a.step)
+WHERE s.above IS NULL AND a.above IS NULL AND s.rule <> a.rule
+ORDER BY 1;
+"""
+
+
 def load_authorities(owner: str, files: list[str]) -> None:
     rows = [
         {"process": table["process"], "step": table["step"]} | row
         for table in (load_yaml(path) for path in files)
         for row in table["rows"]
     ]
+    renamed = psql(ROOT_RENAMED_SQL, rows=json.dumps(rows)).split("\n")
+    problems = [
+        f"tenant {tenant}, bước {step} của {process}: dòng gốc đã nạp có mã '{old}', tệp khai '{new}'"
+        for tenant, process, step, old, new in (line.split(" ") for line in renamed if line)
+    ]
+    if problems:
+        raise SystemExit(
+            f"Bảng phân cấp của {owner} chưa nạp được:\n  "
+            + "\n  ".join(problems)
+            + "\nGiữ mã cũ cho dòng gốc trong tệp, hoặc người vận hành xóa mọi dòng của bước đó trong "
+            "core.step_authorities (mất dòng tenant cha đã sửa) rồi cài lại."
+        )
     psql(AUTHORITIES_SQL, app=owner, rows=json.dumps(rows))
     print(f"postgres: {len(rows)} dòng phân cấp mặc định của {owner} (dòng đã có giữ nguyên)")
 

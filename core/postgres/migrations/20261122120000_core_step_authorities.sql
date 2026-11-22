@@ -24,13 +24,16 @@ CREATE TABLE core.step_authorities (
     updated_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (tenant_id, process, step, rule),
     -- Vai trò thành nhóm ứng viên của Flowable, nơi dấu phẩy tách nhiều nhóm và dấu / tách tenant cha với vai trò
-    -- (dòng scope parent); cho các ký tự đó thì một dòng mở việc cho nhóm ngoài ý người sửa.
-    CONSTRAINT step_authorities_role CHECK (role ~ '^[a-z][a-z0-9_]*(-[a-z0-9_]+)*$'),
+    -- (dòng scope parent); cho các ký tự đó thì một dòng mở việc cho nhóm ngoài ý người sửa. Tiền tố authority_ là
+    -- của biến lõi đặt, không phải vai trò.
+    CONSTRAINT step_authorities_role CHECK (role ~ '^[a-z][a-z0-9_]*(-[a-z0-9_]+)*$' AND role !~ '^authority_'),
     CONSTRAINT step_authorities_scope CHECK (scope IN ('tenant', 'parent')),
     -- Dòng gốc không so biến nào; dòng khác có cả biến lẫn ngưỡng. Nhờ vậy sửa `above` qua Hasura không biến được dòng
     -- gốc thành dòng ngưỡng hay ngược lại: người sửa không ghi được cột variable.
     CONSTRAINT step_authorities_threshold CHECK ((above IS NULL) = (variable IS NULL)),
-    CONSTRAINT step_authorities_above CHECK (above >= 0),
+    -- Trần hữu hạn: numeric nhận NaN (lớn hơn mọi số trong PostgreSQL, nên điều kiện < cũng loại nó) và số vượt
+    -- float8, mà workflow-api đọc ngưỡng dưới dạng float8.
+    CONSTRAINT step_authorities_above CHECK (above >= 0 AND above < 1e15),
     CONSTRAINT step_authorities_variable CHECK (variable ~ '^[A-Za-z_][A-Za-z0-9_]*$'),
     -- Dòng gốc là chỗ dựa cuối cùng của bước; ở tenant cha thì tenant không có cha không còn dòng nào áp được.
     CONSTRAINT step_authorities_root_in_tenant CHECK (above IS NOT NULL OR scope = 'tenant')

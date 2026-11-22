@@ -40,7 +40,7 @@
           "maxLength": 64
         },
         "variable": {
-          "description": "Biến của hồ sơ lúc khởi tạo đem so với `above`; thiếu, không phải số hay âm thì coi như vượt mọi ngưỡng",
+          "description": "Biến của hồ sơ lúc khởi tạo đem so với `above`; thiếu, không phải số hay âm thì coi như vượt mọi ngưỡng. Nên là dữ liệu người lập không tự khai được (do lõi hay hệ thống đặt, ví dụ iot-bridge, hay tính từ dữ liệu đã kiểm): người lập khai thấp là né được cấp duyệt cao. Dùng biến người lập gửi thì người duyệt cấp thấp phải đối chiếu với hồ sơ (ADR 0028, giới hạn đã biết). Không được là biến quyết định của bước (ADR 0025): người lập không gửi được nó, nên mọi hồ sơ đi dòng nghiêm nhất; `make check-fast` kiểm",
           "type": "string",
           "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
           "not": { "enum": ["initiator", "initiatorName", "tenant", "idempotencyKey"] },
@@ -49,13 +49,15 @@
         "above": {
           "description": "Dòng áp khi biến lớn hơn hẳn giá trị này",
           "type": "number",
-          "minimum": 0
+          "minimum": 0,
+          "exclusiveMaximum": 1000000000000000
         },
         "role": {
           "description": "Vai trò Keycloak nhận việc, ví dụ manager",
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*(-[a-z0-9_]+)*$",
-          "maxLength": 64
+          "maxLength": 64,
+          "allOf": [{ "not": { "pattern": "^authority_" } }]
         },
         "scope": {
           "description": "`tenant`: vai trò trong chính tenant của hồ sơ; `parent`: vai trò ở tenant cha, bỏ qua khi tenant không có cha. Người của tenant cha chưa thấy được task của tenant con (#110)",

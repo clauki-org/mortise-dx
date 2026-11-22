@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/authority.schema.json từ chối: ngưỡng từ 1e15 trở lên. CSDL từ chối dòng như vậy, vì
+# workflow-api đọc ngưỡng dưới dạng float8.
+
+process: core-authority
+step: decide
+rows:
+  - rule: default
+    role: manager
+  - rule: huge
+    variable: amount
+    above: 1000000000000000
+    role: manager

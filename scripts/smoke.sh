@@ -518,10 +518,13 @@ check "Tệp tải lên sau khi quét có trạng thái clean" \
 # core.step_authorities lúc khởi tạo. Quản trị của tỉnh (tenant cha) đổi dòng của xã A qua GraphQL; hồ sơ lập sau đi
 # theo dòng mới, hồ sơ đã lập giữ người nhận cũ. Dòng của quy trình mẫu được đặt lại lúc đầu và lúc cuối, để lần chạy
 # dừng giữa chừng không làm lệch lần sau.
-reset_authorities() {
-  sql -c "DELETE FROM core.step_authorities WHERE process = 'core-authority'" >/dev/null
+load_authorities() {
   uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py authorities \
     --owner core contracts/examples/authority.example.yaml >/dev/null
+}
+reset_authorities() {
+  sql -c "DELETE FROM core.step_authorities WHERE process = 'core-authority'" >/dev/null
+  load_authorities
 }
 # authority_case TOKEN AMOUNT: in "mã trạng thái<TAB>thân phản hồi" của lần lập hồ sơ.
 authority_case() {
@@ -531,7 +534,8 @@ case_id() { authority_case "$@" | cut -f2 | jq -r '.id // empty'; }
 seen_by() { [[ -n "$(task_in "$1" "$2")" ]] && echo thấy || echo không; }
 set_root_role() { # TOKEN TENANT VAI_TRÒ: in affected_rows, hoặc mã lỗi của Hasura
   jq -nc --arg t "$2" --arg r "$3" '{query: "mutation($t: String!, $r: String!) { update_core_step_authorities(
-    where: {tenant_id: {_eq: $t}, process: {_eq: \"core-authority\"}, rule: {_eq: \"default\"}},
+    where: {tenant_id: {_eq: $t}, process: {_eq: \"core-authority\"}, step: {_eq: \"decide\"},
+      rule: {_eq: \"default\"}},
     _set: {role: $r}) { affected_rows } }", variables: {t: $t, r: $r}}' |
     curl -s -X POST "$base/v1/graphql" -H "Authorization: Bearer $1" -H 'X-Hasura-Role: tenant_admin' \
       -H 'Content-Type: application/json' -d @- |
@@ -547,6 +551,10 @@ check "Bảng phân cấp: quản trị xã A không sửa được bảng của
 check "Bảng phân cấp: tenant không có cha (tỉnh) không tự sửa được bảng của mình" \
   "$(set_root_role "$admin_tinh" tinh-mau tenant_admin)" 0
 check "Bảng phân cấp: quản trị tỉnh đổi dòng của xã A sang tenant_admin" "$(set_root_role "$admin_tinh" xa-a tenant_admin)" 1
+# Cài lại gói (ở đây: nạp lại dòng mẫu của lõi) chỉ thêm dòng chưa có, không ghi đè dòng tỉnh đã sửa.
+load_authorities
+check "Bảng phân cấp: nạp lại dòng mặc định giữ dòng tỉnh đã sửa" "$(sql -c "SELECT role FROM core.step_authorities
+  WHERE tenant_id = 'xa-a' AND process = 'core-authority' AND step = 'decide' AND rule = 'default'")" tenant_admin
 check "Bảng phân cấp: nhật ký ghi đúng người sửa và xã bị sửa" "$(sql -c "SELECT tenant_id || ' ' || actor_role FROM core.audit_log
   WHERE table_name = 'core.step_authorities' AND op = 'UPDATE' AND actor = '$(claims "$admin_tinh" | jq -r .sub)'
   ORDER BY id DESC LIMIT 1")" "xa-a tenant_admin"

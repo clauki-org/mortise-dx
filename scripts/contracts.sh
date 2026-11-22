@@ -119,7 +119,7 @@ for app in apps/*/; do
   if ((${#declarations[@]})); then
     "${checker[@]}" --schemafile contracts/workflow.schema.json "${declarations[@]}"
   fi
-  "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}"
+  "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}" --packages "$app"
   # Cấu hình của thành phần có schema nằm ở đường dẫn do app.yaml khai, không theo tên thư mục cố định, nên phải
   # đọc app.yaml để biết tệp nào cần kiểm; dò theo tên thư mục sẽ bỏ sót tệp đặt ở chỗ khác.
   for component in catalog map assistant form; do
@@ -170,7 +170,7 @@ done
 # lại hay khi gỡ.
 "${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml apps/**/*.bpmn20.xml \
   --steps contracts/examples/workflow.example.yaml core/workflow/fixtures/*.yaml apps/*/workflows/*.yaml \
-  --authorities contracts/examples/authority.example.yaml
+  --authorities contracts/examples/authority.example.yaml --packages apps/*/
 
 # Ví dụ sai trong contracts/examples/invalid/ phải bị từ chối. Thiếu bước này, một schema
 # bị nới lỏng vẫn qua mọi ví dụ đúng mà không ai biết nó không còn chặn được gì.

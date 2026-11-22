@@ -23,6 +23,8 @@ assistant.document-not-slug.yaml	$.documents[0]	'knowledge/example-rules.yaml' d
 assistant.duplicate-document.yaml	$.documents	['example-rules', 'example-rules'] has non-unique elements
 assistant.no-documents.yaml	$.documents	[] should be non-empty
 assistant.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
+authority.above-too-large.yaml	$.rows[1].above	1000000000000000 is greater than or equal to the maximum of 1000000000000000
+authority.role-reserved-prefix.yaml	$.rows[0].role	'authority_decide' should not be valid under {'pattern': '^authority_'}
 authority.role-with-comma.yaml	$.rows[0].role	'manager,user' does not match '^[a-z][a-z0-9_]*(-[a-z0-9_]+)*$'
 authority.root-in-parent.yaml	$.rows[0].scope	'tenant' was expected
 authority.threshold-without-variable.yaml	$.rows[1]	'variable' is a required property

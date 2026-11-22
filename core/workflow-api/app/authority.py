@@ -14,9 +14,9 @@ from .policy import RESERVED_PREFIX as PREFIX
 
 BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
 FLOWABLE = "{http://flowable.org/bpmn}"
-# Cả hai thuộc tính đều quyết định ai nhận việc; chỉ xét candidateGroups thì tên đặt ở candidateUsers lọt
-# qua bước đặt biến và Flowable báo lỗi biến chưa có khi tạo task.
-_CANDIDATES = (f"{FLOWABLE}candidateGroups", f"{FLOWABLE}candidateUsers")
+# Bảng cho ra vai trò, tức nhóm ứng viên; ở candidateUsers vai trò thành mã người dùng và task không ai nhận.
+_GROUPS = f"{FLOWABLE}candidateGroups"
+_USERS = f"{FLOWABLE}candidateUsers"
 # Định danh UEL theo quy tắc của Java, như decisions.py.
 _NAME = re.compile(r"[^\W\d]\w*")
 
@@ -36,9 +36,10 @@ class Row:
 
 
 def authority_steps(bpmn: bytes, key: str) -> frozenset[str]:
-    """Bước mà quy trình `key` đọc vai trò từ bảng phân cấp: tên `authority_<bước>` trong candidate*.
+    """Bước mà quy trình `key` đọc vai trò từ bảng phân cấp: tên `authority_<bước>` trong candidateGroups.
 
-    Ném ValueError nếu tệp không đọc được hoặc không có quy trình `key`.
+    Ném ValueError nếu tệp không đọc được, không có quy trình `key`, hay candidateUsers dùng tên
+    `authority_*`.
     """
     try:
         # BPMN chỉ vào được Flowable qua bộ cài bằng tài khoản quản trị, như decisions.py.
@@ -50,11 +51,17 @@ def authority_steps(bpmn: bytes, key: str) -> frozenset[str]:
         raise ValueError(f'không có <process id="{key}">')
     steps = set()
     for task in process.iter(f"{BPMN}userTask"):
-        for attribute in _CANDIDATES:
-            for name in _NAME.findall(task.get(attribute, "")):
-                if name.startswith(PREFIX) and len(name) > len(PREFIX):
-                    steps.add(name.removeprefix(PREFIX))
+        if _authority_names(task.get(_USERS, "")):
+            raise ValueError(
+                f"userTask '{task.get('id')}' dùng {PREFIX}* ở candidateUsers; bảng phân cấp chỉ cho "
+                "candidateGroups"
+            )
+        steps.update(name.removeprefix(PREFIX) for name in _authority_names(task.get(_GROUPS, "")))
     return frozenset(steps)
+
+
+def _authority_names(expression: str) -> list[str]:
+    return [name for name in _NAME.findall(expression) if name.startswith(PREFIX) and len(name) > len(PREFIX)]
 
 
 def _amount(value: object) -> float | None:

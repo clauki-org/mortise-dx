@@ -8,7 +8,8 @@
 # có nút để xử lý. BPMN của gói chỉ được dùng {{tên}} đã khai trong `settings` của app.yaml cùng gói
 # (ADR 0019); BPMN của lõi không có settings. Bước đọc bảng phân cấp thẩm quyền phải có dòng gốc khai sẵn
 # (scripts/workflow_authorities.py, ADR 0028). Gọi từ scripts/contracts.sh: --bpmn <tệp BPMN...>
-# --steps <tệp khai báo...> [--authorities <bảng phân cấp của lõi...>]; bảng của gói đọc từ app.yaml.
+# --steps <tệp khai báo...> [--authorities <bảng phân cấp của lõi...>] [--packages <thư mục gói...>]; bảng của
+# gói đọc từ app.yaml.
 
 import argparse
 import os
@@ -125,13 +126,15 @@ def main() -> int:
     parser.add_argument("--bpmn", nargs="*", default=[], required=True)
     parser.add_argument("--steps", nargs="*", default=[], required=True)
     parser.add_argument("--authorities", nargs="*", default=[])
+    # Thư mục gói có bảng phân cấp phải kiểm dù không có BPMN nào.
+    parser.add_argument("--packages", nargs="*", default=[])
     args = parser.parse_args()
     try:
         roots = parse(args.bpmn)
         processes, errors = user_tasks(roots)
         errors += problems(processes, args.steps)
         errors += settings_problems(args.bpmn)
-        errors += workflow_authorities.problems(roots, args.authorities)
+        errors += workflow_authorities.problems(roots, args.authorities, args.packages)
     except Unreadable as error:
         errors = [str(error)]
     for error in errors:
