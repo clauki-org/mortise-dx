@@ -152,6 +152,10 @@ uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py kn
 # khi chưa gói nào khai văn bản; `make e2e` hỏi qua mục này.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py menu --owner core \
   --id ask-example --label "Hỏi văn bản mẫu" --component assistant contracts/examples/assistant.example.yaml
+# Mục menu mẫu hỏi dữ liệu (/apps/core/ask-data-example, ADR 0027) trên bảng văn bản của Tầng 2, để thử trợ lý dữ liệu
+# khi chưa cài gói nào; `make smoke` và `make e2e` chạy câu mẫu của mục này mà không cần mô hình.
+uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py menu --owner core \
+  --id ask-data-example --label "Hỏi dữ liệu mẫu" --component assistant contracts/examples/assistant-data.example.yaml
 echo "flowable: quy trình đã sẵn sàng"
 
 # Tài khoản MQTT của các thiết bị demo (ADR 0012), cùng mật khẩu DEMO_DEVICE_PASSWORD để bộ giả lập đăng nhập

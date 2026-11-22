@@ -250,11 +250,13 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   trọng số ở `core/ollama/models.txt`.
 - **Xem:** `make ai-up` (tải và đối chiếu digest); `docker compose exec ollama ollama list`.
 
-### assistant: trợ lý hỏi văn bản (tự viết)
+### assistant: trợ lý hỏi văn bản và dữ liệu (tự viết)
 
 - **Làm gì:** dịch vụ Python (FastAPI) tại `/v1/assistant/questions`: tìm đoạn trong văn bản của gói, nhờ mô hình
   trả lời, kiểm câu trả lời rồi trả kèm câu trích nguyên văn, hoặc từ chối có lý do
-  ([ADR 0021](adr/0021-document-assistant.md)).
+  ([ADR 0021](adr/0021-document-assistant.md)). Tại `/v1/assistant/data-queries`: cho câu GraphQL qua guard
+  (`app/guard.py`, phân tích bằng graphql-core) rồi chạy qua Hasura bằng token người hỏi, trả bảng kèm câu đã chạy
+  ([ADR 0027](adr/0027-data-assistant-guarded-graphql.md)).
 - **Trong dự án:** đọc đoạn qua cổng bằng token người hỏi, nên Hasura lọc theo tenant. Mỗi câu hỏi một dòng trong
   `platform.assistant_questions`, ghi bằng vai trò CSDL `assistant` chỉ được thêm dòng; không ghi được thì không trả
   lời. Mô hình chỉ chọn mã câu; số trong câu trả lời phải có trong câu được trích. Mỗi lúc chỉ một lượt sinh. Chạy
@@ -264,7 +266,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   cung cấp mô hình: mặc định Ollama; `ASSISTANT_LLM_PROVIDER=openai-compatible` cùng địa chỉ, tên mô hình và khóa
   (`ASSISTANT_LLM_*` trong `.env`) gọi `{địa chỉ}/chat/completions` với JSON Schema; khai thiếu thì 503 chỉ biến
   còn thiếu. Dữ liệu gửi ra ngoài khi đó: bổ sung của [ADR 0021](adr/0021-document-assistant.md).
-- **Xem:** `make test` (mô hình giả); `make smoke` kiểm cả khi Ollama tắt và khi đang chạy.
+- **Xem:** `make test` (mô hình giả, bảng ca của guard); `make smoke` kiểm cả khi Ollama tắt và khi đang chạy, và
+  kiểm guard trên mục mẫu `/apps/core/ask-data-example`.
 
 ## Giao diện Tầng 2
 

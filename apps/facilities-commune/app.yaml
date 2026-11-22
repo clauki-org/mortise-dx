@@ -34,3 +34,9 @@ menu:
     label: Bản đồ trụ sở
     component: map
     config: map-layers/facilities.yaml
+  # Trợ lý hỏi dữ liệu (ADR 0027): câu mẫu chạy câu GraphQL chỉ đọc trên diện tích của xã và cơ sở được phân công,
+  # bằng token người hỏi; kết quả là bảng kèm câu truy vấn đã chạy.
+  - id: ask-data
+    label: Hỏi dữ liệu cơ sở
+    component: assistant
+    config: assistant/ask-data.yaml

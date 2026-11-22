@@ -13,6 +13,9 @@ dependencies = [
   "httpx>=0.28",
   "pyjwt[crypto]>=2.10",
   "pg8000>=1.31",
+  # Guard của trợ lý dữ liệu (app/guard.py) phân tích câu GraphQL; ghim đúng bản vì scripts/contracts.sh đọc số này để
+  # kiểm câu mẫu của gói bằng cùng trình phân tích mà dịch vụ dùng.
+  "graphql-core==3.3.2",
 ]
 
 [dependency-groups]

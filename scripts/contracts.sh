@@ -6,7 +6,9 @@
 # (workflow-api, files-api, context-api, assistant) khớp với mã. `check` (gọi từ make check-fast) báo lỗi khi lệch; `write` (make contracts)
 # xuất lại OpenAPI sau khi đổi route hay model; `token <tệp>` (gọi từ make smoke) kiểm claim
 # của một token thật; `config <thành phần> <tệp>` (gọi từ scripts/app-deploy.py) kiểm tệp cấu hình của một thành
-# phần theo contracts/<thành phần>.schema.json. Các lệnh đó gọi qua đây để phiên bản công cụ kiểm chỉ ghim ở tệp này.
+# phần theo contracts/<thành phần>.schema.json; `assistant-data <gói | core> <tệp>` (cũng từ app-deploy.py) kiểm mục
+# `data` của cấu hình trợ lý với quyền Hasura của chủ sở hữu và chạy câu mẫu qua guard. Các lệnh đó gọi qua đây để
+# phiên bản công cụ kiểm chỉ ghim ở tệp này.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -14,6 +16,15 @@ mode="${1:-check}"
 checker=(uvx --from check-jsonschema==0.29.4 check-jsonschema)
 yaml=(uv run --quiet --no-project --with pyyaml==6.0.3 python)
 steps=("${yaml[@]}" scripts/check-workflow-steps.py)
+# Câu mẫu của trợ lý dữ liệu phải qua đúng guard và đúng bản graphql-core mà dịch vụ chạy, nên đọc số phiên bản từ
+# pyproject.toml của dịch vụ thay vì ghim lần thứ hai ở đây.
+graphql_core=$(sed -n 's/^ *"graphql-core==\([0-9.]*\)",$/\1/p' platform/services/assistant/pyproject.toml)
+if [[ -z "$graphql_core" ]]; then
+  echo "Không đọc được phiên bản graphql-core ghim trong platform/services/assistant/pyproject.toml." >&2
+  exit 1
+fi
+data_check=(uv run --quiet --no-project --with pyyaml==6.0.3 --with "graphql-core==$graphql_core" python
+  scripts/check-assistant-data.py)
 
 case "$mode" in
   check | write) ;;
@@ -40,8 +51,16 @@ case "$mode" in
     # Không dùng -q: lỗi schema là thứ người gọi cần đọc.
     exec "${checker[@]}" --schemafile "contracts/$2.schema.json" "$3"
     ;;
+  assistant-data)
+    if [[ -z "${2:-}" || ! -f "${3:-}" ]]; then
+      echo "Cách dùng: $0 assistant-data <apps/<gói> | core> <tệp cấu hình trợ lý>." >&2
+      exit 2
+    fi
+    exec "${data_check[@]}" --owner "$2" "$3"
+    ;;
   *)
-    echo "Cách dùng: $0 [check | write | token <tệp claim> | service-token <tệp claim> | config <thành phần> <tệp>]" >&2
+    echo "Cách dùng: $0 [check | write | token <tệp claim> | service-token <tệp claim> | config <thành phần> <tệp> |" \
+      "assistant-data <gói | core> <tệp>]" >&2
     exit 2
     ;;
 esac
@@ -54,7 +73,9 @@ esac
 "${checker[@]}" --schemafile contracts/workflow.schema.json contracts/examples/workflow.example.yaml
 "${checker[@]}" --schemafile contracts/catalog.schema.json contracts/examples/catalog.example.yaml
 "${checker[@]}" --schemafile contracts/map.schema.json contracts/examples/map.example.yaml
-"${checker[@]}" --schemafile contracts/assistant.schema.json contracts/examples/assistant.example.yaml
+"${checker[@]}" --schemafile contracts/assistant.schema.json contracts/examples/assistant.example.yaml \
+  contracts/examples/assistant-data.example.yaml
+"${data_check[@]}" --owner core contracts/examples/assistant-data.example.yaml
 "${checker[@]}" --schemafile contracts/knowledge.schema.json contracts/examples/knowledge.example.yaml \
   contracts/examples/knowledge-amendment.example.yaml
 "${checker[@]}" --schemafile contracts/threshold-rule.schema.json contracts/examples/threshold-rule.example.yaml
@@ -108,6 +129,10 @@ for item in app.get("menu", []):
       # Nút của danh mục chỉ mở quy trình của chính gói này (ADR 0026), nên đối chiếu với BPMN của gói.
       if [[ "$component" == catalog ]]; then
         "${yaml[@]}" scripts/check-catalog-actions.py --bpmn "$app"**/*.bpmn20.xml --catalog "${configs[@]}"
+      fi
+      # Trợ lý dữ liệu chỉ hỏi bảng của chính gói, trong quyền đọc của vai trò user (ADR 0027).
+      if [[ "$component" == assistant ]]; then
+        "${data_check[@]}" --owner "${app%/}" "${configs[@]}"
       fi
     fi
   done

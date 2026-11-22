@@ -14,7 +14,7 @@
 #   knowledge --owner core <tệp> ...   chỉ nạp văn bản; make seed gọi cho văn bản mẫu
 #   menu --owner core --id ... --label ... --component ... <tệp cấu hình>
 #                                      chỉ nạp một mục menu, kiểm như mục menu của gói; make seed gọi cho
-#                                      mục hỏi văn bản mẫu
+#                                      mục hỏi văn bản mẫu và mục hỏi dữ liệu mẫu
 # Chạy lại không tạo bản trùng: tên deployment mang băm của tệp, nên tệp không đổi thì không deploy lại.
 # BPMN của gói có thể chứa {{tên}}: được thay bằng giá trị trong `settings` của app.yaml, ghi đè lúc cài
 # bằng biến môi trường APP_SETTINGS (make app-install SETTINGS=tên=giá trị), trước khi băm và deploy
@@ -281,11 +281,31 @@ def check_menu_entry(owner: str, entry: dict) -> None:
     if checked.returncode != 0:
         output = (checked.stdout + checked.stderr).strip()
         raise SystemExit(f"Mục menu {entry['id']} của {owner}: {entry['config']} sai cấu hình.\n{output}")
+    if component == "assistant":
+        check_assistant_data(owner, [os.path.abspath(entry["config"])])
     # Văn bản của chủ sở hữu nạp bằng lệnh `knowledge` trước đó, nên đối chiếu với CSDL chứ không với tệp.
     sql = "SELECT DISTINCT document_id FROM platform.knowledge_documents WHERE app = :'app';"
     problems = app_knowledge.menu_problems(".", {"menu": [entry]}, set(psql(sql, app=owner).split()))
     if problems:
         raise SystemExit(f"Mục menu của {owner}: {'; '.join(problems)}; chạy lệnh knowledge trước.")
+
+
+def check_assistant_data(owner: str, configs: list[str]) -> None:
+    """Mục hỏi dữ liệu (ADR 0027): bảng của chủ sở hữu, cột trong quyền đọc của `user`, câu mẫu qua guard.
+
+    Chạy qua scripts/contracts.sh vì kiểm cần graphql-core đúng bản dịch vụ dùng, mà bộ cài chỉ có pyyaml."""
+    script = os.path.join(REPO, "scripts", "contracts.sh")
+    for path in configs:
+        with open(path, encoding="utf-8") as file:
+            if "data" not in (yaml.safe_load(file) or {}):
+                continue
+        # Lệnh cố định trong repo; owner là `core` hay thư mục gói mà chính bộ cài đang đọc.
+        checked = subprocess.run(  # noqa: S603
+            [script, "assistant-data", owner, path], capture_output=True, text=True, check=False
+        )
+        if checked.returncode != 0:
+            output = (checked.stdout + checked.stderr).strip()
+            raise SystemExit(f"Cấu hình trợ lý dữ liệu {path} chưa nạp được:\n{output}")
 
 
 def package(directory: str) -> tuple[dict, list[str], list[str]]:
@@ -356,6 +376,13 @@ def main() -> int:
         )
         if problems:
             raise SystemExit(f"{args.directory}/app.yaml: " + "; ".join(problems))
+        check_assistant_data(
+            os.path.abspath(args.directory),
+            [
+                os.path.abspath(entry["path"])
+                for entry in app_knowledge.assistant_configs(args.directory, app)
+            ],
+        )
         deploy(bpmn, every, package_settings(app))
         load_steps(steps)
         load_menu(args.directory, app)

@@ -18,11 +18,13 @@ schema/migrations/   migration dbmate của gói; bảng theo dõi public.facili
 hasura/tables.yaml   bảng đăng ký, quan hệ và quyền theo tenant và phân công, cùng định dạng với core/hasura/
 catalog/             cấu hình thành phần danh mục (cơ sở → tòa → phòng) theo contracts/catalog.schema.json
 map-layers/          cấu hình thành phần bản đồ (trụ sở tô theo phần vượt) theo contracts/map.schema.json
+assistant/           cấu hình trợ lý hỏi dữ liệu (diện tích của xã, cơ sở được phân công) theo
+                     contracts/assistant.schema.json
 bpmn/                quy trình BPMN của gói, deploy cho từng tenant khi cài
 workflows/           khai báo bước của từng quy trình theo contracts/workflow.schema.json
 rules/               luật ngưỡng của số đo thiết bị theo contracts/threshold-rule.schema.json
 tests/smoke.sh       kiểm qua cổng: cách ly tenant, tenant lấy từ token, phân công, khóa ngoại ghép, RESTRICT,
-                     nhật ký, phần vượt, tọa độ, tổng hợp cho tỉnh; mở việc kiểm tra kho khi độ ẩm vượt ngưỡng
+                     nhật ký, phần vượt, tọa độ, tổng hợp cho tỉnh, trợ lý hỏi dữ liệu; mở việc kiểm tra kho khi độ ẩm vượt ngưỡng
                      (số đo gửi qua MQTT); gọi tests/workflow.sh kiểm quy trình rà soát
 ```
 
@@ -63,6 +65,15 @@ trong xã đọc được; `user` và `tenant_admin` sửa được biên chế,
 
 Mỗi cơ sở có quan hệ `summary` tới dòng `area_summary` của xã mình, nên đọc được phần vượt của xã cùng với cơ sở
 (ví dụ để tô màu cơ sở trên bản đồ) mà quyền vẫn là quyền của từng bên.
+
+## Hỏi dữ liệu
+
+Mục menu "Hỏi dữ liệu cơ sở" (`ask-data`, `assistant/ask-data.yaml`, [ADR 0027](../../docs/adr/0027-data-assistant-guarded-graphql.md))
+có ba câu mẫu: phần vượt của xã, cơ sở mình phụ trách, cơ sở dôi dư. Bấm là chạy câu GraphQL chỉ đọc trên view
+`area_summary` và bảng `facilities` bằng token người hỏi, nên cán bộ chỉ thấy số của xã mình và cơ sở mình được phân
+công; kết quả là bảng kèm câu truy vấn đã chạy. Tên cơ sở hiện nguyên văn trong ô, dù chứa chữ trông như lệnh. Smoke
+của gói kiểm cán bộ xã A hỏi đúng mã cơ sở của xã B không nhận dòng nào, câu xóa biên chế bị guard chặn, và nhật ký
+câu hỏi không chứa dòng dữ liệu.
 
 ## Diện tích được phép và phần vượt
 

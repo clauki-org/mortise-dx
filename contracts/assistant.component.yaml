@@ -1,12 +1,15 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Bản mô tả thành phần trợ lý hỏi văn bản theo contracts/component.schema.json; `make check-fast` kiểm tệp này.
-# Mã của thành phần ở platform/web/src/ (Assistant.tsx, assistant.ts); dịch vụ phía sau ở platform/services/assistant
-# (ADR 0021). Đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
+# Bản mô tả thành phần trợ lý theo contracts/component.schema.json; `make check-fast` kiểm tệp này. Mã của thành
+# phần ở platform/web/src/ (Assistant.tsx hỏi văn bản, AssistantData.tsx hỏi dữ liệu, assistant.ts); dịch vụ phía sau
+# ở platform/services/assistant (ADR 0021, ADR 0027). Đổi hành vi của thành phần thì sửa tệp này trong cùng pull
+# request.
 
 component: assistant
-summary: Khung hỏi đáp trên các văn bản gói khai ở `knowledge`, trả lời kèm câu trích nguyên văn hay từ chối có lý do.
+summary: >-
+  Khung hỏi đáp của một mục menu, làm một trong hai việc: hỏi các văn bản gói khai ở `knowledge`, trả lời kèm câu
+  trích nguyên văn; hay hỏi dữ liệu trên các bảng gói khai ở `data`, trả bảng kèm câu truy vấn đã chạy.
 config_schema: assistant.schema.json
 example: examples/assistant.example.yaml
 capabilities:
@@ -19,7 +22,16 @@ capabilities:
   - Mô hình chưa chạy, đang bận hay quá giờ thì hiện thông điệp của dịch vụ, gồm cách bật mô hình.
   - Cấu hình thiếu intro hay documents, hay quá giới hạn của hợp đồng (50 văn bản, mã văn bản 64 ký tự), thì báo lý
     do trên màn hình thay vì gửi câu hỏi.
+  - Với mục có `data`, câu mẫu trong data.examples hiện thành nút; bấm là chạy câu GraphQL viết sẵn, không cần
+    mô hình. Dịch vụ đọc bảng, cột được phép từ chính mục menu bằng token người hỏi, cho câu qua guard rồi chạy đúng
+    câu đó qua Hasura với vai trò user.
+  - Kết quả hỏi dữ liệu hiện thành bảng với tiêu đề cột của gói, mỗi ô là chữ thường; luôn kèm khối "Câu truy vấn đã
+    chạy". Câu bị guard hay Hasura từ chối hiện lý do và câu bị từ chối. Màn hình nói rõ dữ liệu chỉ trong phạm vi
+    quyền của tài khoản đang hỏi.
 limits:
   - Mỗi lần một câu hỏi; không giữ lịch sử hỏi đáp trên màn hình, không hỏi tiếp theo câu trước.
   - Chỉ hỏi văn bản của gói chứa mục menu (hay `core` cho mục mẫu của lõi); không hỏi văn bản của gói khác.
   - Không lọc văn bản theo vai trò; người hỏi thấy đoạn nào do quyền Hasura theo tenant quyết định.
+  - Hỏi dữ liệu chỉ chạy câu mẫu của gói; câu hỏi gõ tự do (mô hình viết câu truy vấn) là kế hoạch của issue #116.
+  - Hỏi dữ liệu chỉ đọc bảng, cột của gói chứa mục menu, chỉ theo quan hệ một-một, tối đa max_rows dòng mỗi danh
+    sách; không ghi, không introspection. Dòng nào hiện do quyền Hasura của vai trò user quyết định.

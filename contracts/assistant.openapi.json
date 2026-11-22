@@ -101,6 +101,159 @@
         "title": "Citation",
         "type": "object"
       },
+      "DataAnswer": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "data",
+              "refused"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "query": {
+            "description": "Câu truy vấn đã chạy, hay câu bị từ chối; đúng chữ, không sửa",
+            "title": "Query",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lý do từ chối, hiển thị được cho người dùng; null khi có dữ liệu",
+            "title": "Reason"
+          },
+          "tables": {
+            "description": "Bảng kết quả; rỗng khi từ chối",
+            "items": {
+              "$ref": "#/components/schemas/DataTable"
+            },
+            "title": "Tables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "outcome",
+          "reason",
+          "query",
+          "tables"
+        ],
+        "title": "DataAnswer",
+        "type": "object"
+      },
+      "DataColumn": {
+        "properties": {
+          "key": {
+            "description": "Khóa của ô trong mỗi dòng: tên cột, hay <quan hệ>.<cột>",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "description": "Tiêu đề cột lấy từ cấu hình của gói",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "DataColumn",
+        "type": "object"
+      },
+      "DataQuery": {
+        "additionalProperties": false,
+        "description": "Câu hỏi dữ liệu (ADR 0027). Bảng, cột được phép không đi theo yêu cầu: dịch vụ đọc từ mục `item`.",
+        "properties": {
+          "app": {
+            "description": "Gói của mục menu, hay `core` cho mục mẫu",
+            "maxLength": 64,
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "title": "App",
+            "type": "string"
+          },
+          "item": {
+            "description": "Mục menu `component: assistant` có khối `data`",
+            "maxLength": 64,
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "title": "Item",
+            "type": "string"
+          },
+          "query": {
+            "description": "Câu GraphQL chỉ đọc; phải qua guard (bảng, cột, toán tử, limit theo cấu hình của mục)",
+            "title": "Query",
+            "type": "string"
+          },
+          "question": {
+            "description": "Câu hỏi hiện trên màn hình; độ dài tối đa: ASSISTANT_MAX_QUESTION_CHARS",
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question",
+          "app",
+          "item",
+          "query"
+        ],
+        "title": "DataQuery",
+        "type": "object"
+      },
+      "DataTable": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/DataColumn"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "rows": {
+            "description": "Dòng Hasura trả về theo quyền người hỏi, nguyên giá trị; giao diện hiện như chữ thường",
+            "items": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "title": {
+            "description": "Tên bảng lấy từ cấu hình của gói",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "columns",
+          "rows"
+        ],
+        "title": "DataTable",
+        "type": "object"
+      },
       "ErrorBody": {
         "properties": {
           "error": {
@@ -259,6 +412,133 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/assistant/data-queries": {
+      "post": {
+        "description": "Chạy một câu GraphQL chỉ đọc trên các bảng mà mục menu `item` của gói `app` khai, bằng token người hỏi.\n\nCâu không qua guard hay bị Hasura từ chối thì `outcome` là `refused` kèm lý do và câu bị từ chối (mã\n200). Mục menu không có trong tenant của token, hay không hỏi dữ liệu, là 404. Mỗi câu được ghi nhật ký\nkèm câu truy vấn và số dòng, không kèm dòng; không ghi được thì trả 503 thay cho bảng.",
+        "operationId": "data_queries_v1_assistant_data_queries_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataAnswer"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Data Queries"
+      }
+    },
     "/v1/assistant/questions": {
       "post": {
         "description": "Trả lời từ các văn bản được hỏi, chỉ trong các đoạn mà token người hỏi đọc được.\n\nKhông đủ căn cứ hay câu trả lời không qua bước kiểm thì `outcome` là `refused` kèm lý do (mã 200). Mỗi câu\nhỏi được ghi nhật ký; không ghi được thì trả 503 thay cho câu trả lời.",

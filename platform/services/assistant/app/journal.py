@@ -3,7 +3,8 @@
 #
 # Nhật ký câu hỏi (ADR 0021, bước 6): mỗi câu hỏi đã qua bước kiểm đầu vào một dòng trong
 # platform.assistant_questions, ghi bằng vai trò CSDL `assistant` chỉ được thêm dòng. Không ghi được thì
-# main.py không trả câu trả lời: câu hỏi nào cũng phải có dấu vết.
+# main.py không trả câu trả lời: câu hỏi nào cũng phải có dấu vết. Câu hỏi dữ liệu (ADR 0027) ghi câu truy vấn
+# và số dòng, không ghi dòng kết quả.
 
 import json
 import logging
@@ -12,18 +13,19 @@ import pg8000.native
 from pg8000.exceptions import DatabaseError, InterfaceError
 
 from .config import settings
+from .data_run import shown
 from .errors import Denied
 from .retrieval import Caller
-from .schemas import Answer, Question
+from .schemas import Answer, DataAnswer, DataQuery, Question
 
 log = logging.getLogger("assistant.journal")
 
 INSERT = """
 INSERT INTO platform.assistant_questions
     (tenant_id, asked_by, app, documents, question, outcome, answer, reason, citations, model, model_provider,
-    model_host, duration_ms)
+    model_host, duration_ms, query, row_count, attempts)
 VALUES (:tenant, :sub, :app, CAST(:documents AS text[]), :question, :outcome, :answer, :reason,
-    CAST(:citations AS jsonb), :model, :model_provider, :model_host, :duration_ms)
+    CAST(:citations AS jsonb), :model, :model_provider, :model_host, :duration_ms, :query, :row_count, :attempts)
 """
 
 
@@ -60,7 +62,44 @@ def record(
         "model_provider": settings.llm_provider,
         "model_host": settings.llm_host,
         "duration_ms": duration_ms,
+        "query": None,
+        "row_count": None,
+        "attempts": None,
     }
+    _write(caller, params)
+
+
+def record_data(
+    caller: Caller, request: DataQuery, duration_ms: int, answer: DataAnswer | None, failure: str = ""
+) -> None:
+    """Ghi một câu hỏi dữ liệu: `answer` là bảng hay lời từ chối; None kèm `failure` khi lỗi chặn trả lời.
+
+    Câu chạy từ câu mẫu không qua mô hình, nên `model` và `attempts` trống."""
+    outcome = "failed"
+    if answer:
+        outcome = "answered" if answer.outcome == "data" else "refused"
+    params = {
+        "tenant": caller.tenant,
+        "sub": caller.sub,
+        "app": request.app,
+        "documents": [],
+        "question": request.question.strip(),
+        "outcome": outcome,
+        "answer": None,
+        "reason": answer.reason if answer else failure,
+        "citations": "[]",
+        "model": None,
+        "model_provider": None,
+        "model_host": None,
+        "duration_ms": duration_ms,
+        "query": answer.query if answer else shown(request.query),
+        "row_count": sum(len(table.rows) for table in answer.tables) if outcome == "answered" else None,
+        "attempts": None,
+    }
+    _write(caller, params)
+
+
+def _write(caller: Caller, params: dict) -> None:
     try:
         connection = _connect()
     except (InterfaceError, DatabaseError) as error:

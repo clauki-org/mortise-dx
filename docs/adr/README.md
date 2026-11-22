@@ -47,6 +47,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0024](0024-map-component.md) | Thành phần bản đồ: nền trơn, điểm là nút HTML, vai trò Hasura khai theo lớp và chỉ gửi khi token có | Chấp nhận |
 | [0025](0025-decision-variables.md) | Người lập không đặt sẵn được biến quyết định: workflow-api đọc tên từ điều kiện rẽ nhánh sau userTask trong BPMN đã deploy | Chấp nhận |
 | [0026](0026-start-process-from-catalog-row.md) | Nút của danh mục khởi tạo quy trình của cùng gói, biến lấy từ dòng đang xem; Idempotency-Key ngẫu nhiên cho mỗi lần mở hộp xác nhận | Chấp nhận |
+| [0027](0027-data-assistant-guarded-graphql.md) | Trợ lý hỏi dữ liệu: câu GraphQL chỉ đọc qua guard trên cây cú pháp, chạy qua Hasura bằng token người hỏi; bảng, cột được phép do mục menu khai | Chấp nhận |
 
 ## Quyết định còn mở
 

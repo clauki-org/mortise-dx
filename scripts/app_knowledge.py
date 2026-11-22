@@ -72,17 +72,29 @@ def problems(documents: list[dict]) -> list[str]:
 
 
 def menu_problems(directory: str, app: dict, known: set[str]) -> list[str]:
-    """Mục menu `assistant` hỏi văn bản không có trong `known` (mã văn bản gói khai ở `knowledge`)."""
+    """Mục menu `assistant` hỏi văn bản không có trong `known` (mã văn bản gói khai ở `knowledge`).
+
+    Mục hỏi dữ liệu (`data`, ADR 0027) không hỏi văn bản nào; scripts/check-assistant-data.py kiểm mục đó."""
     found = []
-    for entry in app.get("menu", []):
-        if entry["component"] != "assistant":
+    for entry in assistant_configs(directory, app):
+        if "documents" not in entry["content"]:
             continue
-        with open(os.path.join(directory, entry["config"]), encoding="utf-8") as file:
-            missing = set(yaml.safe_load(file)["documents"]) - known
+        missing = set(entry["content"]["documents"]) - known
         # Thiếu văn bản thì mọi câu hỏi ở mục này đều bị từ chối mà không ai biết vì sao.
         if missing:
             names = ", ".join(sorted(missing))
             found.append(f"mục menu {entry['id']} hỏi văn bản không có trong knowledge: {names}")
+    return found
+
+
+def assistant_configs(directory: str, app: dict) -> list[dict]:
+    """Mục menu `assistant` của gói, kèm nội dung tệp cấu hình (`content`) và đường dẫn tệp (`path`)."""
+    found = []
+    for entry in app.get("menu", []):
+        if entry["component"] == "assistant":
+            path = os.path.join(directory, entry["config"])
+            with open(path, encoding="utf-8") as file:
+                found.append(entry | {"path": path, "content": yaml.safe_load(file)})
     return found
 
 

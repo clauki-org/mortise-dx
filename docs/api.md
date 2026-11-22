@@ -93,6 +93,25 @@ curl -fsS -X POST http://localhost:9080/v1/graphql \
   -d '{"query":"{ platform_assistant_questions(order_by: {asked_at: desc}, limit: 20) { asked_at asked_by question outcome reason } }"}'
 ```
 
+Trợ lý hỏi dữ liệu (`contracts/assistant.openapi.json`, [ADR 0027](adr/0027-data-assistant-guarded-graphql.md))
+chạy một câu GraphQL chỉ đọc tại `POST /v1/assistant/data-queries`, không cần mô hình. Thân yêu cầu gồm câu hỏi, gói
+(`app`) và mục menu (`item`) có khối `data`, và câu truy vấn (`query`); bảng, cột được phép do dịch vụ đọc từ mục menu
+bằng token người hỏi, không nhận từ thân yêu cầu. Câu qua guard (một thao tác `query`, chỉ bảng, cột mục khai, mỗi danh
+sách có `limit` không quá `max_rows`, không introspection, biến, bí danh, fragment hay directive) được chạy đúng chữ qua
+Hasura bằng token người hỏi với vai trò `user`. Phản hồi có `outcome` `data` kèm `tables` (tiêu đề, cột kèm nhãn của gói,
+dòng), hoặc `refused` kèm `reason`; cả hai kèm `query` là câu đã chạy hay bị từ chối. Mục menu không có trong tenant
+của token là 404.
+
+```bash
+curl -fsS -X POST http://localhost:9080/v1/assistant/data-queries \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"question":"Có những văn bản mẫu nào?","app":"core","item":"ask-data-example","query":"{ platform_knowledge_documents(order_by: {document_id: asc}, limit: 20) { document_id title } }"}'
+```
+
+Câu hỏi dữ liệu cũng có một dòng ở `platform_assistant_questions`: `documents` rỗng, `query` là câu đã chạy hay bị từ
+chối, `row_count` là số dòng trả về; dòng kết quả không được lưu. Câu mẫu chạy không qua mô hình nên `model` và
+`attempts` trống.
+
 Văn bản cho trợ lý hỏi văn bản (`contracts/knowledge.schema.json`, [ADR 0021](adr/0021-document-assistant.md)) nằm ở
 `platform_knowledge_documents` (một dòng mỗi văn bản: tên, nguồn, băm và ngày tải bản gốc) và
 `platform_knowledge_passages` (một dòng mỗi đoạn: `label` là nhãn vị trí, `text` là nguyên văn, `position` là thứ tự

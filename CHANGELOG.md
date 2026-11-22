@@ -17,6 +17,14 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   `ASSISTANT_LLM_API_KEY` gọi một API tương thích OpenAI, khai thiếu thì 503 chỉ biến cần sửa. Câu trả lời ghi mô
   hình và nơi chạy (`model`), giao diện hiện "Trả lời bởi ..., chạy tại chỗ" hay "qua API <tên máy>"; nhật ký câu
   hỏi thêm `model_provider`, `model_host`.
+- Trợ lý hỏi dữ liệu (ADR 0027): mục menu `assistant` có khối `data` khai bảng, cột, quan hệ một-một và câu mẫu của
+  gói; bấm câu mẫu là chạy câu GraphQL chỉ đọc qua `POST /v1/assistant/data-queries`, bằng token người hỏi, sau guard
+  trên cây cú pháp (một thao tác query, chỉ bảng, cột đã khai, có limit, không introspection, không biến, bí danh hay
+  fragment). Kết quả hiện thành bảng kèm câu truy vấn đã chạy; câu bị từ chối hiện lý do. `make check-fast` và bộ cài
+  gói kiểm cột nằm trong quyền đọc của `user` và câu mẫu qua guard. Nhật ký câu hỏi thêm `query`, `row_count`,
+  `attempts` (migration mới của `platform`, `make up` áp; `make seed` áp quyền đọc mới). `make seed` thêm mục mẫu
+  "Hỏi dữ liệu mẫu" (`/apps/core/ask-data-example`); gói xã có mục "Hỏi dữ liệu cơ sở" với câu mẫu về phần vượt
+  của xã và cơ sở được phân công.
 - Gói thứ hai `supplies-commune` (kho vật tư xã), chỉ gồm tệp khai báo: kho và vật tư theo xã trên menu "Kho vật tư",
   đề nghị cấp vật tư cho người duyệt của xã, dữ liệu demo hư cấu nạp bằng `make seed-demo`. `make e2e` kiểm mọi mục
   menu của các gói đã cài mở được trang theo cấu hình.

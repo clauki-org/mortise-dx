@@ -10,7 +10,8 @@ import { Fragment, type ReactNode, useMemo } from "react";
 import { useParams } from "react-router";
 import { useQuery } from "urql";
 import { Assistant } from "./Assistant";
-import type { AssistantConfig } from "./assistant";
+import { AssistantData } from "./AssistantData";
+import { type AssistantConfig, isDataConfig } from "./assistant";
 import { Catalog } from "./Catalog";
 import type { CatalogConfig } from "./catalog";
 import { NotFound } from "./Errors";
@@ -27,8 +28,9 @@ export function usePackageMenu() {
   return { items, loaded: data !== undefined, fetching, error };
 }
 
-// `app` là gói của mục: thành phần cần nó khi dữ liệu nó đọc thuộc về gói (văn bản của trợ lý).
-type Render = (config: unknown, basePath: string, app: string) => ReactNode;
+// `app` là gói của mục: thành phần cần nó khi dữ liệu nó đọc thuộc về gói (văn bản của trợ lý). `item` là mục: trợ lý
+// hỏi dữ liệu gửi kèm để dịch vụ tự đọc danh sách bảng được phép của mục, không nhận danh sách đó từ trình duyệt.
+type Render = (config: unknown, basePath: string, app: string, item: string) => ReactNode;
 
 // Tên thành phần là dữ liệu đọc từ CSDL nên tra bằng Map: tra trên đối tượng thường thì tên như "constructor" hay
 // "toString" sẽ khớp với thuộc tính có sẵn của mọi đối tượng. Thành phần mới thêm một dòng ở đây; tên hợp lệ do
@@ -36,7 +38,15 @@ type Render = (config: unknown, basePath: string, app: string) => ReactNode;
 const COMPONENTS = new Map<string, Render>([
   ["catalog", (config, basePath) => <Catalog config={config as CatalogConfig} basePath={basePath} />],
   ["map", (config) => <MapPanel config={config as MapConfig} />],
-  ["assistant", (config, _basePath, app) => <Assistant config={config as AssistantConfig} app={app} />],
+  [
+    "assistant",
+    (config, _basePath, app, item) =>
+      isDataConfig(config) ? (
+        <AssistantData config={config} app={app} item={item} />
+      ) : (
+        <Assistant config={config as AssistantConfig} app={app} />
+      ),
+  ],
 ]);
 
 export function PackagePage() {
@@ -72,5 +82,5 @@ export function PackagePage() {
   }
   const basePath = itemPath(entry);
   // key theo mục: chuyển sang mục khác thì thành phần bắt đầu lại, không giữ trạng thái của mục cũ.
-  return <Fragment key={basePath}>{render(entry.config, basePath, entry.app)}</Fragment>;
+  return <Fragment key={basePath}>{render(entry.config, basePath, entry.app, entry.item)}</Fragment>;
 }

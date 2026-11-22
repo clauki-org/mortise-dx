@@ -14,6 +14,9 @@ import {
   type Answer,
   type Citation,
   configProblems,
+  type DataAnswer,
+  type DataTable,
+  isDataConfig,
   MAX_DOCUMENT_ID,
   MAX_DOCUMENTS,
   type ModelInfo,
@@ -70,6 +73,27 @@ describe("modelLine", () => {
   });
 });
 
+describe("configProblems với mục hỏi dữ liệu", () => {
+  const example = { id: "a", question: "Có gì?", query: "{ t(limit: 1) { c } }" };
+
+  it("nhận cấu hình đúng hợp đồng và nhận ra mục hỏi dữ liệu", () => {
+    const config = { intro: "Hỏi", data: { max_rows: 5, sources: [], examples: [example] } };
+    expect(configProblems(config)).toEqual([]);
+    expect(isDataConfig(config)).toBe(true);
+    expect(isDataConfig({ intro: "Hỏi", documents: ["a"] })).toBe(false);
+  });
+
+  it("báo khai cả data lẫn documents và câu mẫu thiếu trường", () => {
+    expect(configProblems({ intro: "Hỏi", documents: ["a"], data: { examples: [example] } })).toEqual([
+      "mục hỏi dữ liệu (data) không khai thêm documents hay examples",
+    ]);
+    expect(configProblems({ intro: "Hỏi", data: { examples: [{ id: "a", question: " " }] } })).toEqual([
+      "mỗi câu mẫu trong data.examples cần id, question và query",
+    ]);
+    expect(configProblems({ intro: "Hỏi", data: {} })).toEqual(["thiếu câu mẫu của mục hỏi dữ liệu (data.examples)"]);
+  });
+});
+
 type Shape = { required: string[]; properties: Record<string, { enum?: string[]; maxItems?: number }> };
 
 describe("hợp đồng", () => {
@@ -98,6 +122,17 @@ describe("hợp đồng", () => {
     expect(Object.keys(model).sort()).toEqual([...schemas.ModelInfo.required].sort());
     expect(Object.keys(providers).sort()).toEqual([...(schemas.ModelInfo.properties.provider?.enum ?? [])].sort());
     expect(Object.keys(locations).sort()).toEqual([...(schemas.ModelInfo.properties.location?.enum ?? [])].sort());
+  });
+
+  it("DataAnswer và DataTable có đúng các trường của OpenAPI", () => {
+    const data: Record<"DataAnswer" | "DataTable" | "DataColumn", Shape> = JSON.parse(openapiText).components.schemas;
+    const table: DataTable = { title: "t", columns: [{ key: "k", label: "l" }], rows: [] };
+    const result: DataAnswer = { outcome: "data", reason: null, query: "{ }", tables: [table] };
+    const dataOutcomes = { data: true, refused: true } satisfies Record<DataAnswer["outcome"], true>;
+    expect(Object.keys(result).sort()).toEqual([...data.DataAnswer.required].sort());
+    expect(Object.keys(table).sort()).toEqual([...data.DataTable.required].sort());
+    expect(Object.keys(table.columns[0] ?? {}).sort()).toEqual([...data.DataColumn.required].sort());
+    expect(Object.keys(dataOutcomes).sort()).toEqual([...(data.DataAnswer.properties.outcome?.enum ?? [])].sort());
   });
 
   it("giới hạn của configProblems khớp hợp đồng", () => {

@@ -1,18 +1,25 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/clauki-org/mortise-dx/contracts/assistant.schema.json",
-  "title": "Cấu hình thành phần trợ lý hỏi văn bản",
-  "description": "Tệp mà một mục menu `component: assistant` trong app.yaml trỏ tới (ADR 0013, ADR 0021). Trợ lý chỉ tìm trong các văn bản liệt kê ở `documents`, là `id` của văn bản gói khai ở mục `knowledge` của app.yaml; bộ cài gói kiểm các văn bản đó có thật trước khi ghi gì. Cấu hình không cấp quyền: người hỏi thấy đoạn nào do quyền Hasura quyết định.",
+  "title": "Cấu hình thành phần trợ lý",
+  "description": "Tệp mà một mục menu `component: assistant` trong app.yaml trỏ tới (ADR 0013). Mục menu chọn một trong hai việc: hỏi văn bản (`documents`, ADR 0021) hay hỏi dữ liệu (`data`, ADR 0027). Hỏi văn bản: trợ lý chỉ tìm trong các văn bản liệt kê ở `documents`, là `id` của văn bản gói khai ở mục `knowledge` của app.yaml. Hỏi dữ liệu: trợ lý chỉ chạy câu GraphQL chỉ đọc trên các bảng và cột khai ở `data.sources`. Bộ cài gói kiểm văn bản có thật, bảng thuộc gói, cột nằm trong quyền đọc của vai trò `user` và câu mẫu qua guard trước khi ghi gì. Cấu hình không cấp quyền: người hỏi thấy dòng nào do quyền Hasura quyết định.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["intro", "documents"],
+  "required": ["intro"],
+  "oneOf": [
+    { "required": ["documents"], "not": { "required": ["data"] } },
+    {
+      "required": ["data"],
+      "not": { "anyOf": [{ "required": ["documents"] }, { "required": ["examples"] }] }
+    }
+  ],
   "properties": {
     "intro": {
       "description": "Lời giới thiệu hiện trên khung hỏi: hỏi được về những gì",
       "$ref": "#/$defs/text"
     },
     "examples": {
-      "description": "Câu hỏi mẫu người dùng bấm để hỏi ngay",
+      "description": "Câu hỏi mẫu về văn bản, người dùng bấm để hỏi ngay; chỉ dùng cùng `documents`",
       "type": "array",
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/text" }
@@ -24,6 +31,34 @@
       "maxItems": 50,
       "uniqueItems": true,
       "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64 }
+    },
+    "data": {
+      "description": "Bảng, cột được hỏi và câu truy vấn mẫu (ADR 0027). Tenant không là cột hay tham số: Hasura lọc theo tenant trong token của người hỏi.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sources", "max_rows", "examples"],
+      "properties": {
+        "sources": {
+          "description": "Trường gốc GraphQL của gói được truy vấn",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/source" }
+        },
+        "max_rows": {
+          "description": "Số dòng tối đa mỗi danh sách; mọi danh sách trong câu truy vấn phải có `limit` không quá số này. Trần 100 để bảng kết quả còn đọc được trên màn hình.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "examples": {
+          "description": "Câu hỏi mẫu kèm câu truy vấn viết sẵn; bấm là chạy ngay, không cần mô hình",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/example" }
+        }
+      }
     }
   },
   "$defs": {
@@ -31,6 +66,78 @@
       "description": "Chữ cho người đọc: có ít nhất một ký tự không phải khoảng trắng",
       "type": "string",
       "pattern": "\\S"
+    },
+    "name": {
+      "description": "Tên GraphQL của Hasura: chữ thường, số, gạch dưới; không bắt đầu bằng `__` (introspection)",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "maxLength": 128
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "label", "description", "columns"],
+      "properties": {
+        "field": {
+          "description": "Trường gốc của bảng hay view trong GraphQL, dạng <lược đồ>_<bảng>, thuộc lược đồ của gói",
+          "$ref": "#/$defs/name"
+        },
+        "label": { "description": "Tiêu đề của bảng kết quả", "$ref": "#/$defs/text" },
+        "description": { "description": "Bảng chứa gì, viết cho người đọc và cho mô hình", "$ref": "#/$defs/text" },
+        "columns": {
+          "description": "Cột được chọn, lọc và sắp xếp; phải nằm trong quyền đọc của vai trò `user`",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "items": { "$ref": "#/$defs/column" }
+        },
+        "aggregate": {
+          "description": "Cho dùng <field>_aggregate (đếm, tổng, trung bình, lớn nhất, nhỏ nhất); quyền `user` phải bật allow_aggregations",
+          "type": "boolean",
+          "default": false
+        },
+        "relations": {
+          "description": "Quan hệ một-một (object relationship của Hasura) tới một nguồn khác đã khai; cột đi theo nguồn đích",
+          "type": "array",
+          "maxItems": 10,
+          "items": { "$ref": "#/$defs/relation" }
+        }
+      }
+    },
+    "column": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "label", "description"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name", "not": { "const": "tenant_id" } },
+        "label": { "description": "Tiêu đề cột trên bảng kết quả", "$ref": "#/$defs/text" },
+        "description": { "description": "Cột chứa gì, đơn vị nếu có", "$ref": "#/$defs/text" }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "label", "source"],
+      "properties": {
+        "name": { "description": "Tên quan hệ trong hasura/tables.yaml", "$ref": "#/$defs/name" },
+        "label": { "description": "Tiền tố tiêu đề cột lấy qua quan hệ", "$ref": "#/$defs/text" },
+        "source": { "description": "`field` của nguồn đích, cũng phải khai ở `sources`", "$ref": "#/$defs/name" }
+      }
+    },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "question", "query"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64 },
+        "question": { "description": "Câu hỏi hiện trên nút", "$ref": "#/$defs/text" },
+        "query": {
+          "description": "Câu GraphQL chỉ đọc; phải qua guard của trợ lý (platform/services/assistant/app/guard.py)",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      }
     }
   }
 }
