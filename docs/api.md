@@ -100,7 +100,7 @@ bằng token người hỏi, không nhận từ thân yêu cầu. Câu qua guard
 sách có `limit` không quá `max_rows`, không introspection, biến, bí danh, fragment hay directive) được chạy đúng chữ qua
 Hasura bằng token người hỏi với vai trò `user`. Phản hồi có `outcome` `data` kèm `tables` (tiêu đề, cột kèm nhãn của gói,
 dòng), hoặc `refused` kèm `reason`; cả hai kèm `query` là câu đã chạy hay bị từ chối. Mục menu không có trong tenant
-của token là 404.
+của token, hay khai `roles` mà token không có vai trò nào trong đó, là 404.
 
 ```bash
 curl -fsS -X POST http://localhost:9080/v1/assistant/data-queries \
@@ -108,8 +108,8 @@ curl -fsS -X POST http://localhost:9080/v1/assistant/data-queries \
   -d '{"question":"Có những văn bản mẫu nào?","app":"core","item":"ask-data-example","query":"{ platform_knowledge_documents(order_by: {document_id: asc}, limit: 20) { document_id title } }"}'
 ```
 
-Câu hỏi dữ liệu cũng có một dòng ở `platform_assistant_questions`: `documents` rỗng, `query` là câu đã chạy hay bị từ
-chối, `row_count` là số dòng trả về; dòng kết quả không được lưu. Câu mẫu chạy không qua mô hình nên `model` và
+Câu hỏi dữ liệu cũng có một dòng ở `platform_assistant_questions`: `documents` rỗng, `item` là mục menu, `query` là câu
+đã chạy hay bị từ chối, `row_count` là số dòng trả về; dòng kết quả không được lưu. Câu mẫu chạy không qua mô hình nên `model` và
 `attempts` trống.
 
 Văn bản cho trợ lý hỏi văn bản (`contracts/knowledge.schema.json`, [ADR 0021](adr/0021-document-assistant.md)) nằm ở

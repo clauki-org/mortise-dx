@@ -112,6 +112,19 @@ BLOCKED = {
     "order-enum-unknown": ("{ app_x_items(order_by: {code: sideways}, limit: 1) { code } }", "asc hay desc"),
     "relation-without-selection": ("{ app_x_items(limit: 1) { group } }", "quan hệ group"),
     "column-with-selection": ("{ app_x_items(limit: 1) { code { x } } }", "'code'"),
+    "duplicate-argument": ("{ app_x_items(limit: 1, limit: 2) { code } }", "'limit' xuất hiện hai lần"),
+    "duplicate-where-key": (
+        '{ app_x_items(where: {code: {_eq: "a"}, code: {_neq: "b"}}, limit: 1) { code } }',
+        "'code' xuất hiện hai lần",
+    ),
+    "duplicate-nested-operator": (
+        '{ app_x_items(where: {_or: [{name: {_eq: "a", _eq: "b"}}]}, limit: 1) { code } }',
+        "'_eq' xuất hiện hai lần",
+    ),
+    "duplicate-order-key": (
+        "{ app_x_items(order_by: {group: {title: asc, title: desc}}, limit: 1) { code } }",
+        "'title' xuất hiện hai lần",
+    ),
     "limit-missing": ("{ app_x_items { code } }", "phải có limit"),
     "limit-too-big": ("{ app_x_items(limit: 21) { code } }", "từ 1 tới 20"),
     "limit-not-int": ('{ app_x_items(limit: "5") { code } }', "số nguyên"),

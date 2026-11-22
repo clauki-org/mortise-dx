@@ -44,6 +44,14 @@ class FakeConnection:
             raise InterfaceError("network error")
 
 
+def test_document_question_has_no_item_or_query(monkeypatch):
+    connection = FakeConnection()
+    monkeypatch.setattr(journal, "_connect", lambda: connection)
+    journal.record(USER_A, QUESTION, 10, None, "lỗi")
+    params = connection.runs[2][1]
+    assert (params["item"], params["query"], params["row_count"]) == (None, None, None)
+
+
 def test_answer_is_written_in_one_transaction_with_the_actor(monkeypatch):
     connection = FakeConnection()
     monkeypatch.setattr(journal, "_connect", lambda: connection)
@@ -146,7 +154,7 @@ def test_data_answer_stores_query_and_row_count_not_rows(monkeypatch):
         None,
         "[]",
     )
-    assert params["question"] == "Có những văn bản nào?"
+    assert (params["question"], params["item"]) == ("Có những văn bản nào?", "ask-data-example")
     # Dòng kết quả không vào nhật ký: quản trị đọc nhật ký không thấy dữ liệu qua đường này.
     assert INJECTION not in repr(params)
 
@@ -162,14 +170,13 @@ def test_refused_data_query_stores_the_refused_query_without_row_count(monkeypat
     assert (params["outcome"], params["query"], params["row_count"]) == ("refused", "mutation { x }", None)
 
 
-def test_failed_data_query_keeps_a_truncated_query(monkeypatch):
+def test_failed_data_query_keeps_the_query_it_was_given(monkeypatch):
     connection = FakeConnection()
     monkeypatch.setattr(journal, "_connect", lambda: connection)
-    request = DATA_QUERY.model_copy(update={"query": "x" * 10000})
-    journal.record_data(USER_A, request, 3, None, "Không đọc được dữ liệu")
+    journal.record_data(USER_A, DATA_QUERY, 3, None, "Không đọc được dữ liệu")
     params = connection.runs[2][1]
-    assert (params["outcome"], params["reason"], len(params["query"])) == (
+    assert (params["outcome"], params["reason"], params["query"]) == (
         "failed",
         "Không đọc được dữ liệu",
-        4001,
+        DATA_QUERY.query,
     )

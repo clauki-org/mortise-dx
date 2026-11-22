@@ -37,7 +37,8 @@ Các lựa chọn đã xét:
   sẵn. Tenant không bao giờ là cột hay tham số.
 - **Danh sách cho phép chỉ đến từ mục menu.** `POST /v1/assistant/data-queries` nhận `question`, `app`, `item`, `query`.
   Dịch vụ đọc cấu hình của mục qua GraphQL bằng token người hỏi (`platform_menu_items` lọc theo tenant), không nhận
-  bảng hay cột từ thân yêu cầu. Câu do người dùng tự viết cũng chỉ là một tập con của quyền GraphQL họ vốn có.
+  bảng hay cột từ thân yêu cầu. Mục khai `roles` mà người hỏi không có vai trò nào trong đó trả cùng 404 như mục không
+  có, để không lộ là mục tồn tại. Câu do người dùng tự viết cũng chỉ là một tập con của quyền GraphQL họ vốn có.
 - **Kiểm lúc cài.** `scripts/check-assistant-data.py` (trong `make check-fast` và trong bộ cài gói, trước khi ghi gì)
   kiểm nguồn là bảng chủ sở hữu khai trong tệp quyền Hasura, khớp đúng tên bảng; cột nằm trong quyền đọc của `user`;
   `aggregate` cần `allow_aggregations`; quan hệ là object relationship tới đúng bảng của nguồn đích; mọi câu mẫu qua
@@ -48,7 +49,8 @@ Các lựa chọn đã xét:
     Guard kiểm cây của graphql-core còn Hasura phân tích lại câu bằng trình của nó; bỏ những chỗ hai trình có thể hiểu
     khác nhau thì câu đã kiểm và câu đã chạy là một.
   - Đúng một thao tác, loại `query`; không fragment (có tên hay inline), directive, biến, bí danh; không tên bắt đầu
-    bằng `__` (introspection).
+    bằng `__` (introspection); không tham số hay khóa trùng tên trong một đối tượng, vì mỗi trình phân tích xử lý tên
+    trùng khác nhau.
   - Trường gốc chỉ là nguồn đã khai; `<nguồn>_aggregate` chỉ khi khai `aggregate`; không `_by_pk`.
   - Trường gốc chỉ nhận `where`, `order_by`, `limit`; mọi trường khác không nhận tham số. Không `distinct_on`, `offset`.
   - Cột chọn, lọc, sắp xếp chỉ là cột đã khai; quan hệ đã khai đi theo danh sách của nguồn đích.
@@ -64,7 +66,7 @@ Các lựa chọn đã xét:
 - **Kết quả là bảng do giao diện vẽ.** Mỗi nguồn trong câu thành một bảng với tiêu đề và nhãn cột của gói; ô hiện như chữ
   thường. Dữ liệu người dùng nhập, kể cả chữ trông như lệnh, chỉ là chữ trong ô.
 - **Nhật ký.** Mỗi câu hỏi dữ liệu một dòng ở `platform.assistant_questions`, như câu hỏi văn bản: `documents` rỗng,
-  `outcome` là `answered`, `refused` hay `failed`, kèm `query`, `row_count` và `attempts`. Không lưu dòng kết quả: quản
+  `outcome` là `answered`, `refused` hay `failed`, kèm `item`, `query`, `row_count` và `attempts`. Không lưu dòng kết quả: quản
   trị đọc nhật ký không được thấy qua đường này những dòng mà quyền của họ ở bảng nguồn không cho thấy. Câu mẫu chạy
   không qua mô hình nên `model` và `attempts` trống ở các dòng đó.
 - **Mô hình không bao giờ thấy dòng dữ liệu.** Phần mô hình viết câu từ câu hỏi gõ tự do (kèm một lượt sửa theo lý do

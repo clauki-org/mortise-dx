@@ -236,13 +236,13 @@ check "Trợ lý dữ liệu: danh sách thiếu limit bị guard từ chối" \
 check "Trợ lý dữ liệu: limit quá max_rows của mục bị guard từ chối" \
   "$(data_refused 'từ 1 tới 20' '{ platform_knowledge_documents(limit: 500) { title } }')" "200 refused true"
 data_log=$(jq -nc --arg question "$data_question" '{query: "query($q: String!) { platform_assistant_questions(
-  where: {question: {_eq: $q}}) { tenant_id outcome row_count answer model has_query: query } }", variables: {q: $question}}')
-check "Nhật ký câu hỏi: mỗi câu hỏi dữ liệu một dòng kèm câu truy vấn và số dòng, không kèm dòng dữ liệu" \
+  where: {question: {_eq: $q}}) { tenant_id outcome item row_count answer model has_query: query } }", variables: {q: $question}}')
+check "Nhật ký câu hỏi: mỗi câu hỏi dữ liệu một dòng kèm mục menu, câu truy vấn và số dòng, không kèm dòng dữ liệu" \
   "$(curl -fsS -X POST "$base/v1/graphql" -H "Authorization: Bearer $(token admin.a)" -H 'X-Hasura-Role: tenant_admin' \
     -H 'Content-Type: application/json' -d "$data_log" | jq -c '.data.platform_assistant_questions | group_by(.outcome)
     | map([.[0].tenant_id, .[0].outcome, length, (map(.row_count) | unique), (map(.answer, .model) | unique),
-      (map(.has_query != null) | unique)])')" \
-  '[["xa-a","answered",1,[2],[null],[true]],["xa-a","refused",5,[null],[null],[true]]]'
+      (map(.has_query != null) | unique), (map(.item) | unique)])')" \
+  '[["xa-a","answered",1,[2],[null],[true],["ask-data-example"]],["xa-a","refused",5,[null],[null],[true],["ask-data-example"]]]'
 
 # Quyền Hasura đang chạy phải khớp tệp khai báo (core/hasura/, platform/schema/hasura/); ai sửa tay trên trang quản
 # trị thì báo ở đây. Quyền hay quan hệ sai thì `make seed` đưa về đúng; bảng đăng ký thừa thì thông báo chỉ cách gỡ.

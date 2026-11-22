@@ -23,7 +23,7 @@ _client = httpx.Client(timeout=10)
 
 ITEM_QUERY = """
 query Item($app: String!, $item: String!) {
-  platform_menu_items(where: {app: {_eq: $app}, item: {_eq: $item}}) { component config }
+  platform_menu_items(where: {app: {_eq: $app}, item: {_eq: $item}}) { component config roles }
 }
 """
 # Lý do chung: lỗi của Hasura có thể nêu tên bảng, cột hay quyền mà người hỏi không được biết.
@@ -64,20 +64,20 @@ def data_config(caller: Caller, app: str, item: str) -> dict:
             502, "API dữ liệu từ chối đọc mục menu; báo người vận hành xem log của assistant."
         ) from error
     rows = data.get("platform_menu_items") or []
-    config = rows[0].get("config") if len(rows) == 1 and rows[0].get("component") == "assistant" else None
+    row = rows[0] if len(rows) == 1 and rows[0].get("component") == "assistant" else {}
+    config = row.get("config")
+    # Mục khai `roles` chỉ dành cho các vai trò đó, như menu của giao diện (ADR 0023); người hỏi không có vai
+    # trò nào trong đó nhận cùng 404 như mục không có, để không lộ là mục tồn tại.
+    allowed = row.get("roles") or []
+    if allowed and not set(allowed) & set(caller.roles):
+        config = None
     if not isinstance(config, dict) or not isinstance(config.get("data"), dict):
         raise Denied(404, f"Đơn vị của bạn không có mục menu {app}/{item} hỏi dữ liệu.")
     return config["data"]
 
 
-def shown(query: str) -> str:
-    # Câu quá dài vẫn được hiện và ghi nhật ký, nhưng chỉ phần đầu: đủ để biết câu nào, không để nhật ký phình
-    # ra.
-    return query if len(query) <= guard.MAX_QUERY_CHARS else query[: guard.MAX_QUERY_CHARS] + "…"
-
-
 def refuse(reason: str, query: str) -> DataAnswer:
-    return DataAnswer(outcome="refused", reason=reason, query=shown(query), tables=[])
+    return DataAnswer(outcome="refused", reason=reason, query=query, tables=[])
 
 
 def answer(caller: Caller, request: DataQuery, data: dict) -> DataAnswer:

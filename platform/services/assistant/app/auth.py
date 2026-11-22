@@ -33,4 +33,10 @@ def caller_from_token(authorization: str | None = Header(default=None)) -> Calle
     tenants = claims.get("tenant") or []
     if len(tenants) != 1 or not _TENANT.fullmatch(tenants[0]):
         raise Denied(403, "Tài khoản phải thuộc đúng một tenant.")
-    return Caller(sub=claims["sub"], tenant=tenants[0], token=token)
+    roles = (claims.get("realm_access") or {}).get("roles") or []
+    return Caller(
+        sub=claims["sub"],
+        tenant=tenants[0],
+        token=token,
+        roles=tuple(role for role in roles if isinstance(role, str)),
+    )

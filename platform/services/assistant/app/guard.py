@@ -169,6 +169,12 @@ class _Forbidden(Visitor):
         if node.alias:
             raise Refused(f"Câu truy vấn không được đặt bí danh (alias '{node.alias.value}').")
         _not_internal(node.name.value)
+        _no_repeats(
+            [argument.name.value for argument in node.arguments or ()], f"tham số của {node.name.value}"
+        )
+
+    def enter_object_value(self, node: ast.ObjectValueNode, *_):
+        _no_repeats([item.name.value for item in node.fields or ()], "một đối tượng {...}")
 
     def enter_argument(self, node: ast.ArgumentNode, *_):
         _not_internal(node.name.value)
@@ -196,6 +202,14 @@ class _Forbidden(Visitor):
     def enter_string_value(self, node: ast.StringValueNode, *_):
         if node.block:
             raise Refused('Câu truy vấn không được dùng khối chuỗi """; dùng chuỗi trong một cặp ngoặc kép.')
+
+
+def _no_repeats(names: list[str], where: str) -> None:
+    # Tên trùng là lỗi theo đặc tả GraphQL, nhưng mỗi trình phân tích xử lý khác nhau (bỏ, lấy cái đầu hay cái
+    # cuối): guard có thể kiểm `limit: 1` trong khi Hasura chạy `limit: 1000`.
+    for name in names:
+        if names.count(name) > 1:
+            raise Refused(f"'{name}' xuất hiện hai lần trong {where}.")
 
 
 def _not_internal(name: str) -> None:

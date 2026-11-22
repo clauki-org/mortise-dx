@@ -10,9 +10,10 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app import data_run, journal
+from app import data_run, guard, journal
 from app.auth import caller_from_token
 from app.main import app
+from app.schemas import DataQuery
 from tests.passages import USER_A
 
 client = TestClient(app)
@@ -214,11 +215,16 @@ def test_question_too_long_is_rejected_before_any_call(hasura, logged):
     assert (fake.calls, logged) == ([], [])
 
 
-def test_oversized_refused_query_is_shown_truncated(hasura, logged):
-    hasura(FakeHasura())
-    result = ask(REQUEST | {"query": "{" + " " * 5000 + "}"})
-    assert result["outcome"] == "refused"
-    assert len(result["query"]) == 4001
+def test_query_longer_than_the_guard_limit_is_a_400_before_any_call(hasura, logged):
+    fake = hasura(FakeHasura())
+    result = ask(REQUEST | {"query": "{" + " " * guard.MAX_QUERY_CHARS + "}"})
+    assert result["status"] == 400
+    assert (fake.calls, logged) == ([], [])
+
+
+def test_request_limit_is_the_guard_limit():
+    # Một số dùng chung: schemas.py đọc hằng số của guard, OpenAPI mang đúng số đó.
+    assert DataQuery.model_fields["query"].metadata[0].max_length == guard.MAX_QUERY_CHARS
 
 
 @pytest.mark.parametrize("status", [429, 502])
@@ -227,3 +233,18 @@ def test_overloaded_gateway_after_guard_is_a_503_not_a_refusal(hasura, logged, s
     result = ask()
     assert result["status"] == 503
     assert (logged[0]["answer"], logged[0]["failure"]) == (None, result["error"])
+
+
+@pytest.mark.parametrize(
+    ("roles", "status"),
+    [(["tenant_admin"], 404), (["user", "tenant_admin"], 200), ([], 200), (None, 200)],
+    ids=["role-missing", "role-present", "empty-roles", "null-roles"],
+)
+def test_item_reserved_for_other_roles_is_a_404_like_a_missing_item(hasura, logged, roles, status):
+    fake = hasura(FakeHasura(items=[{"component": "assistant", "config": CONFIG, "roles": roles}]))
+    result = ask()
+    assert result["status"] == status
+    if status == 404:
+        # Cùng lời như mục không có: không lộ là mục tồn tại cho vai trò khác.
+        assert result["error"] == "Đơn vị của bạn không có mục menu core/ask-data-example hỏi dữ liệu."
+        assert (len(fake.calls), logged) == (1, [])

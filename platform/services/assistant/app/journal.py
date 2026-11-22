@@ -13,7 +13,6 @@ import pg8000.native
 from pg8000.exceptions import DatabaseError, InterfaceError
 
 from .config import settings
-from .data_run import shown
 from .errors import Denied
 from .retrieval import Caller
 from .schemas import Answer, DataAnswer, DataQuery, Question
@@ -23,9 +22,10 @@ log = logging.getLogger("assistant.journal")
 INSERT = """
 INSERT INTO platform.assistant_questions
     (tenant_id, asked_by, app, documents, question, outcome, answer, reason, citations, model, model_provider,
-    model_host, duration_ms, query, row_count, attempts)
+    model_host, duration_ms, item, query, row_count, attempts)
 VALUES (:tenant, :sub, :app, CAST(:documents AS text[]), :question, :outcome, :answer, :reason,
-    CAST(:citations AS jsonb), :model, :model_provider, :model_host, :duration_ms, :query, :row_count, :attempts)
+    CAST(:citations AS jsonb), :model, :model_provider, :model_host, :duration_ms, :item, :query, :row_count,
+    :attempts)
 """
 
 
@@ -62,6 +62,7 @@ def record(
         "model_provider": settings.llm_provider,
         "model_host": settings.llm_host,
         "duration_ms": duration_ms,
+        "item": None,
         "query": None,
         "row_count": None,
         "attempts": None,
@@ -92,7 +93,8 @@ def record_data(
         "model_provider": None,
         "model_host": None,
         "duration_ms": duration_ms,
-        "query": answer.query if answer else shown(request.query),
+        "item": request.item,
+        "query": answer.query if answer else request.query,
         "row_count": sum(len(table.rows) for table in answer.tables) if outcome == "answered" else None,
         "attempts": None,
     }

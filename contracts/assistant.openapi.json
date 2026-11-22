@@ -186,6 +186,7 @@
           },
           "query": {
             "description": "Câu GraphQL chỉ đọc; phải qua guard (bảng, cột, toán tử, limit theo cấu hình của mục)",
+            "maxLength": 4000,
             "title": "Query",
             "type": "string"
           },

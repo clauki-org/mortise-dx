@@ -8,6 +8,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .guard import MAX_QUERY_CHARS
+
 _SLUG = r"^[a-z0-9]+(-[a-z0-9]+)*$"
 
 
@@ -73,8 +75,10 @@ class DataQuery(BaseModel):
     item: str = Field(
         pattern=_SLUG, max_length=64, description="Mục menu `component: assistant` có khối `data`"
     )
+    # Cùng trần với guard: câu dài hơn bị chặn ngay khi đọc thân yêu cầu, không vào nhật ký hay phản hồi.
     query: str = Field(
-        description="Câu GraphQL chỉ đọc; phải qua guard (bảng, cột, toán tử, limit theo cấu hình của mục)"
+        max_length=MAX_QUERY_CHARS,
+        description="Câu GraphQL chỉ đọc; phải qua guard (bảng, cột, toán tử, limit theo cấu hình của mục)",
     )
 
 

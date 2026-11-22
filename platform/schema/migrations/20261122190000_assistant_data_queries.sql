@@ -9,6 +9,8 @@
 
 -- migrate:up
 ALTER TABLE platform.assistant_questions
+    -- Mục menu (khóa `item` cùng `app`) mà câu hỏi dữ liệu chạy trên đó: danh sách bảng được phép thuộc về mục.
+    ADD COLUMN item text,
     ADD COLUMN query text,
     ADD COLUMN row_count integer CHECK (row_count >= 0),
     ADD COLUMN attempts smallint CHECK (attempts >= 1),
@@ -24,4 +26,5 @@ ALTER TABLE platform.assistant_questions
     ALTER COLUMN model SET NOT NULL,
     DROP COLUMN attempts,
     DROP COLUMN row_count,
-    DROP COLUMN query;
+    DROP COLUMN query,
+    DROP COLUMN item;
