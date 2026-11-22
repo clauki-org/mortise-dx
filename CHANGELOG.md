@@ -19,6 +19,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   cùng gói với biến lấy từ dòng đang xem, kèm hộp xác nhận và Idempotency-Key. Màn hình chi tiết hiện được cột qua
   quan hệ một-một (`<quan hệ>.<cột>`). Gói cơ sở vật chất xã có nút "Lập hồ sơ rà soát" trên màn hình chi tiết của cơ
   sở; hồ sơ hiện trên bảng việc của người duyệt cùng xã.
+- Thành phần bản đồ Tầng 2 (ADR 0024, `contracts/map.schema.json`): lớp điểm đọc qua GraphQL theo cấu hình của gói,
+  nền trơn không tải tile, tô màu theo giá trị qua các bậc, chú giải và danh sách điểm; lớp khai `role` chỉ truy vấn
+  khi token có vai trò đó và gửi kèm `X-Hasura-Role`. Mục menu `component: map` mở thành phần này.
 - Trợ lý hỏi văn bản (ADR 0021): `POST /v1/assistant/questions` tìm đoạn qua GraphQL bằng token người hỏi, hỏi Qwen3.5
   4B qua Ollama với JSON Schema, chỉ trả lời khi mọi câu trích có trong đoạn đã tìm và mọi con số có trong câu được
   trích, không thì từ chối có lý do. Chưa bật Ollama (`make ai-up`) thì câu hỏi cần mô hình nhận 503 kèm cách bật.

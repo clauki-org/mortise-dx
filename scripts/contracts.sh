@@ -43,6 +43,7 @@ esac
 "${checker[@]}" --schemafile contracts/app.schema.json contracts/examples/app.example.yaml
 "${checker[@]}" --schemafile contracts/workflow.schema.json contracts/examples/workflow.example.yaml
 "${checker[@]}" --schemafile contracts/catalog.schema.json contracts/examples/catalog.example.yaml
+"${checker[@]}" --schemafile contracts/map.schema.json contracts/examples/map.example.yaml
 "${checker[@]}" --schemafile contracts/assistant.schema.json contracts/examples/assistant.example.yaml
 "${checker[@]}" --schemafile contracts/knowledge.schema.json contracts/examples/knowledge.example.yaml \
   contracts/examples/knowledge-amendment.example.yaml
@@ -84,7 +85,7 @@ for app in apps/*/; do
   "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}"
   # Cấu hình của thành phần có schema nằm ở đường dẫn do app.yaml khai, không theo tên thư mục cố định, nên phải
   # đọc app.yaml để biết tệp nào cần kiểm; dò theo tên thư mục sẽ bỏ sót tệp đặt ở chỗ khác.
-  for component in catalog assistant; do
+  for component in catalog map assistant; do
     mapfile -t configs < <("${yaml[@]}" -c '
 import sys, yaml
 app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
@@ -161,6 +162,7 @@ reject contracts/service-token-claims.schema.json contracts/examples/invalid/ser
 reject contracts/app.schema.json contracts/examples/invalid/app.*.yaml
 reject contracts/workflow.schema.json contracts/examples/invalid/workflow.*.yaml
 reject contracts/catalog.schema.json contracts/examples/invalid/catalog.*.yaml
+reject contracts/map.schema.json contracts/examples/invalid/map.*.yaml
 reject contracts/assistant.schema.json contracts/examples/invalid/assistant.*.yaml
 reject contracts/knowledge.schema.json contracts/examples/invalid/knowledge.*.yaml
 reject contracts/threshold-rule.schema.json contracts/examples/invalid/threshold-rule.*.yaml
@@ -172,10 +174,10 @@ reject contracts/device-message.schema.json contracts/examples/invalid/device-me
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
     token-claims.*.json | service-token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml | \
-    threshold-rule.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml) ;;
+    threshold-rule.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml | map.*.yaml) ;;
     *)
       echo "$file không được kiểm: tên phải theo mẫu <token-claims|service-token-claims|device-message>.<lỗi>.json hoặc" \
-        "<app|workflow|catalog|component|threshold-rule|assistant|knowledge|seed>.<lỗi>.yaml." >&2
+        "<app|workflow|catalog|map|component|threshold-rule|assistant|knowledge|seed>.<lỗi>.yaml." >&2
       exit 1
       ;;
   esac

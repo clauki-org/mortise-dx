@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/map.schema.json từ chối: vai trò có chữ hoa và khoảng trắng.
+# Nếu lọt, giá trị lạ đi thẳng vào header của yêu cầu.
+
+title: Bản đồ
+layers:
+  - id: sites
+    label: Điểm
+    source: app_example_sites
+    latitude: lat
+    longitude: lon
+    title: name
+    role: Rollup Reader
+    color: { fixed: gray }

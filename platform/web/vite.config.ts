@@ -12,6 +12,8 @@ const gateway = process.env.MORTISE_PUBLIC_URL ?? "http://localhost:9080";
 
 export default defineConfig({
   plugins: [react()],
+  // MapLibre tạo worker kiểu module (MapCanvas.tsx); bản worker do Vite build ra phải là module ES mới chạy được như vậy.
+  worker: { format: "es" },
   // Xem src/noAjv.ts: rjsf nhập bộ kiểm AJV ở một hàm kiểm thử mà giao diện không dùng.
   resolve: { alias: { "@rjsf/validator-ajv8": fileURLToPath(new URL("./src/noAjv.ts", import.meta.url)) } },
   server: {

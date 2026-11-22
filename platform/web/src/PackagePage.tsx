@@ -12,6 +12,8 @@ import { useQuery } from "urql";
 import { Catalog } from "./Catalog";
 import type { CatalogConfig } from "./catalog";
 import { NotFound } from "./Errors";
+import { MapPanel } from "./MapPanel";
+import type { MapConfig } from "./mapConfig";
 import { findItem, itemPath, MENU_QUERY, type MenuData, rolesOf, visibleItems } from "./menu";
 import { useSession } from "./session";
 
@@ -30,6 +32,7 @@ type Render = (config: unknown, basePath: string) => ReactNode;
 // contracts/app.schema.json liệt kê.
 const COMPONENTS = new Map<string, Render>([
   ["catalog", (config, basePath) => <Catalog config={config as CatalogConfig} basePath={basePath} />],
+  ["map", (config) => <MapPanel config={config as MapConfig} />],
 ]);
 
 export function PackagePage() {

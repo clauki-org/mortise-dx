@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/map.schema.json từ chối: bậc màu đầu có ngưỡng above.
+# Nếu lọt, giá trị dưới ngưỡng đầu không có màu nào.
+
+title: Bản đồ
+layers:
+  - id: sites
+    label: Điểm
+    source: app_example_sites
+    latitude: lat
+    longitude: lon
+    title: name
+    color:
+      by: score
+      label: Điểm
+      steps:
+        - { above: 0, color: red, label: Cao }

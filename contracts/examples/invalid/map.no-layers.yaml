@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/map.schema.json từ chối: không có lớp nào.
+
+title: Bản đồ
+layers: []
