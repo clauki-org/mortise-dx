@@ -36,10 +36,25 @@ export function chainQuery(steps: Step[]): string {
   const parameters = steps.map((step, index) => `$w${index}: ${step.node.source}_bool_exp!`).join(", ");
   const parts = steps.map((step, index) => {
     const names = index === last ? step.node.fields.map((field) => field.name) : [titleField(step.node)];
-    const selection = [...new Set([keyOf(step.node), ...names])].join(" ");
-    return `s${index}: ${step.node.source}(where: $w${index}, limit: 1) { ${selection} }`;
+    return `s${index}: ${step.node.source}(where: $w${index}, limit: 1) { ${selection([keyOf(step.node), ...names])} }`;
   });
   return `query(${parameters}) { ${parts.join(" ")} }`;
+}
+
+/**
+ * Phần chọn cột của một chặng: cột của bảng giữ nguyên, trường <quan hệ>.<cột> gom theo quan hệ thành
+ * `quan_hệ { cột ... }` như cú pháp GraphQL đòi.
+ */
+export function selection(names: string[]): string {
+  const plain = new Set<string>();
+  const nested = new Map<string, Set<string>>();
+  for (const name of names) {
+    const [head = "", tail] = name.split(".");
+    if (tail === undefined) plain.add(head);
+    else nested.set(head, (nested.get(head) ?? new Set()).add(tail));
+  }
+  const groups = [...nested].map(([relation, columns]) => `${relation} { ${[...columns].join(" ")} }`);
+  return [...plain, ...groups].join(" ");
 }
 
 export function chainVariables(steps: Step[]): Record<string, Where> {

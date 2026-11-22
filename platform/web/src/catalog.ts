@@ -7,6 +7,7 @@
 // kiểm thử được bằng hàm thuần.
 
 export type Field = {
+  /** Tên cột, hoặc <quan hệ>.<cột> để đọc qua quan hệ một-một; loại sau chỉ hiện ở màn hình chi tiết */
   name: string;
   label: string;
   type?: "text" | "number" | "date" | "datetime";
@@ -25,8 +26,11 @@ export type CatalogNode = {
     sort?: Sort;
     page_size?: number;
   };
-  detail?: { title?: string; children?: Child[] };
+  detail?: { title?: string; children?: Child[]; actions?: Action[] };
 };
+
+/** Nút khởi tạo quy trình cho dòng đang xem: tên biến của quy trình -> khóa hoặc trường của dòng (ADR 0026). */
+export type Action = { id: string; label: string; process: string; variables: Record<string, string> };
 
 /** Loại đối tượng con: khai như cha, thêm tên ngắn dùng trong đường dẫn và cột chứa khóa của cha. */
 export type Child = CatalogNode & { id: string; label: string; via: string };
@@ -46,6 +50,15 @@ export const firstColumn = (config: CatalogNode) => config.list.columns[0] ?? ke
 export const titleField = (config: CatalogNode) => config.detail?.title ?? firstColumn(config);
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const FIELD_PATH = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/;
+
+/** Giá trị của một trường trên dòng Hasura trả; trường qua quan hệ nằm trong đối tượng con cùng tên quan hệ. */
+export function fieldValue(row: Row, name: string): unknown {
+  const [head = "", tail] = name.split(".");
+  const value = row[head];
+  if (tail === undefined) return value;
+  return typeof value === "object" && value !== null ? (value as Row)[tail] : undefined;
+}
 
 /**
  * Lỗi của cấu hình mà schema không diễn đạt được (tên trỏ tới trường chưa khai) và luật tên mà câu truy vấn dựa
@@ -55,9 +68,12 @@ const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 function nodeProblems(config: CatalogNode): string[] {
   const problems: string[] = [];
   const names = config.fields.map((field) => field.name);
-  const identifiers = [config.source, keyOf(config), ...names, ...(config.detail?.children ?? []).map((c) => c.via)];
+  const identifiers = [config.source, keyOf(config), ...(config.detail?.children ?? []).map((c) => c.via)];
   for (const name of identifiers) {
     if (!IDENTIFIER.test(name)) problems.push(`"${name}" không phải tên hợp lệ (chỉ chữ không dấu, số, gạch dưới)`);
+  }
+  for (const name of names) {
+    if (!FIELD_PATH.test(name)) problems.push(`"${name}" không phải tên trường hợp lệ (cột, hoặc quan hệ.cột)`);
   }
   for (const name of new Set(names.filter((name, index) => names.indexOf(name) !== index))) {
     problems.push(`trường "${name}" được khai hai lần trong fields`);
@@ -72,6 +88,9 @@ function nodeProblems(config: CatalogNode): string[] {
   for (const [where, list] of used) {
     for (const name of list) {
       if (!names.includes(name)) problems.push(`${where} dùng trường "${name}" chưa khai trong fields`);
+      // Danh sách đọc một bảng và Hasura lọc, xếp theo cột của chính bảng; tên có dấu chấm ghép vào câu truy vấn
+      // danh sách sẽ làm hỏng cả câu.
+      else if (!IDENTIFIER.test(name)) problems.push(`${where} chỉ nhận cột của chính bảng, không nhận "${name}"`);
     }
   }
   for (const name of config.list.filters ?? []) {
@@ -84,6 +103,26 @@ function nodeProblems(config: CatalogNode): string[] {
     // Tìm chữ dùng phép so mẫu của CSDL, chỉ có trên cột chữ; trên cột số hay ngày Hasura từ chối cả câu truy vấn.
     if (field && ((field.type ?? "text") !== "text" || field.choices)) {
       problems.push(`list.search dùng trường "${name}" không phải kiểu text`);
+    }
+  }
+  return [...problems, ...actionProblems(config, names)];
+}
+
+/** Nút trỏ tới trường chưa khai thì biến của quy trình nhận giá trị trống; báo ngay thay vì đợi người dùng bấm. */
+function actionProblems(config: CatalogNode, names: string[]): string[] {
+  const problems: string[] = [];
+  const actions = config.detail?.actions ?? [];
+  const ids = actions.map((action) => action.id);
+  for (const id of new Set(ids.filter((id, index) => ids.indexOf(id) !== index))) {
+    problems.push(`hai nút cùng tên ngắn "${id}"`);
+  }
+  for (const action of actions) {
+    for (const [variable, source] of Object.entries(action.variables)) {
+      if (source !== keyOf(config) && !names.includes(source)) {
+        problems.push(
+          `nút "${action.label}" lấy biến "${variable}" từ "${source}", không phải khóa hay trường đã khai`,
+        );
+      }
     }
   }
   return problems;
@@ -165,4 +204,26 @@ export function display(field: Field, value: unknown): string {
     return (field.type === "date" ? date : dateTime).format(time);
   }
   return String(value);
+}
+
+/** Một giá trị mà nút sẽ gửi, kèm nhãn của trường để hộp xác nhận cho người bấm thấy trước. */
+export type Sent = { label: string; text: string };
+
+/**
+ * Biến gửi khi bấm nút, lấy từ dòng đang xem với kiểu Hasura trả (số vẫn là số, để cổng rẽ nhánh của BPMN so được).
+ * `shown` là các giá trị lấy từ trường đã khai; khóa của dòng là mã kỹ thuật nên không hiện. `missing` là nhãn của
+ * trường còn trống: gửi giá trị trống thì quy trình đi nhánh mặc định hoặc hồ sơ thiếu thông tin, nên không cho gửi.
+ */
+export function actionVariables(config: CatalogNode, action: Action, row: Row) {
+  const variables: Record<string, unknown> = {};
+  const shown: Sent[] = [];
+  const missing: string[] = [];
+  for (const [variable, source] of Object.entries(action.variables)) {
+    const value = fieldValue(row, source);
+    const field = fieldOf(config, source);
+    if (value === null || value === undefined || value === "") missing.push(field?.label ?? source);
+    else variables[variable] = value;
+    if (field) shown.push({ label: field.label, text: display(field, value) });
+  }
+  return { variables, shown, missing };
 }

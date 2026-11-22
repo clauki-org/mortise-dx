@@ -2,15 +2,27 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Màn hình chi tiết của thành phần danh mục: mọi trường của một dòng theo thứ tự gói khai, bảng của từng loại đối
-// tượng con (detail.children) và đường về các đối tượng cha. Catalog.tsx mở màn hình này sau khi đã kiểm cấu hình
-// và đọc đường dẫn thành các chặng từ đối tượng ngoài cùng tới dòng đang xem.
+// tượng con (detail.children), nút khởi tạo quy trình (detail.actions) và đường về các đối tượng cha. Catalog.tsx
+// mở màn hình này sau khi đã kiểm cấu hình và đọc đường dẫn thành các chặng từ đối tượng ngoài cùng tới dòng đang
+// xem.
 
 import { Alert, Anchor, Breadcrumbs, Loader, Paper, Stack, Table, Title } from "@mantine/core";
 import { useState } from "react";
 import { Link } from "react-router";
 import { useQuery } from "urql";
+import { CatalogActions } from "./CatalogActions";
 import { CatalogTable } from "./CatalogTable";
-import { type CatalogConfig, type Child, display, fieldOf, keyOf, type Row, type Step, titleField } from "./catalog";
+import {
+  type CatalogConfig,
+  type Child,
+  display,
+  fieldOf,
+  fieldValue,
+  keyOf,
+  type Row,
+  type Step,
+  titleField,
+} from "./catalog";
 import { chainQuery, chainVariables, emptyState } from "./catalogQuery";
 
 /** Tiêu đề của một dòng theo cấu hình; trường tiêu đề trống thì dùng giá trị khóa. */
@@ -93,13 +105,14 @@ export function CatalogRecord({ config, basePath, steps }: Props) {
       <Title order={1} size="h2">
         {titleOf(current, row)}
       </Title>
+      <CatalogActions node={node} row={row} />
       <Paper withBorder radius="md">
         <Table variant="vertical" layout="fixed" verticalSpacing="sm" horizontalSpacing="md">
           <Table.Tbody>
             {node.fields.map((field) => (
               <Table.Tr key={field.name}>
                 <Table.Th w={240}>{field.label}</Table.Th>
-                <Table.Td>{display(field, row[field.name])}</Table.Td>
+                <Table.Td>{display(field, fieldValue(row, field.name))}</Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>

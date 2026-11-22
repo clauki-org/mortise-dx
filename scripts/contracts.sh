@@ -94,6 +94,10 @@ for item in app.get("menu", []):
 ' "$app" "$component")
     if ((${#configs[@]})); then
       "${checker[@]}" --schemafile "contracts/$component.schema.json" "${configs[@]}"
+      # Nút của danh mục chỉ mở quy trình của chính gói này (ADR 0026), nên đối chiếu với BPMN của gói.
+      if [[ "$component" == catalog ]]; then
+        "${yaml[@]}" scripts/check-catalog-actions.py --bpmn "$app"**/*.bpmn20.xml --catalog "${configs[@]}"
+      fi
     fi
   done
   # Luật ngưỡng (mục `rules`) và văn bản cho trợ lý (mục `knowledge`) cũng nằm ở đường dẫn do app.yaml khai.

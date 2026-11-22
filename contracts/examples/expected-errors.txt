@@ -23,12 +23,15 @@ assistant.document-not-slug.yaml	$.documents[0]	'knowledge/example-rules.yaml' d
 assistant.duplicate-document.yaml	$.documents	['example-rules', 'example-rules'] has non-unique elements
 assistant.no-documents.yaml	$.documents	[] should be non-empty
 assistant.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
+catalog.action-missing-process.yaml	$.detail.actions[0]	'process' is a required property
+catalog.action-reserved-variable.yaml	$.detail.actions[0].variables	'initiator' should not be valid under {'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}
 catalog.blank-field-label.yaml	$.fields[0].label	'   ' does not match '\\\\S'
 catalog.child-id-not-slug.yaml	$.detail.children[0].id	'No Such/Child' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
 catalog.child-missing-id.yaml	$.detail.children[0]	'id' is a required property
 catalog.child-missing-via.yaml	$.detail.children[0]	'via' is a required property
 catalog.duplicate-column.yaml	$.list.columns	['name', 'name'] has non-unique elements
 catalog.empty-choices.yaml	$.fields[0].choices	[] should be non-empty
+catalog.field-path-too-deep.yaml	$.fields[1].name	'category.group.name' does not match '^[A-Za-z_][A-Za-z0-9_]*(\\\\.[A-Za-z_][A-Za-z0-9_]*)?$'
 catalog.missing-source.yaml	$	'source' is a required property
 catalog.no-columns.yaml	$.list.columns	[] should be non-empty
 catalog.no-fields.yaml	$.fields	[] should be non-empty

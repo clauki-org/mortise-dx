@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Bản mô tả thành phần danh mục theo contracts/component.schema.json; `make check-fast` kiểm tệp này.
-# Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, catalog.ts). Mỗi dòng dưới đây đã được
-# chạy thử trên giao diện; đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
+# Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, CatalogActions.tsx,
+# catalog.ts, catalogQuery.ts). Mỗi dòng dưới đây đã được chạy thử trên giao diện; đổi hành vi của thành phần thì sửa
+# tệp này trong cùng pull request.
 
 component: catalog
 summary: Danh sách và màn hình chi tiết của một loại đối tượng cùng các đối tượng con của nó, đọc qua GraphQL theo cấu hình của gói.
@@ -21,10 +22,20 @@ capabilities:
   - Giá trị hiện theo kiểu của trường (số, ngày, ngày giờ); trường có choices hiện chữ thay cho giá trị lưu.
   - Quan hệ cha–con nhiều cấp, khai lồng trong cùng tệp bằng detail.children. Màn hình chi tiết của cha có bảng của
     từng loại đối tượng con, tìm, lọc và phân trang được; màn hình chi tiết của con có đường về mọi cấp cha.
+  - Màn hình chi tiết hiện được cột của bảng khác qua quan hệ một-một mà Hasura khai cho bảng, khai trong fields
+    dạng <quan hệ>.<cột>.
+  - Nút trên màn hình chi tiết (detail.actions, ở mọi cấp cha–con) khởi tạo một quy trình của gói cho dòng đang xem
+    qua API quy trình, với biến lấy từ khóa hay trường của dòng (ADR 0026). Hộp xác nhận hiện các giá trị sẽ gửi;
+    trường còn trống thì không cho gửi. Bấm đúp hay gửi lại sau lỗi trong cùng hộp chỉ tạo một quy trình
+    (Idempotency-Key).
   - Nơi gọi chỉ đưa cấu hình và địa chỉ gốc; thành phần không cần menu, bảng hay cấu hình nào khác của hệ thống.
 limits:
-  - Chỉ đọc; không thêm, sửa hay xóa dòng.
-  - Mỗi danh sách đọc một bảng; không hiện cột của bảng khác, kể cả tên của đối tượng cha.
+  - Không thêm, sửa hay xóa dòng; việc ghi duy nhất là khởi tạo quy trình bằng nút gói khai.
+  - Mỗi danh sách đọc một bảng; không hiện cột của bảng khác, kể cả tên của đối tượng cha. Cột qua quan hệ chỉ hiện ở
+    màn hình chi tiết, chỉ một cấp, không tìm, lọc hay sắp xếp được.
+  - Nút chỉ mở quy trình của cùng gói, chỉ khởi tạo; không hiện trạng thái hồ sơ đã lập và không chặn hai hồ sơ cùng
+    mở cho một dòng. Nút hiện cho mọi người đọc được dòng; ai được khởi tạo do workflow-api quyết định.
+  - Giá trị gửi cho quy trình do trình duyệt đọc từ dòng lúc bấm; quy trình không tự đọc lại từ CSDL.
   - Không hiện tổng số dòng và tổng số trang.
   - Mỗi lúc chỉ sắp xếp theo một cột; thứ tự của chữ có dấu là thứ tự so sánh của CSDL.
   - Ô tìm không dò trường số, trường ngày và trường có choices.

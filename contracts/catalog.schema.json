@@ -34,7 +34,10 @@
       "additionalProperties": false,
       "required": ["name", "label"],
       "properties": {
-        "name": { "description": "Tên cột trong bảng", "$ref": "#/$defs/identifier" },
+        "name": {
+          "description": "Tên cột trong bảng, hoặc <quan hệ>.<cột> để đọc một cột qua quan hệ một-một mà Hasura khai cho bảng. Trường qua quan hệ chỉ hiện ở màn hình chi tiết và làm nguồn biến của nút; danh sách, ô tìm, ô lọc, thứ tự và tiêu đề chỉ nhận cột của chính bảng.",
+          "$ref": "#/$defs/field_path"
+        },
         "label": { "description": "Tên hiển thị của trường", "$ref": "#/$defs/text" },
         "type": {
           "description": "Cách hiển thị giá trị. Bỏ trống là text.",
@@ -106,8 +109,47 @@
           "description": "Các loại đối tượng con, mỗi loại hiện thành một bảng dưới phần chi tiết. Bấm một dòng con thì mở màn hình chi tiết của nó, có thể lại có đối tượng con.",
           "type": "array",
           "items": { "$ref": "#/$defs/child" }
+        },
+        "actions": {
+          "description": "Các nút trên màn hình chi tiết; mỗi nút khởi tạo một quy trình của gói cho dòng đang xem, qua API quy trình của lõi",
+          "type": "array",
+          "items": { "$ref": "#/$defs/action" }
         }
       }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "process", "variables"],
+      "properties": {
+        "id": {
+          "description": "Tên ngắn của nút; không trùng với nút khác của cùng loại đối tượng",
+          "$ref": "#/$defs/slug"
+        },
+        "label": { "description": "Chữ trên nút và tiêu đề hộp xác nhận", "$ref": "#/$defs/text" },
+        "process": {
+          "description": "Khóa của quy trình (id của phần tử <process>) trong BPMN của cùng gói; `make check-fast` kiểm",
+          "$ref": "#/$defs/slug"
+        },
+        "variables": {
+          "description": "Biến gửi khi khởi tạo: tên biến của quy trình và trường của dòng đang xem cho giá trị của biến. Trường là khóa của dòng hoặc một trường đã khai trong fields; giá trị gửi đi giữ nguyên kiểu mà Hasura trả (số vẫn là số).",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/variable" },
+          "additionalProperties": { "$ref": "#/$defs/field_path" }
+        }
+      }
+    },
+    "variable": {
+      "description": "Tên biến của quy trình, cùng luật với $defs.variable của contracts/workflow.schema.json: không trùng biến dành riêng mà lõi đặt (docs/api.md)",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "not": { "enum": ["initiator", "initiatorName", "tenant", "idempotencyKey"] }
+    },
+    "field_path": {
+      "description": "Tên cột, hoặc <quan hệ>.<cột> đúng một cấp; mỗi phần theo luật tên của GraphQL như identifier",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)?$"
     },
     "child": {
       "description": "Một loại đối tượng con, khai như đối tượng cha, thêm cột nối về cha",

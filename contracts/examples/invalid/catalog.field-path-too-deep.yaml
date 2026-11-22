@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: trường đọc qua hai cấp quan hệ.
+# Thành phần chỉ dựng câu truy vấn cho một cấp; nếu lọt, màn hình chi tiết báo lỗi truy vấn thay vì hiện dòng.
+
+title: Danh mục
+source: app_example_items
+fields:
+  - name: name
+    label: Tên
+  - name: category.group.name
+    label: Khối
+list:
+  columns: [name]
