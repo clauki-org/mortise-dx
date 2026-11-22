@@ -41,9 +41,13 @@ def sent(monkeypatch) -> list[dict]:
     monkeypatch.setattr(flowable, "candidate_groups", lambda _id: frozenset({"manager"}))
     monkeypatch.setattr(flowable, "claim_and_complete", complete)
     monkeypatch.setattr(flowable, "start", start)
-    monkeypatch.setattr(flowable, "decisions", lambda _key, _tenant: frozenset({"approved"}))
+    monkeypatch.setattr(flowable, "definition", lambda _key, _tenant: _definition({"approved"}))
     monkeypatch.setitem(app.dependency_overrides, caller_from_token, lambda: MANAGER_A)
     return calls
+
+
+def _definition(decisions: set[str] = frozenset(), authorities: set[str] = frozenset()):
+    return flowable.Definition(frozenset(decisions), frozenset(authorities))
 
 
 client = TestClient(app)
@@ -81,7 +85,7 @@ def test_start_stops_when_decisions_cannot_be_read(sent, monkeypatch):
     def unreadable(_key, _tenant):
         raise Denied(502, "Không đọc được BPMN")
 
-    monkeypatch.setattr(flowable, "decisions", unreadable)
+    monkeypatch.setattr(flowable, "definition", unreadable)
     response = client.post(START, json={"variables": {"title": "Yêu cầu mẫu"}})
     assert response.status_code == 502
     assert sent == []

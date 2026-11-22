@@ -70,7 +70,8 @@ if [[ "$public_url" =~ ^http://(localhost|127\.0\.0\.1)(:|/|$) ]]; then
 fi
 
 # username  tenant   vai trò thêm. admin.<x> quản trị một tenant (tenant_admin): gói dùng vai trò này để tenant tự
-# sửa dữ liệu cấu hình của mình, ví dụ phân công cán bộ.
+# sửa dữ liệu cấu hình của mình, ví dụ phân công cán bộ. admin.tinh sửa bảng phân cấp thẩm quyền của các xã con
+# (ADR 0028); manager.tinh là người duyệt của tỉnh, có OTP như mọi manager.
 users=(
   "user.a  xa-a  -"
   "manager.a  xa-a  manager"
@@ -82,6 +83,8 @@ users=(
   "manager.c  xa-c  manager"
   "admin.c  xa-c  tenant_admin"
   "leader.tinh  tinh-mau  rollup_reader"
+  "admin.tinh  tinh-mau  tenant_admin"
+  "manager.tinh  tinh-mau  manager"
 )
 
 # Tệp realm chỉ được nạp khi Keycloak khởi động lần đầu. Bản cài dựng trước khi có vai trò rollup_reader và tenant
@@ -137,11 +140,17 @@ echo "postgres: tenant demo tinh-mau (cha), xa-a, xa-b, xa-c"
 # Quyền dữ liệu của Hasura: áp tệp khai báo theo kiểu ghi đè, nên chạy lại seed cũng sửa được quyền đã bị đổi sai.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py apply
 
+# Bảng phân cấp mặc định của quy trình mẫu core-authority (ADR 0028), nạp trước khi deploy để hồ sơ đầu tiên đã có dòng
+# để chọn. Chỉ thêm dòng chưa có: dòng đã sửa giữ nguyên khi seed lại; `make smoke` tự đặt lại dòng của nó.
+uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py authorities \
+  --owner core contracts/examples/authority.example.yaml
 # Quy trình mẫu dùng để kiểm thử lõi và khai báo bước của nó, cho mọi tenant có trong core.tenants; chung một bộ nạp
 # với gói (scripts/app-deploy.py), nên chạy lại không deploy lại tệp không đổi. Ví dụ của hợp đồng viết cho
-# core-approval nên cũng là khai báo của nó; `make check-fast` đã kiểm tệp theo schema và theo BPMN.
+# core-approval nên cũng là khai báo của nó; khai báo của quy trình mẫu khác nằm cạnh BPMN. `make check-fast` đã kiểm
+# tệp theo schema và theo BPMN.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py workflows \
-  --bpmn core/workflow/fixtures/*.bpmn20.xml --steps contracts/examples/workflow.example.yaml
+  --bpmn core/workflow/fixtures/*.bpmn20.xml \
+  --steps contracts/examples/workflow.example.yaml core/workflow/fixtures/*.yaml
 # Luật ngưỡng mẫu của lõi, mở core-approval; `make smoke` kiểm đường mở hồ sơ khi vượt ngưỡng bằng luật này.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py rules \
   --owner core contracts/examples/threshold-rule.example.yaml

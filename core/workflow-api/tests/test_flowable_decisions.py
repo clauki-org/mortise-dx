@@ -32,34 +32,44 @@ def rest(monkeypatch) -> dict:
         return httpx.Response(200, content=state["bpmn"])
 
     monkeypatch.setattr(flowable, "_call", call)
-    monkeypatch.setattr(flowable, "_decisions", {})
+    monkeypatch.setattr(flowable, "_definitions", {})
     return state
 
 
 def test_decisions_come_from_the_latest_definition(rest):
-    assert "approved" in flowable.decisions("p", "xa-a")
+    assert "approved" in flowable.definition("p", "xa-a").decisions
     assert rest["calls"][-1] == "/repository/process-definitions/p:1:a/resourcedata"
 
 
 def test_bpmn_is_read_once_per_definition(rest):
-    flowable.decisions("p", "xa-a")
-    flowable.decisions("p", "xa-a")
+    flowable.definition("p", "xa-a")
+    flowable.definition("p", "xa-a")
     assert sum(path.endswith("/resourcedata") for path in rest["calls"]) == 1
     # Deploy phiên bản mới: cùng khóa, mã định nghĩa khác, nên BPMN được đọc lại.
     rest["definitions"] = ["p:2:b"]
     rest["bpmn"] = BPMN.replace(b"${approved}", b"${accepted}")
-    assert "accepted" in flowable.decisions("p", "xa-a")
+    assert "accepted" in flowable.definition("p", "xa-a").decisions
 
 
 def test_missing_process_is_404(rest):
     rest["definitions"] = []
     with pytest.raises(Denied) as error:
-        flowable.decisions("p", "xa-a")
+        flowable.definition("p", "xa-a")
     assert error.value.status == 404
 
 
 def test_unreadable_bpmn_refuses_the_start(rest):
     rest["bpmn"] = b"<definitions"
     with pytest.raises(Denied) as error:
-        flowable.decisions("p", "xa-a")
+        flowable.definition("p", "xa-a")
     assert error.value.status == 502
+
+
+def test_authority_steps_come_from_the_same_single_read(rest):
+    rest["bpmn"] = BPMN.replace(
+        b'<userTask id="t"/>',
+        b'<userTask id="t" xmlns:f="http://flowable.org/bpmn" f:candidateGroups="${authority_t}"/>',
+    )
+    assert flowable.definition("p", "xa-a").authorities == {"t"}
+    assert flowable.definition("p", "xa-a").decisions == {"approved"}
+    assert sum(path.endswith("/resourcedata") for path in rest["calls"]) == 1

@@ -16,6 +16,8 @@ knowledge:
   - knowledge/example-rules.yaml
 workflows:
   - bpmn/approval.bpmn20.xml
+authorities:
+  - authorities/approval.yaml
 settings:
   approval_limit: 1000
   answer_within: P5D

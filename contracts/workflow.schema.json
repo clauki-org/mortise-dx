@@ -88,10 +88,11 @@
       }
     },
     "variable": {
-      "description": "Tên biến của quy trình; không được trùng biến dành riêng mà lõi đặt (docs/api.md)",
+      "description": "Tên biến của quy trình; không được trùng biến dành riêng mà lõi đặt, kể cả tiền tố `authority_` (docs/api.md)",
       "type": "string",
       "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
-      "not": { "enum": ["initiator", "initiatorName", "tenant", "idempotencyKey"] }
+      "not": { "enum": ["initiator", "initiatorName", "tenant", "idempotencyKey"] },
+      "allOf": [{ "not": { "pattern": "^authority_" } }]
     },
     "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
     "text": {

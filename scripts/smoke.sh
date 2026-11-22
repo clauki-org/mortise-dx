@@ -514,6 +514,69 @@ check "Tệp tải lên sau khi quét có trạng thái clean" \
   "$(curl -s -H "Authorization: Bearer $user_a" "$files/$file_id" | jq -r .status)" clean
 
 
+# Bảng phân cấp thẩm quyền (ADR 0028): quy trình mẫu core-authority lấy vai trò của bước `decide` từ
+# core.step_authorities lúc khởi tạo. Quản trị của tỉnh (tenant cha) đổi dòng của xã A qua GraphQL; hồ sơ lập sau đi
+# theo dòng mới, hồ sơ đã lập giữ người nhận cũ. Dòng của quy trình mẫu được đặt lại lúc đầu và lúc cuối, để lần chạy
+# dừng giữa chừng không làm lệch lần sau.
+reset_authorities() {
+  sql -c "DELETE FROM core.step_authorities WHERE process = 'core-authority'" >/dev/null
+  uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py authorities \
+    --owner core contracts/examples/authority.example.yaml >/dev/null
+}
+# authority_case TOKEN AMOUNT: in "mã trạng thái<TAB>thân phản hồi" của lần lập hồ sơ.
+authority_case() {
+  api POST "$1" /processes/core-authority/instances "{\"variables\":{\"title\":\"Kiểm thử phân cấp\",\"amount\":$2}}"
+}
+case_id() { authority_case "$@" | cut -f2 | jq -r '.id // empty'; }
+seen_by() { [[ -n "$(task_in "$1" "$2")" ]] && echo thấy || echo không; }
+set_root_role() { # TOKEN TENANT VAI_TRÒ: in affected_rows, hoặc mã lỗi của Hasura
+  jq -nc --arg t "$2" --arg r "$3" '{query: "mutation($t: String!, $r: String!) { update_core_step_authorities(
+    where: {tenant_id: {_eq: $t}, process: {_eq: \"core-authority\"}, rule: {_eq: \"default\"}},
+    _set: {role: $r}) { affected_rows } }", variables: {t: $t, r: $r}}' |
+    curl -s -X POST "$base/v1/graphql" -H "Authorization: Bearer $1" -H 'X-Hasura-Role: tenant_admin' \
+      -H 'Content-Type: application/json' -d @- |
+    jq -r '.data.update_core_step_authorities.affected_rows // .errors[0].extensions.code'
+}
+reset_authorities
+admin_a=$(token admin.a)
+admin_tinh=$(token admin.tinh)
+before_case=$(case_id "$user_a" 10)
+check "Bảng phân cấp: hồ sơ đầu tới manager của xã A" \
+  "$(seen_by "$manager_a" "$before_case") $(seen_by "$admin_a" "$before_case")" "thấy không"
+check "Bảng phân cấp: quản trị xã A không sửa được bảng của chính xã mình" "$(set_root_role "$admin_a" xa-a tenant_admin)" 0
+check "Bảng phân cấp: tenant không có cha (tỉnh) không tự sửa được bảng của mình" \
+  "$(set_root_role "$admin_tinh" tinh-mau tenant_admin)" 0
+check "Bảng phân cấp: quản trị tỉnh đổi dòng của xã A sang tenant_admin" "$(set_root_role "$admin_tinh" xa-a tenant_admin)" 1
+check "Bảng phân cấp: nhật ký ghi đúng người sửa và xã bị sửa" "$(sql -c "SELECT tenant_id || ' ' || actor_role FROM core.audit_log
+  WHERE table_name = 'core.step_authorities' AND op = 'UPDATE' AND actor = '$(claims "$admin_tinh" | jq -r .sub)'
+  ORDER BY id DESC LIMIT 1")" "xa-a tenant_admin"
+after_case=$(case_id "$user_a" 10)
+check "Bảng phân cấp: hồ sơ lập sau tới tenant_admin, không tới manager" \
+  "$(seen_by "$admin_a" "$after_case") $(seen_by "$manager_a" "$after_case")" "thấy không"
+check "Bảng phân cấp: hồ sơ lập trước khi đổi vẫn ở manager" "$(seen_by "$manager_a" "$before_case")" thấy
+large_case=$(case_id "$user_a" 5000)
+check "Bảng phân cấp: vượt ngưỡng 1000 thì theo dòng ngưỡng (manager), không theo dòng gốc" \
+  "$(seen_by "$manager_a" "$large_case") $(seen_by "$admin_a" "$large_case")" "thấy không"
+IFS=$'\t' read -r status body < <(api POST "$admin_a" "/tasks/$(task_in "$admin_a" "$after_case")/complete" '{}')
+check "Bảng phân cấp: bước đọc bảng đòi OTP với cả tenant_admin" "$status $(jq -r '.error | test("OTP")' <<<"$body")" \
+  "403 true"
+for pair in "$before_case dòng gốc" "$large_case dòng ngưỡng"; do
+  read -r authority_task row <<<"$pair"
+  IFS=$'\t' read -r status _ < <(api POST "$manager_a" "/tasks/$(task_in "$manager_a" "$authority_task")/complete" '{}')
+  check "Bảng phân cấp: manager.a có OTP hoàn thành được hồ sơ theo $row" "$status" 204
+done
+IFS=$'\t' read -r status _ < <(api POST "$user_a" /processes/core-authority/instances \
+  '{"variables":{"authority_decide":"user"}}')
+check "Bảng phân cấp: người lập không tự đặt được biến authority_*" "$status" 400
+sql -c "DELETE FROM core.step_authorities WHERE tenant_id = 'xa-a' AND process = 'core-authority'" >/dev/null
+IFS=$'\t' read -r status body < <(authority_case "$user_a" 10)
+check "Bảng phân cấp: bước chưa có dòng nào thì từ chối lập hồ sơ" \
+  "$status $(jq -r '.error | test("bảng phân cấp")' <<<"$body")" "409 true"
+# Dọn: hồ sơ thứ hai không ai trong bản demo có OTP và vai trò tenant_admin để hoàn thành, nên xóa thẳng trong Flowable.
+curl -fsS -o /dev/null -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" -X DELETE \
+  "http://127.0.0.1:${FLOWABLE_PORT:-8083}/flowable-rest/service/runtime/process-instances/$after_case" || true
+reset_authorities
+
 # Dữ liệu thiết bị (context-api trước Scorpio, ADR 0012): ghi một thiết bị cho xa-a thẳng vào Scorpio
 # qua cổng chỉ mở trong máy chủ, như cầu nối MQTT sẽ làm, rồi đọc qua cổng chung bằng token.
 context="$base/v1/context/entities"

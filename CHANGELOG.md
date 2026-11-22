@@ -17,6 +17,13 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   gói kèm Idempotency-Key hoặc thêm một dòng vào bảng của gói; `make check-fast` kiểm biểu mẫu với BPMN, khai báo
   bước và quyền Hasura của gói. Khai báo bước có `details` để người xử lý thấy giá trị người lập điền. Gói kho vật tư
   có mục "Lập đề nghị cấp vật tư" và "Thêm vật tư vào kho" (quản trị xã).
+- Bảng phân cấp thẩm quyền theo tenant (ADR 0028, `core.step_authorities`): bước ghi `candidateGroups` là
+  `${authority_<bước>}` nhận vai trò do workflow-api chọn lúc khởi tạo, theo ngưỡng của một biến của hồ sơ; đổi dòng
+  thì hồ sơ lập sau tới vai trò mới. Quản trị của tenant cha (`admin.tinh`) sửa vai trò và ngưỡng của tenant con qua
+  GraphQL; bước đọc bảng cần OTP với mọi vai trò; tiền tố `authority_` dành riêng cho lõi; gói khai dòng mặc định ở
+  `authorities` của app.yaml (`contracts/authority.schema.json`). Tài khoản demo mới `admin.tinh`, `manager.tinh`.
+  workflow-api đọc CSDL bằng vai trò chỉ đọc `workflow_api` (`WORKFLOW_DB_PASSWORD`): bản cài cũ chạy `make env`, dựng
+  lại workflow-api rồi `make up` và `make seed`.
 - Trợ lý hỏi văn bản chọn nhà cung cấp mô hình qua cấu hình (bổ sung của ADR 0021): mặc định Ollama tại chỗ như trước;
   `ASSISTANT_LLM_PROVIDER=openai-compatible` cùng `ASSISTANT_LLM_BASE_URL`, `ASSISTANT_LLM_MODEL`,
   `ASSISTANT_LLM_API_KEY` gọi một API tương thích OpenAI, khai thiếu thì 503 chỉ biến cần sửa. Câu trả lời ghi mô

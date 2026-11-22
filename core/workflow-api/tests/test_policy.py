@@ -120,3 +120,26 @@ def test_approver_without_second_factor_still_sees_not_found_for_other_tenant():
 
 def test_user_without_approver_role_needs_no_second_factor():
     check_can_complete(USER_A, review_task(candidate_groups=frozenset({"user"}), category=None))
+
+
+def test_authority_step_needs_a_second_factor_for_any_role():
+    # Bảng phân cấp đổi bước sang tenant_admin thì OTP vẫn bắt buộc, không chỉ với manager (ADR 0028).
+    admin = Caller(
+        sub="a-a",
+        username="admin.a",
+        tenant="xa-a",
+        roles=frozenset({"user", "tenant_admin"}),
+        methods=frozenset({"pwd"}),
+    )
+    task = review_task(candidate_groups=frozenset({"tenant_admin"}), authority=True)
+    with pytest.raises(Denied) as denied:
+        check_can_complete(admin, task)
+    assert denied.value.status == 403
+    check_can_complete(replace(admin, methods=frozenset({"pwd", "otp"})), task)
+
+
+def test_authority_prefix_is_reserved():
+    with pytest.raises(Denied) as error:
+        check_variables({"authority_review": "user"})
+    assert "authority_" in error.value.reason
+    check_variables({"authorityNote": "ok"})

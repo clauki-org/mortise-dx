@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/authority.schema.json từ chối: vai trò chứa dấu phẩy. Flowable tách nhóm ứng viên
+# theo dấu phẩy, nên một dòng sẽ mở việc cho hai nhóm.
+
+process: core-authority
+step: decide
+rows:
+  - rule: default
+    role: manager,user

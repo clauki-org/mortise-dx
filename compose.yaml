@@ -78,6 +78,7 @@ services:
       FILES_DB_PASSWORD: ${FILES_DB_PASSWORD:?run make env}
       IOT_BRIDGE_DB_PASSWORD: ${IOT_BRIDGE_DB_PASSWORD:?run make env}
       ASSISTANT_DB_PASSWORD: ${ASSISTANT_DB_PASSWORD:?run make env}
+      WORKFLOW_DB_PASSWORD: ${WORKFLOW_DB_PASSWORD:?run make env}
     entrypoint: ["/roles.sh"]
     volumes:
       - ./core/postgres/roles.sh:/roles.sh:ro
@@ -188,7 +189,7 @@ services:
       start_period: 20s
 
   workflow-api:
-    # Lớp kiểm soát quyền trước Flowable: tenant, vai trò, quy tắc bốn mắt.
+    # Lớp kiểm soát quyền trước Flowable: tenant, vai trò, quy tắc bốn mắt; vai trò của bước theo bảng phân cấp.
     build: core/workflow-api
     restart: unless-stopped
     environment:
@@ -199,11 +200,19 @@ services:
       FLOWABLE_PASSWORD: ${FLOWABLE_ADMIN_PASSWORD}
       # Client Keycloak của dịch vụ được mở quy trình thay cho tenant ghi ở header (ADR 0017), cách nhau dấu phẩy.
       WORKFLOW_SERVICE_CLIENTS: mortise-iot-bridge
+      # Chỉ đọc bảng phân cấp thẩm quyền và bảng tenant (ADR 0028).
+      WORKFLOW_DB_HOST: postgres
+      WORKFLOW_DB_NAME: mortise
+      WORKFLOW_DB_USER: workflow_api
+      WORKFLOW_DB_PASSWORD: ${WORKFLOW_DB_PASSWORD:?run make env}
     depends_on:
       keycloak:
         condition: service_healthy
       flowable:
         condition: service_healthy
+      # Bảng phân cấp và quyền đọc của workflow_api do migration của lõi tạo.
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD

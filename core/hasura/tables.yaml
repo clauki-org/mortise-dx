@@ -14,3 +14,27 @@
       permission:
         columns: [id, name, parent_id, created_at]
         filter: { id: { _eq: X-Hasura-Tenant-Id } }
+
+# Bảng phân cấp thẩm quyền (ADR 0028). Chỉ tenant_admin của tenant cha đọc và sửa, trên dòng của các tenant con: tenant
+# con tự sửa được thì xã tự đổi ai duyệt hồ sơ mà tỉnh đã phân cấp. Tenant không có cha thì không ai sửa qua GraphQL,
+# chỉ người vận hành trong CSDL. Chỉ sửa được vai trò và ngưỡng: đổi tenant, quy trình, bước hay mã dòng là chuyển
+# dòng sang chỗ khác; đổi biến so sánh thì dòng ngưỡng so một biến khác hẳn. Thêm và xóa dòng chưa mở; dòng mới đến từ
+# gói. Quan hệ tenant chỉ dùng để lọc, nên tenant_admin không cần quyền đọc thêm cột nào của core.tenants.
+- table: { schema: core, name: step_authorities }
+  object_relationships:
+    - name: tenant
+      using:
+        manual_configuration:
+          remote_table: { schema: core, name: tenants }
+          column_mapping: { tenant_id: id }
+  select_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [tenant_id, app, process, step, rule, variable, above, role, scope, updated_at]
+        filter: { tenant: { parent_id: { _eq: X-Hasura-Tenant-Id } } }
+  update_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [role, above]
+        filter: { tenant: { parent_id: { _eq: X-Hasura-Tenant-Id } } }
+        check: { tenant: { parent_id: { _eq: X-Hasura-Tenant-Id } } }

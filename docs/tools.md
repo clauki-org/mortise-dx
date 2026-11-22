@@ -139,6 +139,9 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - Chỉ người được giao hoặc người có vai trò ứng viên mới hoàn thành được task, và chỉ trong tenant của mình.
   - Task đánh dấu `four-eyes` không cho người khởi tạo tự hoàn thành (quy tắc bốn mắt).
   - Người có vai trò `manager` chỉ hoàn thành được task khi claim `amr` của token có `otp` (đã đăng nhập hai bước).
+  - Bước có `candidateGroups` là `${authority_<bước>}` nhận vai trò từ bảng phân cấp `core.step_authorities` lúc khởi
+    tạo, đọc bằng vai trò CSDL `workflow_api` chỉ có quyền đọc bảng đó và `core.tenants`; hoàn thành bước đó cần
+    `otp` với mọi vai trò ([ADR 0028](adr/0028-step-authority-table.md)).
 - **Cấu hình:** mã ở `core/workflow-api/`; quy tắc quyền là các hàm thuần trong `app/policy.py`, có kiểm thử ở
   `tests/`. Phiên bản thư viện khóa trong `uv.lock`.
 - **Xem:** `make test` (kiểm thử đơn vị), `make smoke` (kiểm tra đầu-cuối); các endpoint ở [api.md](api.md).

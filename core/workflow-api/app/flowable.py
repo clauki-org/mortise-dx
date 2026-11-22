@@ -4,8 +4,11 @@
 # Gọi REST API của Flowable bằng tài khoản kỹ thuật. Chỉ module này biết đường dẫn và
 # định dạng của Flowable; phần còn lại làm việc với dict đơn giản.
 
+from dataclasses import dataclass
+
 import httpx
 
+from .authority import authority_steps
 from .config import settings
 from .decisions import decision_variables
 from .policy import IDEMPOTENCY_VARIABLE, Denied
@@ -135,28 +138,38 @@ def instance(instance_id: str) -> dict | None:
     return response.json()
 
 
-# Biến quyết định theo mã định nghĩa; định nghĩa đã deploy không đổi nên nhớ suốt đời tiến trình. Không
-# nhớ theo khóa quy trình: deploy phiên bản mới thì khóa giữ nguyên mà biến quyết định có thể khác.
-_decisions: dict[str, frozenset[str]] = {}
+@dataclass(frozen=True)
+class Definition:
+    # Biến quyết định (ADR 0025): người lập không được đặt sẵn.
+    decisions: frozenset[str]
+    # Bước đọc vai trò từ bảng phân cấp thẩm quyền (ADR 0028).
+    authorities: frozenset[str]
 
 
-def decisions(key: str, tenant: str) -> frozenset[str]:
-    """Biến quyết định (ADR 0025) của phiên bản mới nhất của quy trình `key`, tức bản sắp khởi tạo."""
+# Điều lõi cần biết về một định nghĩa, theo mã định nghĩa; định nghĩa đã deploy không đổi nên nhớ suốt đời
+# tiến trình. Không nhớ theo khóa quy trình: deploy phiên bản mới thì khóa giữ nguyên mà BPMN có thể khác.
+_definitions: dict[str, Definition] = {}
+
+
+def definition(key: str, tenant: str) -> Definition:
+    """Biến quyết định và bước phân cấp của phiên bản mới nhất của quy trình `key`, tức bản sắp khởi tạo."""
     query = {"key": key, "tenantId": tenant, "latest": "true"}
     response = _call("GET", "/repository/process-definitions", params=query)
     _ensure_ok(response, "đọc định nghĩa quy trình")
     found = response.json()["data"]
     if not found:
         raise Denied(404, f"Tenant chưa có quy trình '{key}'.")
-    definition = found[0]["id"]
-    if definition not in _decisions:
-        response = _call("GET", f"/repository/process-definitions/{definition}/resourcedata")
+    definition_id = found[0]["id"]
+    if definition_id not in _definitions:
+        response = _call("GET", f"/repository/process-definitions/{definition_id}/resourcedata")
         _ensure_ok(response, "đọc BPMN của quy trình")
         # Không đọc được thì từ chối khởi tạo: cho qua là để người lập đặt sẵn được quyết định của người
-        # duyệt.
+        # duyệt, và bước phân cấp không có vai trò.
         try:
-            _decisions[definition] = decision_variables(response.content, key)
+            _definitions[definition_id] = Definition(
+                decision_variables(response.content, key), authority_steps(response.content, key)
+            )
         except ValueError as error:
             reason = f"Không đọc được BPMN của quy trình '{key}' ({error}); deploy lại quy trình."
             raise Denied(502, reason) from error
-    return _decisions[definition]
+    return _definitions[definition_id]

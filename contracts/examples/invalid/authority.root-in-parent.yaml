@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/authority.schema.json từ chối: dòng gốc ở tenant cha. Tenant không có cha bỏ qua dòng
+# cấp cha, nên bước của tenant đó không còn dòng nào áp được.
+
+process: core-authority
+step: decide
+rows:
+  - rule: default
+    role: manager
+    scope: parent

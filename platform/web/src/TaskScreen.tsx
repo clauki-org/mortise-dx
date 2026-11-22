@@ -20,7 +20,9 @@ import { DueBadge } from "./TaskList";
 import { completeTask, fetchTasks, type StepConfig, type Task } from "./workflow";
 
 // Biến lõi tự đặt (docs/api.md); không phải thông tin hồ sơ nên không hiện. initiatorName hiện thành "Người gửi".
+// Biến mang tiền tố authority_ là vai trò lõi chọn từ bảng phân cấp thẩm quyền (ADR 0028).
 const HIDDEN_VARIABLES = new Set(["initiator", "initiatorName", "tenant", "idempotencyKey"]);
+const HIDDEN_PREFIX = "authority_";
 
 // Ô nhập của Mantine đã tự hiện lỗi dưới ô; danh sách lỗi riêng của rjsf dưới mỗi trường sẽ lặp lại cùng lỗi đó.
 const NoFieldErrorList = () => null;
@@ -49,7 +51,14 @@ function Details({ task, step }: { task: Task; step: StepConfig | undefined }) {
     ...Object.entries(task.variables).flatMap(([name, value]): [string, string, string][] => {
       const label = labelOf(name, step);
       // Tên hồ sơ đã là tiêu đề màn hình; biến khai ở details đã hiện ở trên.
-      if (label === undefined || HIDDEN_VARIABLES.has(name) || name === step?.title || declared.has(name)) return [];
+      if (
+        label === undefined ||
+        HIDDEN_VARIABLES.has(name) ||
+        name.startsWith(HIDDEN_PREFIX) ||
+        name === step?.title ||
+        declared.has(name)
+      )
+        return [];
       return [[`variable/${name}`, label, typeof value === "string" ? value : JSON.stringify(value)]];
     }),
   ];

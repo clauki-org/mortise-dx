@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/authority.schema.json từ chối: hai dòng gốc (không có above) cho một bước. Nếu lọt,
+# bộ cài dừng giữa chừng vì CSDL chỉ nhận một dòng gốc mỗi bước.
+
+process: core-authority
+step: decide
+rows:
+  - rule: default
+    role: manager
+  - rule: other
+    role: tenant_admin

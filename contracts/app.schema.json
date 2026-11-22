@@ -38,6 +38,12 @@
       "description": "Thư mục metadata Hasura khai báo: bảng được đăng ký, quan hệ, quyền",
       "$ref": "#/$defs/path"
     },
+    "authorities": {
+      "description": "Tệp bảng phân cấp thẩm quyền mặc định theo contracts/authority.schema.json, mỗi tệp một bước có candidateGroups `${authority_<bước>}` (ADR 0028); `make check-fast` kiểm. Bộ cài gói chỉ thêm dòng chưa có cho mọi tenant, nên dòng đã sửa giữ nguyên khi cài lại; gỡ gói thì xóa.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/path", "pattern": "\\.yaml$" }
+    },
     "knowledge": {
       "description": "Tệp văn bản cho trợ lý hỏi văn bản theo contracts/knowledge.schema.json, mỗi tệp một văn bản (ADR 0021); `make check-fast` kiểm từng tệp. Bộ cài gói nạp vào platform.knowledge_documents và platform.knowledge_passages cho mọi tenant, gỡ gói thì xóa.",
       "type": "array",

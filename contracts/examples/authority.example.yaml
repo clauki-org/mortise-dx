@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ bảng phân cấp hợp lệ theo contracts/authority.schema.json, viết cho quy trình mẫu
+# core/workflow/fixtures/core-authority.bpmn20.xml. `make seed` nạp tệp này làm dòng mặc định của lõi cho mọi tenant;
+# `make smoke` đổi vai trò của dòng gốc ở một xã rồi kiểm hồ sơ lập sau tới vai trò mới. Ngưỡng là số kiểm thử,
+# không theo quy định nào. Gói thật đặt tệp ở apps/<gói>/authorities/ và khai trong `authorities` của app.yaml.
+
+process: core-authority
+step: decide
+rows:
+  - rule: default
+    role: manager
+  - rule: large
+    variable: amount
+    above: 1000
+    role: manager
