@@ -44,8 +44,8 @@ def record(
         "tenant": caller.tenant,
         "sub": caller.sub,
         "app": question.app,
-        # Mảng PostgreSQL dạng chữ ({a,b}); mã văn bản đã kiểm là slug nên không cần thoát ký tự.
-        "documents": "{" + ",".join(question.documents) + "}",
+        # pg8000 đổi list thành mảng PostgreSQL và tự thoát ký tự trong từng phần tử.
+        "documents": list(question.documents),
         "question": question.question.strip(),
         "outcome": answer.outcome if answer else "failed",
         "answer": answer.answer if answer else None,
@@ -73,4 +73,13 @@ def record(
             503, "Không ghi được nhật ký câu hỏi; báo người vận hành xem log của assistant."
         ) from error
     finally:
+        _close(connection)
+
+
+def _close(connection: pg8000.native.Connection) -> None:
+    # Lỗi khi đóng không được đè lên kết quả của lần ghi: dòng đã COMMIT thì câu trả lời vẫn trả, ghi hỏng
+    # thì người hỏi vẫn nhận 503 có lý do thay vì 500.
+    try:
         connection.close()
+    except (InterfaceError, DatabaseError, OSError) as error:
+        log.warning("Không đóng được kết nối nhật ký câu hỏi: %s", error)

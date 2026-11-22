@@ -4,7 +4,7 @@
 # Hình dạng yêu cầu và phản hồi của assistant, dùng để sinh contracts/assistant.openapi.json. Đổi model thì
 # chạy `make contracts`.
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,7 +20,8 @@ class Question(BaseModel):
     app: str = Field(
         pattern=_SLUG, max_length=64, description="Gói sở hữu văn bản, hay `core` cho văn bản mẫu"
     )
-    documents: list[str] = Field(
+    # Mã văn bản cùng dạng với `documents` của cấu hình trợ lý: chỉ chữ thường, số, gạch ngang.
+    documents: list[Annotated[str, Field(pattern=_SLUG, max_length=64)]] = Field(
         min_length=1,
         max_length=50,
         description="Mã văn bản được hỏi: `documents` của cấu hình trợ lý (contracts/assistant.schema.json)",

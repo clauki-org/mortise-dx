@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Kiểm thử cả đường ống qua route bằng mô hình giả (FakeModel) trả JSON soạn sẵn: trả lời có căn cứ, số bịa,
-# mã câu lạ, mô hình từ chối, không có căn cứ (không gọi mô hình), câu hỏi quá dài, đang bận; mỗi câu hỏi đã
-# xử lý có một dòng nhật ký. Token, Hasura và CSDL nhật ký được thay bằng bản giả.
+# mã câu lạ, mô hình từ chối, không có căn cứ (không gọi mô hình), câu hỏi quá dài, mã văn bản sai dạng, đang
+# bận, lỗi không lường trước; mỗi câu hỏi đã xử lý có một dòng nhật ký. Token, Hasura và CSDL nhật ký được
+# thay bằng bản giả.
 
 import pytest
 from fastapi.testclient import TestClient
@@ -149,3 +150,23 @@ def test_answer_is_withheld_when_the_log_cannot_be_written(use, monkeypatch):
     result = ask()
     assert result["status"] == 503
     assert "answer" not in result
+
+
+def test_unexpected_error_is_logged_as_failed_and_a_json_500(use, logged):
+    def crash(question, sentences):
+        raise KeyError("message")
+
+    fake = use(FakeModel())
+    fake.generate = crash
+    result = ask()
+    assert result["status"] == 500
+    assert "log của assistant" in result["error"]
+    # Nội dung lỗi chỉ vào log của dịch vụ, không vào nhật ký câu hỏi.
+    assert logged == [("failed", result["error"])]
+
+
+@pytest.mark.parametrize("document", ["Example-Rules", "a,b", "x" * 65], ids=["upper", "comma", "too-long"])
+def test_document_id_that_is_not_a_slug_is_a_400(use, logged, document):
+    fake = use(FakeModel())
+    result = ask(QUESTION | {"documents": [document]})
+    assert (result["status"], fake.calls, logged) == (400, 0, [])

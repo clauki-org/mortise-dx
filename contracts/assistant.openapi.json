@@ -129,6 +129,8 @@
           "documents": {
             "description": "Mã văn bản được hỏi: `documents` của cấu hình trợ lý (contracts/assistant.schema.json)",
             "items": {
+              "maxLength": 64,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
               "type": "string"
             },
             "maxItems": 50,
@@ -280,6 +282,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
           },
           "502": {
             "content": {

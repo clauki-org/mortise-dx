@@ -4,6 +4,7 @@
 # Trợ lý hỏi văn bản (ADR 0021), đứng sau APISIX tại /v1/assistant, chạy trong profile `ai` cùng Ollama. Một
 # đường: gửi câu hỏi, nhận câu trả lời kèm câu trích đã kiểm hoặc lời từ chối có lý do (pipeline.py).
 
+import logging
 import time
 from typing import Annotated
 
@@ -25,6 +26,7 @@ app = FastAPI(
     title="Mortise DX assistant API", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None
 )
 _ollama = Ollama()
+log = logging.getLogger("assistant")
 
 
 def model() -> Model:
@@ -65,7 +67,7 @@ def healthz() -> dict:
 @app.post(
     "/v1/assistant/questions",
     response_model=Answer,
-    responses={code: {"model": ErrorBody} for code in (400, 401, 403, 502, 503, 504)},
+    responses={code: {"model": ErrorBody} for code in (400, 401, 403, 500, 502, 503, 504)},
 )
 def questions(question: Question, caller: CallerDep, chosen: ModelDep) -> Answer:
     """Trả lời từ các văn bản được hỏi, chỉ trong các đoạn mà token người hỏi đọc được.
@@ -81,6 +83,13 @@ def questions(question: Question, caller: CallerDep, chosen: ModelDep) -> Answer
         if error.status >= 500:
             journal.record(caller, question, _elapsed(started), None, error.reason)
         raise
+    except Exception as error:
+        # Lỗi không lường trước cũng phải có dòng nhật ký, như docs/api.md hứa. Chi tiết chỉ vào log của
+        # dịch vụ: nội dung lỗi có thể chứa dữ liệu nội bộ, không đưa vào nhật ký hay vào phản hồi.
+        log.exception("Lỗi không lường trước khi trả lời câu hỏi")
+        reason = "Trợ lý gặp lỗi không lường trước; báo người vận hành xem log của assistant."
+        journal.record(caller, question, _elapsed(started), None, reason)
+        raise Denied(500, reason) from error
     journal.record(caller, question, _elapsed(started), answer)
     return answer
 
