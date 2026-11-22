@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Biểu mẫu lập đề nghị cấp vật tư theo contracts/form.schema.json; app.yaml trỏ tới tệp này ở mục menu
+# `supply-request` và `make check-fast` kiểm. Gửi thì khởi tạo quy trình bpmn/supply-request.bpmn20.xml với các biến
+# như tên trường. Không có trường approved hay comment: đó là quyết định và ý kiến của người duyệt (ADR 0025).
+
+title: Lập đề nghị cấp vật tư
+description: Chọn kho rồi chọn vật tư trong kho đó. Người duyệt của xã thấy đề nghị trên bảng việc.
+fields:
+  - { name: title, label: Tên đề nghị, type: string, required: true, max_length: 200 }
+  - name: storeCode
+    label: Kho
+    type: choice
+    required: true
+    source: { table: app_supplies_commune_stores, value: code, label: name }
+  - name: itemCode
+    label: Vật tư
+    type: choice
+    required: true
+    source:
+      table: app_supplies_commune_items
+      value: code
+      label: name
+      where: { column: store_code, field: storeCode }
+  - { name: quantity, label: Số lượng, type: number, required: true, min: 1 }
+  - { name: reason, label: Lý do, type: string, required: true, multiline: true, max_length: 1000 }
+submit:
+  label: Gửi
+  process: supply-request
+done:
+  message: Đã gửi đề nghị; người duyệt của xã thấy việc trên bảng việc của họ.

@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/form.schema.json từ chối. Tiền tố authority_ dành cho biến do hệ thống đặt.
+
+title: x
+submit: { label: Gửi, process: core-approval }
+done: { message: Đã gửi }
+fields:
+  - { name: authority_level, label: Cấp, type: string }

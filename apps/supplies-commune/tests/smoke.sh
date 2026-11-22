@@ -147,11 +147,14 @@ delete_store='mutation($code: String!) { delete_app_supplies_commune_stores(wher
 check "ON DELETE RESTRICT: không xóa được kho còn vật tư" \
   "$(errors "$(gql "$admin_a" "$delete_store" "{\"code\":\"$code\"}" "$admin")")" true
 
-# Menu của gói (app.yaml, nạp khi cài): mỗi xã thấy mục của mình kèm cấu hình danh mục.
-menu='{ platform_menu_items(where: {app: {_eq: "supplies-commune"}}) { tenant_id item component config } }'
-check "Menu của gói: user.a thấy mục kho vật tư kèm cấu hình, chỉ của xã mình" \
-  "$(gql "$user_a" "$menu" | jq -c '[.data.platform_menu_items[] | [.tenant_id, .item, .component, .config.source]]')" \
-  '[["xa-a","stores","catalog","app_supplies_commune_stores"]]'
+# Menu của gói (app.yaml, nạp khi cài): mỗi xã thấy mục của mình kèm cấu hình của thành phần. Hasura trả cả mục
+# dành cho vai trò khác (roles); giao diện mới là nơi ẩn chúng.
+menu='{ platform_menu_items(where: {app: {_eq: "supplies-commune"}}, order_by: {position: asc}) {
+  tenant_id item component config roles } }'
+check "Menu của gói: user.a thấy danh mục kho, hai biểu mẫu kèm cấu hình, chỉ của xã mình" \
+  "$(gql "$user_a" "$menu" | jq -c '[.data.platform_menu_items[] |
+    [.tenant_id, .item, .component, (.config.source // .config.submit.process // .config.submit.insert), .roles]]')" \
+  '[["xa-a","stores","catalog","app_supplies_commune_stores",null],["xa-a","supply-request","form","supply-request",null],["xa-a","item","form","app_supplies_commune_items",["tenant_admin"]]]'
 check "Menu của gói: user.b chỉ thấy mục của xã mình" \
   "$(gql "$user_b" "$menu" | jq -c '[.data.platform_menu_items[].tenant_id] | unique')" '["xa-b"]'
 

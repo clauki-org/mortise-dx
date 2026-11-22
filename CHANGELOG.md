@@ -12,6 +12,11 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Thành phần biểu mẫu nhập liệu Tầng 2 (ADR 0030, `contracts/form.schema.json`, mục menu `component: form`): gói
+  khai trường, danh sách chọn cố định hay đọc từ bảng của gói (lọc theo trường trước), rồi khởi tạo quy trình của
+  gói kèm Idempotency-Key hoặc thêm một dòng vào bảng của gói; `make check-fast` kiểm biểu mẫu với BPMN, khai báo
+  bước và quyền Hasura của gói. Khai báo bước có `details` để người xử lý thấy giá trị người lập điền. Gói kho vật tư
+  có mục "Lập đề nghị cấp vật tư" và "Thêm vật tư vào kho" (quản trị xã).
 - Trợ lý hỏi văn bản chọn nhà cung cấp mô hình qua cấu hình (bổ sung của ADR 0021): mặc định Ollama tại chỗ như trước;
   `ASSISTANT_LLM_PROVIDER=openai-compatible` cùng `ASSISTANT_LLM_BASE_URL`, `ASSISTANT_LLM_MODEL`,
   `ASSISTANT_LLM_API_KEY` gọi một API tương thích OpenAI, khai thiếu thì 503 chỉ biến cần sửa. Câu trả lời ghi mô

@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/form.schema.json từ chối. Kiểu trường ngoài danh sách thì thành phần không biết vẽ ô
+# nhập nào.
+
+title: x
+submit: { label: Gửi, process: core-approval }
+done: { message: Đã gửi }
+fields:
+  - { name: code, label: Mã, type: text }

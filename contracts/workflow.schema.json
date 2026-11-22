@@ -29,6 +29,19 @@
           "description": "Biến của quy trình chứa tên hồ sơ; bảng việc hiện giá trị này để phân biệt các việc cùng một bước. Biến phải được đặt khi khởi tạo quy trình hoặc bởi biểu mẫu của một bước trước; thiếu thì giao diện hiện tên bước.",
           "$ref": "#/$defs/variable"
         },
+        "details": {
+          "description": "Biến của quy trình hiện chỉ đọc trong thông tin hồ sơ, theo thứ tự khai, ví dụ các giá trị người lập điền ở biểu mẫu khởi tạo. Biến chưa có giá trị thì không hiện.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["variable", "label"],
+            "properties": {
+              "variable": { "$ref": "#/$defs/variable" },
+              "label": { "$ref": "#/$defs/text" }
+            }
+          }
+        },
         "form": {
           "description": "JSON Schema của dữ liệu người xử lý nhập; giao diện vẽ thành biểu mẫu. Mỗi trường thành một biến của quy trình khi hoàn thành task, nên tên trường theo luật tên biến. Bỏ trống thì bước chỉ có nút.",
           "type": "object",

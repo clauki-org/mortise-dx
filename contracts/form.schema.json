@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/form.schema.json",
+  "title": "Cấu hình thành phần biểu mẫu nhập liệu (component: form)",
+  "description": "Tệp cấu hình mà gói viết cho thành phần biểu mẫu. Người dùng điền các trường rồi gửi; biểu mẫu khởi tạo một quy trình của gói qua workflow-api (submit.process) hoặc thêm một dòng vào một bảng của gói qua GraphQL (submit.insert), bằng token của người dùng. Trình duyệt kiểm các luật khai ở đây; workflow-api và Hasura vẫn là nơi quyết định. Quyền không khai ở đây: role chỉ chọn vai trò gửi kèm truy vấn (ADR 0030).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "fields", "submit", "done"],
+  "properties": {
+    "title": { "description": "Tiêu đề của trang biểu mẫu", "$ref": "#/$defs/text" },
+    "description": { "description": "Một đoạn hướng dẫn hiện dưới tiêu đề", "$ref": "#/$defs/text" },
+    "role": {
+      "description": "Vai trò Hasura gửi kèm truy vấn danh mục chọn và lệnh thêm dòng (header X-Hasura-Role). Token của người dùng không có vai trò này thì biểu mẫu không hiện. Khai vai trò không cấp quyền gì: Hasura vẫn kiểm vai trò với token. Bỏ trống là vai trò mặc định.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "fields": {
+      "description": "Các trường theo thứ tự hiện trên biểu mẫu",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/field" }
+    },
+    "submit": { "$ref": "#/$defs/submit" },
+    "done": {
+      "description": "Điều hiện ra sau khi gửi được, kèm nút \"Lập tiếp\" để điền lại từ đầu",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["message"],
+      "properties": {
+        "message": { "$ref": "#/$defs/text" },
+        "menu": { "description": "Mục menu của cùng gói hiện thành đường dẫn sau khi gửi", "$ref": "#/$defs/slug" }
+      }
+    }
+  },
+  "$defs": {
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "label", "type"],
+      "properties": {
+        "name": {
+          "description": "Tên biến của quy trình (submit.process) hoặc tên cột (submit.insert)",
+          "$ref": "#/$defs/name"
+        },
+        "label": { "$ref": "#/$defs/text" },
+        "type": { "enum": ["string", "number", "integer", "boolean", "date", "choice"] },
+        "required": {
+          "description": "Bắt buộc nhập; với boolean là bắt buộc đánh dấu",
+          "type": "boolean"
+        },
+        "min": { "description": "Giá trị nhỏ nhất (number, integer)", "type": "number" },
+        "max": { "description": "Giá trị lớn nhất (number, integer)", "type": "number" },
+        "max_length": { "description": "Số ký tự tối đa (string)", "type": "integer", "minimum": 1, "maximum": 10000 },
+        "multiline": { "description": "Ô nhập nhiều dòng (string)", "type": "boolean" },
+        "choices": {
+          "description": "Danh sách chọn cố định (choice)",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "label"],
+            "properties": { "value": { "type": "string" }, "label": { "$ref": "#/$defs/text" } }
+          }
+        },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "choice" } } },
+          "then": { "oneOf": [{ "required": ["choices"] }, { "required": ["source"] }] },
+          "else": { "properties": { "choices": false, "source": false } }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "enum": ["number", "integer"] } } },
+          "else": { "properties": { "min": false, "max": false } }
+        },
+        {
+          "if": { "required": ["type"], "properties": { "type": { "const": "string" } } },
+          "else": { "properties": { "max_length": false, "multiline": false } }
+        }
+      ]
+    },
+    "source": {
+      "description": "Danh sách chọn đọc từ một bảng của gói qua GraphQL, xếp theo nhãn",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["table", "value", "label"],
+      "properties": {
+        "table": { "description": "Trường gốc GraphQL của bảng: <lược đồ>_<bảng>", "$ref": "#/$defs/identifier" },
+        "value": { "description": "Cột làm giá trị gửi đi (dạng chữ)", "$ref": "#/$defs/identifier" },
+        "label": { "description": "Cột làm nhãn hiện ra", "$ref": "#/$defs/identifier" },
+        "where": {
+          "description": "Chỉ lấy dòng có column bằng giá trị của một trường đứng trước; đổi trường đó thì trường này bị xóa",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["column", "field"],
+          "properties": {
+            "column": { "$ref": "#/$defs/identifier" },
+            "field": { "$ref": "#/$defs/name" }
+          }
+        },
+        "limit": {
+          "description": "Số mục tối đa của danh sách. Bỏ trống là 200.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        }
+      }
+    },
+    "submit": {
+      "description": "Nút gửi và đích gửi: đúng một trong process (khóa quy trình của gói) và insert (bảng của gói)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label"],
+      "properties": {
+        "label": { "$ref": "#/$defs/text" },
+        "process": { "$ref": "#/$defs/slug" },
+        "insert": { "description": "Trường gốc GraphQL của bảng: <lược đồ>_<bảng>", "$ref": "#/$defs/identifier" }
+      },
+      "oneOf": [{ "required": ["process"] }, { "required": ["insert"] }]
+    },
+    "name": {
+      "description": "Tên biến hay tên cột theo luật tên biến của quy trình; không trùng biến dành riêng mà lõi đặt (docs/api.md) và không bắt đầu bằng authority_, tiền tố dành cho biến do hệ thống đặt",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "not": {
+        "anyOf": [
+          { "enum": ["initiator", "initiatorName", "tenant", "idempotencyKey"] },
+          { "pattern": "^authority_" }
+        ]
+      }
+    },
+    "identifier": {
+      "description": "Tên theo luật của GraphQL",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "text": {
+      "description": "Chữ hiển thị cho người dùng: có ít nhất một ký tự không phải khoảng trắng",
+      "type": "string",
+      "pattern": "\\S"
+    }
+  }
+}

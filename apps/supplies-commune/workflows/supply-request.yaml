@@ -2,12 +2,18 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Khai báo bước của quy trình bpmn/supply-request.bpmn20.xml theo contracts/workflow.schema.json: bảng việc vẽ biểu
-# mẫu ý kiến và hai nút cho người duyệt; tên đề nghị lấy từ biến title đặt lúc lập.
+# mẫu ý kiến và hai nút cho người duyệt; tên đề nghị lấy từ biến title đặt lúc lập, các giá trị người lập điền ở
+# forms/supply-request.yaml hiện trong thông tin hồ sơ (details).
 
 process: supply-request
 steps:
   approve:
     title: title
+    details:
+      - { variable: storeCode, label: Mã kho }
+      - { variable: itemCode, label: Mã vật tư }
+      - { variable: quantity, label: Số lượng }
+      - { variable: reason, label: Lý do }
     form:
       type: object
       required: [comment]

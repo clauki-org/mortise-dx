@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/form.schema.json từ chối. choices chỉ dùng cho trường choice; trên trường string nó
+# bị bỏ qua mà không ai biết.
+
+title: x
+submit: { label: Gửi, process: core-approval }
+done: { message: Đã gửi }
+fields:
+  - { name: kind, label: Loại, type: string, choices: [{ value: a, label: A }] }

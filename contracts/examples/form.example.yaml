@@ -1,0 +1,42 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ cấu hình biểu mẫu hợp lệ theo contracts/form.schema.json; `make check-fast` kiểm tệp này. Biểu mẫu khởi tạo
+# quy trình mẫu core-approval (core/workflow/fixtures/) với tên hồ sơ, một danh sách chọn cố định và hai danh sách
+# đọc từ bảng của gói, danh sách sau lọc theo giá trị của danh sách trước. Gói thật đặt tệp ở apps/<gói>/forms/.
+
+title: Lập yêu cầu
+description: Điền thông tin rồi bấm Gửi; người duyệt của đơn vị thấy yêu cầu trên bảng việc.
+fields:
+  - { name: title, label: Tên yêu cầu, type: string, required: true, max_length: 200 }
+  - name: priority
+    label: Mức ưu tiên
+    type: choice
+    required: true
+    choices:
+      - { value: normal, label: Thường }
+      - { value: urgent, label: Gấp }
+  - name: groupCode
+    label: Nhóm
+    type: choice
+    required: true
+    source: { table: app_example_groups, value: code, label: name }
+  - name: itemId
+    label: Đối tượng
+    type: choice
+    required: true
+    source:
+      table: app_example_items
+      value: id
+      label: name
+      where: { column: group_code, field: groupCode }
+      limit: 100
+  - { name: amount, label: Số lượng, type: number, required: true, min: 1 }
+  - { name: neededBy, label: Cần trước ngày, type: date }
+  - { name: note, label: Ghi chú, type: string, multiline: true, max_length: 1000 }
+submit:
+  label: Gửi
+  process: core-approval
+done:
+  message: Đã gửi yêu cầu; người duyệt của đơn vị thấy việc trên bảng việc của họ.
+  menu: items
