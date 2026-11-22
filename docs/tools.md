@@ -244,7 +244,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Làm gì:** chạy mô hình ngôn ngữ trên CPU của máy chủ, nhận yêu cầu qua HTTP trong mạng nội bộ; nhận một JSON
   Schema để buộc câu trả lời đúng dạng.
 - **Trong dự án:** profile `ai`, không chạy cùng `make up`; không mở cổng ra máy chủ hay qua cổng APISIX. Mô hình và
-  lý do chọn ở [ADR 0021](adr/0021-document-assistant.md); chỉ trợ lý hỏi văn bản gọi Ollama.
+  lý do chọn ở [ADR 0021](adr/0021-document-assistant.md); chỉ trợ lý hỏi văn bản gọi Ollama, trừ khi người vận
+  hành chuyển nó sang API (mục assistant bên dưới).
 - **Cấu hình:** dịch vụ `ollama` trong `compose.yaml`, trọng số trong volume `ollama`; tên mô hình và digest lớp
   trọng số ở `core/ollama/models.txt`.
 - **Xem:** `make ai-up` (tải và đối chiếu digest); `docker compose exec ollama ollama list`.
@@ -259,7 +260,10 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   lời. Mô hình chỉ chọn mã câu; số trong câu trả lời phải có trong câu được trích. Mỗi lúc chỉ một lượt sinh. Chạy
   cùng lõi; Ollama chưa bật thì câu hỏi cần mô hình nhận 503 kèm cách bật.
 - **Cấu hình:** dịch vụ `assistant` trong `compose.yaml`: ngưỡng điểm tìm, số đoạn, độ dài câu hỏi,
-  thời gian chờ. Mã ở `platform/services/assistant/`; route và giới hạn tần suất ở `core/apisix/apisix.yaml`.
+  thời gian chờ. Mã ở `platform/services/assistant/`; route và giới hạn tần suất ở `core/apisix/apisix.yaml`. Nhà
+  cung cấp mô hình: mặc định Ollama; `ASSISTANT_LLM_PROVIDER=openai-compatible` cùng địa chỉ, tên mô hình và khóa
+  (`ASSISTANT_LLM_*` trong `.env`) gọi `{địa chỉ}/chat/completions` với JSON Schema; khai thiếu thì 503 chỉ biến
+  còn thiếu. Dữ liệu gửi ra ngoài khi đó: bổ sung của [ADR 0021](adr/0021-document-assistant.md).
 - **Xem:** `make test` (mô hình giả); `make smoke` kiểm cả khi Ollama tắt và khi đang chạy.
 
 ## Giao diện Tầng 2

@@ -54,5 +54,5 @@
     - role: tenant_admin
       permission:
         columns: [id, tenant_id, asked_at, asked_by, app, documents, question, outcome, answer, reason, citations, model,
-                  duration_ms]
+                  model_provider, model_host, duration_ms]
         filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }

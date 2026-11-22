@@ -1,8 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Trợ lý hỏi văn bản (ADR 0021), đứng sau APISIX tại /v1/assistant, chạy trong profile `ai` cùng Ollama. Một
-# đường: gửi câu hỏi, nhận câu trả lời kèm câu trích đã kiểm hoặc lời từ chối có lý do (pipeline.py).
+# Trợ lý hỏi văn bản (ADR 0021), đứng sau APISIX tại /v1/assistant, chạy cùng lõi; mô hình là Ollama ở profile
+# `ai` hay một API tương thích OpenAI, theo cấu hình (providers.py). Một đường: gửi câu hỏi, nhận câu trả lời
+# kèm câu trích đã kiểm hoặc lời từ chối có lý do (pipeline.py).
 
 import logging
 import time
@@ -16,8 +17,9 @@ from starlette.exceptions import HTTPException
 from . import journal
 from .auth import caller_from_token
 from .errors import Denied
-from .model import Model, Ollama
+from .model import Model
 from .pipeline import ask
+from .providers import configured
 from .retrieval import Caller
 from .schemas import Answer, ErrorBody, Question
 
@@ -25,12 +27,13 @@ from .schemas import Answer, ErrorBody, Question
 app = FastAPI(
     title="Mortise DX assistant API", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None
 )
-_ollama = Ollama()
+# Chọn lúc import để cấu hình sai hiện trong log ngay khi container khởi động, không đợi câu hỏi đầu tiên.
+_model = configured()
 log = logging.getLogger("assistant")
 
 
 def model() -> Model:
-    return _ollama
+    return _model
 
 
 CallerDep = Annotated[Caller, Depends(caller_from_token)]

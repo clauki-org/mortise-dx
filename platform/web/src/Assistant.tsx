@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Thành phần trợ lý hỏi văn bản (ADR 0021): ô hỏi, câu hỏi mẫu, câu trả lời kèm câu trích nguyên văn, hay lời từ chối
-// có lý do. Câu trích hiện đúng chữ lưu trong dữ liệu mà dịch vụ trả về, không phải chữ của mô hình. Thành phần chỉ
-// biết cấu hình của nó và gói của mục menu (ADR 0013); không có chữ của một lĩnh vực nào.
+// có lý do. Câu trích hiện đúng chữ lưu trong dữ liệu mà dịch vụ trả về, không phải chữ của mô hình; dưới câu trả lời
+// là mô hình đã trả lời và nơi nó chạy. Thành phần chỉ biết cấu hình của nó và gói của mục menu (ADR 0013); không có
+// chữ của một lĩnh vực nào.
 
 import { Alert, Blockquote, Button, Group, Loader, Stack, Text, Textarea, Title } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
-import { type Answer, type AssistantConfig, ask, configProblems } from "./assistant";
+import { type Answer, type AssistantConfig, ask, configProblems, modelLine } from "./assistant";
 import { useSession } from "./session";
 
 type Props = { config: AssistantConfig; app: string };
@@ -97,6 +98,11 @@ export function Result({ answer }: { answer: Answer }) {
   return (
     <Stack>
       <Text fw={500}>{answer.answer}</Text>
+      {answer.model && (
+        <Text size="sm" c="dimmed">
+          {modelLine(answer.model)}
+        </Text>
+      )}
       <Title order={2} size="h4">
         Căn cứ
       </Title>

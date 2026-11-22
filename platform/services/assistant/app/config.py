@@ -2,11 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Cấu hình đọc từ biến môi trường do compose.yaml truyền vào; thiếu biến thì dừng ngay lúc khởi động thay vì
-# lỗi giữa chừng. Tên mô hình lấy từ core/ollama/models.txt (gắn vào container), tệp mà `make ai-up` dùng để
-# tải và kiểm digest, để dịch vụ không gọi một mô hình khác với mô hình đã ghim.
+# lỗi giữa chừng. Với Ollama, tên mô hình lấy từ core/ollama/models.txt (gắn vào container), tệp mà
+# `make ai-up` dùng để tải và kiểm digest, để dịch vụ không gọi một mô hình khác với mô hình đã ghim. Với API
+# tương thích OpenAI, tên mô hình là ASSISTANT_LLM_MODEL. Các biến ASSISTANT_LLM_* không bắt buộc ở đây:
+# khai thiếu thì providers.py báo 503 kèm cách sửa, vì dừng dịch vụ lúc khởi động sẽ kéo theo cả cổng APISIX
+# đang chờ nó.
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 
 def _required(name: str) -> str:
@@ -37,13 +41,34 @@ def _pinned_model(path: str) -> str:
     return lines[0][0]
 
 
+# compose.yaml truyền chuỗi rỗng cho biến không có trong .env, nên rỗng cũng là chưa khai.
+_PROVIDER = os.environ.get("ASSISTANT_LLM_PROVIDER") or "ollama"
+_BASE_URL = os.environ.get("ASSISTANT_LLM_BASE_URL", "")
+
+
+def _host(url: str) -> str | None:
+    # Địa chỉ sai dạng không dừng dịch vụ: tên máy là None và providers.py báo 503 chỉ biến cần sửa.
+    try:
+        return urlsplit(url).hostname
+    except ValueError:
+        return None
+
+
 @dataclass(frozen=True)
 class Settings:
     jwks_url: str
     issuer: str
     graphql_url: str
     ollama_url: str
+    # Tên ghi trong .env, providers.py kiểm giá trị: chỉ nhận `ollama` và `openai-compatible`.
+    llm_provider: str
+    llm_base_url: str
+    # Chỉ tên máy của API, không cả địa chỉ: tên này hiện cho người hỏi và vào nhật ký câu hỏi.
+    llm_host: str | None
+    # Mô hình được gọi: bản ghim của Ollama, hay ASSISTANT_LLM_MODEL khi gọi qua API.
     model: str
+    # repr=False: in cấu hình ra log khi gỡ lỗi không được làm lộ khóa.
+    llm_api_key: str = field(repr=False)
     max_question_chars: int
     min_score: float
     top_passages: int
@@ -60,7 +85,15 @@ settings = Settings(
     issuer=_required("KEYCLOAK_ISSUER"),
     graphql_url=_required("ASSISTANT_GRAPHQL_URL"),
     ollama_url=_required("OLLAMA_URL"),
-    model=_pinned_model(_required("ASSISTANT_MODELS_FILE")),
+    llm_provider=_PROVIDER,
+    llm_base_url=_BASE_URL,
+    llm_host=_host(_BASE_URL) if _PROVIDER != "ollama" else None,
+    model=(
+        _pinned_model(_required("ASSISTANT_MODELS_FILE"))
+        if _PROVIDER == "ollama"
+        else os.environ.get("ASSISTANT_LLM_MODEL", "")
+    ),
+    llm_api_key=os.environ.get("ASSISTANT_LLM_API_KEY", ""),
     max_question_chars=int(_number("ASSISTANT_MAX_QUESTION_CHARS")),
     min_score=_number("ASSISTANT_MIN_SCORE"),
     top_passages=int(_number("ASSISTANT_TOP_PASSAGES")),

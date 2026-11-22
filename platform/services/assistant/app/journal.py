@@ -20,9 +20,10 @@ log = logging.getLogger("assistant.journal")
 
 INSERT = """
 INSERT INTO platform.assistant_questions
-    (tenant_id, asked_by, app, documents, question, outcome, answer, reason, citations, model, duration_ms)
+    (tenant_id, asked_by, app, documents, question, outcome, answer, reason, citations, model, model_provider,
+    model_host, duration_ms)
 VALUES (:tenant, :sub, :app, CAST(:documents AS text[]), :question, :outcome, :answer, :reason,
-    CAST(:citations AS jsonb), :model, :duration_ms)
+    CAST(:citations AS jsonb), :model, :model_provider, :model_host, :duration_ms)
 """
 
 
@@ -53,7 +54,11 @@ def record(
         "citations": json.dumps(
             [c.model_dump() for c in answer.citations] if answer else [], ensure_ascii=False
         ),
+        # Lấy từ cấu hình chứ không từ câu trả lời: dòng của câu hỏi lỗi hay từ chối không gọi mô hình
+        # cũng ghi câu hỏi lẽ ra đi tới đâu, kể cả khi cấu hình sai (providers.Unconfigured).
         "model": settings.model,
+        "model_provider": settings.llm_provider,
+        "model_host": settings.llm_host,
         "duration_ms": duration_ms,
     }
     try:

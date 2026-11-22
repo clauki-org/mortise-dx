@@ -11,7 +11,7 @@ from .config import settings
 from .errors import Denied
 from .model import Model
 from .retrieval import Caller
-from .schemas import Answer, Citation, Question
+from .schemas import Answer, Citation, ModelInfo, Question
 from .verify import Unverified, check
 
 # Một lượt sinh mỗi lúc: mô hình chạy trên CPU, lượt thứ hai chạy song song chỉ làm cả hai chậm hơn (ADR
@@ -22,8 +22,8 @@ NO_EVIDENCE = "Không tìm thấy đoạn nào trong các văn bản được h�
 DECLINED = "Các đoạn tìm được không đủ để trả lời câu hỏi này."
 
 
-def refuse(reason: str) -> Answer:
-    return Answer(outcome="refused", answer=None, reason=reason, citations=[])
+def refuse(reason: str, model: ModelInfo | None = None) -> Answer:
+    return Answer(outcome="refused", answer=None, reason=reason, citations=[], model=model)
 
 
 def ask(caller: Caller, question: Question, model: Model) -> Answer:
@@ -43,11 +43,11 @@ def ask(caller: Caller, question: Question, model: Model) -> Answer:
     finally:
         _generating.release()
     if not reply["answerable"]:
-        return refuse(DECLINED)
+        return refuse(DECLINED, model.info)
     try:
         cited = check(reply, sentences)
     except Unverified as problem:
-        return refuse(f"Câu trả lời không qua bước kiểm: {problem}")
+        return refuse(f"Câu trả lời không qua bước kiểm: {problem}", model.info)
     citations = [
         Citation(
             document_id=s.passage.document_id,
@@ -58,4 +58,6 @@ def ask(caller: Caller, question: Question, model: Model) -> Answer:
         )
         for s in cited
     ]
-    return Answer(outcome="answered", answer=reply["answer"].strip(), reason=None, citations=citations)
+    return Answer(
+        outcome="answered", answer=reply["answer"].strip(), reason=None, citations=citations, model=model.info
+    )

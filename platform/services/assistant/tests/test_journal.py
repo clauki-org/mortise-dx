@@ -6,6 +6,7 @@
 # không đè lên kết quả của lần ghi.
 
 import json
+from dataclasses import replace
 
 import pytest
 from pg8000.exceptions import DatabaseError, InterfaceError
@@ -46,7 +47,9 @@ class FakeConnection:
 def test_answer_is_written_in_one_transaction_with_the_actor(monkeypatch):
     connection = FakeConnection()
     monkeypatch.setattr(journal, "_connect", lambda: connection)
-    answer = Answer(outcome="answered", answer="Tối đa 14 ngày.", reason=None, citations=[CITATION])
+    answer = Answer(
+        outcome="answered", answer="Tối đa 14 ngày.", reason=None, citations=[CITATION], model=None
+    )
     journal.record(USER_A, QUESTION, 1234, answer)
     statements = [sql.split()[0] for sql, _ in connection.runs]
     assert statements == ["BEGIN", "SELECT", "INSERT", "COMMIT"]
@@ -60,6 +63,8 @@ def test_answer_is_written_in_one_transaction_with_the_actor(monkeypatch):
     # Danh sách, không phải chuỗi tự ghép: pg8000 tự dựng mảng PostgreSQL.
     assert params["documents"] == ["example-rules", "example-rules-amendment"]
     assert json.loads(params["citations"])[0]["sentence"] == "Phòng họp được đặt trước tối đa 14 ngày."
+    # Cấu hình mặc định: Ollama tại chỗ, không có tên máy của API.
+    assert (params["model"], params["model_provider"], params["model_host"]) == ("qwen3.5:4b", "ollama", None)
     assert connection.closed
 
 
@@ -93,3 +98,17 @@ def test_failed_close_after_commit_is_not_an_error(monkeypatch):
     monkeypatch.setattr(journal, "_connect", lambda: connection)
     journal.record(USER_A, QUESTION, 10, None, "lỗi")
     assert [sql.split()[0] for sql, _ in connection.runs][-1] == "COMMIT"
+
+
+def test_api_provider_and_host_are_written(monkeypatch):
+    connection = FakeConnection()
+    monkeypatch.setattr(journal, "_connect", lambda: connection)
+    api = {"llm_provider": "openai-compatible", "llm_host": "llm.example.test", "model": "model-x"}
+    monkeypatch.setattr(journal, "settings", replace(journal.settings, **api))
+    journal.record(USER_A, QUESTION, 10, None, "lỗi")
+    params = connection.runs[2][1]
+    assert (params["model"], params["model_provider"], params["model_host"]) == (
+        "model-x",
+        "openai-compatible",
+        "llm.example.test",
+    )
