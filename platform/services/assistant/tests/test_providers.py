@@ -86,11 +86,12 @@ def unreachable(request: httpx.Request) -> httpx.Response:
         (status(401), 503, "ASSISTANT_LLM_API_KEY"),
         (status(404), 503, "ASSISTANT_LLM_MODEL"),
         (status(429), 503, "thử lại sau"),
+        (status(503), 503, "quá tải"),
         (unreachable, 503, "ASSISTANT_LLM_BASE_URL"),
         (status(500), 502, "log của assistant"),
         (timeout, 504, TOO_SLOW),
     ],
-    ids=["bad-key", "no-model", "rate-limited", "unreachable", "server-error", "timeout"],
+    ids=["bad-key", "no-model", "rate-limited", "overloaded", "unreachable", "server-error", "timeout"],
 )
 def test_failures_have_a_status_and_a_fix(handler, code, hint, caplog):
     with caplog.at_level(logging.DEBUG), pytest.raises(Denied) as raised:

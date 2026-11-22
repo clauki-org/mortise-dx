@@ -90,6 +90,10 @@ class OpenAICompatible:
             )
         if status == 429:
             return Denied(503, "API mô hình đang giới hạn tần suất hay đã hết hạn mức; thử lại sau ít phút.")
+        # Nhà cung cấp quá tải trả 503 (đã gặp với Gemini ngày 2026-11-22); báo 502 thì người hỏi tưởng hệ
+        # thống hỏng và đi báo người vận hành, trong khi chỉ cần hỏi lại.
+        if status == 503:
+            return Denied(503, "API mô hình đang quá tải; thử lại sau ít phút.")
         return Denied(502, "API mô hình trả lỗi; báo người vận hành xem log của assistant.")
 
     def _scrub(self, text: str) -> str:
