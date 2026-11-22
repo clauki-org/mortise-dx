@@ -1,10 +1,10 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Trợ lý (ADR 0021, ADR 0027), đứng sau APISIX tại /v1/assistant. Hai đường: hỏi văn bản, nhận câu trả lời kèm
-# câu trích đã kiểm hoặc lời từ chối có lý do (pipeline.py), mô hình là Ollama ở profile `ai` hay một API tương
-# thích OpenAI theo cấu hình (providers.py); hỏi dữ liệu, chạy một câu GraphQL chỉ đọc đã qua guard bằng token
-# người hỏi và nhận bảng kèm câu đã chạy (data_run.py). Đường thứ hai không cần mô hình.
+# Trợ lý (ADR 0021, ADR 0027), đứng sau APISIX tại /v1/assistant. Hai đường: hỏi văn bản, nhận câu trả lời
+# kèm câu trích đã kiểm hoặc lời từ chối có lý do (pipeline.py), mô hình là Ollama ở profile `ai` hay một API
+# tương thích OpenAI theo cấu hình (providers.py); hỏi dữ liệu, chạy một câu GraphQL chỉ đọc đã qua guard bằng
+# token người hỏi và nhận bảng kèm câu đã chạy (data_run.py). Đường thứ hai không cần mô hình.
 
 import logging
 import time
