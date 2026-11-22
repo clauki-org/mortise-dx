@@ -129,6 +129,8 @@
           "documents": {
             "description": "Mã văn bản được hỏi: `documents` của cấu hình trợ lý (contracts/assistant.schema.json)",
             "items": {
+              "maxLength": 64,
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
               "type": "string"
             },
             "maxItems": 50,
@@ -200,7 +202,7 @@
   "paths": {
     "/v1/assistant/questions": {
       "post": {
-        "description": "Trả lời từ các văn bản được hỏi, chỉ trong các đoạn mà token người hỏi đọc được.\n\nKhông đủ căn cứ hay câu trả lời không qua bước kiểm thì `outcome` là `refused` kèm lý do (mã 200).",
+        "description": "Trả lời từ các văn bản được hỏi, chỉ trong các đoạn mà token người hỏi đọc được.\n\nKhông đủ căn cứ hay câu trả lời không qua bước kiểm thì `outcome` là `refused` kèm lý do (mã 200). Mỗi câu\nhỏi được ghi nhật ký; không ghi được thì trả 503 thay cho câu trả lời.",
         "operationId": "questions_v1_assistant_questions_post",
         "parameters": [
           {
@@ -280,6 +282,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
           },
           "502": {
             "content": {

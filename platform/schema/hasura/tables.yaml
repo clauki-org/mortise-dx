@@ -46,3 +46,13 @@
         columns: [tenant_id, app, document_id, passage_id, position, label, text, superseded_by_document,
                   superseded_by_passage]
         filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+# Nhật ký câu hỏi của trợ lý (ADR 0021): chỉ quản trị của tenant đọc, chỉ dòng của tenant mình; không ai ghi qua
+# GraphQL, dịch vụ trợ lý ghi bằng vai trò CSDL riêng.
+- table: { schema: platform, name: assistant_questions }
+  select_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [id, tenant_id, asked_at, asked_by, app, documents, question, outcome, answer, reason, citations, model,
+                  duration_ms]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }

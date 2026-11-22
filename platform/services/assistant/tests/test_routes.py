@@ -2,13 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Kiểm thử cả đường ống qua route bằng mô hình giả (FakeModel) trả JSON soạn sẵn: trả lời có căn cứ, số bịa,
-# mã câu lạ, mô hình từ chối, không có căn cứ (không gọi mô hình), câu hỏi quá dài, đang bận. Token và Hasura
-# được thay bằng bản giả.
+# mã câu lạ, mô hình từ chối, không có căn cứ (không gọi mô hình), câu hỏi quá dài, mã văn bản sai dạng, đang
+# bận, lỗi không lường trước; mỗi câu hỏi đã xử lý có một dòng nhật ký. Token, Hasura và CSDL nhật ký được
+# thay bằng bản giả.
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app import pipeline, retrieval
+from app import journal, pipeline, retrieval
 from app.auth import caller_from_token
 from app.errors import Denied
 from app.main import app, model
@@ -30,7 +31,19 @@ class FakeModel:
 
 
 @pytest.fixture
-def use(monkeypatch):
+def logged(monkeypatch) -> list[tuple]:
+    """Mỗi dòng nhật ký đã ghi: (outcome, lý do)."""
+    rows: list[tuple] = []
+
+    def record(caller, question, duration_ms, answer, failure=""):
+        rows.append((answer.outcome, answer.reason) if answer else ("failed", failure))
+
+    monkeypatch.setattr(journal, "record", record)
+    return rows
+
+
+@pytest.fixture
+def use(monkeypatch, logged):
     monkeypatch.setattr(retrieval, "fetch", lambda caller, app_id, documents: PASSAGES)
     monkeypatch.setitem(app.dependency_overrides, caller_from_token, lambda: USER_A)
 
@@ -109,3 +122,51 @@ def test_second_question_while_generating_gets_503(use):
 def test_unknown_field_is_a_400(use):
     use(FakeModel())
     assert ask(QUESTION | {"tenant": "xa-b"})["status"] == 400
+
+
+def test_every_handled_question_is_logged(use, logged):
+    use(FakeModel({"answerable": True, "answer": "Tối đa 14 ngày.", "sentences": ["p1.s2"]}))
+    ask()
+    ask(QUESTION | {"question": "Lương cơ sở hiện nay là bao nhiêu?"})
+    use(FakeModel(error=Denied(503, "Mô hình chưa chạy; người vận hành bật bằng make ai-up.")))
+    ask()
+    assert [outcome for outcome, _ in logged] == ["answered", "refused", "failed"]
+    assert "make ai-up" in logged[2][1]
+
+
+def test_rejected_input_is_not_logged(use, logged):
+    use(FakeModel())
+    ask(QUESTION | {"question": "x" * 301})
+    assert logged == []
+
+
+def test_answer_is_withheld_when_the_log_cannot_be_written(use, monkeypatch):
+    use(FakeModel({"answerable": True, "answer": "Tối đa 14 ngày.", "sentences": ["p1.s2"]}))
+
+    def broken(*args, **kwargs):
+        raise Denied(503, "Không ghi được nhật ký câu hỏi; báo người vận hành xem log của assistant.")
+
+    monkeypatch.setattr(journal, "record", broken)
+    result = ask()
+    assert result["status"] == 503
+    assert "answer" not in result
+
+
+def test_unexpected_error_is_logged_as_failed_and_a_json_500(use, logged):
+    def crash(question, sentences):
+        raise KeyError("message")
+
+    fake = use(FakeModel())
+    fake.generate = crash
+    result = ask()
+    assert result["status"] == 500
+    assert "log của assistant" in result["error"]
+    # Nội dung lỗi chỉ vào log của dịch vụ, không vào nhật ký câu hỏi.
+    assert logged == [("failed", result["error"])]
+
+
+@pytest.mark.parametrize("document", ["Example-Rules", "a,b", "x" * 65], ids=["upper", "comma", "too-long"])
+def test_document_id_that_is_not_a_slug_is_a_400(use, logged, document):
+    fake = use(FakeModel())
+    result = ask(QUESTION | {"documents": [document]})
+    assert (result["status"], fake.calls, logged) == (400, 0, [])

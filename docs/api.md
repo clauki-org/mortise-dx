@@ -79,6 +79,16 @@ curl -fsS -X POST http://localhost:9080/v1/assistant/questions \
   -d '{"question":"Phòng họp được đặt trước tối đa bao nhiêu ngày?","app":"core","documents":["example-rules","example-rules-amendment"]}'
 ```
 
+Mỗi câu hỏi đã qua bước kiểm đầu vào có một dòng ở `platform_assistant_questions` (người hỏi, câu hỏi, kết quả, câu
+trả lời, lý do, câu trích, mô hình, thời gian xử lý), kể cả câu không trả lời được vì lỗi (`outcome` là `failed`).
+Chỉ vai trò `tenant_admin` đọc được, và chỉ dòng của tenant mình; không ai sửa hay xóa được qua API.
+
+```bash
+curl -fsS -X POST http://localhost:9080/v1/graphql \
+  -H "Authorization: Bearer $TOKEN" -H 'X-Hasura-Role: tenant_admin' -H 'Content-Type: application/json' \
+  -d '{"query":"{ platform_assistant_questions(order_by: {asked_at: desc}, limit: 20) { asked_at asked_by question outcome reason } }"}'
+```
+
 Văn bản cho trợ lý hỏi văn bản (`contracts/knowledge.schema.json`, [ADR 0021](adr/0021-document-assistant.md)) nằm ở
 `platform_knowledge_documents` (một dòng mỗi văn bản: tên, nguồn, băm và ngày tải bản gốc) và
 `platform_knowledge_passages` (một dòng mỗi đoạn: `label` là nhãn vị trí, `text` là nguyên văn, `position` là thứ tự

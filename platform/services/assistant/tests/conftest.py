@@ -15,3 +15,5 @@ os.environ.setdefault("ASSISTANT_MIN_SCORE", "0.3")
 os.environ.setdefault("ASSISTANT_TOP_PASSAGES", "4")
 os.environ.setdefault("ASSISTANT_NUM_PREDICT", "400")
 os.environ.setdefault("ASSISTANT_TIMEOUT_SECONDS", "5")
+for name in ("ASSISTANT_DB_HOST", "ASSISTANT_DB_NAME", "ASSISTANT_DB_USER", "ASSISTANT_DB_PASSWORD"):
+    os.environ.setdefault(name, "unused")

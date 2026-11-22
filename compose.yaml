@@ -77,6 +77,7 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:?run make env}
       FILES_DB_PASSWORD: ${FILES_DB_PASSWORD:?run make env}
       IOT_BRIDGE_DB_PASSWORD: ${IOT_BRIDGE_DB_PASSWORD:?run make env}
+      ASSISTANT_DB_PASSWORD: ${ASSISTANT_DB_PASSWORD:?run make env}
     entrypoint: ["/roles.sh"]
     volumes:
       - ./core/postgres/roles.sh:/roles.sh:ro
@@ -515,9 +516,9 @@ services:
       retries: 20
 
   assistant:
-    # Trợ lý hỏi văn bản (ADR 0021), sau cổng tại /v1/assistant. Đọc văn bản qua cổng bằng token của người hỏi, không
-    # có tài khoản CSDL nào; gọi Ollama trong mạng nội bộ. Chạy cùng lõi; Ollama ở profile `ai` (`make ai-up`), chưa bật
-    # thì dịch vụ trả 503 kèm cách bật cho câu hỏi cần mô hình.
+    # Trợ lý hỏi văn bản (ADR 0021), sau cổng tại /v1/assistant. Đọc văn bản qua cổng bằng token của người hỏi; tài
+    # khoản CSDL `assistant` chỉ thêm được dòng vào nhật ký câu hỏi; gọi Ollama trong mạng nội bộ. Chạy cùng lõi;
+    # Ollama ở profile `ai` (`make ai-up`), chưa bật thì dịch vụ trả 503 kèm cách bật cho câu hỏi cần mô hình.
     build: platform/services/assistant
     restart: unless-stopped
     environment:
@@ -526,6 +527,10 @@ services:
       ASSISTANT_GRAPHQL_URL: http://apisix:9080/v1/graphql
       OLLAMA_URL: http://ollama:11434
       ASSISTANT_MODELS_FILE: /srv/models.txt
+      ASSISTANT_DB_HOST: postgres
+      ASSISTANT_DB_NAME: mortise
+      ASSISTANT_DB_USER: assistant
+      ASSISTANT_DB_PASSWORD: ${ASSISTANT_DB_PASSWORD:?run make env}
       # Giới hạn và ngưỡng là điểm xuất phát, chưa đo; đo lại bằng bộ câu hỏi có đáp án trước khi dùng thật.
       # Độ dài câu hỏi tối đa, ký tự.
       ASSISTANT_MAX_QUESTION_CHARS: "500"
@@ -543,6 +548,9 @@ services:
     depends_on:
       keycloak:
         condition: service_healthy
+      # Bảng nhật ký câu hỏi do migration của Tầng 2 tạo.
+      migrate-platform:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
