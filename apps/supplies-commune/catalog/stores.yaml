@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình thành phần danh mục cho kho → vật tư, theo contracts/catalog.schema.json; app.yaml trỏ tới tệp này ở mục
+# menu `stores` và `make check-fast` kiểm. Khóa của kho là mã vì vật tư nối về kho bằng cột store_code.
+
+title: Kho vật tư
+source: app_supplies_commune_stores
+key: code
+fields:
+  - { name: code, label: Mã kho }
+  - { name: name, label: Tên kho }
+  - { name: location, label: Vị trí }
+  - { name: created_at, label: Ngày tạo, type: datetime }
+list:
+  columns: [code, name, location]
+  search: [code, name, location]
+detail:
+  title: name
+  children:
+    - id: items
+      label: Vật tư, thiết bị
+      via: store_code
+      source: app_supplies_commune_items
+      fields:
+        - { name: code, label: Mã }
+        - { name: name, label: Tên }
+        - name: kind
+          label: Loại
+          choices:
+            - { value: consumable, label: Vật tư tiêu hao }
+            - { value: equipment, label: Thiết bị }
+        - { name: quantity, label: Số lượng, type: number }
+        - { name: unit, label: Đơn vị tính }
+        - { name: created_at, label: Ngày tạo, type: datetime }
+      list:
+        columns: [code, name, kind, quantity, unit]
+        search: [code, name]
+        filters: [kind]
+      detail:
+        title: name

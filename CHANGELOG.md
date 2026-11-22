@@ -12,6 +12,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Gói thứ hai `supplies-commune` (kho vật tư xã), chỉ gồm tệp khai báo: kho và vật tư theo xã trên menu "Kho vật tư",
+  đề nghị cấp vật tư cho người duyệt của xã, dữ liệu demo hư cấu nạp bằng `make seed-demo`. `make e2e` kiểm mọi mục
+  menu của các gói đã cài mở được trang theo cấu hình.
 - Trợ lý hỏi văn bản (ADR 0021): `POST /v1/assistant/questions` tìm đoạn qua GraphQL bằng token người hỏi, hỏi Qwen3.5
   4B qua Ollama với JSON Schema, chỉ trả lời khi mọi câu trích có trong đoạn đã tìm và mọi con số có trong câu được
   trích, không thì từ chối có lý do. Chưa bật Ollama (`make ai-up`) thì câu hỏi cần mô hình nhận 503 kèm cách bật.
