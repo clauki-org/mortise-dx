@@ -66,6 +66,7 @@ def service(monkeypatch) -> list[dict]:
 
     monkeypatch.setattr(flowable, "started_with", started_with)
     monkeypatch.setattr(flowable, "start", start)
+    monkeypatch.setattr(flowable, "decisions", lambda _key, _tenant: frozenset())
     monkeypatch.setitem(app.dependency_overrides, caller_from_token, lambda: SERVICE)
     return calls
 

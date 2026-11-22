@@ -141,7 +141,7 @@ curl -fsS -X POST http://localhost:9080/v1/workflow/processes/core-approval/inst
 | Mã trả về | Khi nào |
 |---|---|
 | `201` / `204` | Khởi tạo / hoàn thành thành công |
-| `400` | Ghi đè biến dành riêng của lõi (`initiator`, `initiatorName`, `tenant`, `idempotencyKey`); `Idempotency-Key` sai định dạng (8–100 ký tự chữ, số, `-`, `_`); người dùng gửi `X-Mortise-Tenant`; tài khoản dịch vụ thiếu header đó |
+| `400` | Ghi đè biến dành riêng của lõi (`initiator`, `initiatorName`, `tenant`, `idempotencyKey`); khởi tạo kèm biến quyết định, tức tên dùng trong điều kiện rẽ nhánh sau một userTask của quy trình, ví dụ `approved` của `core-approval` ([ADR 0025](adr/0025-decision-variables.md)); `Idempotency-Key` sai định dạng (8–100 ký tự chữ, số, `-`, `_`); người dùng gửi `X-Mortise-Tenant`; tài khoản dịch vụ thiếu header đó |
 | `401` | Thiếu hoặc sai token |
 | `403` | Tài khoản không thuộc đúng một tenant; tài khoản dịch vụ gọi đường khác ngoài khởi tạo quy trình; người duyệt (`manager`) đăng nhập chưa qua bước OTP; task đã giao cho người khác; không có vai trò ứng viên; người gửi tự duyệt yêu cầu của mình |
 | `404` | Task hay quy trình không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại); tenant chưa có quy trình đó |

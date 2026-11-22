@@ -83,6 +83,21 @@ def check_variables(variables: dict[str, object]) -> None:
         raise Denied(400, f"Không được đặt biến dành riêng cho lõi: {', '.join(sorted(clash))}.")
 
 
+def check_not_preset(variables: dict[str, object], decisions: frozenset[str]) -> None:
+    """Người lập không được đặt sẵn biến quyết định (ADR 0025).
+
+    Người hoàn thành bước không gửi biến đó thì cổng rẽ nhánh đọc giá trị người lập đặt, tức người lập tự
+    duyệt.
+    """
+    preset = decisions & variables.keys()
+    if preset:
+        raise Denied(
+            400,
+            f"Không được đặt sẵn biến do người xử lý bước quyết định: {', '.join(sorted(preset))}. "
+            "Biến này chỉ gửi khi hoàn thành bước.",
+        )
+
+
 def check_idempotency_key(key: str) -> None:
     if not _IDEMPOTENCY_KEY.fullmatch(key):
         raise Denied(400, "Idempotency-Key phải dài 8–100 ký tự, chỉ gồm chữ, số, '-' và '_'.")

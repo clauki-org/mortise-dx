@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from app import flowable
 from app.auth import caller_from_token
 from app.main import app
-from app.policy import Caller
+from app.policy import Caller, Denied
 
 MANAGER_A = Caller(
     sub="m-a",
@@ -41,6 +41,7 @@ def sent(monkeypatch) -> list[dict]:
     monkeypatch.setattr(flowable, "candidate_groups", lambda _id: frozenset({"manager"}))
     monkeypatch.setattr(flowable, "claim_and_complete", complete)
     monkeypatch.setattr(flowable, "start", start)
+    monkeypatch.setattr(flowable, "decisions", lambda _key, _tenant: frozenset({"approved"}))
     monkeypatch.setitem(app.dependency_overrides, caller_from_token, lambda: MANAGER_A)
     return calls
 
@@ -67,6 +68,35 @@ def test_unknown_key_on_start_is_rejected(sent):
     assert response.status_code == 422
     assert "title" in response.json()["error"]
     assert sent == []
+
+
+def test_start_cannot_preset_a_decision(sent):
+    response = client.post(START, json={"variables": {"title": "Yêu cầu mẫu", "approved": True}})
+    assert response.status_code == 400
+    assert "approved" in response.json()["error"]
+    assert sent == []
+
+
+def test_start_stops_when_decisions_cannot_be_read(sent, monkeypatch):
+    def unreadable(_key, _tenant):
+        raise Denied(502, "Không đọc được BPMN")
+
+    monkeypatch.setattr(flowable, "decisions", unreadable)
+    response = client.post(START, json={"variables": {"title": "Yêu cầu mẫu"}})
+    assert response.status_code == 502
+    assert sent == []
+
+
+def test_start_with_other_variables_reaches_flowable(sent):
+    response = client.post(START, json={"variables": {"title": "Yêu cầu mẫu"}})
+    assert response.status_code == 201
+    assert sent[0]["title"] == "Yêu cầu mẫu"
+
+
+def test_completing_still_sends_the_decision(sent):
+    response = client.post(COMPLETE, json={"variables": {"approved": False}})
+    assert response.status_code == 204
+    assert sent == [{"approved": False}]
 
 
 def test_body_that_is_not_an_object_is_rejected(sent):
