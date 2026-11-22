@@ -24,6 +24,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   `authorities` của app.yaml (`contracts/authority.schema.json`). Tài khoản demo mới `admin.tinh`, `manager.tinh`.
   workflow-api đọc CSDL bằng vai trò chỉ đọc `workflow_api` (`WORKFLOW_DB_PASSWORD`): bản cài cũ chạy `make env`, dựng
   lại workflow-api rồi `make up` và `make seed`.
+- Keycloak hỏi OTP người có vai trò `otp_required` của client `mortise-web` thay vì chỉ người có `manager`; `manager`
+  gộp vai trò này nên người duyệt vẫn như cũ (ADR 0011, bổ sung). Người vận hành gán `otp_required` cho tài khoản nhận
+  bước phân cấp mà không phải `manager`; tài khoản demo mới `admin2.a`. `make seed` sửa luồng trên realm đang chạy.
 - Trợ lý hỏi văn bản chọn nhà cung cấp mô hình qua cấu hình (bổ sung của ADR 0021): mặc định Ollama tại chỗ như trước;
   `ASSISTANT_LLM_PROVIDER=openai-compatible` cùng `ASSISTANT_LLM_BASE_URL`, `ASSISTANT_LLM_MODEL`,
   `ASSISTANT_LLM_API_KEY` gọi một API tương thích OpenAI, khai thiếu thì 503 chỉ biến cần sửa. Câu trả lời ghi mô

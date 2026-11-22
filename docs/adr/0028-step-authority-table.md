@@ -68,6 +68,12 @@ tenant và do người sửa lúc chạy, nên không nằm trong BPMN được.
   thành bước. `contracts/workflow.schema.json` và `contracts/catalog.schema.json` từ chối nút đặt biến như vậy.
 - **OTP theo bước, không theo vai trò:** hoàn thành một task mà hồ sơ có biến `authority_<id của bước>` cần `otp`
   trong `amr`, với mọi vai trò. Chỉ lõi đặt được biến đó, nên có biến là bước đọc bảng.
+- **Ai phải nhập OTP lúc đăng nhập:** người có vai trò `otp_required` của client `mortise-web`; `manager` gộp vai trò
+  này (ADR 0011, bổ sung 2026-11-22). Giao một bước cho vai trò khác, ví dụ `tenant_admin`, thì người vận hành gán
+  thêm `otp_required` cho từng tài khoản sẽ nhận bước đó; tài khoản cùng vai trò mà không có nó thấy task nhưng bị
+  từ chối khi hoàn thành. Đây là vai trò của client chứ không của realm, nên nằm ở `resource_access` của token: Hasura
+  (đọc vai trò từ `realm_access`) không cho chọn nó, workflow-api không coi nó là nhóm ứng viên. Bản demo có
+  `admin2.a`: `tenant_admin` của xã A có `otp_required`; `admin.a` vẫn đăng nhập bằng mật khẩu.
 - **Vai trò CSDL `workflow_api`** (`core/postgres/roles.sh`, mật khẩu `WORKFLOW_DB_PASSWORD`): chỉ SELECT trên
   `core.step_authorities` và `core.tenants` (để biết tenant cha).
 - **Ai sửa:** chỉ `tenant_admin` của tenant cha, qua Hasura, trên dòng của tenant con. Lọc qua quan hệ
@@ -87,10 +93,9 @@ tenant và do người sửa lúc chạy, nên không nằm trong BPMN được.
   định mới cho dòng đã có thì người vận hành sửa trong CSDL.
 - **Tenant tạo sau khi cài gói chưa có dòng** cho tới khi chạy lại `make app-install`; hồ sơ của quy trình đọc bảng ở
   tenant đó nhận 409 kèm lệnh đó.
-- **Chuyển một bước sang vai trò không phải `manager` thì người nhận phải có OTP**, nhưng luồng đăng nhập của realm chỉ
-  hỏi OTP người có vai trò `manager` (ADR 0011). Người nhận như vậy hiện không lấy được token có `otp`, nên bước đó
-  không ai hoàn thành được: workflow-api từ chối thay vì cho qua. Bản demo chưa có `tenant_admin` nào có OTP. Mở luồng
-  đăng nhập cho vai trò khác là việc riêng, cần sửa realm và cập nhật realm đã nạp trên các bản cài đang chạy.
+- **Chuyển một bước sang vai trò không phải `manager` là thêm việc cho người vận hành:** gán `otp_required` cho người
+  nhận. Quên gán thì bước đó không ai hoàn thành được: workflow-api từ chối thay vì cho qua. Bảng phân cấp không biết
+  tài khoản nào có `otp_required`, nên tenant cha đổi dòng không được báo trước điều này.
 - **workflow-api phụ thuộc CSDL khi khởi tạo quy trình có bước đọc bảng.** CSDL lỗi thì quy trình đó trả 503; quy
   trình khác không bị ảnh hưởng.
 - Gói `facilities-commune` chưa dùng bảng: bước "Trình người có thẩm quyền" vẫn viết `manager`. Chuyển bước đó sang

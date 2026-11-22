@@ -19,7 +19,7 @@
   "authenticationFlows": [
     {
       "alias": "browser-mfa",
-      "description": "Đăng nhập trên trình duyệt; người có vai trò manager nhập thêm mã OTP (ADR 0011)",
+      "description": "Đăng nhập trên trình duyệt; người có vai trò otp_required (mọi manager) nhập thêm mã OTP (ADR 0011)",
       "providerId": "basic-flow",
       "topLevel": true,
       "builtIn": false,
@@ -44,7 +44,7 @@
     },
     {
       "alias": "browser-mfa approver otp",
-      "description": "OTP bắt buộc với vai trò manager; chưa cài thì Keycloak yêu cầu cài ngay lúc đăng nhập",
+      "description": "OTP bắt buộc với vai trò otp_required; chưa cài thì Keycloak yêu cầu cài ngay lúc đăng nhập",
       "providerId": "basic-flow",
       "topLevel": false,
       "builtIn": false,
@@ -76,7 +76,7 @@
     },
     {
       "alias": "direct-grant-mfa approver otp",
-      "description": "OTP bắt buộc với vai trò manager",
+      "description": "OTP bắt buộc với vai trò otp_required",
       "providerId": "basic-flow",
       "topLevel": false,
       "builtIn": false,
@@ -93,17 +93,28 @@
     }
   ],
   "authenticatorConfig": [
-    { "alias": "approver-role", "config": { "condUserRole": "manager", "negate": "false" } },
+    { "alias": "approver-role", "config": { "condUserRole": "mortise-web.otp_required", "negate": "false" } },
     { "alias": "amr-pwd", "config": { "default.reference.value": "pwd", "default.reference.maxAge": "36000" } },
     { "alias": "amr-otp", "config": { "default.reference.value": "otp", "default.reference.maxAge": "36000" } }
   ],
   "roles": {
     "realm": [
       { "name": "user", "description": "Người dùng nghiệp vụ trong một tenant" },
-      { "name": "manager", "description": "Quản lý, được duyệt trong quy trình" },
+      {
+        "name": "manager", "description": "Quản lý, được duyệt trong quy trình; gộp otp_required nên luôn phải nhập OTP",
+        "composite": true, "composites": { "client": { "mortise-web": ["otp_required"] } }
+      },
       { "name": "tenant_admin", "description": "Quản trị một tenant" },
       { "name": "rollup_reader", "description": "Đọc số liệu tổng hợp của các tenant con (ADR 0016)" }
-    ]
+    ],
+    "client": {
+      "mortise-web": [
+        {
+          "name": "otp_required",
+          "description": "Phải nhập OTP khi đăng nhập (ADR 0011, ADR 0028). Vai trò của client, không của realm: không vào realm_access nên Hasura và workflow-api không coi là vai trò"
+        }
+      ]
+    }
   },
   "groups": [
     { "name": "xa-a" },

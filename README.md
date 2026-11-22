@@ -106,10 +106,11 @@ lưu xong. Nhờ vậy CSDL, CSDL của Scorpio và kho tệp trong bản sao l�
 Tài khoản demo: `user.a`, `manager.a`, `admin.a` (tenant `xa-a`), tương tự `.b` cho `xa-b` và `.c` cho `xa-c`, ba xã
 của "Tỉnh Mẫu", tỉnh hư cấu; ở tenant cha `tinh-mau` có `leader.tinh` (đọc tổng hợp của ba xã), `admin.tinh` (quản trị
 tỉnh, sửa bảng phân cấp thẩm quyền của các xã) và `manager.tinh` (người duyệt của tỉnh); mật khẩu là
-`DEMO_USER_PASSWORD` trong `.env`. `admin.*` có vai trò `tenant_admin` (quản trị xã). Người duyệt (`manager.*`) nhập
-thêm mã OTP: `make otp` in mã hiện tại và khóa để
-nhập vào ứng dụng OTP trên điện thoại ([ADR 0011](docs/adr/0011-approver-mfa.md)). Thiết bị demo nằm trong
-`devices/simulator/devices.yaml`, mật khẩu MQTT `DEMO_DEVICE_PASSWORD`; `make simulate` gửi số đo giả cho chúng.
+`DEMO_USER_PASSWORD` trong `.env`. `admin.*` có vai trò `tenant_admin` (quản trị xã); `admin2.a` cũng là quản trị xã
+A nhưng có thêm `otp_required`, nhận được bước mà bảng phân cấp giao cho `tenant_admin`. Người duyệt (`manager.*`) và
+`admin2.a` nhập thêm mã OTP: `make otp` in mã hiện tại và khóa để nhập vào ứng dụng OTP trên điện thoại
+([ADR 0011](docs/adr/0011-approver-mfa.md)). Thiết bị demo nằm trong `devices/simulator/devices.yaml`, mật khẩu MQTT
+`DEMO_DEVICE_PASSWORD`; `make simulate` gửi số đo giả cho chúng.
 Thiết bị khác cấp tài khoản bằng `make device-add TENANT=<tenant> DEVICE=<thiết bị>`. Mọi lệnh khác: `make help`.
 
 Mô hình ngôn ngữ của trợ lý hỏi văn bản chạy tại chỗ bằng Ollama, tách khỏi lõi trong profile `ai`: `make ai-up` chạy

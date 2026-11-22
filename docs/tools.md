@@ -66,8 +66,9 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - Client `mortise-test` chỉ dùng cho smoke và CI, lấy token bằng mật khẩu; do `make seed` tạo, không có trong tệp
     realm nên bản cài thật không có, trừ khi khôi phục từ bản sao lưu của bản cài đã seed.
   - Access token sống 15 phút; bật chống dò mật khẩu; tắt tự đăng ký.
-  - Người có vai trò `manager` đăng nhập hai bước (mật khẩu và mã OTP) qua luồng `browser-mfa` và `direct-grant-mfa`;
-    token ghi cách đăng nhập trong claim `amr` ([ADR 0011](adr/0011-approver-mfa.md)).
+  - Người có vai trò `otp_required` của client `mortise-web` (mọi `manager` có sẵn qua vai trò gộp) đăng nhập hai bước
+    (mật khẩu và mã OTP) qua luồng `browser-mfa` và `direct-grant-mfa`; token ghi cách đăng nhập trong claim `amr`
+    ([ADR 0011](adr/0011-approver-mfa.md)).
 - **Cấu hình:** `core/keycloak/realm-mortise.json`, được nạp khi Keycloak khởi động lần đầu. Tài khoản demo, khóa OTP
   của người duyệt demo (`DEMO_OTP_SECRET`) và client `mortise-test` do `scripts/seed.sh` tạo, không nằm trong tệp
   realm. `make otp` in mã OTP hiện tại của người duyệt demo.
@@ -141,7 +142,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - Người có vai trò `manager` chỉ hoàn thành được task khi claim `amr` của token có `otp` (đã đăng nhập hai bước).
   - Bước có `candidateGroups` là `${authority_<bước>}` nhận vai trò từ bảng phân cấp `core.step_authorities` lúc khởi
     tạo, đọc bằng vai trò CSDL `workflow_api` chỉ có quyền đọc bảng đó và `core.tenants`; hoàn thành bước đó cần
-    `otp` với mọi vai trò ([ADR 0028](adr/0028-step-authority-table.md)).
+    `otp` với mọi vai trò ([ADR 0028](adr/0028-step-authority-table.md)); Keycloak hỏi OTP người có vai trò
+    `otp_required` của client `mortise-web`, mà `manager` gộp sẵn.
 - **Cấu hình:** mã ở `core/workflow-api/`; quy tắc quyền là các hàm thuần trong `app/policy.py`, có kiểm thử ở
   `tests/`. Phiên bản thư viện khóa trong `uv.lock`.
 - **Xem:** `make test` (kiểm thử đơn vị), `make smoke` (kiểm tra đầu-cuối); các endpoint ở [api.md](api.md).

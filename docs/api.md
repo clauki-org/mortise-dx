@@ -22,8 +22,8 @@ TOKEN=$(curl -fsS http://localhost:9080/auth/realms/mortise/protocol/openid-conn
   -d username=user.a -d "password=$DEMO_USER_PASSWORD" | jq -r .access_token)
 ```
 
-Người duyệt (vai trò `manager`) gửi kèm mã OTP, ví dụ `-d username=manager.a -d totp=<mã>`; `make otp` in mã của tài
-khoản demo. Thiếu mã thì Keycloak trả `invalid_grant`. Mỗi mã chỉ dùng được một lần.
+Người duyệt (vai trò `manager`) và người có vai trò `otp_required` của client `mortise-web` (tài khoản demo
+`admin2.a`) gửi kèm mã OTP, ví dụ `-d username=manager.a -d totp=<mã>`; `make otp` in mã của tài khoản demo. Thiếu mã thì Keycloak trả `invalid_grant`. Mỗi mã chỉ dùng được một lần.
 
 Token mang các claim lõi dùng để phân quyền (hợp đồng: [`contracts/token-claims.schema.json`](../contracts/token-claims.schema.json)):
 
@@ -162,7 +162,9 @@ Bảng phân cấp thẩm quyền ([ADR 0028](adr/0028-step-authority-table.md))
 `${authority_<id của bước>}` lấy vai trò từ bảng `core.step_authorities` của tenant lúc khởi tạo. workflow-api chọn
 dòng có ngưỡng (`above`) cao nhất mà biến của dòng vượt hẳn; biến thiếu, không phải số hay âm thì coi như vượt mọi
 ngưỡng; không vượt dòng nào thì dùng dòng gốc. Vai trò được ghi vào biến `authority_<bước>` của hồ sơ, nên đổi bảng chỉ
-áp cho hồ sơ lập sau. Hoàn thành bước đó cần đăng nhập có OTP, với mọi vai trò. Quy trình mẫu `core-authority` dùng biến
+áp cho hồ sơ lập sau. Hoàn thành bước đó cần đăng nhập có OTP, với mọi vai trò: Keycloak chỉ hỏi OTP người có vai trò `otp_required` của
+client `mortise-web` (mọi `manager` có sẵn), nên người vận hành gán vai trò đó cho tài khoản nhận bước, như `admin2.a`
+của bản demo. Quy trình mẫu `core-authority` dùng biến
 `amount`; quản trị (`tenant_admin`) của tenant cha sửa vai trò và ngưỡng của tenant con qua GraphQL:
 
 ```bash

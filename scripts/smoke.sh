@@ -558,8 +558,20 @@ large_case=$(case_id "$user_a" 5000)
 check "Bảng phân cấp: vượt ngưỡng 1000 thì theo dòng ngưỡng (manager), không theo dòng gốc" \
   "$(seen_by "$manager_a" "$large_case") $(seen_by "$admin_a" "$large_case")" "thấy không"
 IFS=$'\t' read -r status body < <(api POST "$admin_a" "/tasks/$(task_in "$admin_a" "$after_case")/complete" '{}')
-check "Bảng phân cấp: bước đọc bảng đòi OTP với cả tenant_admin" "$status $(jq -r '.error | test("OTP")' <<<"$body")" \
-  "403 true"
+check "Bảng phân cấp: tenant_admin không có otp_required (admin.a) bị từ chối vì thiếu OTP" \
+  "$status $(jq -r '.error | test("OTP")' <<<"$body")" "403 true"
+# admin2.a là tenant_admin có otp_required (vai trò của client mortise-web): Keycloak đòi OTP, và vai trò đó không vào
+# realm_access, nên Hasura không cho chọn và workflow-api không coi là nhóm ứng viên. Chỉ thử sai một lần, như ở trên.
+error=$(curl -s "$base/auth/realms/mortise/protocol/openid-connect/token" -d grant_type=password \
+  -d client_id=mortise-test -d username=admin2.a -d "password=$DEMO_USER_PASSWORD" | jq -r .error)
+check "Bảng phân cấp: tài khoản có otp_required thiếu mã OTP không lấy được token" "$error" invalid_grant
+admin2_a=$(token admin2.a "$(otp admin2.a)")
+check "Bảng phân cấp: token có otp_required ghi OTP, otp_required không nằm trong vai trò của realm" \
+  "$(claims "$admin2_a" | jq -c '[(.amr | index("otp") != null), (.realm_access.roles | index("otp_required") == null)]')" \
+  "[true,true]"
+IFS=$'\t' read -r status _ < <(api POST "$admin2_a" "/tasks/$(task_in "$admin2_a" "$after_case")/complete" '{}')
+check "Bảng phân cấp: tenant_admin có otp_required, đăng nhập kèm OTP, hoàn thành hồ sơ giao cho tenant_admin" \
+  "$status" 204
 for pair in "$before_case dòng gốc" "$large_case dòng ngưỡng"; do
   read -r authority_task row <<<"$pair"
   IFS=$'\t' read -r status _ < <(api POST "$manager_a" "/tasks/$(task_in "$manager_a" "$authority_task")/complete" '{}')
@@ -572,9 +584,6 @@ sql -c "DELETE FROM core.step_authorities WHERE tenant_id = 'xa-a' AND process =
 IFS=$'\t' read -r status body < <(authority_case "$user_a" 10)
 check "Bảng phân cấp: bước chưa có dòng nào thì từ chối lập hồ sơ" \
   "$status $(jq -r '.error | test("bảng phân cấp")' <<<"$body")" "409 true"
-# Dọn: hồ sơ thứ hai không ai trong bản demo có OTP và vai trò tenant_admin để hoàn thành, nên xóa thẳng trong Flowable.
-curl -fsS -o /dev/null -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" -X DELETE \
-  "http://127.0.0.1:${FLOWABLE_PORT:-8083}/flowable-rest/service/runtime/process-instances/$after_case" || true
 reset_authorities
 
 # Dữ liệu thiết bị (context-api trước Scorpio, ADR 0012): ghi một thiết bị cho xa-a thẳng vào Scorpio
