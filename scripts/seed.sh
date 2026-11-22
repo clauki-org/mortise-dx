@@ -148,6 +148,10 @@ uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py ru
 # Văn bản mẫu của lõi (hư cấu) cho trợ lý hỏi văn bản; `make smoke` kiểm mỗi tenant chỉ đọc được đoạn của mình.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py knowledge \
   --owner core contracts/examples/knowledge.example.yaml contracts/examples/knowledge-amendment.example.yaml
+# Mục menu mẫu của lõi mở thành phần trợ lý trên hai văn bản đó (/apps/core/ask-example), để thử trợ lý trên giao diện
+# khi chưa gói nào khai văn bản; `make e2e` hỏi qua mục này.
+uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py menu --owner core \
+  --id ask-example --label "Hỏi văn bản mẫu" --component assistant contracts/examples/assistant.example.yaml
 echo "flowable: quy trình đã sẵn sàng"
 
 # Tài khoản MQTT của các thiết bị demo (ADR 0012), cùng mật khẩu DEMO_DEVICE_PASSWORD để bộ giả lập đăng nhập

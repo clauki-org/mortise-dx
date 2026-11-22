@@ -4,7 +4,7 @@
 # Nạp phần chạy lúc dùng của một gói vào lõi, cho mọi tenant đang có trong core.tenants: deploy BPMN lên
 # Flowable, khai báo bước vào platform.workflow_steps, mục menu kèm nội dung tệp cấu hình vào
 # platform.menu_items, luật ngưỡng vào core.threshold_rules, văn bản cho trợ lý vào bảng knowledge của
-# platform (scripts/app_knowledge.py). Năm lệnh:
+# platform (scripts/app_knowledge.py). Sáu lệnh:
 #   install <thư mục gói>   đọc app.yaml (workflows, menu, rules, knowledge) và <gói>/workflows/*.yaml;
 #                           app.sh gọi khi cài
 #   remove <thư mục gói>    xóa deployment (kèm hồ sơ đang chạy), khai báo bước, menu, luật, văn bản của
@@ -12,6 +12,9 @@
 #   workflows --bpmn ... --steps ...   chỉ deploy và nạp khai báo bước; make seed gọi cho quy trình mẫu
 #   rules --owner core <tệp> ...       chỉ nạp luật ngưỡng; make seed gọi cho luật mẫu
 #   knowledge --owner core <tệp> ...   chỉ nạp văn bản; make seed gọi cho văn bản mẫu
+#   menu --owner core --id ... --label ... --component ... <tệp cấu hình>
+#                                      chỉ nạp một mục menu, kiểm như mục menu của gói; make seed gọi cho
+#                                      mục hỏi văn bản mẫu
 # Chạy lại không tạo bản trùng: tên deployment mang băm của tệp, nên tệp không đổi thì không deploy lại.
 # BPMN của gói có thể chứa {{tên}}: được thay bằng giá trị trong `settings` của app.yaml, ghi đè lúc cài
 # bằng biến môi trường APP_SETTINGS (make app-install SETTINGS=tên=giá trị), trước khi băm và deploy
@@ -27,6 +30,7 @@ import glob
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.error
@@ -40,6 +44,7 @@ import yaml
 from workflow_settings import SettingsError, merge, parse_overrides, render
 
 BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def load_yaml(path: str) -> dict:
@@ -246,6 +251,43 @@ def load_knowledge(owner: str, documents: list[dict]) -> None:
     print(f"postgres: {len(rows)} văn bản, {len(passages)} đoạn của {owner}")
 
 
+def check_menu_entry(owner: str, entry: dict) -> None:
+    """Kiểm một mục menu nạp ngoài app.yaml (lệnh `menu`) theo các luật mà `make check-fast` và lệnh install
+    kiểm cho mục menu của gói: mục này không nằm trong app.yaml nào, nên không bước kiểm nào khác thấy nó."""
+    with open(os.path.join(REPO, "contracts", "app.schema.json"), encoding="utf-8") as file:
+        schema = json.load(file)
+    components = schema["properties"]["menu"]["items"]["properties"]["component"]["enum"]
+    component = entry["component"]
+    problems = []
+    if not re.search(schema["$defs"]["slug"]["pattern"], entry["id"]):
+        problems.append(f"id {entry['id']!r} phải là chữ thường, số, gạch ngang")
+    if not re.search(schema["$defs"]["text"]["pattern"], entry["label"]):
+        problems.append("label trống")
+    if component not in components:
+        problems.append(f"component {component!r} không có trong contracts/app.schema.json")
+    elif not os.path.isfile(os.path.join(REPO, "contracts", f"{component}.schema.json")):
+        # Không có schema thì không kiểm được cấu hình, và giao diện thành nơi đầu tiên báo cấu hình sai.
+        problems.append(f"component {component} chưa có contracts/{component}.schema.json")
+    if problems:
+        raise SystemExit(f"Mục menu {entry['id']} của {owner} chưa nạp được: " + "; ".join(problems))
+    script = os.path.join(REPO, "scripts", "contracts.sh")
+    # Lệnh cố định trong repo; tên thành phần đã đối chiếu với danh sách trong schema ở trên.
+    checked = subprocess.run(  # noqa: S603
+        [script, "config", component, os.path.abspath(entry["config"])],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if checked.returncode != 0:
+        output = (checked.stdout + checked.stderr).strip()
+        raise SystemExit(f"Mục menu {entry['id']} của {owner}: {entry['config']} sai cấu hình.\n{output}")
+    # Văn bản của chủ sở hữu nạp bằng lệnh `knowledge` trước đó, nên đối chiếu với CSDL chứ không với tệp.
+    sql = "SELECT DISTINCT document_id FROM platform.knowledge_documents WHERE app = :'app';"
+    problems = app_knowledge.menu_problems(".", {"menu": [entry]}, set(psql(sql, app=owner).split()))
+    if problems:
+        raise SystemExit(f"Mục menu của {owner}: {'; '.join(problems)}; chạy lệnh knowledge trước.")
+
+
 def package(directory: str) -> tuple[dict, list[str], list[str]]:
     app = load_yaml(os.path.join(directory, "app.yaml"))
     # Kiểm trước khi ghi gì: schema không buộc id menu duy nhất, và trùng id làm câu INSERT báo lỗi khó hiểu
@@ -281,6 +323,10 @@ def main() -> int:
         command = commands.add_parser(name)
         command.add_argument("--owner", required=True)
         command.add_argument("files", nargs="+")
+    menu = commands.add_parser("menu")
+    for flag in ("--owner", "--id", "--label", "--component"):
+        menu.add_argument(flag, required=True)
+    menu.add_argument("config")
     args = parser.parse_args()
 
     every = tenants()
@@ -294,12 +340,20 @@ def main() -> int:
     if args.command == "knowledge":
         load_knowledge(args.owner, read_knowledge(args.owner, args.files))
         return 0
+    if args.command == "menu":
+        # Mục menu của lõi không có app.yaml; dựng đúng dạng một mục của `menu` để dùng chung bộ nạp với gói.
+        entry = {"id": args.id, "label": args.label, "component": args.component, "config": args.config}
+        check_menu_entry(args.owner, entry)
+        load_menu(".", {"id": args.owner, "menu": [entry]})
+        return 0
     app, bpmn, steps = package(args.directory)
     if args.command == "install":
         # Văn bản và cấu hình trợ lý kiểm trước khi ghi gì, như id menu trong package().
         files = [os.path.join(args.directory, path) for path in app.get("knowledge", [])]
         documents = read_knowledge(app["id"], files)
-        problems = app_knowledge.menu_problems(args.directory, app, documents)
+        problems = app_knowledge.menu_problems(
+            args.directory, app, {document["id"] for document in documents}
+        )
         if problems:
             raise SystemExit(f"{args.directory}/app.yaml: " + "; ".join(problems))
         deploy(bpmn, every, package_settings(app))

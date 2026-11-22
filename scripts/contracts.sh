@@ -5,7 +5,8 @@
 # Hợp đồng API trong contracts/: kiểm schema và ví dụ, và giữ OpenAPI của các dịch vụ tự viết
 # (workflow-api, files-api, context-api, assistant) khớp với mã. `check` (gọi từ make check-fast) báo lỗi khi lệch; `write` (make contracts)
 # xuất lại OpenAPI sau khi đổi route hay model; `token <tệp>` (gọi từ make smoke) kiểm claim
-# của một token thật, để phiên bản công cụ kiểm chỉ ghim ở tệp này.
+# của một token thật; `config <thành phần> <tệp>` (gọi từ scripts/app-deploy.py) kiểm tệp cấu hình của một thành
+# phần theo contracts/<thành phần>.schema.json. Các lệnh đó gọi qua đây để phiên bản công cụ kiểm chỉ ghim ở tệp này.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -30,8 +31,17 @@ case "$mode" in
     fi
     exec "${checker[@]}" -q --schemafile contracts/service-token-claims.schema.json "$2"
     ;;
+  config)
+    # Tên thành phần thành một phần đường dẫn, nên chỉ nhận chữ thường; không có schema thì báo thay vì bỏ qua.
+    if [[ ! "${2:-}" =~ ^[a-z]+$ || ! -f "contracts/${2:-}.schema.json" || ! -f "${3:-}" ]]; then
+      echo "Cách dùng: $0 config <thành phần có contracts/<thành phần>.schema.json> <tệp cấu hình>." >&2
+      exit 2
+    fi
+    # Không dùng -q: lỗi schema là thứ người gọi cần đọc.
+    exec "${checker[@]}" --schemafile "contracts/$2.schema.json" "$3"
+    ;;
   *)
-    echo "Cách dùng: $0 [check | write | token <tệp claim> | service-token <tệp claim>]" >&2
+    echo "Cách dùng: $0 [check | write | token <tệp claim> | service-token <tệp claim> | config <thành phần> <tệp>]" >&2
     exit 2
     ;;
 esac
