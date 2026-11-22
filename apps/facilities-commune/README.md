@@ -87,9 +87,15 @@ Bản gốc đã đối chiếu (tải ngày 2026-11-19 từ cổng văn bản c
 
 ## Quy trình rà soát
 
-`bpmn/facilities-review.bpmn20.xml` (khóa `facilities-review`). Cán bộ lập hồ sơ với các biến `title` (tên hồ
-sơ), `facilityId` (cơ sở) và `excessM2` (phần vượt tiêu chuẩn, định mức, m²). Người có vai trò `manager` trong cùng
+`bpmn/facilities-review.bpmn20.xml` (khóa `facilities-review`). Cán bộ mở một cơ sở trong mục "Cơ sở nhà, đất",
+bấm "Lập hồ sơ rà soát", xem lại các giá trị rồi gửi (nút khai trong `catalog/facilities.yaml`,
+[ADR 0026](../../docs/adr/0026-start-process-from-catalog-row.md)). Hồ sơ mang các biến `title` (tên cơ sở),
+`facilityId` (id của cơ sở) và `excessM2` (phần vượt tiêu chuẩn, định mức, m²). Người có vai trò `manager` trong cùng
 xã duyệt; người lập không tự duyệt được (bốn mắt).
+
+`excessM2` là phần vượt của cả xã trong view `area_summary`, đọc qua quan hệ `summary` của cơ sở, nên mọi cơ sở
+trong một xã mang cùng số. Lý do: diện tích đang dùng tính trên tổng các trụ sở (Điều 3 khoản 3 NĐ 155/2025/NĐ-CP,
+sửa bởi NĐ 369/2026/NĐ-CP, mục trên), không tính riêng từng cơ sở.
 
 - **Phần vượt từ ngưỡng trở xuống** (`review_report`): duyệt xong là kết thúc ở "báo cáo để tiếp tục sử dụng".
 - **Phần vượt trên ngưỡng** (`review_publish`): duyệt xong thì công khai trong thời hạn, không có bước nào cho người
@@ -103,8 +109,11 @@ Ngưỡng và thời hạn là `settings` trong `app.yaml` (ADR 0019): `review_t
 theo Điều 3a khoản 2, 3 NĐ 155/2025/NĐ-CP, bổ sung bởi Điều 3 NĐ 369/2026/NĐ-CP. Demo và CI ghi đè thời hạn khi cài:
 `make app-install APP=facilities-commune SETTINGS=publication_period=PT20S`.
 
-**Giới hạn:** `excessM2` do client gửi khi lập hồ sơ (chưa có màn hình nào mở quy trình này), người duyệt đối chiếu
-với hồ sơ. Quy trình chưa tự lấy phần vượt từ view `area_summary`; lấy số ở phía máy chủ là việc sau.
+**Giới hạn:**
+
+- `excessM2` do trình duyệt đọc từ `area_summary` lúc bấm nút rồi gửi đi. Người gọi thẳng API vẫn gửi được số khác,
+  nên người duyệt đối chiếu với hồ sơ. Quy trình chưa tự lấy phần vượt ở phía máy chủ; đó là việc sau.
+- Lập hai hồ sơ cho cùng một cơ sở không bị chặn. Bấm đúp trong cùng hộp xác nhận chỉ tạo một hồ sơ.
 
 ## Cài và gỡ
 
