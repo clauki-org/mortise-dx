@@ -19,6 +19,11 @@ export type Answer = {
 };
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+// Giới hạn của contracts: mã văn bản tối đa 64 ký tự (assistant.schema.json), mỗi câu hỏi tối đa 50 văn bản
+// (Question trong assistant.openapi.json). Cấu hình vượt thì không câu hỏi nào ở mục đó được trả lời, nên báo ngay;
+// assistant.test.ts đối chiếu hai số với contracts/.
+export const MAX_DOCUMENT_ID = 64;
+export const MAX_DOCUMENTS = 50;
 
 /**
  * Lỗi của cấu hình mà schema đã chặn ở `make check-fast`. Kiểm lại lúc chạy vì cấu hình là dữ liệu đọc từ CSDL: gói
@@ -30,8 +35,10 @@ export function configProblems(config: unknown): string[] {
   if (typeof value.intro !== "string" || !value.intro.trim()) problems.push("thiếu lời giới thiệu (intro)");
   if (!Array.isArray(value.documents) || value.documents.length === 0)
     problems.push("thiếu danh sách văn bản được hỏi (documents)");
-  else if (!value.documents.every((id) => typeof id === "string" && SLUG.test(id)))
-    problems.push("mã văn bản trong documents phải là chữ thường, số, gạch ngang");
+  else if (value.documents.length > MAX_DOCUMENTS)
+    problems.push(`documents có tối đa ${MAX_DOCUMENTS} văn bản cho mỗi câu hỏi`);
+  else if (!value.documents.every((id) => typeof id === "string" && id.length <= MAX_DOCUMENT_ID && SLUG.test(id)))
+    problems.push(`mã văn bản trong documents phải là chữ thường, số, gạch ngang, tối đa ${MAX_DOCUMENT_ID} ký tự`);
   if (
     value.examples !== undefined &&
     !(Array.isArray(value.examples) && value.examples.every((e) => typeof e === "string"))

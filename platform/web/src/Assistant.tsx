@@ -85,7 +85,8 @@ export function Assistant({ config, app }: Props) {
   );
 }
 
-function Result({ answer }: { answer: Answer }) {
+/** Câu trả lời hay lời từ chối; tách ra để Assistant.test.tsx kiểm cách hiện câu trích. */
+export function Result({ answer }: { answer: Answer }) {
   if (answer.outcome === "refused") {
     return (
       <Alert color="yellow" title="Trợ lý không trả lời">
@@ -99,8 +100,11 @@ function Result({ answer }: { answer: Answer }) {
       <Title order={2} size="h4">
         Căn cứ
       </Title>
-      {answer.citations.map((citation) => (
-        <Blockquote key={`${citation.document_id}/${citation.passage_id}/${citation.sentence}`} p="sm">
+      {answer.citations.map((citation, index) => (
+        // Hai câu trích có thể trùng mọi trường (một câu được dẫn hai lần), nên thứ tự là một phần của khóa; danh
+        // sách hiện một lần cho mỗi câu trả lời, không đổi thứ tự.
+        // biome-ignore lint/suspicious/noArrayIndexKey: các trường khác có thể trùng nhau, xem chú thích trên
+        <Blockquote key={`${index}/${citation.document_id}/${citation.passage_id}/${citation.sentence}`} p="sm">
           <Text>{citation.sentence}</Text>
           <Text size="sm" c="dimmed" mt="xs">
             {citation.title}, {citation.label}

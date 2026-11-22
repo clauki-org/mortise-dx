@@ -71,9 +71,8 @@ def problems(documents: list[dict]) -> list[str]:
     return found
 
 
-def menu_problems(directory: str, app: dict, documents: list[dict]) -> list[str]:
-    """Mục menu `assistant` hỏi văn bản mà gói không khai ở `knowledge`."""
-    known = {document["id"] for document in documents}
+def menu_problems(directory: str, app: dict, known: set[str]) -> list[str]:
+    """Mục menu `assistant` hỏi văn bản không có trong `known` (mã văn bản gói khai ở `knowledge`)."""
     found = []
     for entry in app.get("menu", []):
         if entry["component"] != "assistant":

@@ -15,7 +15,8 @@ capabilities:
   - Câu trả lời hiện kèm từng câu làm căn cứ, đúng chữ lưu trong dữ liệu, cùng tên văn bản và nhãn vị trí.
   - Từ chối hiện lý do của dịch vụ, gồm không có đoạn đủ gần câu hỏi và câu trả lời không qua bước kiểm.
   - Mô hình chưa chạy, đang bận hay quá giờ thì hiện thông điệp của dịch vụ, gồm cách bật mô hình.
-  - Cấu hình thiếu intro hay documents thì báo lý do trên màn hình thay vì gửi câu hỏi.
+  - Cấu hình thiếu intro hay documents, hay quá giới hạn của hợp đồng (50 văn bản, mã văn bản 64 ký tự), thì báo lý
+    do trên màn hình thay vì gửi câu hỏi.
 limits:
   - Mỗi lần một câu hỏi; không giữ lịch sử hỏi đáp trên màn hình, không hỏi tiếp theo câu trước.
   - Chỉ hỏi văn bản của gói chứa mục menu (hay `core` cho mục mẫu của lõi); không hỏi văn bản của gói khác.
