@@ -99,8 +99,8 @@ def pick(rows: list[Row], variables: dict[str, object], parent: str | None) -> R
 
 
 def group(row: Row, parent: str | None) -> str:
-    """Nhóm ứng viên của task. Dòng cấp cha cho `<tenant cha>/<vai trò>`; workflow-api chưa cho người của
-    tenant cha thấy task của tenant con (#110), nên nhóm này hiện chưa ai nhận."""
+    """Nhóm ứng viên của task. Dòng cấp cha cho `<tenant cha>/<vai trò>`: người của tenant cha có vai trò đó
+    thấy và hoàn thành task (ADR 0029, policy.check_parent_can_complete)."""
     if row.scope == PARENT and parent is not None:
         return f"{parent}/{row.role}"
     return row.role

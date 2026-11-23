@@ -11,7 +11,7 @@ from fastapi import Body, Depends, FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
-from . import db, flowable
+from . import db, delegation, flowable
 from .auth import caller_from_token
 from .authority import group, pick
 from .policy import (
@@ -23,10 +23,12 @@ from .policy import (
     check_can_complete,
     check_idempotency_key,
     check_not_preset,
+    check_parent_can_complete,
     check_person,
     check_start_fields,
     check_step_fields,
     check_variables,
+    delegated_to,
 )
 from .schemas import ErrorBody, InstanceStatus, ProcessStarted, Task, VariablesBody
 
@@ -123,6 +125,8 @@ def my_tasks(caller: CallerDep) -> list[dict]:
     # Hai truy vấn vì Flowable không gộp "chưa giao, thuộc nhóm của tôi" với "đã giao cho tôi".
     found = {t["id"]: t for t in flowable.tasks(caller.tenant, groups=sorted(caller.roles))}
     found |= {t["id"]: t for t in flowable.tasks(caller.tenant, assignee=caller.sub)}
+    # Bước của tenant con mà workflow-api đã gán cho nhóm tenant của người gọi lúc lập hồ sơ (ADR 0029).
+    found |= {t["id"]: t for t in delegation.tasks(caller)}
     return [_task_out(t) for t in found.values()]
 
 
@@ -139,9 +143,16 @@ def complete_task(task_id: str, caller: CallerDep, body: VariablesIn = None) -> 
     raw = flowable.task(task_id)
     if raw is None:
         raise Denied(404, "Không tìm thấy task.")
-    check_can_complete(caller, _task_view(raw))
+    task = _task_view(raw)
+    # Task của tenant khác chỉ được xét tiếp khi nhóm ứng viên là nhóm tenant của người gọi; chỉ khi đó mới
+    # đọc CSDL, để người lạ thử mã task nhận 404 ngay cả khi CSDL lỗi (ADR 0029).
+    if delegated_to(caller, task):
+        check_parent_can_complete(caller, task, db.children(caller.tenant))
+    else:
+        check_can_complete(caller, task)
     # Kiểm sau quyền: người của tenant khác hay vai trò khác nhận 404/403 như trước, không biết được bước
-    # nào có trường gì.
+    # nào có trường gì. Đường của tenant cha cũng qua đây: người duyệt của tỉnh không ghi được trường của
+    # bước khác.
     fields = flowable.definition_of(raw["processDefinitionId"]).fields
     check_step_fields(variables, fields, raw["taskDefinitionKey"])
     flowable.claim_and_complete(task_id, caller.sub, variables)
@@ -210,6 +221,8 @@ def _task_out(raw: dict) -> dict:
     return {
         "id": raw["id"],
         "name": raw["name"],
+        # tenantId của Flowable, không phải biến `tenant`: biến chỉ là bản ghi lúc khởi tạo.
+        "tenant": raw.get("tenantId") or "",
         "step": raw["taskDefinitionKey"],
         "process": flowable.process_key(raw["processDefinitionId"]),
         "due": raw.get("dueDate"),

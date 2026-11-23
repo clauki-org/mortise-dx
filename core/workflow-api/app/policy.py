@@ -30,6 +30,7 @@ _IDEMPOTENCY_KEY = re.compile(r"[A-Za-z0-9_-]{8,100}")
 APPROVER_ROLE = "manager"
 # Giá trị trong claim `amr` mà Keycloak ghi khi người dùng đã nhập đúng mã OTP (cấu hình `amr-otp` của realm).
 SECOND_FACTOR = "otp"
+_NEED_SECOND_FACTOR = "Người duyệt phải đăng nhập hai bước (mật khẩu và mã OTP); đăng xuất rồi đăng nhập lại."
 
 
 @dataclass(frozen=True)
@@ -70,13 +71,46 @@ def check_can_complete(caller: Caller, task: TaskView) -> None:
     # Bước lấy vai trò từ bảng phân cấp cần OTP với mọi vai trò: chỉ xét vai trò manager thì đổi một dòng
     # sang vai trò khác là bỏ được bước OTP của chính bước cần thẩm quyền.
     if (APPROVER_ROLE in caller.roles or task.authority) and SECOND_FACTOR not in caller.methods:
-        raise Denied(
-            403, "Người duyệt phải đăng nhập hai bước (mật khẩu và mã OTP); đăng xuất rồi đăng nhập lại."
-        )
+        raise Denied(403, _NEED_SECOND_FACTOR)
     if task.assignee is not None and task.assignee != caller.sub:
         raise Denied(403, "Task đã được giao cho người khác.")
     if task.assignee is None and not (task.candidate_groups & caller.roles):
         raise Denied(403, "Vai trò của bạn không được xử lý task này.")
+    if task.category == FOUR_EYES and task.initiator == caller.sub:
+        raise Denied(403, "Quy tắc bốn mắt: người gửi yêu cầu không được tự duyệt.")
+
+
+def parent_groups(caller: Caller) -> list[str]:
+    """Nhóm ứng viên của bước được gán cho tenant của caller: `<tenant>/<vai trò>` (ADR 0029).
+
+    Ghép từ tenant và vai trò của caller chứ không tách nhóm của task ra: mã tenant không bị cấm chứa `/`, nên
+    tách thì `a/b` + `c` và `a` + `b/c` cho cùng một nhóm. Phép so tenant cha ở check_parent_can_complete phân
+    định trường hợp đó.
+    """
+    return sorted(f"{caller.tenant}/{role}" for role in caller.roles)
+
+
+def delegated_to(caller: Caller, task: TaskView) -> bool:
+    """Task của tenant khác mà nhóm ứng viên là nhóm tenant của caller; chưa xét tenant cha (cần CSDL)."""
+    return task.tenant != caller.tenant and bool(task.candidate_groups & set(parent_groups(caller)))
+
+
+def check_parent_can_complete(caller: Caller, task: TaskView, children: frozenset[str]) -> None:
+    """Người của tenant cha hoàn thành bước thuộc thẩm quyền của mình trong hồ sơ tenant con (ADR 0029).
+
+    `children` là tenant con trực tiếp của caller lúc này, đọc từ core.tenants.
+    """
+    # Mọi điều kiện xác định task có thuộc phạm vi của caller hay không đều trả 404 như task của tenant khác:
+    # 403 cho biết task tồn tại. Bước không đọc bảng phân cấp thì không thành việc của tenant cha, kể cả khi
+    # BPMN viết sẵn nhóm có dấu `/`.
+    if not (delegated_to(caller, task) and task.tenant in children and task.authority):
+        raise Denied(404, "Không tìm thấy task.")
+    # Luôn cần OTP, không xét vai trò: bước của tenant cha là bước đọc bảng phân cấp (ADR 0028), và người ở
+    # tenant khác quyết định thay cho tenant con.
+    if SECOND_FACTOR not in caller.methods:
+        raise Denied(403, _NEED_SECOND_FACTOR)
+    if task.assignee is not None and task.assignee != caller.sub:
+        raise Denied(403, "Task đã được giao cho người khác.")
     if task.category == FOUR_EYES and task.initiator == caller.sub:
         raise Denied(403, "Quy tắc bốn mắt: người gửi yêu cầu không được tự duyệt.")
 

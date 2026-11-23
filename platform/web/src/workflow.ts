@@ -9,6 +9,8 @@ import { callApi } from "./api";
 export type Task = {
   id: string;
   name: string;
+  /** Tenant của hồ sơ; khác tenant của người đăng nhập khi bước của tenant con được gán cho tenant cha (ADR 0029) */
+  tenant: string;
   /** Khóa của quy trình (BPMN) */
   process: string;
   /** id của userTask; cùng process xác định khai báo của bước (platform_workflow_steps) */
@@ -23,6 +25,21 @@ export type Task = {
   assignee: string | null;
   variables: Record<string, unknown>;
 };
+
+/**
+ * Tenant của hồ sơ khi đó không phải tenant của người đăng nhập, tức bước của tenant con mà workflow-api gán cho tenant
+ * cha theo bảng phân cấp (ADR 0029); undefined với task của chính tenant mình. `profileTenant` là claim `tenant` của ID
+ * token (mảng tên nhóm).
+ */
+export function delegatedFrom(task: Task, profileTenant: unknown): string | undefined {
+  const own = (Array.isArray(profileTenant) ? profileTenant : [profileTenant]).filter(
+    (tenant): tenant is string => typeof tenant === "string" && tenant !== "",
+  );
+  // Không đọc được tenant của mình thì không gắn nhãn: gắn thì mọi task, kể cả của chính tenant mình, đều hiện như
+  // việc của đơn vị khác.
+  if (own.length === 0) return undefined;
+  return own.includes(task.tenant) ? undefined : task.tenant;
+}
 
 export const fetchTasks = (token: string | undefined) => callApi<Task[]>("/v1/workflow/tasks", token);
 

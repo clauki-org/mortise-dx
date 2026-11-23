@@ -6,11 +6,13 @@
 # diện: phần vượt trên ngưỡng thì sau khi duyệt chờ hết thời hạn công khai rồi mới sang bước trình và bước quyết
 # định, từ ngưỡng trở xuống thì duyệt xong là kết thúc; người lập không tự duyệt; biến gửi kèm khi lập hay khi duyệt
 # không đổi được nhánh. Bảng phân cấp (ADR 0028): quản trị tỉnh đổi dòng của xã A thì hồ sơ lập sau có bước quyết
-# định ở vai trò mới, hồ sơ đã lập giữ vai trò cũ, và bước quyết định cần OTP. Trường của bước (ADR 0031): người lập
-# hay người trình không gửi sẵn được nội dung quyết định. Ngưỡng 300 m² là giá trị trong app.yaml; thời hạn công
-# khai đọc từ quy trình đã deploy (ADR 0019): chỉ chờ hết hạn khi gói được cài với thời hạn ngắn, ví dụ
-# make app-install APP=facilities-commune SETTINGS=publication_period=PT20S, còn không thì báo SKIP phần đó. Mọi
-# hồ sơ tạo ra đều được đưa tới kết thúc hoặc bị xóa; dòng của xã A được đặt lại về manager.
+# định ở vai trò mới, hồ sơ đã lập giữ vai trò cũ, và bước quyết định cần OTP. Hồ sơ vượt dòng `province` (trên
+# 1000 m²) có bước quyết định ở người duyệt của tỉnh (ADR 0029): manager.tinh chỉ thấy bước đó, người của xã khác và
+# tỉnh khác nhận 404. Trường của bước (ADR 0031): người lập hay người trình không gửi sẵn được nội dung quyết định.
+# Ngưỡng 300 m² là giá trị trong app.yaml; thời hạn công khai đọc từ quy trình đã deploy (ADR 0019): chỉ chờ hết hạn
+# khi gói được cài với thời hạn ngắn, ví dụ make app-install APP=facilities-commune SETTINGS=publication_period=PT20S,
+# còn không thì báo SKIP phần đó. Mọi hồ sơ tạo ra đều được đưa tới kết thúc hoặc bị xóa; dòng của xã A được đặt lại
+# về manager.
 # smoke.sh của gói gọi tệp này; cần lõi đang chạy, đã `make seed` và đã cài gói.
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
@@ -92,9 +94,16 @@ flowable() {
     "http://127.0.0.1:${FLOWABLE_PORT:-8083}/flowable-rest/service$2"
 }
 
+# otp_token TÊN: token của người phải đăng nhập kèm mã OTP (ADR 0011).
+otp_token() { token "$1" "$(uv run --quiet --no-project python scripts/otp.py next "$1")"; }
+
 user=$(token user.a)
 # Người duyệt phải gửi kèm mã OTP (ADR 0011); một token dùng cho cả bài để không tốn mã.
-manager=$(token manager.a "$(uv run --quiet --no-project python scripts/otp.py next manager.a)")
+manager=$(otp_token manager.a)
+# Người duyệt của tỉnh (tenant cha của xã A), của xã B cùng tỉnh, và của tỉnh khác (scripts/seed.sh).
+manager_tinh=$(otp_token manager.tinh)
+manager_b=$(otp_token manager.b)
+manager_k=$(otp_token manager.k)
 title="Rà soát kiểm thử $(date +%s)"
 admin_a=$(token admin.a)
 
@@ -136,6 +145,13 @@ flowable DELETE "/runtime/process-instances/$own" >/dev/null
 above=$(file "{\"title\": \"$title A\", \"excessM2\": 420}")
 check "Vượt 420 m² (trên ngưỡng): hồ sơ vào bước duyệt để công khai" "$(step_of "$above")" review_publish
 check "Bảng phân cấp: hồ sơ lập theo dòng mặc định có bước quyết định ở manager" "$(decider_of "$above")" manager
+# Vượt 1500 m², trên ngưỡng minh họa 1000 của dòng province: bước quyết định ở người duyệt của tỉnh, các bước trước
+# vẫn ở xã.
+province=$(file "{\"title\": \"$title P\", \"excessM2\": 1500}")
+check "Bước của tỉnh: hồ sơ vượt 1500 m² có bước quyết định ở tinh-mau/manager" "$(decider_of "$province")" \
+  tinh-mau/manager
+check "Bước của tỉnh: manager.tinh không thấy bước duyệt để công khai của xã A" "[$(step_of "$province" \
+  "$manager_tinh")]" "[]"
 check "Bảng phân cấp: quản trị xã A không sửa được bảng của chính xã mình" "$(set_decider "$admin_a" tenant_admin)" 0
 trap 'restore_decider >/dev/null || true' EXIT
 check "Bảng phân cấp: quản trị tỉnh đổi dòng của xã A sang tenant_admin" \
@@ -150,29 +166,33 @@ if [[ $short == false ]]; then
   echo "SKIP  Thời hạn công khai đang deploy là '${period}', smoke chỉ chờ ${wait_limit} giây: bỏ qua phần công" \
     "khai, trình và quyết định. Kiểm cả phần này: make app-install APP=facilities-commune" \
     "SETTINGS=publication_period=PT20S"
-  for instance in "$above" "$later"; do complete "$manager" "$instance" '{"approved": false}' >/dev/null; done
+  for instance in "$above" "$later" "$province"; do
+    complete "$manager" "$instance" '{"approved": false}' >/dev/null
+  done
 else
   # Người duyệt gửi kèm excessM2 = 0: nhánh đã chọn lúc lập hồ sơ nên không đổi.
   check "Người duyệt duyệt hồ sơ" "$(complete "$manager" "$above" '{"approved": true, "excessM2": 0}')" 204
-  complete "$manager" "$later" '{"approved": true}' >/dev/null
+  for instance in "$later" "$province"; do complete "$manager" "$instance" '{"approved": true}' >/dev/null; done
   check "Đang công khai: chưa kết thúc, chưa có bước nào cho người dùng" "$(status "$above") [$(step_of "$above")]" \
     "false null []"
   # Hai hồ sơ công khai cùng lúc nên chỉ chờ một lần.
   waited=0
-  while [[ -z "$(step_of "$above")" || -z "$(step_of "$later")" ]] && ((waited < wait_limit)); do
+  while [[ -z "$(step_of "$above")" || -z "$(step_of "$later")" || -z "$(step_of "$province")" ]] &&
+    ((waited < wait_limit)); do
     sleep 5
     waited=$((waited + 5))
   done
-  if [[ -z "$(step_of "$above")" || -z "$(step_of "$later")" ]]; then
+  if [[ -z "$(step_of "$above")" || -z "$(step_of "$later")" || -z "$(step_of "$province")" ]]; then
     echo "FAIL  Thời hạn công khai ${period} nhưng hết ${wait_limit} giây hồ sơ vẫn đang công khai"
     fail=1
   else
     check "Hết thời hạn công khai: hồ sơ sang bước trình người có thẩm quyền" \
-      "$(step_of "$above") $(step_of "$later")" "submit submit"
+      "$(step_of "$above") $(step_of "$later") $(step_of "$province")" "submit submit submit"
+    check "Bước của tỉnh: manager.tinh không thấy bước trình của xã A" "[$(step_of "$province" "$manager_tinh")]" "[]"
     # Trường của bước (ADR 0031): decision là trường của bước quyết định, người trình không ghi sẵn được.
     check "Người trình không gửi được nội dung quyết định khi hoàn thành bước trình" \
       "$(complete "$manager" "$above" '{"recipient": "Đơn vị kiểm thử", "submitted": true, "decision": "Đặt sẵn"}')" 400
-    for instance in "$above" "$later"; do
+    for instance in "$above" "$later" "$province"; do
       complete "$manager" "$instance" '{"recipient": "Đơn vị kiểm thử", "submitted": true}' >/dev/null
     done
     check "Trình xong: hồ sơ A sang bước quyết định, manager.a thấy, admin.a không thấy" \
@@ -196,11 +216,28 @@ else
       "$(complete "$manager" "$above" "$decision")" 204
     check "Ghi nhận quyết định xong: hai hồ sơ kết thúc ở đã có quyết định" "$(status "$above") $(status "$later")" \
       "true decided true decided"
+    delegated=$(task_of "$province" "$manager_tinh")
+    check "Bước của tỉnh: trình xong, manager.tinh thấy bước quyết định, task ghi tenant xa-a" \
+      "$(pending "$province" step "$manager_tinh") $(pending "$province" tenant "$manager_tinh")" "decide xa-a"
+    check "Bước của tỉnh: manager.a, manager.b, manager.k không thấy bước quyết định đó" \
+      "[$(step_of "$province")$(step_of "$province" "$manager_b")$(step_of "$province" "$manager_k")]" "[]"
+    for pair in "manager.b $manager_b" "manager.k $manager_k" "manager.a $manager"; do
+      read -r name stranger <<<"$pair"
+      out=$(api "$stranger" POST "/tasks/$delegated/complete" "{\"variables\": $decision}" | tail -1)
+      # manager.a ở chính xã của hồ sơ: thấy task tồn tại nên nhận 403 của luật vai trò, như mọi task trong xã.
+      [[ $name == manager.a ]] && want=403 || want=404
+      check "Bước của tỉnh: $name hoàn thành bước quyết định bằng mã task bị từ chối" "$out" "$want"
+    done
+    check "Bước của tỉnh: tỉnh không đọc được trạng thái hồ sơ của xã A" \
+      "$(api "$manager_tinh" GET "/instances/$province" | tail -1)" 404
+    check "Bước của tỉnh: manager.tinh (có OTP) ghi nhận quyết định" \
+      "$(complete "$manager_tinh" "$province" "$decision")" 204
+    check "Bước của tỉnh: hồ sơ của xã A kết thúc ở đã có quyết định" "$(status "$province")" "true decided"
   fi
 fi
 # Hồ sơ chưa kết thúc vì một bước ở trên hỏng (hết giờ chờ công khai, bị từ chối) thì xóa: hồ sơ đang công khai không
 # trả lại được qua API, và để lại thì nó nằm trên bảng việc của xã A sau mỗi lần chạy hỏng.
-for instance in "$above" "$later"; do
+for instance in "$above" "$later" "$province"; do
   [[ "$(status "$instance")" == true\ * ]] || flowable DELETE "/runtime/process-instances/$instance" >/dev/null
 done
 

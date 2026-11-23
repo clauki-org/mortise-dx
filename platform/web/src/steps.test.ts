@@ -18,6 +18,7 @@ const task = {
   processInstanceId: "p1",
   created: "2026-11-22T00:00:00Z",
   assignee: null,
+  tenant: "xa-a",
   variables: { amount: 1234.5, note: "Gấp", urgent: true, empty: "" },
 } satisfies Task;
 

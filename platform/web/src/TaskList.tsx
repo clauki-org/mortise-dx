@@ -24,7 +24,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useSession } from "./session";
 import { dateTime, dueText, recordTitle, stepOf, useSteps } from "./steps";
-import { fetchTasks, type Task } from "./workflow";
+import { delegatedFrom, fetchTasks, type Task } from "./workflow";
 
 type Filter = "all" | "overdue" | "upcoming" | "no-due";
 
@@ -68,6 +68,21 @@ export function DueBadge({ due, now }: { due: string | null; now: number }) {
   return (
     <Badge variant="light" color={overdue ? "red" : "blue"} tt="none" title={dateTime.format(new Date(due))}>
       {text}
+    </Badge>
+  );
+}
+
+/**
+ * Nhãn mã tenant của hồ sơ khi bước thuộc hồ sơ tenant khác, được gán cho tenant của người đăng nhập. Chỉ có
+ * mã, không có tên: quyền Hasura của người đăng nhập không đọc được dòng tenant của tenant con.
+ */
+export function DelegatedBadge({ task }: { task: Task }) {
+  const { user } = useSession();
+  const tenant = delegatedFrom(task, user.profile.tenant);
+  if (tenant === undefined) return null;
+  return (
+    <Badge size="xs" variant="light" color="grape" tt="none" title="Bước của đơn vị cấp dưới, giao cho đơn vị bạn">
+      Đơn vị {tenant}
     </Badge>
   );
 }
@@ -152,6 +167,7 @@ export function TaskList() {
                         <Text size="xs" c="dimmed">
                           {task.name}
                         </Text>
+                        <DelegatedBadge task={task} />
                         {task.assignee !== null && (
                           <Badge size="xs" variant="outline" tt="none">
                             Đã giao cho bạn

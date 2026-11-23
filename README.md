@@ -58,7 +58,7 @@ biệt.
 | Gói minh họa: độ ẩm kho lưu trữ vượt ngưỡng (ngưỡng minh họa) liên tục 5 phút thì người duyệt của xã có việc "Kiểm tra kho lưu trữ" | Đã chạy | CI: smoke gói gửi số đo qua MQTT, kiểm việc mở đúng xã, không mở trùng |
 | Gói minh họa: quy trình rà soát hồ sơ: cán bộ lập hồ sơ từ màn hình chi tiết của cơ sở trên web, bốn mắt, phần vượt trên ngưỡng thì công khai có hẹn giờ rồi trình người có thẩm quyền, bước quyết định tới vai trò theo bảng phân cấp của xã; ngưỡng và thời hạn là settings của gói | Đã chạy | CI: smoke gói chạy quy trình qua API (thời hạn công khai 20 giây; tỉnh đổi bảng phân cấp thì hồ sơ lập sau tới vai trò mới); `make e2e` (trình duyệt: lập hồ sơ từ cơ sở, hồ sơ hiện trên bảng việc người duyệt cùng xã, không hiện ở xã khác) |
 | Gói minh họa: bản đồ trụ sở tô theo phần vượt của xã; tỉnh thấy trụ sở đang dùng của các xã con | Đã chạy | `make e2e` (trình duyệt: cán bộ xã A thấy trụ sở mình phụ trách, không thấy xã B; `leader.tinh` thấy trụ sở của hai xã) |
-| Gói minh họa: tỉnh duyệt bước được phân cấp | Kế hoạch | |
+| Gói minh họa: tỉnh duyệt bước được phân cấp: hồ sơ rà soát vượt ngưỡng minh họa của dòng `scope: parent` có bước quyết định ở người duyệt của tỉnh; tỉnh chỉ thấy bước đó, không thấy bước khác hay trạng thái hồ sơ; xã khác, tỉnh khác nhận 404 ([ADR 0029](docs/adr/0029-parent-completes-delegated-step.md)) | Đã chạy | CI: smoke gói (thời hạn công khai 20 giây: `manager.tinh` ghi nhận quyết định của hồ sơ xã A); `make smoke` (quy trình mẫu `core-authority`, gồm đổi tạm tenant cha của xã A); `make test` |
 | Gói thứ hai `apps/supplies-commune` (kho vật tư xã) chỉ gồm tệp khai báo, không có mã chạy: kho và vật tư cách ly theo tenant, cán bộ và lãnh đạo xã chỉ đọc, quản trị xã ghi, có nhật ký; danh mục kho → vật tư trên menu; đề nghị cấp vật tư lập trên web tới người duyệt của xã, bốn mắt; quản trị xã thêm vật tư bằng biểu mẫu; dữ liệu demo nạp bằng bộ nạp chung; gỡ ra thì lõi và gói xã vẫn chạy | Đã chạy | `make check-fast` (gói không có tệp mã); CI: cài cùng gói xã → `make seed-demo` → smoke hai gói → `make e2e` → gỡ gói kho → `make smoke`, smoke gói xã |
 
 ## Chạy từ mã nguồn
@@ -105,12 +105,13 @@ lưu xong. Nhờ vậy CSDL, CSDL của Scorpio và kho tệp trong bản sao l�
 
 Tài khoản demo: `user.a`, `manager.a`, `admin.a` (tenant `xa-a`), tương tự `.b` cho `xa-b` và `.c` cho `xa-c`, ba xã
 của "Tỉnh Mẫu", tỉnh hư cấu; ở tenant cha `tinh-mau` có `leader.tinh` (đọc tổng hợp của ba xã), `admin.tinh` (quản trị
-tỉnh, sửa bảng phân cấp thẩm quyền của các xã) và `manager.tinh` (người duyệt của tỉnh); mật khẩu là
+tỉnh, sửa bảng phân cấp thẩm quyền của các xã) và `manager.tinh` (người duyệt của tỉnh, làm các bước thuộc thẩm
+quyền của tỉnh trong hồ sơ của xã); tenant `tinh-khac` ("Tỉnh Khác", không có xã) có `manager.k`; mật khẩu là
 `DEMO_USER_PASSWORD` trong `.env`. `admin.*` có vai trò `tenant_admin` (quản trị xã); `admin2.a` cũng là quản trị xã
-A nhưng có thêm `otp_required`, nhận được bước mà bảng phân cấp giao cho `tenant_admin`. Người duyệt (`manager.*`) và
-`admin2.a` nhập thêm mã OTP: `make otp` in mã hiện tại và khóa để nhập vào ứng dụng OTP trên điện thoại
-([ADR 0011](docs/adr/0011-approver-mfa.md)). Thiết bị demo nằm trong `devices/simulator/devices.yaml`, mật khẩu MQTT
-`DEMO_DEVICE_PASSWORD`; `make simulate` gửi số đo giả cho chúng.
+A nhưng có thêm `otp_required`, nhận được bước mà workflow-api gán cho `tenant_admin` theo bảng phân cấp. Người
+duyệt (`manager.*`) và `admin2.a` nhập thêm mã OTP: `make otp` in mã hiện tại và khóa để nhập vào ứng dụng OTP trên
+điện thoại ([ADR 0011](docs/adr/0011-approver-mfa.md)). Thiết bị demo nằm trong `devices/simulator/devices.yaml`,
+mật khẩu MQTT `DEMO_DEVICE_PASSWORD`; `make simulate` gửi số đo giả cho chúng.
 Thiết bị khác cấp tài khoản bằng `make device-add TENANT=<tenant> DEVICE=<thiết bị>`. Mọi lệnh khác: `make help`.
 
 Mô hình ngôn ngữ của trợ lý hỏi văn bản chạy tại chỗ bằng Ollama, tách khỏi lõi trong profile `ai`: `make ai-up` chạy

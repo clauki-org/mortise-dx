@@ -16,7 +16,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { formValidator } from "./formValidator";
 import { useSession } from "./session";
 import { dateTime, detailRows, recordTitle, stepOf, useSteps } from "./steps";
-import { DueBadge } from "./TaskList";
+import { DelegatedBadge, DueBadge } from "./TaskList";
 import { completeTask, fetchTasks, type StepConfig, type Task } from "./workflow";
 
 // Biến lõi tự đặt (docs/api.md); không phải thông tin hồ sơ nên không hiện. initiatorName hiện thành "Người gửi".
@@ -211,9 +211,12 @@ export function TaskScreen() {
           <Title order={1} size="h2">
             {recordTitle(task, step)}
           </Title>
-          <Text c="dimmed" size="sm">
-            {task.name}
-          </Text>
+          <Group gap={6}>
+            <Text c="dimmed" size="sm">
+              {task.name}
+            </Text>
+            <DelegatedBadge task={task} />
+          </Group>
         </div>
         <DueBadge due={task.due} now={Date.now()} />
       </Group>

@@ -17,6 +17,14 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   gói kèm Idempotency-Key hoặc thêm một dòng vào bảng của gói; `make check-fast` kiểm biểu mẫu với BPMN, khai báo
   bước và quyền Hasura của gói. Khai báo bước có `details` để người xử lý thấy giá trị người lập điền. Gói kho vật tư
   có mục "Lập đề nghị cấp vật tư" và "Thêm vật tư vào kho" (quản trị xã).
+- Tenant cha hoàn thành bước thuộc thẩm quyền của mình trong hồ sơ tenant con (ADR 0029): khi hồ sơ khớp dòng
+  `scope: parent` của bảng phân cấp, lúc lập hồ sơ workflow-api gán bước cho nhóm `<tenant cha>/<vai trò>`, và người của
+  tenant cha có vai trò đó thấy task trên bảng việc (kèm mã tenant con) và hoàn thành được, luôn cần OTP. Các bước khác
+  của hồ sơ và trạng thái hồ sơ vẫn 404 với tenant cha; tenant cùng cha, tenant khác nhận 404. Task của API quy trình có
+  thêm trường `tenant`. Gói `facilities-commune` có dòng để bước `decide` thuộc thẩm quyền của tỉnh khi phần vượt trên
+  1000 m² (ngưỡng minh họa, quản trị tỉnh sửa được). Tenant demo mới `tinh-khac` với `manager.k`; bản cài cũ dựng lại
+  image (`docker compose build workflow-api web`), chạy `make up`, `make seed` và
+  `make app-install APP=facilities-commune`.
 - Quy trình rà soát của gói `facilities-commune` có thêm bước "Quyết định của người có thẩm quyền" (`decide`) sau
   bước trình, với một nút "Ghi nhận quyết định". Vai trò của bước lấy từ bảng phân cấp của xã (ADR 0028, dòng mặc
   định `manager` ở `authorities/facilities-review.yaml`); quản trị tỉnh đổi dòng thì hồ sơ lập sau tới vai trò mới,

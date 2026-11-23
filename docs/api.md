@@ -141,7 +141,7 @@ không có đường vào trực tiếp từ bên ngoài.
 | Phương thức | Đường dẫn | Việc |
 |---|---|---|
 | `POST` | `/v1/workflow/processes/{key}/instances` | Khởi tạo một quy trình của tenant mình; thân `{"variables": {...}}` hoặc không có thân; header `Idempotency-Key` tùy chọn |
-| `GET` | `/v1/workflow/tasks` | Các task giao cho mình hoặc cho vai trò của mình, trong tenant mình; mỗi task có `process`, `step` (id của userTask) và `due` (hạn, có thể null) |
+| `GET` | `/v1/workflow/tasks` | Các task giao cho mình hoặc cho vai trò của mình, trong tenant mình, cùng bước của tenant con mà workflow-api gán cho nhóm của tenant mình theo bảng phân cấp; mỗi task có `tenant` (tenant của hồ sơ), `process`, `step` (id của userTask) và `due` (hạn, có thể null) |
 | `POST` | `/v1/workflow/tasks/{id}/complete` | Hoàn thành task; thân `{"variables": {...}}` hoặc không có thân |
 | `GET` | `/v1/workflow/instances/{id}` | Trạng thái một quy trình của tenant mình |
 
@@ -175,6 +175,13 @@ curl -fsS -X POST http://localhost:9080/v1/graphql \
   -d '{"query":"mutation { update_core_step_authorities(where: {tenant_id: {_eq: \"xa-a\"}, process: {_eq: \"core-authority\"}, step: {_eq: \"decide\"}, rule: {_eq: \"default\"}}, _set: {role: \"tenant_admin\"}) { affected_rows } }"}'
 ```
 
+Bước thuộc thẩm quyền của tenant cha ([ADR 0029](adr/0029-parent-completes-delegated-step.md)): hồ sơ khớp dòng
+`scope: parent` thì lúc lập hồ sơ workflow-api gán bước cho nhóm `<tenant cha>/<vai trò>`. Người của tenant cha có vai
+trò đó thấy task trong `GET /v1/workflow/tasks`, với `tenant` là tenant con, kèm mọi biến của hồ sơ, và hoàn thành được
+nó; luôn cần OTP, quy tắc bốn mắt vẫn áp. Chỉ tenant con trực tiếp lúc gọi, đọc từ `core.tenants.parent_id`. Các bước
+khác của hồ sơ và `GET /v1/workflow/instances/{id}` vẫn trả 404 với tenant cha; tenant khác, kể cả tenant cùng cha, nhận
+404 với task đó.
+
 Tài khoản dịch vụ ([ADR 0017](adr/0017-service-account-for-tenant.md)): client Keycloak `mortise-iot-bridge` lấy
 token bằng client credentials, secret `IOT_BRIDGE_CLIENT_SECRET` trong `.env`. Token này không có tenant; mỗi yêu cầu
 ghi tenant ở header `X-Mortise-Tenant` và chỉ được khởi tạo quy trình. Với tài khoản dịch vụ, `Idempotency-Key` chỉ
@@ -194,10 +201,10 @@ curl -fsS -X POST http://localhost:9080/v1/workflow/processes/core-approval/inst
 | `400` | Ghi đè biến dành riêng của lõi (`initiator`, `initiatorName`, `tenant`, `idempotencyKey`, mọi biến bắt đầu bằng `authority_`); khởi tạo kèm biến quyết định, tức tên dùng trong điều kiện rẽ nhánh sau một userTask của quy trình, ví dụ `approved` của `core-approval` ([ADR 0025](adr/0025-decision-variables.md)); khởi tạo kèm trường của một bước, tức `id` của một `flowable:formProperty` khai trong userTask, ví dụ `comment` của `core-approval`; hoàn thành một bước kèm trường của bước khác mà bước này không khai ([ADR 0031](adr/0031-step-fields.md)); `Idempotency-Key` sai định dạng (8–100 ký tự chữ, số, `-`, `_`); người dùng gửi `X-Mortise-Tenant`; tài khoản dịch vụ thiếu header đó |
 | `401` | Thiếu hoặc sai token |
 | `403` | Tài khoản không thuộc đúng một tenant; tài khoản dịch vụ gọi đường khác ngoài khởi tạo quy trình; người duyệt (`manager`), hay người hoàn thành bước lấy vai trò từ bảng phân cấp, đăng nhập chưa qua bước OTP; task đã giao cho người khác; không có vai trò ứng viên; người gửi tự duyệt yêu cầu của mình |
-| `404` | Task hay quy trình không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại); tenant chưa có quy trình đó |
+| `404` | Task hay quy trình không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại), trừ bước của tenant con được gán cho nhóm của tenant mình; tenant chưa có quy trình đó |
 | `409` | Hoàn thành: task vừa được người khác nhận. Khởi tạo: bảng phân cấp của tenant chưa có dòng cho một bước của quy trình (người vận hành chạy lại `make app-install`, quy trình mẫu: `make seed`) |
 | `422` | Thân yêu cầu sai định dạng hoặc có khóa ngoài `variables`, ví dụ gửi `{"approved": true}` thiếu lớp `variables` |
-| `502` / `503` | Flowable trả lỗi (thông điệp được chuyển lại) / không kết nối được Flowable, hay không đọc được bảng phân cấp trong CSDL |
+| `502` / `503` | Flowable trả lỗi (thông điệp được chuyển lại) / không kết nối được Flowable, hay không đọc được bảng phân cấp hoặc tenant con trong CSDL |
 
 ## Tệp: `/v1/files`
 

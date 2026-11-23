@@ -69,10 +69,12 @@ if [[ "$public_url" =~ ^http://(localhost|127\.0\.0\.1)(:|/|$) ]]; then
   echo "keycloak: mortise-web nhận thêm $web_dev_url cho máy chủ phát triển giao diện"
 fi
 
-# username  tenant   vai trò thêm   otp nếu phải nhập OTP. admin.<x> quản trị một tenant (tenant_admin): gói dùng vai trò
-# này để tenant tự sửa dữ liệu cấu hình của mình, ví dụ phân công cán bộ. admin.tinh sửa bảng phân cấp thẩm quyền của
-# các xã con (ADR 0028). admin2.a là quản trị xã A có otp_required, nhận được bước mà bảng phân cấp giao cho
-# tenant_admin; admin.a giữ đăng nhập bằng mật khẩu. manager luôn phải nhập OTP vì gộp otp_required.
+# username  tenant   vai trò thêm   otp nếu phải nhập OTP. admin.<x> quản trị một tenant (tenant_admin): gói dùng vai
+# trò này để tenant tự sửa dữ liệu cấu hình của mình, ví dụ phân công cán bộ. admin.tinh sửa bảng phân cấp thẩm quyền
+# của các xã con (ADR 0028), manager.tinh hoàn thành bước thuộc thẩm quyền của tỉnh trong hồ sơ của xã con (ADR 0029);
+# manager.k là người duyệt của tỉnh khác, không có quyền gì với xã của Tỉnh Mẫu. admin2.a là quản trị xã A có
+# otp_required, nhận được bước mà workflow-api gán cho tenant_admin theo bảng phân cấp; admin.a giữ đăng nhập bằng mật
+# khẩu. manager luôn phải nhập OTP vì gộp otp_required.
 users=(
   "user.a  xa-a  -"
   "manager.a  xa-a  manager"
@@ -87,6 +89,7 @@ users=(
   "leader.tinh  tinh-mau  rollup_reader"
   "admin.tinh  tinh-mau  tenant_admin"
   "manager.tinh  tinh-mau  manager"
+  "manager.k  tinh-khac  manager"
 )
 
 # Tệp realm chỉ được nạp khi Keycloak khởi động lần đầu. Bản cài dựng trước khi có vai trò rollup_reader và tenant
@@ -150,16 +153,18 @@ done
 
 # Tenant demo là dữ liệu, không phải lược đồ, nên nằm ở seed chứ không nằm trong migration:
 # bản cài thật không được tự có tenant demo. Ba xã của "Tỉnh Mẫu", tỉnh hư cấu dùng cho demo (#58), là con của
-# tenant tỉnh (ADR 0016); cha phải có trước con vì khóa ngoại parent_id. Tên trùng tên group trong realm.
+# tenant tỉnh (ADR 0016); cha phải có trước con vì khóa ngoại parent_id. "Tỉnh Khác" (tinh-khac) không có xã nào,
+# để kiểm người duyệt của một tỉnh không thấy bước của xã thuộc tỉnh khác. Tên trùng tên group trong realm.
 docker compose exec -T postgres psql -qX -v ON_ERROR_STOP=1 --username hasura --dbname mortise <<'SQL'
 INSERT INTO core.tenants (id, name, parent_id) VALUES
     ('tinh-mau', 'Tỉnh Mẫu', NULL),
     ('xa-a', 'Xã A (Tỉnh Mẫu)', 'tinh-mau'),
     ('xa-b', 'Xã B (Tỉnh Mẫu)', 'tinh-mau'),
-    ('xa-c', 'Xã C (Tỉnh Mẫu)', 'tinh-mau')
+    ('xa-c', 'Xã C (Tỉnh Mẫu)', 'tinh-mau'),
+    ('tinh-khac', 'Tỉnh Khác', NULL)
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, parent_id = EXCLUDED.parent_id;
 SQL
-echo "postgres: tenant demo tinh-mau (cha), xa-a, xa-b, xa-c"
+echo "postgres: tenant demo tinh-mau (cha), xa-a, xa-b, xa-c, tinh-khac"
 
 # Quyền dữ liệu của Hasura: áp tệp khai báo theo kiểu ghi đè, nên chạy lại seed cũng sửa được quyền đã bị đổi sai.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py apply

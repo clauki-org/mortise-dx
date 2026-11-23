@@ -131,6 +131,11 @@
             "title": "Step",
             "type": "string"
           },
+          "tenant": {
+            "description": "Tenant của hồ sơ. Khác tenant của người gọi khi bước thuộc thẩm quyền của tenant cha theo bảng phân cấp: lúc lập hồ sơ, workflow-api gán bước cho nhóm của tenant cha (ADR 0029)",
+            "title": "Tenant",
+            "type": "string"
+          },
           "variables": {
             "additionalProperties": true,
             "title": "Variables",
@@ -140,6 +145,7 @@
         "required": [
           "id",
           "name",
+          "tenant",
           "step",
           "process",
           "due",
