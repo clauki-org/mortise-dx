@@ -183,3 +183,22 @@ def _refuse_fields(
 def check_idempotency_key(key: str) -> None:
     if not _IDEMPOTENCY_KEY.fullmatch(key):
         raise Denied(400, "Idempotency-Key phải dài 8–100 ký tự, chỉ gồm chữ, số, '-' và '_'.")
+
+
+def visible_variables(
+    variables: Mapping[str, object], fields: Mapping[str, frozenset[str]], has_steps: bool
+) -> dict[str, object]:
+    """Biến người lập thấy trên hồ sơ của mình (ADR 0032): bỏ biến lõi đặt và mọi trường của mọi bước.
+
+    Trường của bước (ADR 0031) là nội dung người xử lý ghi, như ý kiến hay quyết định; người lập không xem
+    được, kể cả khi hồ sơ đã kết thúc. Định nghĩa có bước người làm mà không khai trường nào (deploy trước ADR
+    0031) thì không biết biến nào là của bước, nên không trả biến nào.
+    """
+    if has_steps and not fields:
+        return {}
+    written = frozenset().union(*fields.values())
+    return {
+        name: value
+        for name, value in variables.items()
+        if name not in RESERVED_VARIABLES and not name.startswith(RESERVED_PREFIX) and name not in written
+    }

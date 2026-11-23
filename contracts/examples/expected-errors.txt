@@ -15,7 +15,7 @@ app.missing-id.yaml	$	'id' is a required property
 app.path-escapes-package.yaml	$.menu[0].config	'../../core/keycloak/realm.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
 app.path-is-url.yaml	$.menu[0].config	'http://no-such-host.invalid/items.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
 app.settings-unsafe-value.yaml	$.settings.approval_limit	'1000 || true' is not valid under any of the given schemas
-app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'documents', 'dashboard', 'rules', 'assistant']
+app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'documents', 'dashboard', 'rules', 'assistant', 'cases']
 app.unknown-field.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
 app.version-leading-zero.yaml	$.version	'01.0.0' does not match '^(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)$'
 assistant.blank-intro.yaml	$.intro	'   ' does not match '\\\\S'
@@ -98,3 +98,6 @@ workflow.title-reserved-variable.yaml	$.steps.review.title	'initiator' should no
 assistant.data-tenant-column.yaml	$.data.sources[0].columns[0].name	'tenant_id' should not be valid under {'const': 'tenant_id'}
 assistant.data-too-many-rows.yaml	$.data.max_rows	5000 is greater than the maximum of 100
 assistant.documents-and-data.yaml	$	{'intro': 'Hỏi về quy chế đặt phòng họp.', 'documents': ['example-rules'], 'data': {'max_rows': 20, 'sources': [{'field': 'platform_knowledge_documents', 'label': 'Văn bản', 'description': 'Văn bản đã nạp.', 'columns': [{'name': 'title', 'label': 'Tên', 'description': 'Tên văn bản'}]}], 'examples': [{'id': 'titles', 'question': 'Có những văn bản nào?', 'query': '{ platform_knowledge_documents(limit: 20) { title } }'}]}} is not valid under any of the given schemas
+cases.duplicate-process.yaml	$.processes	['core-approval', 'core-approval'] has non-unique elements
+cases.no-processes.yaml	$.processes	[] should be non-empty
+cases.process-not-slug.yaml	$.processes[0]	'core-approval&state=all' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'

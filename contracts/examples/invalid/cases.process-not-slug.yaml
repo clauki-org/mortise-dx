@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/cases.schema.json từ chối: khóa quy trình không phải slug, ví dụ ghép thêm tham số
+# vào địa chỉ API.
+
+title: Hồ sơ đã lập
+processes: ["core-approval&state=all"]

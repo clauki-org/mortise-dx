@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse, Response
 from . import db, delegation, flowable
 from .auth import caller_from_token
 from .authority import group, pick
+from .case_routes import router as case_router
 from .policy import (
     IDEMPOTENCY_VARIABLE,
     RESERVED_PREFIX,
@@ -30,7 +31,7 @@ from .policy import (
     check_variables,
     delegated_to,
 )
-from .schemas import ErrorBody, InstanceStatus, ProcessStarted, Task, VariablesBody
+from .schemas import InstanceStatus, ProcessStarted, Task, VariablesBody, error_responses
 
 # openapi_url=None: không phục vụ tài liệu qua cổng; hợp đồng nằm trong contracts/.
 app = FastAPI(
@@ -56,13 +57,6 @@ IdempotencyKey = Annotated[
 _start_locks = tuple(threading.Lock() for _ in range(64))
 
 
-# 400, 401 và 422 khai cho mọi route: route nào cũng kiểm token và header X-Mortise-Tenant, và FastAPI tự
-# ghi 422 theo dạng mặc định của nó vào OpenAPI nếu route không khai, lệch với dạng {"error": "..."} thật sự
-# trả về.
-def _errors(*codes: int) -> dict:
-    return {code: {"model": ErrorBody} for code in (400, 401, 422, *codes)}
-
-
 @app.exception_handler(Denied)
 def denied(_: Request, error: Denied) -> JSONResponse:
     return JSONResponse({"error": error.reason}, status_code=error.status)
@@ -72,10 +66,24 @@ def denied(_: Request, error: Denied) -> JSONResponse:
 # của API này có dạng {"error": "..."}, nên giao diện chỉ phải đọc một dạng.
 @app.exception_handler(RequestValidationError)
 def invalid_body(_: Request, error: RequestValidationError) -> JSONResponse:
+    # Tham số trên đường dẫn sai là lỗi của yêu cầu, không phải của thân: trả 400 và nêu tham số.
+    params = sorted({str(e["loc"][1]) for e in error.errors() if e["loc"][0] == "query"})
+    if params:
+        return JSONResponse(
+            {"error": f"Tham số không hợp lệ: {', '.join(params)}. {QUERY_HINT}"}, status_code=400
+        )
     extra = sorted(str(e["loc"][-1]) for e in error.errors() if e["type"] == "extra_forbidden")
     reason = f"Thân request có khóa lạ: {', '.join(extra)}. " if extra else "Thân request sai định dạng. "
     hint = 'Biến của quy trình đặt trong `variables`, ví dụ {"variables": {"approved": true}}.'
     return JSONResponse({"error": reason + hint}, status_code=422)
+
+
+QUERY_HINT = (
+    "state là open, ended hoặc all; offset là số nguyên không âm; limit từ 1 tới 100; process là khóa quy "
+    "trình, tối đa 20 khóa."
+)
+
+app.include_router(case_router)
 
 
 # Healthcheck của Docker, không đi qua cổng nên không thuộc hợp đồng.
@@ -88,7 +96,7 @@ def healthz() -> dict:
     "/v1/workflow/processes/{key}/instances",
     status_code=201,
     response_model=ProcessStarted,
-    responses=_errors(400, 403, 404, 409, 502, 503),
+    responses=error_responses(400, 403, 404, 409, 502, 503),
 )
 def start_process(
     key: str,
@@ -119,7 +127,7 @@ def start_process(
     return {"id": found["id"], "process": key}
 
 
-@app.get("/v1/workflow/tasks", response_model=list[Task], responses=_errors(403, 502, 503))
+@app.get("/v1/workflow/tasks", response_model=list[Task], responses=error_responses(403, 502, 503))
 def my_tasks(caller: CallerDep) -> list[dict]:
     check_person(caller)
     # Hai truy vấn vì Flowable không gộp "chưa giao, thuộc nhóm của tôi" với "đã giao cho tôi".
@@ -134,7 +142,7 @@ def my_tasks(caller: CallerDep) -> list[dict]:
     "/v1/workflow/tasks/{task_id}/complete",
     status_code=204,
     response_class=Response,
-    responses=_errors(400, 403, 404, 409, 502, 503),
+    responses=error_responses(400, 403, 404, 409, 502, 503),
 )
 def complete_task(task_id: str, caller: CallerDep, body: VariablesIn = None) -> Response:
     check_person(caller)
@@ -162,7 +170,7 @@ def complete_task(task_id: str, caller: CallerDep, body: VariablesIn = None) -> 
 @app.get(
     "/v1/workflow/instances/{instance_id}",
     response_model=InstanceStatus,
-    responses=_errors(403, 404, 502, 503),
+    responses=error_responses(403, 404, 502, 503),
 )
 def instance_status(instance_id: str, caller: CallerDep) -> dict:
     check_person(caller)

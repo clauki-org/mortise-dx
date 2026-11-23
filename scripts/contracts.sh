@@ -77,6 +77,7 @@ esac
 "${checker[@]}" --schemafile contracts/catalog.schema.json contracts/examples/catalog.example.yaml
 "${checker[@]}" --schemafile contracts/map.schema.json contracts/examples/map.example.yaml
 "${checker[@]}" --schemafile contracts/form.schema.json contracts/examples/form.example.yaml
+"${checker[@]}" --schemafile contracts/cases.schema.json contracts/examples/cases.example.yaml
 "${checker[@]}" --schemafile contracts/assistant.schema.json contracts/examples/assistant.example.yaml \
   contracts/examples/assistant-data.example.yaml
 "${data_check[@]}" --owner core contracts/examples/assistant-data.example.yaml
@@ -122,7 +123,7 @@ for app in apps/*/; do
   "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}" --packages "$app"
   # Cấu hình của thành phần có schema nằm ở đường dẫn do app.yaml khai, không theo tên thư mục cố định, nên phải
   # đọc app.yaml để biết tệp nào cần kiểm; dò theo tên thư mục sẽ bỏ sót tệp đặt ở chỗ khác.
-  for component in catalog map assistant form; do
+  for component in catalog map assistant form cases; do
     mapfile -t configs < <("${yaml[@]}" -c '
 import sys, yaml
 app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
@@ -143,6 +144,10 @@ for item in app.get("menu", []):
       # Biểu mẫu chỉ gửi tới quy trình hay bảng của chính gói này (ADR 0030); tệp lấy theo app.yaml như ở trên.
       if [[ "$component" == form ]]; then
         "${yaml[@]}" scripts/check-form-config.py --app "${app}app.yaml"
+      fi
+      # Trang theo dõi hồ sơ chỉ liệt kê quy trình của chính gói này (ADR 0032).
+      if [[ "$component" == cases ]]; then
+        "${yaml[@]}" scripts/check-cases-config.py --bpmn "$app"**/*.bpmn20.xml --cases "${configs[@]}"
       fi
     fi
   done
@@ -233,6 +238,7 @@ reject contracts/workflow.schema.json contracts/examples/invalid/workflow.*.yaml
 reject contracts/catalog.schema.json contracts/examples/invalid/catalog.*.yaml
 reject contracts/map.schema.json contracts/examples/invalid/map.*.yaml
 reject contracts/form.schema.json contracts/examples/invalid/form.*.yaml
+reject contracts/cases.schema.json contracts/examples/invalid/cases.*.yaml
 reject contracts/assistant.schema.json contracts/examples/invalid/assistant.*.yaml
 reject contracts/knowledge.schema.json contracts/examples/invalid/knowledge.*.yaml
 reject contracts/threshold-rule.schema.json contracts/examples/invalid/threshold-rule.*.yaml
@@ -245,10 +251,10 @@ reject contracts/device-message.schema.json contracts/examples/invalid/device-me
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
     token-claims.*.json | service-token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml | \
-    threshold-rule.*.yaml | authority.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml | map.*.yaml | form.*.yaml) ;;
+    threshold-rule.*.yaml | authority.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml | map.*.yaml | form.*.yaml | cases.*.yaml) ;;
     *)
       echo "$file không được kiểm: tên phải theo mẫu <token-claims|service-token-claims|device-message>.<lỗi>.json hoặc" \
-        "<app|workflow|catalog|map|form|component|threshold-rule|authority|assistant|knowledge|seed>.<lỗi>.yaml." >&2
+        "<app|workflow|catalog|map|form|cases|component|threshold-rule|authority|assistant|knowledge|seed>.<lỗi>.yaml." >&2
       exit 1
       ;;
   esac
@@ -323,6 +329,15 @@ if [[ "$result" != *": mục 1: một mục của insert_permissions thiếu rol
   exit 1
 fi
 echo "ok -- 6 biểu mẫu và tệp quyền sai bị check-form-config.py từ chối đúng luật"
+# Luật của scripts/check-cases-config.py cũng phải chặn được thật: trang theo dõi hồ sơ liệt kê quy trình không có
+# trong BPMN của gói (ở đây chỉ có core-approval).
+result=$("${yaml[@]}" scripts/check-cases-config.py --bpmn core/workflow/fixtures/core-approval.bpmn20.xml \
+  --cases <(printf '%s\n' 'title: Hồ sơ' 'processes: [core-approval, core-handoff]') 2>&1) && result="không bị từ chối"
+if [[ "$result" != *": quy trình 'core-handoff' không có trong BPMN của gói; sửa khóa hoặc thêm quy trình vào workflows" ]]; then
+  echo "check-cases-config.py phải từ chối quy trình ngoài gói. Đang nhận: $result" >&2
+  exit 1
+fi
+echo "ok -- cấu hình theo dõi hồ sơ trỏ tới quy trình ngoài gói bị check-cases-config.py từ chối"
 
 # Chiều ngược: dòng của tệp đã xóa hay đổi tên nằm im trong expected-errors.txt mà không ai biết.
 while IFS=$'\t' read -r name _; do

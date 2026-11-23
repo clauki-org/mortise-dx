@@ -151,10 +151,10 @@ check "ON DELETE RESTRICT: không xóa được kho còn vật tư" \
 # dành cho vai trò khác (roles); giao diện mới là nơi ẩn chúng.
 menu='{ platform_menu_items(where: {app: {_eq: "supplies-commune"}}, order_by: {position: asc}) {
   tenant_id item component config roles } }'
-check "Menu của gói: user.a thấy danh mục kho, hai biểu mẫu kèm cấu hình, chỉ của xã mình" \
-  "$(gql "$user_a" "$menu" | jq -c '[.data.platform_menu_items[] |
-    [.tenant_id, .item, .component, (.config.source // .config.submit.process // .config.submit.insert), .roles]]')" \
-  '[["xa-a","stores","catalog","app_supplies_commune_stores",null],["xa-a","supply-request","form","supply-request",null],["xa-a","item","form","app_supplies_commune_items",["tenant_admin"]]]'
+check "Menu của gói: user.a thấy danh mục kho, hai biểu mẫu, trang đề nghị đã lập kèm cấu hình, chỉ của xã mình" \
+  "$(gql "$user_a" "$menu" | jq -c '[.data.platform_menu_items[] | [.tenant_id, .item, .component,
+    (.config.source // .config.submit.process // .config.submit.insert // .config.processes[0]), .roles]]')" \
+  '[["xa-a","stores","catalog","app_supplies_commune_stores",null],["xa-a","supply-request","form","supply-request",null],["xa-a","item","form","app_supplies_commune_items",["tenant_admin"]],["xa-a","my-requests","cases","supply-request",null]]'
 check "Menu của gói: user.b chỉ thấy mục của xã mình" \
   "$(gql "$user_b" "$menu" | jq -c '[.data.platform_menu_items[].tenant_id] | unique')" '["xa-b"]'
 
@@ -177,11 +177,21 @@ instance=$(request "$user_a")
 task=$(task_of "$manager_a" "$instance")
 check "Đề nghị của user.a tới bảng việc của manager.a" "$([[ -n "$task" ]] && echo yes)" yes
 check "manager.b (xã B) không thấy đề nghị của xã A" "$(task_of "$manager_b" "$instance")" ""
+# Trang "Đề nghị đã lập" (ADR 0032): user.a thấy đề nghị đang chờ bước duyệt; user.b (xã B) nhận 404.
+case_of() { # TOKEN: mã HTTP rồi bước đang chờ, kết quả và tên biến của đề nghị, như người lập thấy
+  api "$1" GET "/cases/$instance" | jq -rRs 'split("\n") | .[-1] + " " + ((.[0] | fromjson?) // {} |
+    [(.current // [] | map(.step) | join(",")), .outcomeName, (.variables // {} | keys | join(","))] | join(" "))'
+}
+check "user.a theo dõi đề nghị của mình: đang chờ bước duyệt" "$(case_of "$user_a")" \
+  "200 approve  itemCode,quantity,reason,storeCode,title"
+check "user.b không thấy đề nghị của user.a" "$(case_of "$user_b" | cut -d' ' -f1)" 404
 check "user.a không duyệt được (không có vai trò manager)" \
   "$(complete "$user_a" "$task" '{"approved": true, "comment": "x"}')" 403
 check "manager.a duyệt đề nghị" "$(complete "$manager_a" "$task" '{"approved": true, "comment": "Đồng ý"}')" 204
 check "Đề nghị kết thúc ở nhánh đã duyệt" \
   "$(api "$manager_a" GET "/instances/$instance" | sed '$d' | jq -r '"\(.ended) \(.outcome)"')" "true approved"
+check "user.a thấy kết quả Đã duyệt, không thấy ý kiến hay quyết định của người duyệt" "$(case_of "$user_a")" \
+  "200  Đã duyệt itemCode,quantity,reason,storeCode,title"
 
 # Bốn mắt: manager.a lập đề nghị thì không tự duyệt được. Xã không còn người duyệt khác nên từ chối bằng chính
 # manager.a không được; xóa hồ sơ thẳng ở Flowable trong máy chủ, như bài kiểm quy trình của gói xã, để bảng việc

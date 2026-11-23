@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Trang theo dõi hồ sơ rà soát theo contracts/cases.schema.json; app.yaml trỏ tới tệp này ở mục menu `reviews` và
+# `make check-fast` kiểm. Tên hồ sơ và phần vượt lấy từ `title`, `details` trong workflows/facilities-review.yaml.
+
+title: Hồ sơ rà soát đã lập
+description: Hồ sơ rà soát diện tích bạn đã lập từ danh mục cơ sở, đang ở bước nào và kết quả.
+processes: [facilities-review]

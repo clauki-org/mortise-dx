@@ -14,6 +14,7 @@ from .authority import authority_steps
 from .config import settings
 from .decisions import decision_variables
 from .fields import step_fields
+from .names import node_names
 from .policy import IDEMPOTENCY_VARIABLE, Denied
 
 log = logging.getLogger("workflow-api.flowable")
@@ -92,29 +93,28 @@ MAX_PAGES = 10
 def tasks(tenant: str | None, *, groups: list[str] | None = None, assignee: str | None = None) -> list[dict]:
     """Task đang chờ, đọc hết các trang; tenant None là mọi tenant. Theo `groups` thì chỉ task chưa nhận."""
     # Sắp theo id để các trang không chồng hay sót nhau khi đọc lần lượt.
-    query: dict[str, object] = {"includeProcessVariables": True, "size": PAGE_SIZE, "sort": "id"}
+    query: dict[str, object] = {"includeProcessVariables": True, "sort": "id"}
     if tenant is not None:
         query["tenantId"] = tenant
     if groups is not None:
         query |= {"candidateGroupIn": groups, "unassigned": True}
     if assignee is not None:
         query["assignee"] = assignee
+    who = f"tenant {tenant or 'mọi tenant'}, nhóm {groups}, người nhận {assignee}"
+    return read_all("/query/tasks", query, "truy vấn task", who)
+
+
+def read_all(path: str, query: dict[str, object], action: str, who: str) -> list[dict]:
+    """Mọi trang của một truy vấn POST /query/...; `query` phải có `sort` để các trang không chồng nhau."""
     found: list[dict] = []
     for _ in range(MAX_PAGES):
-        response = _call("POST", "/query/tasks", json=query | {"start": len(found)})
-        _ensure_ok(response, "truy vấn task")
+        response = _call("POST", path, json=query | {"start": len(found), "size": PAGE_SIZE})
+        _ensure_ok(response, action)
         page = response.json()
         found += page["data"]
         if not page["data"] or len(found) >= page["total"]:
             return found
-    log.warning(
-        "Truy vấn task (tenant %s, nhóm %s, người nhận %s) có %s task, chỉ đọc %s",
-        tenant or "mọi tenant",
-        groups,
-        assignee,
-        page["total"],
-        len(found),
-    )
+    log.warning("%s (%s) có %s dòng, chỉ đọc %s", action.capitalize(), who, page["total"], len(found))
     return found
 
 
@@ -175,6 +175,8 @@ class Definition:
     authorities: frozenset[str]
     # id của userTask -> trường bước đó ghi (ADR 0031).
     fields: Mapping[str, frozenset[str]] = field(default_factory=dict)
+    # id của bước người làm, bước chờ và kết quả -> (loại, tên), cho người lập theo dõi hồ sơ (ADR 0032).
+    nodes: Mapping[str, tuple[str, str]] = field(default_factory=dict)
 
 
 # Điều lõi cần biết về một định nghĩa, theo mã định nghĩa; định nghĩa đã deploy không đổi nên nhớ suốt đời
@@ -212,6 +214,7 @@ def _load(definition_id: str, key: str) -> Definition:
                 decision_variables(response.content, key),
                 authority_steps(response.content, key),
                 step_fields(response.content, key),
+                node_names(response.content, key),
             )
         except ValueError as error:
             reason = f"Không đọc được BPMN của quy trình '{key}' ({error}); deploy lại quy trình."

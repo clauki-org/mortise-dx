@@ -19,6 +19,7 @@ schema/migrations/   migration dbmate của gói; bảng theo dõi public.suppli
 hasura/tables.yaml   bảng đăng ký và quyền theo tenant, cùng định dạng với core/hasura/
 catalog/stores.yaml  cấu hình thành phần danh mục (kho → vật tư) theo contracts/catalog.schema.json
 forms/               biểu mẫu lập đề nghị và thêm vật tư theo contracts/form.schema.json
+cases/               trang đề nghị đã lập theo contracts/cases.schema.json
 bpmn/                quy trình đề nghị cấp vật tư, deploy cho từng tenant khi cài
 workflows/           khai báo bước của quy trình theo contracts/workflow.schema.json
 seed/demo.yaml       dữ liệu demo hư cấu theo contracts/seed.schema.json, nạp bằng bộ nạp chung
@@ -50,6 +51,10 @@ kho rồi chọn vật tư trong kho đó, ghi số lượng và lý do rồi g�
 `storeCode`, `itemCode`, `quantity`, `reason`, như khi gọi thẳng `POST /v1/workflow/processes/supply-request/instances`.
 Người có vai trò `manager` của xã thấy việc "Duyệt đề nghị cấp vật tư" trên bảng việc kèm các giá trị đó (`details`
 trong `workflows/supply-request.yaml`), ghi ý kiến rồi duyệt hoặc từ chối. Người lập không tự duyệt được (bốn mắt).
+
+Người lập theo dõi đề nghị của mình ở mục menu "Đề nghị đã lập" (`cases/supply-requests.yaml`, thành phần `cases`,
+[ADR 0032](../../docs/adr/0032-case-tracking-for-initiators.md)): đề nghị đang chờ người duyệt nào, kết quả duyệt
+hay từ chối và các giá trị đã điền; ý kiến của người duyệt không hiện.
 
 Quản trị xã (`tenant_admin`) thêm vật tư vào kho bằng mục menu "Thêm vật tư vào kho" (`forms/item.yaml`); mục này chỉ
 hiện với vai trò đó, `tenant_id` của dòng do Hasura đặt từ token.

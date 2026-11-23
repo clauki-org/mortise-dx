@@ -43,3 +43,9 @@ menu:
     label: Hỏi dữ liệu cơ sở
     component: assistant
     config: assistant/ask-data.yaml
+  # Cán bộ theo dõi hồ sơ rà soát mình đã lập (ADR 0032). Không gồm hồ sơ kiểm tra kho lưu trữ: hồ sơ đó do tài khoản
+  # dịch vụ mở, không có người lập nào.
+  - id: reviews
+    label: Hồ sơ rà soát đã lập
+    component: cases
+    config: cases/reviews.yaml

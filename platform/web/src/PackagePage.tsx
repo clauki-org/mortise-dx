@@ -12,7 +12,9 @@ import { useQuery } from "urql";
 import { Assistant } from "./Assistant";
 import { AssistantData } from "./AssistantData";
 import { type AssistantConfig, isDataConfig } from "./assistant";
+import { Cases } from "./CasesPanel";
 import { Catalog } from "./Catalog";
+import type { CasesConfig } from "./cases";
 import type { CatalogConfig } from "./catalog";
 import { NotFound } from "./Errors";
 import { FormPanel } from "./FormPanel";
@@ -42,6 +44,7 @@ const COMPONENTS = new Map<string, Render>([
   ["catalog", (config, basePath) => <Catalog config={config as CatalogConfig} basePath={basePath} />],
   ["map", (config) => <MapPanel config={config as MapConfig} />],
   ["form", (config, _basePath, app) => <FormPanel config={config as FormConfig} app={app} />],
+  ["cases", (config, basePath) => <Cases config={config as CasesConfig} basePath={basePath} />],
   [
     "assistant",
     (config, _basePath, app, item) =>

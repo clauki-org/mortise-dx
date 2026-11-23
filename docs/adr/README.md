@@ -52,6 +52,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0029](0029-parent-completes-delegated-step.md) | Tenant cha hoàn thành bước thuộc thẩm quyền của mình trong hồ sơ tenant con: workflow-api tìm theo nhóm `<tenant cha>/<vai trò>`, kiểm tenant cha lúc gọi, mọi bước khác vẫn 404 | Chấp nhận |
 | [0030](0030-form-component.md) | Thành phần biểu mẫu: cấu hình riêng dịch sang rjsf, khởi tạo quy trình hoặc thêm dòng của gói, Idempotency-Key đổi theo dữ liệu, check-fast kiểm theo gói | Chấp nhận |
 | [0031](0031-step-fields.md) | Trường của một bước chỉ do người làm bước đó ghi: userTask khai trường bằng `flowable:formProperty`, workflow-api từ chối người lập và người làm bước khác gửi nó | Chấp nhận |
+| [0032](0032-case-tracking-for-initiators.md) | Người lập theo dõi hồ sơ của mình: route riêng lọc theo tenant và `initiator` trong một truy vấn, không trả trường của bước hay danh tính người xử lý; thành phần `cases` | Chấp nhận |
 
 ## Quyết định còn mở
 

@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ cấu hình thành phần theo dõi hồ sơ hợp lệ theo contracts/cases.schema.json; `make check-fast` kiểm tệp này.
+# core-approval là quy trình mẫu của lõi (core/workflow/fixtures/).
+
+title: Yêu cầu đã gửi
+description: Các yêu cầu bạn đã gửi, đang ở bước nào và kết quả.
+processes: [core-approval]

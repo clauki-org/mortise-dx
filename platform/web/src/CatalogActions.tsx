@@ -5,10 +5,13 @@
 // gói cho dòng đang xem qua API quy trình của lõi, với biến lấy từ dòng. CatalogRecord.tsx vẽ khối này dưới tiêu
 // đề. Người bấm xem các giá trị sẽ gửi trong hộp xác nhận trước khi gửi; quyền khởi tạo do workflow-api quyết định.
 
-import { Alert, Button, Group, Modal, Stack, Table, Text } from "@mantine/core";
+import { Alert, Anchor, Button, Group, Modal, Stack, Table, Text } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { Link, useParams } from "react-router";
+import { casesPathFor } from "./cases";
 import { type Action, actionVariables, type CatalogNode, type Row } from "./catalog";
+import { usePackageMenu } from "./PackagePage";
 import { useSession } from "./session";
 import { idempotencyKey, startProcess } from "./workflow";
 
@@ -18,13 +21,16 @@ type Pending = { action: Action; key: string };
 export function CatalogActions({ node, row }: { node: CatalogNode; row: Row }) {
   const { getToken } = useSession();
   const [open, setOpen] = useState<Pending | null>(null);
-  const [done, setDone] = useState<string | null>(null);
+  // Nút vừa gửi được, cùng đường tới hồ sơ vừa lập nếu gói có trang theo dõi hồ sơ cho quy trình đó (ADR 0032).
+  const [done, setDone] = useState<{ label: string; path?: string } | null>(null);
+  const { app = "" } = useParams();
+  const { items } = usePackageMenu();
   const start = useMutation({
     mutationFn: ({ action, key }: Pending) =>
       startProcess(getToken(), action.process, actionVariables(node, action, row).variables, key),
-    onSuccess: (_, { action }) => {
+    onSuccess: (started, { action }) => {
       setOpen(null);
-      setDone(action.label);
+      setDone({ label: action.label, path: casesPathFor(items, app, action.process, started.id) });
     },
   });
   const actions = node.detail?.actions ?? [];
@@ -55,12 +61,17 @@ export function CatalogActions({ node, row }: { node: CatalogNode; row: Row }) {
       {done && (
         <Alert
           color="green"
-          title={`Đã gửi: ${done}`}
+          title={`Đã gửi: ${done.label}`}
           withCloseButton
           closeButtonLabel="Đóng thông báo"
           onClose={() => setDone(null)}
         >
-          Hồ sơ đã được lập; người xử lý thấy việc trên bảng việc của họ.
+          Hồ sơ đã được lập; người xử lý thấy việc trên bảng việc của họ.{" "}
+          {done.path && (
+            <Anchor component={Link} to={done.path}>
+              Xem hồ sơ vừa lập
+            </Anchor>
+          )}
         </Alert>
       )}
       <Modal
