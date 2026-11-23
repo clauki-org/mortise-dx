@@ -151,7 +151,8 @@ def complete_task(task_id: str, caller: CallerDep, body: VariablesIn = None) -> 
     else:
         check_can_complete(caller, task)
     # Kiểm sau quyền: người của tenant khác hay vai trò khác nhận 404/403 như trước, không biết được bước
-    # nào có trường gì. Đường của tenant cha cũng qua đây: người duyệt của tỉnh không ghi được trường của bước khác.
+    # nào có trường gì. Đường của tenant cha cũng qua đây: người duyệt của tỉnh không ghi được trường của
+    # bước khác.
     fields = flowable.definition_of(raw["processDefinitionId"]).fields
     check_step_fields(variables, fields, raw["taskDefinitionKey"])
     flowable.claim_and_complete(task_id, caller.sub, variables)

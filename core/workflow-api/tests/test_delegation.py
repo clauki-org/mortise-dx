@@ -181,6 +181,10 @@ def stack(monkeypatch) -> dict:
     monkeypatch.setattr(flowable, "task", task)
     monkeypatch.setattr(flowable, "candidate_groups", lambda _id: state["groups"])
     monkeypatch.setattr(flowable, "process_key", lambda _id: "core-authority")
+    # Hoàn thành đọc trường của bước từ phiên bản quy trình đang chạy (ADR 0031); bước này không có trường.
+    monkeypatch.setattr(
+        flowable, "definition_of", lambda _id: flowable.Definition(frozenset(), frozenset({"decide"}))
+    )
     monkeypatch.setattr(
         flowable, "claim_and_complete", lambda task_id, sub, _v: state["completed"].append((task_id, sub))
     )
