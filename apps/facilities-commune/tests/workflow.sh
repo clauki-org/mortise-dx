@@ -9,6 +9,8 @@
 # định ở vai trò mới, hồ sơ đã lập giữ vai trò cũ, và bước quyết định cần OTP. Hồ sơ vượt dòng `province` (trên
 # 1000 m²) có bước quyết định ở người duyệt của tỉnh (ADR 0029): manager.tinh chỉ thấy bước đó, người của xã khác và
 # tỉnh khác nhận 404. Trường của bước (ADR 0031): người lập hay người trình không gửi sẵn được nội dung quyết định.
+# Số hồ sơ (ADR 0035): lập hồ sơ thì số của xã A tăng, xã B không đổi; chỉ vai trò của một bước, kể cả vai trò trong
+# bảng phân cấp của xã, xem được số.
 # Ngưỡng 300 m² là giá trị trong app.yaml; thời hạn công khai đọc từ quy trình đã deploy (ADR 0019): chỉ chờ hết hạn
 # khi gói được cài với thời hạn ngắn, ví dụ make app-install APP=facilities-commune SETTINGS=publication_period=PT20S,
 # còn không thì báo SKIP phần đó. Mọi hồ sơ tạo ra đều được đưa tới kết thúc hoặc bị xóa; dòng của xã A được đặt lại
@@ -142,8 +144,19 @@ flowable DELETE "/runtime/process-instances/$own" >/dev/null
 # Vượt 420 m², trên ngưỡng 300: bước duyệt để công khai. Hồ sơ A lập khi dòng của xã A là manager; quản trị tỉnh
 # đổi dòng sang tenant_admin rồi lập hồ sơ A2, rồi đặt lại ngay về manager: vai trò ghi vào hồ sơ lúc lập, nên A vẫn
 # ở manager, A2 vẫn ở tenant_admin dù dòng đã đổi lại.
+# counts TOKEN JQ: lọc JQ trên số hồ sơ của quy trình mà TOKEN thấy.
+counts() { api "$1" GET "/processes/$process/counts" | sed '$d' | jq -c "$2"; }
+at_publish='[.open, (.steps[] | select(.step == "review_publish") | .open)]'
+counts_before=$(counts "$manager" "$at_publish")
+counts_b=$(counts "$manager_b" .open)
 above=$(file "{\"title\": \"$title A\", \"excessM2\": 420}")
 check "Vượt 420 m² (trên ngưỡng): hồ sơ vào bước duyệt để công khai" "$(step_of "$above")" review_publish
+check "Số hồ sơ: lập một hồ sơ thì số đang xử lý của xã A và số chờ ở bước duyệt để công khai cùng tăng một" \
+  "$(counts "$manager" "$at_publish")" "$(jq -c 'map(. + 1)' <<<"$counts_before")"
+check "Số hồ sơ: manager.b thấy số của xã B, không đổi" "$(counts "$manager_b" .open)" "$counts_b"
+check "Số hồ sơ: cán bộ và quản trị xã không có vai trò của bước nào nhận 404" \
+  "$(api "$user" GET "/processes/$process/counts" | tail -1) $(api "$admin_a" GET "/processes/$process/counts" |
+    tail -1)" "404 404"
 check "Bảng phân cấp: hồ sơ lập theo dòng mặc định có bước quyết định ở manager" "$(decider_of "$above")" manager
 # Vượt 1500 m², trên ngưỡng minh họa 1000 của dòng province: bước quyết định ở người duyệt của tỉnh, các bước trước
 # vẫn ở xã.
@@ -156,6 +169,8 @@ check "Bảng phân cấp: quản trị xã A không sửa được bảng của
 trap 'restore_decider >/dev/null || true' EXIT
 check "Bảng phân cấp: quản trị tỉnh đổi dòng của xã A sang tenant_admin" \
   "$(set_decider "$(token admin.tinh)" tenant_admin)" 1
+check "Số hồ sơ: tenant_admin có trong bảng phân cấp của xã A thì admin.a xem được số" \
+  "$(api "$admin_a" GET "/processes/$process/counts" | tail -1)" 200
 later=$(file "{\"title\": \"$title A2\", \"excessM2\": 420}")
 check "Bảng phân cấp: quản trị tỉnh đặt lại dòng của xã A về manager" "$(restore_decider)" 1
 trap - EXIT

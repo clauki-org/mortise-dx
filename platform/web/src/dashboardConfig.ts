@@ -3,10 +3,12 @@
 //
 // Cấu hình của thành phần bảng điều hành (contracts/dashboard.schema.json): kiểu dữ liệu, lỗi cấu hình mà schema
 // không bắt được, khối nào được truy vấn với vai trò trong token, câu truy vấn của từng khối, cách viết một số và độ
-// dài của thanh. Phần hiển thị ở DashboardView.tsx và DashboardPanel.tsx. Không có React ở đây để kiểm thử được bằng
-// hàm thuần. Thành phần không cộng hay đếm gì: mọi số là cột mà nguồn trả (ADR 0033).
+// dài của thanh. Hai nguồn REST (workflow, context) ở dashboardSources.ts; phần hiển thị ở DashboardView.tsx và
+// DashboardPanel.tsx. Không có React ở đây để kiểm thử được bằng hàm thuần. Thành phần không cộng hay đếm gì: mọi số là
+// cột mà nguồn trả (ADR 0033), trừ số việc đang chờ chính người xem (ADR 0035, dashboardSources.ts).
 
 import { createRequest, formatDocument, stringifyDocument } from "urql";
+import { type ContextSource, restProblems, type WorkflowSource } from "./dashboardSources";
 
 export type Card = { column: string; label: string; unit?: string; format?: "number" | "integer"; description: string };
 
@@ -32,8 +34,8 @@ export type Panel = {
   description: string;
   role?: string;
   graphql?: GraphqlSource;
-  workflow?: object;
-  context?: object;
+  workflow?: WorkflowSource;
+  context?: ContextSource;
   cards?: Card[];
   chart?: Chart;
   link?: { menu: string; label: string };
@@ -73,7 +75,7 @@ export const panelRole = (panel: Panel) => panel.role ?? "user";
 
 export const limitOf = (panel: Panel) => panel.graphql?.limit ?? 50;
 
-/** Loại nguồn của khối; chỉ graphql được hỗ trợ, hai loại còn lại có trong schema cho bước sau. */
+/** Loại nguồn của khối. */
 export const sourceKind = (panel: Panel) => (panel.workflow ? "workflow" : panel.context ? "context" : "graphql");
 
 /** Các cột mà khối đọc ra để hiện, theo thứ tự khai, không trùng. */
@@ -108,6 +110,7 @@ export function dashboardProblems(config: DashboardConfig): string[] {
     problems.push(`hai khối cùng tên ngắn "${id}"`);
   }
   for (const panel of config.panels) {
+    problems.push(...restProblems(panel));
     for (const name of panelNames(panel)) {
       if (!IDENTIFIER.test(name)) {
         problems.push(`${panel.title}: "${name}" không phải tên hợp lệ (chỉ chữ không dấu, số, gạch dưới)`);

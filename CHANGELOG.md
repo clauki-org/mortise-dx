@@ -12,6 +12,14 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Bảng điều hành đọc được số hồ sơ và số đo thiết bị (ADR 0035): API quy trình có thêm
+  `GET /v1/workflow/processes/{key}/counts` trả số hồ sơ còn mở, đã kết thúc, bước quá hạn và số đang chờ theo bước
+  trong tenant của người gọi, chỉ cho người có vai trò của một bước (trong BPMN hay bảng phân cấp), người khác nhận 404.
+  Nguồn `workflow` (`counts: tenant` hay `mine`, việc đang chờ chính người xem) và `context` (số đo mới nhất của thiết
+  bị) của thành phần bảng điều hành chạy thật, mục "Nguồn" ghi đường dẫn đã gửi; `make check-fast` kiểm quy trình
+  thuộc gói và tên giá trị. Gói `facilities-commune` có thêm khối hồ sơ rà soát, hồ sơ kiểm tra kho do luật ngưỡng mở
+  (lãnh đạo xã), việc đang chờ bạn và độ ẩm thiết bị. Bản cài cũ dựng lại image (`docker compose build workflow-api
+  web`), chạy `make up` và `make app-install APP=facilities-commune`.
 - Trợ lý hỏi dữ liệu nhận câu hỏi gõ tự do (ADR 0034, `POST /v1/assistant/data-questions`): mô hình (Ollama hay API theo
   cấu hình) viết một câu GraphQL chỉ đọc từ mô tả bảng, cột của mục menu, không thấy dòng dữ liệu nào; câu qua cùng
   guard với câu mẫu, bị từ chối thì mô hình viết lại một lần theo lý do của guard, rồi chạy qua Hasura bằng token người

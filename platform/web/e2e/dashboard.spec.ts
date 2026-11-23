@@ -5,12 +5,14 @@
 // tích lẻ, cán bộ xã A thấy thẻ số đúng bằng số Hasura trả cho chính tài khoản đó, viết kiểu Việt Nam, mục "Nguồn" ghi
 // đúng câu truy vấn trang đã gửi, và trang không truy vấn khối của tỉnh; cán bộ xã B thấy số của xã B, không thấy số
 // của xã A; tỉnh thấy dòng của xã A trong bảng số liệu bằng đúng số xã A thấy, truy vấn với vai trò rollup_reader;
-// lãnh đạo xã A thấy khối phân công mà cán bộ không thấy.
+// lãnh đạo xã A thấy khối phân công mà cán bộ không thấy. Nguồn REST (ADR 0035): lãnh đạo xã A thấy số hồ sơ rà soát
+// bằng đúng số workflow-api trả cho chính tài khoản đó và số việc đang chờ mình bằng số việc trên bảng việc; cán bộ
+// không thấy khối số hồ sơ; khối độ ẩm hiện số đo hoặc báo chưa có số đo.
 // Không có vi phạm Content-Security-Policy. Cần gói đã cài (`make app-install APP=facilities-commune`); bài tự tạo và
 // tự dọn dữ liệu nên không cần `make seed-demo`.
 
 import { type APIRequestContext, type Browser, expect, type Page, type TestInfo, test } from "@playwright/test";
-import { graphql, signIn, uniqueTitle } from "./support.ts";
+import { graphql, signIn, token, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
 const PREFIX = "app_facilities_commune";
@@ -204,5 +206,66 @@ test("số trên bảng điều hành bằng số Hasura trả cho người xem;
     // Bài đã hỏng thì lỗi gốc là lỗi cần đọc: ném lỗi dọn ở đây sẽ thay mất nó, nên chỉ in ra.
     if (passed) expect(problems, "dọn dữ liệu kiểm thử").toEqual([]);
     else if (problems.length > 0) console.warn(`Dọn dữ liệu kiểm thử chưa xong:\n${problems.join("\n")}`);
+  }
+});
+
+const REVIEWS = "Hồ sơ rà soát";
+const MINE = "Việc đang chờ bạn";
+const HUMIDITY = "Độ ẩm thiết bị";
+
+/** GET qua cổng bằng token của một tài khoản, như trang gọi. */
+async function rest<T>(request: APIRequestContext, username: string, path: string): Promise<T> {
+  const response = await request.get(path, { headers: { Authorization: `Bearer ${await token(request, username)}` } });
+  expect(response.ok(), `GET ${path} với ${username}`).toBeTruthy();
+  return response.json();
+}
+
+test("lãnh đạo xã thấy số hồ sơ và việc đang chờ mình đúng bằng số API trả; cán bộ không thấy khối số hồ sơ", async ({
+  browser,
+  request,
+}, testInfo) => {
+  test.slow();
+  const pages: { close: () => Promise<void> }[] = [];
+  try {
+    const counts = await rest<{ open: number; overdue: number; finished: number }>(
+      request,
+      "manager.a",
+      "/v1/workflow/processes/facilities-review/counts",
+    );
+    const tasks = await rest<{ process: string }[]>(request, "manager.a", "/v1/workflow/tasks");
+    const waiting = tasks.filter((task) => task.process === "facilities-review").length;
+    const head = await open(browser, testInfo, "manager.a");
+    pages.push(head.context);
+    const reviews = head.page.getByRole("region", { name: REVIEWS, exact: true });
+    for (const [column, label] of [
+      ["open", "Đang xử lý"],
+      ["overdue", "Bước quá hạn"],
+      ["finished", "Đã kết thúc"],
+    ] as const) {
+      await expect(reviews.getByRole("group", { name: label, exact: true })).toContainText(
+        `${label}${number(counts[column])}Cách tính`,
+      );
+    }
+    await reviews.getByText("Nguồn", { exact: true }).click();
+    await expect(reviews).toContainText("GET /v1/workflow/processes/facilities-review/counts");
+    const mine = head.page.getByRole("region", { name: MINE, exact: true });
+    await expect(mine).toContainText("Số việc đang chờ bạn");
+    await expect(mine.getByRole("group", { name: "Đang chờ bạn", exact: true })).toContainText(
+      `Đang chờ bạn${number(waiting)}Cách tính`,
+    );
+    // Có thiết bị gửi độ ẩm thì bảng số liệu có dòng; chưa có thì khối báo chưa có số đo, không báo lỗi.
+    const humidity = head.page.getByRole("region", { name: HUMIDITY, exact: true });
+    await expect(humidity.getByText(/Số liệu của biểu đồ|Chưa có số đo/).first()).toBeVisible();
+    await expect(humidity.getByText("Không đọc được số liệu")).toHaveCount(0);
+    expect(head.seen.violations, "vi phạm CSP").toEqual([]);
+
+    const clerk = await open(browser, testInfo, "user.a");
+    pages.push(clerk.context);
+    await expect(clerk.page.getByRole("region", { name: MINE, exact: true })).toBeVisible();
+    await expect(clerk.page.getByRole("region", { name: REVIEWS, exact: true })).toHaveCount(0);
+    await expect(clerk.page.getByRole("region", { name: "Hồ sơ kiểm tra kho do luật ngưỡng mở" })).toHaveCount(0);
+    expect(clerk.seen.violations, "vi phạm CSP").toEqual([]);
+  } finally {
+    for (const page of pages) await page.close();
   }
 });

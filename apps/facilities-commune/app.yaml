@@ -49,8 +49,8 @@ menu:
     label: Hồ sơ rà soát đã lập
     component: cases
     config: cases/reviews.yaml
-  # Số của cả xã và tổng hợp của tỉnh (ADR 0033): mọi số là cột của view do migration của gói tính, kèm cách tính và
-  # câu truy vấn đã gửi.
+  # Số của cả xã và tổng hợp của tỉnh (ADR 0033): số diện tích, cơ sở là cột của view do migration của gói tính; số hồ
+  # sơ do workflow-api đếm, số đo thiết bị do context-api trả (ADR 0035). Mỗi số kèm cách tính và nguồn đã gửi.
   - id: dashboard
     label: Bảng điều hành
     component: dashboard

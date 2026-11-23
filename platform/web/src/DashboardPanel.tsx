@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Thành phần bảng điều hành: các khối theo cấu hình của gói (contracts/dashboard.schema.json), mỗi khối đọc một nguồn
-// qua GraphQL bằng token của người xem rồi vẽ bằng DashboardView.tsx. Khối khai vai trò chỉ được truy vấn khi token có
-// vai trò đó (ADR 0033). Ở đây không có tên bảng hay chữ của một lĩnh vực nào.
+// bằng token của người xem, qua GraphQL ở đây hay qua REST ở DashboardRest.tsx (ADR 0035), rồi vẽ bằng
+// DashboardView.tsx. Khối khai vai trò chỉ được truy vấn khi token có vai trò đó (ADR 0033). Ở đây không có tên bảng
+// hay chữ của một lĩnh vực nào.
 
 import { Alert, Anchor, Loader, Paper, Stack, Text, Title } from "@mantine/core";
 import { useMemo } from "react";
 import { Link } from "react-router";
 import { useQuery } from "urql";
+import { RestBody } from "./DashboardRest";
 import { CardsView, ChartView, SourceDetails } from "./DashboardView";
 import {
   type DashboardConfig,
@@ -20,7 +22,6 @@ import {
   panelRole,
   queryErrorText,
   type Row,
-  sourceKind,
   visiblePanels,
 } from "./dashboardConfig";
 import { findItem, itemPath, rolesOf } from "./menu";
@@ -76,14 +77,7 @@ function PanelSection({ panel, app }: { panel: Panel; app: string }) {
           {panel.title}
         </Title>
         <Text size="sm">{panel.description}</Text>
-        {panel.graphql ? (
-          <GraphqlBody panel={panel as GraphqlPanel} />
-        ) : (
-          <Alert color="yellow" title="Nguồn chưa hỗ trợ">
-            Thành phần chưa hỗ trợ nguồn {sourceKind(panel)}. Báo người quản trị đổi khối sang nguồn graphql.
-          </Alert>
-        )}
-        {!panel.graphql && <SourceDetails panel={panel} />}
+        {panel.graphql ? <GraphqlBody panel={panel as GraphqlPanel} /> : <RestBody panel={panel} />}
         {panel.link && target && (
           <Anchor component={Link} to={itemPath(target)} size="sm">
             {panel.link.label}

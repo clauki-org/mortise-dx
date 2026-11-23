@@ -507,6 +507,18 @@ for _ in $(seq 1 22); do
 done
 check "Độ ẩm kho xã A vượt ngưỡng 5 phút: manager.a có việc kiểm tra kho" "$([[ -n "$opened" ]] && echo yes)" yes
 check "Chỉ một việc kiểm tra kho dù độ ẩm vẫn vượt" "$(tasks "$manager_a" | grep -c . || true)" 1
+# Khối "Độ ẩm thiết bị" và "Hồ sơ kiểm tra kho do luật ngưỡng mở" của bảng điều hành (ADR 0035): đúng đường dẫn mà
+# khối gửi trả số đo của thiết bị vừa gửi, dạng { value, observedAt }; số hồ sơ đếm cả hồ sơ luật vừa mở, cán bộ không
+# làm bước nào của quy trình nên nhận 404.
+check "Bảng điều hành: số đo độ ẩm của thiết bị đọc theo đường dẫn của khối có value và observedAt" \
+  "$(curl -fsS -H "Authorization: Bearer $(token "$user_a")" \
+    "$base/v1/context/entities?type=Device&attrs=humidity&limit=51" |
+    jq -r --arg d "urn:ngsi-ld:Device:$sensor" '.[] | select(.id == $d) | "\(.humidity.value) \(.humidity.observedAt != null)"')" \
+  "81 true"
+check "Bảng điều hành: manager.a thấy ít nhất một hồ sơ kiểm tra kho còn mở; user.a nhận 404" \
+  "$(curl -fsS -H "Authorization: Bearer $manager_a" "$base/v1/workflow/processes/archive-inspection/counts" |
+    jq '.open >= 1') $(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(token "$user_a")" \
+    "$base/v1/workflow/processes/archive-inspection/counts")" "true 404"
 manager_b=$(token manager.b "$(uv run --quiet --no-project python scripts/otp.py next manager.b)")
 check "manager.b (xã B) không thấy việc kiểm tra kho của xã A" "$(tasks "$manager_b" | grep -c . || true)" 0
 # Dọn: ghi kết quả để bảng việc demo không tích việc do smoke để lại.

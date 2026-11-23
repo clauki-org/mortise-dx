@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 import httpx
 
-from .authority import authority_steps
+from .authority import authority_steps, static_groups
 from .config import settings
 from .decisions import decision_variables
 from .fields import step_fields
@@ -177,6 +177,8 @@ class Definition:
     fields: Mapping[str, frozenset[str]] = field(default_factory=dict)
     # id của bước người làm, bước chờ và kết quả -> (loại, tên), cho người lập theo dõi hồ sơ (ADR 0032).
     nodes: Mapping[str, tuple[str, str]] = field(default_factory=dict)
+    # Vai trò viết thẳng trong candidateGroups của các bước, để biết ai được xem số hồ sơ (ADR 0035).
+    groups: frozenset[str] = frozenset()
 
 
 # Điều lõi cần biết về một định nghĩa, theo mã định nghĩa; định nghĩa đã deploy không đổi nên nhớ suốt đời
@@ -215,6 +217,7 @@ def _load(definition_id: str, key: str) -> Definition:
                 authority_steps(response.content, key),
                 step_fields(response.content, key),
                 node_names(response.content, key),
+                static_groups(response.content, key),
             )
         except ValueError as error:
             reason = f"Không đọc được BPMN của quy trình '{key}' ({error}); deploy lại quy trình."

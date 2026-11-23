@@ -41,6 +41,33 @@ def authority_steps(bpmn: bytes, key: str) -> frozenset[str]:
     Ném ValueError nếu tệp không đọc được, không có quy trình `key`, hay candidateUsers dùng tên
     `authority_*`.
     """
+    steps = set()
+    for task in _process(bpmn, key).iter(f"{BPMN}userTask"):
+        if _authority_names(task.get(_USERS, "")):
+            raise ValueError(
+                f"userTask '{task.get('id')}' dùng {PREFIX}* ở candidateUsers; bảng phân cấp chỉ cho "
+                "candidateGroups"
+            )
+        steps.update(name.removeprefix(PREFIX) for name in _authority_names(task.get(_GROUPS, "")))
+    return frozenset(steps)
+
+
+def static_groups(bpmn: bytes, key: str) -> frozenset[str]:
+    """Vai trò viết thẳng trong candidateGroups của các userTask của quy trình `key`, không gồm biểu thức.
+
+    Dùng để biết ai liên quan tới quy trình (route đếm hồ sơ, ADR 0035); vai trò của bước đọc bảng phân cấp
+    nằm trong core.step_authorities, không ở đây. Ném ValueError như authority_steps.
+    """
+    found = set()
+    for task in _process(bpmn, key).iter(f"{BPMN}userTask"):
+        for name in task.get(_GROUPS, "").split(","):
+            # `${...}` và `#{...}` là biểu thức Flowable tính lúc chạy, không phải tên vai trò.
+            if name.strip() and "{" not in name:
+                found.add(name.strip())
+    return frozenset(found)
+
+
+def _process(bpmn: bytes, key: str) -> ET.Element:
     try:
         # BPMN chỉ vào được Flowable qua bộ cài bằng tài khoản quản trị, như decisions.py.
         root = ET.fromstring(bpmn)  # noqa: S314
@@ -49,15 +76,7 @@ def authority_steps(bpmn: bytes, key: str) -> frozenset[str]:
     process = next((p for p in root.iter(f"{BPMN}process") if p.get("id") == key), None)
     if process is None:
         raise ValueError(f'không có <process id="{key}">')
-    steps = set()
-    for task in process.iter(f"{BPMN}userTask"):
-        if _authority_names(task.get(_USERS, "")):
-            raise ValueError(
-                f"userTask '{task.get('id')}' dùng {PREFIX}* ở candidateUsers; bảng phân cấp chỉ cho "
-                "candidateGroups"
-            )
-        steps.update(name.removeprefix(PREFIX) for name in _authority_names(task.get(_GROUPS, "")))
-    return frozenset(steps)
+    return process
 
 
 def _authority_names(expression: str) -> list[str]:

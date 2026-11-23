@@ -347,8 +347,9 @@ fi
 echo "ok -- cấu hình theo dõi hồ sơ trỏ tới quy trình ngoài gói bị check-cases-config.py từ chối"
 
 # Luật của scripts/check-dashboard-config.py, như của biểu mẫu ở trên: cấu hình sai đọc từ stdin, đối chiếu với menu
-# của app.example.yaml và bảng quyền mẫu dưới đây; mỗi cấu hình phạm đúng một luật và lỗi phải đúng từng ký tự. Ví dụ
-# đúng của hợp đồng cũng phải qua bước này, để ví dụ không lệch với luật mà không ai biết.
+# của app.example.yaml, bảng quyền mẫu dưới đây và BPMN của quy trình mẫu core-approval (thay cho BPMN của gói); mỗi
+# cấu hình phạm đúng một luật và lỗi phải đúng từng ký tự. Ví dụ đúng của hợp đồng cũng phải qua bước này, để ví dụ
+# không lệch với luật mà không ai biết.
 dashboard_tables='- table: { schema: app_example, name: totals }
   select_permissions:
     - role: user
@@ -359,9 +360,35 @@ dashboard_tables='- table: { schema: app_example, name: totals }
       permission: { columns: "*", filter: { parent_tenant_id: { _eq: X-Hasura-Tenant-Id } } }'
 dashboard_check() { # TỆP_CẤU_HÌNH [BẢNG_QUYỀN]
   "${yaml[@]}" scripts/check-dashboard-config.py --app contracts/examples/app.example.yaml \
-    --hasura <(printf '%s\n' "${2:-$dashboard_tables}") --dashboard "$1" 2>&1
+    --hasura <(printf '%s\n' "${2:-$dashboard_tables}") --bpmn core/workflow/fixtures/core-approval.bpmn20.xml \
+    --dashboard "$1" 2>&1
 }
 dashboard_check contracts/examples/dashboard.example.yaml
+# Nguồn workflow và context đúng luật (ADR 0035) phải qua.
+dashboard_check /dev/stdin <<'YAML'
+title: Tổng quan
+panels:
+  - id: cases
+    title: Hồ sơ
+    description: Số hồ sơ của đơn vị.
+    role: manager
+    workflow: { process: core-approval, counts: tenant }
+    cards: [{ column: finished, label: Đã xong, description: Hồ sơ đã kết thúc. }]
+  - id: steps
+    title: Việc của tôi
+    description: Việc đang chờ người xem theo bước.
+    workflow: { process: core-approval, counts: mine }
+    chart: { type: bar, x: { column: step, label: Bước }, y: [{ column: overdue, label: Quá hạn, color: red }] }
+  - id: readings
+    title: Số đo
+    description: Số đo mới nhất.
+    context: { type: Device, attribute: level }
+    chart:
+      type: bar
+      x: { column: id, label: Thiết bị }
+      y: [{ column: value, label: Mức, color: blue }]
+      details: [{ column: observedAt, label: Lúc đo }]
+YAML
 dashboard_rejects() { # LỖI_MONG_ĐỢI, cấu hình ở stdin
   local result
   result=$(dashboard_check /dev/stdin) && result="không bị từ chối"
@@ -371,10 +398,42 @@ dashboard_rejects() { # LỖI_MONG_ĐỢI, cấu hình ở stdin
     exit 1
   fi
 }
-dashboard_rejects "khối 'flow': nguồn 'workflow' chưa được thành phần hỗ trợ; dùng graphql" <<'YAML'
+dashboard_rejects "khối 'flow': quy trình 'core-handoff' không có trong BPMN của gói; sửa khóa hoặc thêm quy trình \
+vào workflows" <<'YAML'
 title: Tổng quan
 panels:
-  - { id: flow, title: Hồ sơ, description: Số hồ sơ., workflow: {}, cards: [{ column: n, label: N, description: N. }] }
+  - id: flow
+    title: Hồ sơ
+    description: Quy trình ngoài gói.
+    workflow: { process: core-handoff, counts: tenant }
+    cards: [{ column: open, label: Còn mở, description: Hồ sơ còn mở. }]
+YAML
+dashboard_rejects "khối 'mine': cards không có giá trị 'finished'; dùng open, overdue" <<'YAML'
+title: Tổng quan
+panels:
+  - id: mine
+    title: Việc của tôi
+    description: Việc của người xem không có số đã kết thúc.
+    workflow: { process: core-approval, counts: mine }
+    cards: [{ column: finished, label: Đã xong, description: Không có. }]
+YAML
+dashboard_rejects "khối 'r': context.attribute 'level&q=x' không phải tên (chữ, số, gạch dưới)" <<'YAML'
+title: Tổng quan
+panels:
+  - id: r
+    title: Số đo
+    description: Tên số đo ghép thêm tham số.
+    context: { type: Device, attribute: "level&q=x" }
+    chart: { type: bar, x: { column: id, label: Thiết bị }, y: [{ column: value, label: Mức, color: blue }] }
+YAML
+dashboard_rejects "khối 'r': chart.x không có giá trị 'observedAt'; dùng id" <<'YAML'
+title: Tổng quan
+panels:
+  - id: r
+    title: Số đo
+    description: Trục theo lúc đo.
+    context: { type: Device, attribute: level }
+    chart: { type: bar, x: { column: observedAt, label: Lúc }, y: [{ column: value, label: Mức, color: blue }] }
 YAML
 dashboard_rejects "khối 't': graphql.field 'app_other_totals' không phải bảng trong quyền Hasura của gói" <<'YAML'
 title: Tổng quan
@@ -470,7 +529,7 @@ if [[ "$result" != *": mục 1: một mục của select_permissions thiếu rol
   echo "check-dashboard-config.py phải báo tệp quyền sai dạng bằng một dòng lỗi. Đang nhận: $result" >&2
   exit 1
 fi
-echo "ok -- 12 bảng điều hành và tệp quyền sai bị check-dashboard-config.py từ chối đúng luật"
+echo "ok -- 15 bảng điều hành và tệp quyền sai bị check-dashboard-config.py từ chối đúng luật"
 
 # Chiều ngược: dòng của tệp đã xóa hay đổi tên nằm im trong expected-errors.txt mà không ai biết.
 while IFS=$'\t' read -r name _; do

@@ -3,8 +3,8 @@
 //
 // Kiểm cách bảng điều hành vẽ dòng đã đọc (DashboardView.tsx): thẻ số có nhãn, số viết kiểu Việt Nam, đơn vị và cách
 // tính; nguồn trả nhiều dòng cho thẻ số thì báo cấu hình sai; biểu đồ ẩn phần thanh khỏi trình đọc màn hình và luôn
-// kèm bảng số liệu có chú thích; mục "Nguồn" ghi nguyên văn câu truy vấn và biến; khối có nguồn chưa hỗ trợ thì báo
-// chưa hỗ trợ, khối của vai trò khác không hiện. Dựng ra HTML bằng react-dom/server, không cần trình duyệt hay máy chủ.
+// kèm bảng số liệu có chú thích; mục "Nguồn" ghi nguyên văn câu truy vấn và biến, hay đường dẫn REST đã gửi; khối
+// việc đang chờ người xem nói rõ là của người xem; khối của vai trò khác không hiện. Dựng ra HTML bằng react-dom/server, không cần trình duyệt hay máy chủ.
 
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -108,19 +108,71 @@ describe("SourceDetails", () => {
   });
 });
 
+describe("SourceDetails của nguồn REST", () => {
+  it("ghi loại nguồn, đường dẫn và các dòng giải thích, không ghi câu GraphQL", () => {
+    const counts: Panel = {
+      id: "c",
+      title: "Hồ sơ",
+      description: "Số hồ sơ.",
+      role: "manager",
+      workflow: { process: "review", counts: "tenant" },
+      cards: [{ column: "open", label: "Còn mở", description: "Hồ sơ còn mở." }],
+    };
+    const out = html(
+      <SourceDetails
+        panel={counts}
+        rest={{ path: "/v1/workflow/processes/review/counts", notes: ["Đếm lúc 9:00."] }}
+      />,
+    );
+    expect(out).toContain("workflow-api");
+    expect(out).toContain("GET /v1/workflow/processes/review/counts");
+    expect(out).toContain("Đếm lúc 9:00.");
+    expect(out).toContain("Khối chỉ hiện với vai trò: manager");
+    expect(out).not.toContain("Câu truy vấn");
+  });
+
+  it("thẻ và biểu đồ không có dòng thì ghi lời của nguồn", () => {
+    expect(html(<CardsView cards={cards} rows={[]} empty="Chưa có số đo" />)).toContain("Chưa có số đo.");
+    expect(html(<ChartView chart={chart} rows={[]} title="T" empty="Không có việc nào" />)).toContain(
+      "Không có việc nào.",
+    );
+  });
+});
+
 describe("DashboardPanel", () => {
   const config: DashboardConfig = {
     title: "Tổng quan",
     panels: [
-      { id: "flow", title: "Hồ sơ", description: "Số hồ sơ.", workflow: {}, cards },
+      {
+        id: "flow",
+        title: "Hồ sơ",
+        description: "Số hồ sơ.",
+        workflow: { process: "review", counts: "mine" },
+        cards: [{ column: "open", label: "Đang chờ", description: "Việc đang chờ." }],
+      },
+      {
+        id: "readings",
+        title: "Số đo",
+        description: "Số đo thiết bị.",
+        context: { type: "Device", attribute: "level" },
+        chart: {
+          type: "bar",
+          x: { column: "id", label: "Thiết bị" },
+          y: [{ column: "value", label: "Mức", color: "blue" }],
+        },
+      },
       panel,
       { ...panel, id: "mine", title: "Của tôi", role: undefined },
     ],
   };
 
-  it("nguồn chưa hỗ trợ thì báo; khối của vai trò khác không hiện", () => {
+  it("khối REST ghi đường dẫn đã gửi, khối việc của người xem nói rõ; khối của vai trò khác không hiện", () => {
     const out = html(<DashboardPanel config={config} app="example" />);
-    expect(out).toContain("Nguồn chưa hỗ trợ");
+    expect(out).toContain("Số việc đang chờ bạn");
+    expect(out).toContain("GET /v1/workflow/tasks");
+    expect(out).toContain("GET /v1/context/entities?type=Device&amp;attrs=level&amp;limit=51");
+    expect(out).toContain("Khối chỉ hiện với vai trò: user");
+    expect(out).toContain("Giá trị: id, value");
     expect(out).toContain("Của tôi");
     expect(out).not.toContain("rollup_reader");
   });

@@ -15,6 +15,7 @@ from . import db, delegation, flowable
 from .auth import caller_from_token
 from .authority import group, pick
 from .case_routes import router as case_router
+from .counts import router as count_router
 from .policy import (
     IDEMPOTENCY_VARIABLE,
     RESERVED_PREFIX,
@@ -84,6 +85,7 @@ QUERY_HINT = (
 )
 
 app.include_router(case_router)
+app.include_router(count_router)
 
 
 # Healthcheck của Docker, không đi qua cổng nên không thuộc hợp đồng.
