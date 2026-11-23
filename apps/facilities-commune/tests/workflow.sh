@@ -84,8 +84,8 @@ set_decider() {
 # giữa chừng mà không đặt lại sẽ để bước quyết định của xã A ở vai trò khác cho tới khi có người sửa.
 restore_decider() { set_decider "$(token admin.tinh)" manager; }
 
-# Gọi thẳng Flowable trong máy chủ bằng tài khoản rest-admin, như scripts/smoke.sh của lõi, chỉ ở hai chỗ API quy
-# trình qua cổng không làm được: đọc thời hạn công khai đã deploy, và xóa hồ sơ không ai trong xã còn duyệt được.
+# Gọi thẳng Flowable trong máy chủ bằng tài khoản rest-admin, như scripts/smoke.sh của lõi, chỉ ở hai việc API quy
+# trình qua cổng không làm được: đọc thời hạn công khai đã deploy, và xóa hồ sơ mà bài không đưa tới kết thúc được.
 flowable() {
   curl -fsS -X "$1" -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" \
     "http://127.0.0.1:${FLOWABLE_PORT:-8083}/flowable-rest/service$2"
@@ -124,9 +124,9 @@ own=$(api "$manager" POST "/processes/$process/instances" \
 out=$(api "$manager" POST "/tasks/$(task_of "$own")/complete" '{"variables": {"approved": true}}')
 check "Người lập là manager cũng không tự duyệt hồ sơ của mình (bốn mắt)" \
   "$(tail -1 <<<"$out") $(sed '$d' <<<"$out" | jq -r '.error // "" | startswith("Quy tắc bốn mắt")')" "403 true"
-# Xã không còn manager nào khác để trả lại hồ sơ, và API quy trình không có lệnh hủy: xóa thẳng ở Flowable. Đây là
-# lần ghi duy nhất đi vòng qua cổng, chỉ trong bài kiểm; không xóa thì mỗi lần chạy, bảng việc của manager.a tích thêm
-# một hồ sơ cho tới khi gỡ gói.
+# Xã không còn manager nào khác để trả lại hồ sơ, và API quy trình không có lệnh hủy: xóa thẳng ở Flowable. Xóa hồ sơ
+# là lần ghi duy nhất đi vòng qua cổng, chỉ trong bài kiểm; không xóa thì mỗi lần chạy, bảng việc của manager.a tích
+# thêm một hồ sơ cho tới khi gỡ gói.
 flowable DELETE "/runtime/process-instances/$own" >/dev/null
 
 # Vượt 420 m², trên ngưỡng 300: bước duyệt để công khai. Hồ sơ A lập khi dòng của xã A là manager; quản trị tỉnh
@@ -179,6 +179,11 @@ else
     out=$(api "$admin_a" POST "/tasks/$(task_of "$later" "$admin_a")/complete" "{\"variables\": $decision}")
     check "Bước quyết định cần OTP: admin.a (tenant_admin, đăng nhập bằng mật khẩu) bị từ chối" \
       "$(tail -1 <<<"$out") $(sed '$d' <<<"$out" | jq -r '.error // "" | test("OTP")')" "403 true"
+    # Lớp chặn thật là kiểm vai trò khi hoàn thành, không phải bảng việc: manager.a gửi thẳng mã task (lấy qua
+    # admin.a) vẫn bị từ chối.
+    out=$(api "$manager" POST "/tasks/$(task_of "$later" "$admin_a")/complete" "{\"variables\": $decision}")
+    check "Bước quyết định ở tenant_admin: manager.a (có OTP) hoàn thành bằng mã task bị từ chối vì sai vai trò" \
+      "$(tail -1 <<<"$out") $(sed '$d' <<<"$out" | jq -r '.error // "" | startswith("Vai trò")')" "403 true"
     # admin2.a là tenant_admin của xã A có otp_required (scripts/seed.sh), nên đăng nhập phải kèm mã OTP.
     admin2_a=$(token admin2.a "$(uv run --quiet --no-project python scripts/otp.py next admin2.a)")
     check "Bước quyết định: admin2.a (tenant_admin, có OTP) ghi nhận quyết định hồ sơ A2" \
@@ -189,6 +194,11 @@ else
       "true decided true decided"
   fi
 fi
+# Hồ sơ chưa kết thúc vì một bước ở trên hỏng (hết giờ chờ công khai, bị từ chối) thì xóa: hồ sơ đang công khai không
+# trả lại được qua API, và để lại thì nó nằm trên bảng việc của xã A sau mỗi lần chạy hỏng.
+for instance in "$above" "$later"; do
+  [[ "$(status "$instance")" == true\ * ]] || flowable DELETE "/runtime/process-instances/$instance" >/dev/null
+done
 
 # Đúng bằng ngưỡng: không công khai, duyệt xong là báo cáo để tiếp tục sử dụng.
 equal=$(file "{\"title\": \"$title B\", \"excessM2\": 300}")

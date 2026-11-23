@@ -70,7 +70,9 @@ lập, người duyệt đối chiếu với hồ sơ; lấy số ở phía máy
 
     <!-- Bước quyết định chỉ ghi nhận quyết định, không có cổng rẽ nhánh phía sau: workflow-api cho người hoàn thành
          một bước gửi mọi biến, nên người trình đặt sẵn được biến mà một cổng sau bước này đọc (ADR 0025, chưa chặn
-         giữa hai bước). Người lập không tự quyết định hồ sơ của mình (bốn mắt). -->
+         giữa hai bước). Người lập không tự quyết định hồ sơ của mình (bốn mắt). Nội dung quyết định (decision)
+         thì chưa được bảo vệ: người lập, người duyệt hay người trình gửi sẵn được nó, vì lõi chỉ chặn biến mà cổng
+         rẽ nhánh đọc; chặn ở lõi là kế hoạch (README của gói, mục Giới hạn). -->
     <userTask id="decide" name="Quyết định của người có thẩm quyền" flowable:candidateGroups="${authority_decide}"
               flowable:category="four-eyes"/>
     <sequenceFlow id="toDecided" sourceRef="decide" targetRef="decided"/>
