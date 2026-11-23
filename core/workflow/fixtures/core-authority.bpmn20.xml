@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Mortise DX contributors
+SPDX-License-Identifier: Apache-2.0
+
+Quy trình mẫu chỉ dùng để kiểm thử bảng phân cấp thẩm quyền của lõi (ADR 0028), không phải quy trình nghiệp vụ.
+Bước `decide` không viết vai trò trong BPMN: workflow-api đọc core.step_authorities của tenant lúc khởi tạo, so
+biến `amount` với ngưỡng của từng dòng và đặt `authority_decide` bằng vai trò của dòng được chọn. Dòng mặc định nằm
+ở contracts/examples/authority.example.yaml, do `make seed` nạp; `make smoke` đổi dòng của một xã rồi kiểm hồ sơ
+lập sau tới vai trò mới.
+-->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="https://mortise-dx/workflow">
+  <process id="core-authority" name="Duyệt theo bảng phân cấp" isExecutable="true">
+    <startEvent id="submitted"/>
+    <sequenceFlow id="toDecide" sourceRef="submitted" targetRef="decide"/>
+    <userTask id="decide" name="Duyệt theo phân cấp" flowable:candidateGroups="${authority_decide}"
+              flowable:category="four-eyes"/>
+    <sequenceFlow id="toDone" sourceRef="decide" targetRef="done"/>
+    <endEvent id="done" name="Xong"/>
+  </process>
+</definitions>

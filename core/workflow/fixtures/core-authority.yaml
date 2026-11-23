@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Khai báo bước (contracts/workflow.schema.json) của quy trình mẫu core-authority.bpmn20.xml cùng thư mục; `make seed`
+# nạp cùng quy trình, `make check-fast` kiểm theo schema và theo BPMN.
+
+process: core-authority
+steps:
+  decide:
+    title: title
+    actions:
+      - id: done
+        label: Xong
+        variables: {}

@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/workflow.schema.json từ chối: nút đặt biến mang tiền tố `authority_`, do lõi đặt từ
+# bảng phân cấp thẩm quyền (ADR 0028). Nếu lọt, workflow-api trả 400 mỗi khi người xử lý bấm nút.
+
+process: core-approval
+steps:
+  review:
+    actions:
+      - { id: approve, label: Duyệt, variables: { authority_review: user } }

@@ -14,13 +14,18 @@ IDEMPOTENCY_VARIABLE = "idempotencyKey"
 
 # Biến do lõi đặt; ứng dụng không được ghi đè khi khởi tạo hay hoàn thành task.
 RESERVED_VARIABLES = frozenset({"initiator", "initiatorName", "tenant", IDEMPOTENCY_VARIABLE})
+# Tiền tố của biến lõi đặt từ bảng phân cấp thẩm quyền (ADR 0028). Client đặt được thì người lập tự chọn người
+# duyệt cho hồ sơ của mình, và người hoàn thành một bước đổi được người nhận các bước sau.
+RESERVED_PREFIX = "authority_"
 
 # Đủ cho UUID và mã ngẫu nhiên base64url; giới hạn độ dài để khóa không phình biến của Flowable.
 _IDEMPOTENCY_KEY = re.compile(r"[A-Za-z0-9_-]{8,100}")
 
-# Người có vai trò này phải đăng nhập hai bước (ADR 0011). Keycloak đã bắt nhập mã OTP lúc đăng nhập; kiểm lại
-# ở đây để lỡ luồng đăng nhập bị cấu hình sai thì người duyệt chỉ có mật khẩu vẫn không duyệt được. Trùng với
-# điều kiện `approver-role` trong core/keycloak/realm-mortise.json.
+# Người có vai trò này phải đăng nhập hai bước (ADR 0011). Keycloak đã bắt nhập mã OTP lúc đăng nhập, vì điều
+# kiện `approver-role` trong core/keycloak/realm-mortise.json là vai trò `otp_required` của client mortise-web
+# mà manager gộp sẵn; kiểm lại ở đây để lỡ luồng đăng nhập hay vai trò gộp bị cấu hình sai thì người duyệt
+# chỉ có mật khẩu vẫn không duyệt được. otp_required không nằm trong vai trò realm của token nên không kiểm
+# theo nó.
 APPROVER_ROLE = "manager"
 # Giá trị trong claim `amr` mà Keycloak ghi khi người dùng đã nhập đúng mã OTP (cấu hình `amr-otp` của realm).
 SECOND_FACTOR = "otp"
@@ -45,6 +50,8 @@ class TaskView:
     candidate_groups: frozenset[str]
     category: str | None
     initiator: str | None
+    # Quy trình có biến `authority_<bước>` của bước này, tức vai trò của bước lấy từ bảng phân cấp (ADR 0028).
+    authority: bool = False
 
 
 class Denied(Exception):
@@ -59,7 +66,9 @@ def check_can_complete(caller: Caller, task: TaskView) -> None:
     # Task của tenant khác trả 404 chứ không phải 403, để không lộ việc task tồn tại.
     if task.tenant != caller.tenant:
         raise Denied(404, "Không tìm thấy task.")
-    if APPROVER_ROLE in caller.roles and SECOND_FACTOR not in caller.methods:
+    # Bước lấy vai trò từ bảng phân cấp cần OTP với mọi vai trò: chỉ xét vai trò manager thì đổi một dòng
+    # sang vai trò khác là bỏ được bước OTP của chính bước cần thẩm quyền.
+    if (APPROVER_ROLE in caller.roles or task.authority) and SECOND_FACTOR not in caller.methods:
         raise Denied(
             403, "Người duyệt phải đăng nhập hai bước (mật khẩu và mã OTP); đăng xuất rồi đăng nhập lại."
         )
@@ -78,9 +87,13 @@ def check_person(caller: Caller) -> None:
 
 
 def check_variables(variables: dict[str, object]) -> None:
-    clash = RESERVED_VARIABLES & variables.keys()
+    clash = (RESERVED_VARIABLES & variables.keys()) | {n for n in variables if n.startswith(RESERVED_PREFIX)}
     if clash:
-        raise Denied(400, f"Không được đặt biến dành riêng cho lõi: {', '.join(sorted(clash))}.")
+        raise Denied(
+            400,
+            f"Không được đặt biến dành riêng cho lõi: {', '.join(sorted(clash))}. Lõi tự đặt "
+            f"{', '.join(sorted(RESERVED_VARIABLES))} và mọi biến bắt đầu bằng {RESERVED_PREFIX}.",
+        )
 
 
 def check_not_preset(variables: dict[str, object], decisions: frozenset[str]) -> None:

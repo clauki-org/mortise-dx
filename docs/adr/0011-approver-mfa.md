@@ -70,3 +70,24 @@ token có `amr` `["pwd","otp"]`, giữ nguyên sau khi làm mới token; mã dù
 - Trang đăng nhập và trang cài OTP hiện bằng tiếng Anh (giao diện mặc định của Keycloak).
 - Realm chỉ nạp khi Keycloak khởi động lần đầu: bản cài đã dựng cần `make reset` để có luồng mới.
 - Ngoài phạm vi: chính sách đăng nhập riêng theo tenant; Passkey; mã dự phòng.
+
+## Bổ sung 2026-11-22: điều kiện OTP là vai trò `otp_required`
+
+Bảng phân cấp thẩm quyền ([ADR 0028](0028-step-authority-table.md)) giao được một bước cho vai trò khác `manager`, và
+workflow-api đòi OTP cho bước đó với mọi vai trò. Điều kiện theo `manager` thì người nhận như vậy không bao giờ được
+hỏi OTP, nên không hoàn thành được bước.
+
+- Điều kiện `approver-role` của hai luồng `browser-mfa` và `direct-grant-mfa` là vai trò `otp_required` của client
+  `mortise-web` (`condUserRole: mortise-web.otp_required`). `manager` là vai trò gộp chứa `otp_required`, nên mọi người
+  duyệt vẫn bị hỏi OTP như trước.
+- Vai trò của client, không của realm: Keycloak ghi nó ở `resource_access.mortise-web.roles`, không ở
+  `realm_access.roles`. Hasura lấy vai trò chọn được từ `realm_access` và workflow-api lấy nhóm ứng viên từ đó, nên
+  `otp_required` không mở thêm quyền nào.
+- Người vận hành gán `otp_required` cho tài khoản cần OTP mà không phải `manager`. `make seed` tạo vai trò, gộp vào
+  `manager` và đổi điều kiện trên realm đang chạy, nên bản cài đã dựng không phải `make reset`; tài khoản demo
+  `admin2.a` (`tenant_admin` của xã A) có vai trò này và khóa OTP như `manager.*`.
+- workflow-api vẫn tự kiểm `manager` cần `otp` như trước, không đọc `otp_required`.
+
+Đã thử ngày 2026-11-22 trên Keycloak 26.7.5, cả realm nạp mới từ tệp lẫn realm cũ được `make seed` sửa: `manager.a`
+và `admin2.a` thiếu mã bị `invalid_grant`, có mã thì `amr` là `["pwd","otp"]` và `realm_access` không có
+`otp_required`; `admin.a`, `user.a` vẫn chỉ có `["pwd"]`.

@@ -28,3 +28,10 @@ WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'assistant') \gexec
 ALTER ROLE assistant PASSWORD :'assistant_password';
 SQL
 echo "db-roles: vai trò assistant sẵn sàng"
+
+psql -v ON_ERROR_STOP=1 -v workflow_password="$WORKFLOW_DB_PASSWORD" --host postgres --username postgres --dbname mortise <<'SQL'
+SELECT 'CREATE ROLE workflow_api LOGIN'
+WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'workflow_api') \gexec
+ALTER ROLE workflow_api PASSWORD :'workflow_password';
+SQL
+echo "db-roles: vai trò workflow_api sẵn sàng"

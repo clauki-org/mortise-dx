@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/authority.schema.json từ chối: vai trò mang tiền tố `authority_`, là tiền tố của biến lõi
+# đặt từ bảng phân cấp (ADR 0028), không phải một vai trò.
+
+process: core-authority
+step: decide
+rows:
+  - rule: default
+    role: authority_decide

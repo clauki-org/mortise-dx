@@ -70,7 +70,10 @@ esac
 "${checker[@]}" --schemafile contracts/service-token-claims.schema.json \
   contracts/examples/service-token-claims.example.json
 "${checker[@]}" --schemafile contracts/app.schema.json contracts/examples/app.example.yaml
-"${checker[@]}" --schemafile contracts/workflow.schema.json contracts/examples/workflow.example.yaml
+# Khai báo bước của các quy trình mẫu của lõi: ví dụ của hợp đồng (core-approval) và tệp cạnh BPMN mẫu.
+"${checker[@]}" --schemafile contracts/workflow.schema.json contracts/examples/workflow.example.yaml \
+  core/workflow/fixtures/*.yaml
+"${checker[@]}" --schemafile contracts/authority.schema.json contracts/examples/authority.example.yaml
 "${checker[@]}" --schemafile contracts/catalog.schema.json contracts/examples/catalog.example.yaml
 "${checker[@]}" --schemafile contracts/map.schema.json contracts/examples/map.example.yaml
 "${checker[@]}" --schemafile contracts/form.schema.json contracts/examples/form.example.yaml
@@ -102,7 +105,9 @@ print(described["component"]); print(described["config_schema"]); print(describe
   done
 done
 "${checker[@]}" --schemafile contracts/device-message.schema.json contracts/examples/device-message.example.json
-"${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml --steps contracts/examples/workflow.example.yaml
+"${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml \
+  --steps contracts/examples/workflow.example.yaml core/workflow/fixtures/*.yaml \
+  --authorities contracts/examples/authority.example.yaml
 # Gói thật, nếu đã có. Khai báo bước của một gói chỉ đối chiếu với BPMN của chính gói đó.
 shopt -s nullglob globstar
 apps=(apps/*/app.yaml)
@@ -114,7 +119,7 @@ for app in apps/*/; do
   if ((${#declarations[@]})); then
     "${checker[@]}" --schemafile contracts/workflow.schema.json "${declarations[@]}"
   fi
-  "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}"
+  "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}" --packages "$app"
   # Cấu hình của thành phần có schema nằm ở đường dẫn do app.yaml khai, không theo tên thư mục cố định, nên phải
   # đọc app.yaml để biết tệp nào cần kiểm; dò theo tên thư mục sẽ bỏ sót tệp đặt ở chỗ khác.
   for component in catalog map assistant form; do
@@ -141,8 +146,9 @@ for item in app.get("menu", []):
       fi
     fi
   done
-  # Luật ngưỡng (mục `rules`) và văn bản cho trợ lý (mục `knowledge`) cũng nằm ở đường dẫn do app.yaml khai.
-  for entry in rules:threshold-rule knowledge:knowledge; do
+  # Luật ngưỡng (mục `rules`), văn bản cho trợ lý (mục `knowledge`) và bảng phân cấp (mục `authorities`) cũng nằm ở
+  # đường dẫn do app.yaml khai.
+  for entry in rules:threshold-rule knowledge:knowledge authorities:authority; do
     mapfile -t files < <("${yaml[@]}" -c '
 import sys, yaml
 app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
@@ -163,7 +169,8 @@ done
 # deployment theo khóa, nên một gói khai trùng khóa với lõi hay gói khác sẽ xóa luôn quy trình của bên kia khi cài
 # lại hay khi gỡ.
 "${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml apps/**/*.bpmn20.xml \
-  --steps contracts/examples/workflow.example.yaml apps/*/workflows/*.yaml
+  --steps contracts/examples/workflow.example.yaml core/workflow/fixtures/*.yaml apps/*/workflows/*.yaml \
+  --authorities contracts/examples/authority.example.yaml --packages apps/*/
 
 # Ví dụ sai trong contracts/examples/invalid/ phải bị từ chối. Thiếu bước này, một schema
 # bị nới lỏng vẫn qua mọi ví dụ đúng mà không ai biết nó không còn chặn được gì.
@@ -207,6 +214,7 @@ reject contracts/form.schema.json contracts/examples/invalid/form.*.yaml
 reject contracts/assistant.schema.json contracts/examples/invalid/assistant.*.yaml
 reject contracts/knowledge.schema.json contracts/examples/invalid/knowledge.*.yaml
 reject contracts/threshold-rule.schema.json contracts/examples/invalid/threshold-rule.*.yaml
+reject contracts/authority.schema.json contracts/examples/invalid/authority.*.yaml
 reject contracts/seed.schema.json contracts/examples/invalid/seed.*.yaml
 reject contracts/component.schema.json contracts/examples/invalid/component.*.yaml
 reject contracts/device-message.schema.json contracts/examples/invalid/device-message.*.json
@@ -215,10 +223,10 @@ reject contracts/device-message.schema.json contracts/examples/invalid/device-me
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
     token-claims.*.json | service-token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml | \
-    threshold-rule.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml | map.*.yaml | form.*.yaml) ;;
+    threshold-rule.*.yaml | authority.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml | map.*.yaml | form.*.yaml) ;;
     *)
       echo "$file không được kiểm: tên phải theo mẫu <token-claims|service-token-claims|device-message>.<lỗi>.json hoặc" \
-        "<app|workflow|catalog|map|form|component|threshold-rule|assistant|knowledge|seed>.<lỗi>.yaml." >&2
+        "<app|workflow|catalog|map|form|component|threshold-rule|authority|assistant|knowledge|seed>.<lỗi>.yaml." >&2
       exit 1
       ;;
   esac
@@ -325,7 +333,8 @@ check_openapi() {
   fi
 }
 
-check_openapi core/workflow-api FLOWABLE_URL=http://unused FLOWABLE_USER=unused FLOWABLE_PASSWORD=unused
+check_openapi core/workflow-api FLOWABLE_URL=http://unused FLOWABLE_USER=unused FLOWABLE_PASSWORD=unused \
+  WORKFLOW_DB_HOST=unused WORKFLOW_DB_NAME=unused WORKFLOW_DB_USER=unused WORKFLOW_DB_PASSWORD=unused
 check_openapi core/files-api FILES_DB_HOST=unused FILES_DB_NAME=unused FILES_DB_USER=unused FILES_DB_PASSWORD=unused \
   S3_URL=http://unused S3_ACCESS_KEY=unused S3_SECRET_KEY=unused FILES_BUCKET=unused FILES_MAX_BYTES=1 \
   CLAMD_HOST=unused CLAMD_PORT=1 FILES_SCAN_TIMEOUT=1

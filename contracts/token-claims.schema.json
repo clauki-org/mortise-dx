@@ -44,7 +44,7 @@
       }
     },
     "amr": {
-      "description": "Cách người dùng đã đăng nhập trong phiên: `pwd` là mật khẩu, `otp` là mã OTP. Người có vai trò `manager` phải có `otp` mới duyệt được qua workflow-api (ADR 0011). Thiếu claim thì coi như chưa qua bước nào.",
+      "description": "Cách người dùng đã đăng nhập trong phiên: `pwd` là mật khẩu, `otp` là mã OTP. Người có vai trò `manager` phải có `otp` mới duyệt được qua workflow-api (ADR 0011); bước lấy vai trò từ bảng phân cấp cần `otp` với mọi vai trò (ADR 0028). Keycloak hỏi OTP người có vai trò `otp_required` của client `mortise-web` (ghi ở `resource_access`, không dùng để phân quyền); `manager` gộp vai trò này. Thiếu claim thì coi như chưa qua bước nào.",
       "type": "array",
       "items": { "type": "string" }
     }

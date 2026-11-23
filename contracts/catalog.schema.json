@@ -141,10 +141,11 @@
       }
     },
     "variable": {
-      "description": "Tên biến của quy trình, cùng luật với $defs.variable của contracts/workflow.schema.json: không trùng biến dành riêng mà lõi đặt (docs/api.md)",
+      "description": "Tên biến của quy trình, cùng luật với $defs.variable của contracts/workflow.schema.json: không trùng biến dành riêng mà lõi đặt, kể cả tiền tố `authority_` (docs/api.md)",
       "type": "string",
       "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
-      "not": { "enum": ["initiator", "initiatorName", "tenant", "idempotencyKey"] }
+      "not": { "enum": ["initiator", "initiatorName", "tenant", "idempotencyKey"] },
+      "allOf": [{ "not": { "pattern": "^authority_" } }]
     },
     "field_path": {
       "description": "Tên cột, hoặc <quan hệ>.<cột> đúng một cấp; mỗi phần theo luật tên của GraphQL như identifier",

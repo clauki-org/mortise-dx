@@ -11,10 +11,12 @@ from fastapi import Body, Depends, FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
-from . import flowable
+from . import db, flowable
 from .auth import caller_from_token
+from .authority import group, pick
 from .policy import (
     IDEMPOTENCY_VARIABLE,
+    RESERVED_PREFIX,
     Caller,
     Denied,
     TaskView,
@@ -82,7 +84,7 @@ def healthz() -> dict:
     "/v1/workflow/processes/{key}/instances",
     status_code=201,
     response_model=ProcessStarted,
-    responses=_errors(400, 403, 404, 502, 503),
+    responses=_errors(400, 403, 404, 409, 502, 503),
 )
 def start_process(
     key: str,
@@ -92,8 +94,11 @@ def start_process(
 ) -> dict:
     variables = _variables_in(body)
     check_variables(variables)
-    check_not_preset(variables, flowable.decisions(key, caller.tenant))
+    definition = flowable.definition(key, caller.tenant)
+    check_not_preset(variables, definition.decisions)
+    authorities = _authorities(key, caller.tenant, definition.authorities, variables)
     variables |= {"initiator": caller.sub, "initiatorName": caller.username, "tenant": caller.tenant}
+    variables |= authorities
     if idempotency_key is None:
         return {"id": flowable.start(key, caller.tenant, variables)["id"], "process": key}
     check_idempotency_key(idempotency_key)
@@ -149,6 +154,30 @@ def instance_status(instance_id: str, caller: CallerDep) -> dict:
     return {"id": found["id"], "ended": found["endTime"] is not None, "outcome": found.get("endActivityId")}
 
 
+def _authorities(
+    key: str, tenant: str, steps: frozenset[str], variables: dict[str, object]
+) -> dict[str, object]:
+    """Biến `authority_<bước>` của hồ sơ sắp mở, chọn theo bảng phân cấp của tenant (ADR 0028)."""
+    if not steps:
+        return {}
+    parent, rows = db.authorities(tenant, key, steps)
+    chosen = {}
+    for step in sorted(steps):
+        row = pick(rows.get(step, []), variables, parent)
+        # Không có dòng nào thì task không có nhóm ứng viên và nằm lại mà không ai thấy; từ chối ngay để người
+        # lập biết. 409 ở route hoàn thành task nghĩa là task vừa bị nhận, nên lý do phải nói rõ là bảng phân
+        # cấp.
+        if row is None:
+            raise Denied(
+                409,
+                f"Tenant {tenant} chưa có bảng phân cấp thẩm quyền cho bước '{step}' của quy trình '{key}'. "
+                "Người vận hành chạy lại `make app-install APP=<gói>` (quy trình mẫu: `make seed`) để nạp "
+                "dòng mặc định; tenant tạo sau khi cài gói chưa có dòng nào.",
+            )
+        chosen[f"{RESERVED_PREFIX}{step}"] = group(row, parent)
+    return chosen
+
+
 def _variables_in(body: VariablesBody | None) -> dict[str, object]:
     return (body.variables if body else None) or {}
 
@@ -158,12 +187,15 @@ def _variables(raw: dict) -> dict[str, object]:
 
 
 def _task_view(raw: dict) -> TaskView:
+    variables = _variables(raw)
     return TaskView(
         tenant=raw.get("tenantId") or "",
         assignee=raw.get("assignee"),
         candidate_groups=flowable.candidate_groups(raw["id"]),
         category=raw.get("category"),
-        initiator=_variables(raw).get("initiator"),
+        initiator=variables.get("initiator"),
+        # Biến chỉ lõi đặt được (check_variables), nên có biến là bước này lấy vai trò từ bảng phân cấp.
+        authority=f"{RESERVED_PREFIX}{raw.get('taskDefinitionKey')}" in variables,
     )
 
 

@@ -4,13 +4,14 @@
 # Nạp phần chạy lúc dùng của một gói vào lõi, cho mọi tenant đang có trong core.tenants: deploy BPMN lên
 # Flowable, khai báo bước vào platform.workflow_steps, mục menu kèm nội dung tệp cấu hình vào
 # platform.menu_items, luật ngưỡng vào core.threshold_rules, văn bản cho trợ lý vào bảng knowledge của
-# platform (scripts/app_knowledge.py). Sáu lệnh:
-#   install <thư mục gói>   đọc app.yaml (workflows, menu, rules, knowledge) và <gói>/workflows/*.yaml;
-#                           app.sh gọi khi cài
-#   remove <thư mục gói>    xóa deployment (kèm hồ sơ đang chạy), khai báo bước, menu, luật, văn bản của
-#                           gói; gọi khi gỡ
+# platform (scripts/app_knowledge.py), bảng phân cấp mặc định vào core.step_authorities. Bảy lệnh:
+#   install <thư mục gói>   đọc app.yaml (workflows, menu, rules, knowledge, authorities) và
+#                           <gói>/workflows/*.yaml; app.sh gọi khi cài
+#   remove <thư mục gói>    xóa deployment (kèm hồ sơ đang chạy), khai báo bước, menu, luật, văn bản, bảng
+#                           phân cấp của gói; gọi khi gỡ
 #   workflows --bpmn ... --steps ...   chỉ deploy và nạp khai báo bước; make seed gọi cho quy trình mẫu
 #   rules --owner core <tệp> ...       chỉ nạp luật ngưỡng; make seed gọi cho luật mẫu
+#   authorities --owner core <tệp> ... chỉ nạp bảng phân cấp; make seed gọi cho quy trình mẫu core-authority
 #   knowledge --owner core <tệp> ...   chỉ nạp văn bản; make seed gọi cho văn bản mẫu
 #   menu --owner core <tệp menu>       chỉ nạp mọi mục menu liệt kê trong tệp (dạng mục `menu` của app.yaml),
 #                                      kiểm như mục menu của gói; make seed gọi với scripts/core-menu.yaml
@@ -235,6 +236,55 @@ def load_rules(owner: str, files: list[str]) -> None:
     print(f"postgres: {len(rules)} luật ngưỡng của {owner}")
 
 
+# Chỉ thêm dòng chưa có (ON CONFLICT DO NOTHING theo mã dòng): dòng do tenant cha sửa phải giữ nguyên khi cài
+# lại gói (ADR 0028). Vì vậy đổi vai trò hay ngưỡng mặc định trong tệp không tới dòng đã nạp, và dòng gói bỏ
+# khỏi tệp vẫn còn tới khi gỡ gói; bước không còn trong BPMN thì không quy trình nào đọc dòng đó.
+AUTHORITIES_SQL = """
+BEGIN;
+CREATE TEMP TABLE authority ON COMMIT DROP AS SELECT * FROM jsonb_to_recordset(:'rows'::jsonb)
+    AS x(process text, step text, rule text, variable text, above numeric, role text, scope text);
+INSERT INTO core.step_authorities (tenant_id, app, process, step, rule, variable, above, role, scope)
+SELECT t.id, :'app', a.process, a.step, a.rule, a.variable, a.above, a.role, coalesce(a.scope, 'tenant')
+FROM core.tenants t, authority a
+ON CONFLICT (tenant_id, process, step, rule) DO NOTHING;
+COMMIT;
+"""
+
+
+# Dòng gốc đã nạp mang mã khác mã trong tệp: ON CONFLICT theo mã không bắt được, nên câu INSERT gặp chỉ mục
+# một dòng gốc mỗi bước và báo lỗi khó hiểu giữa lúc cài.
+ROOT_RENAMED_SQL = """
+SELECT DISTINCT s.tenant_id || ' ' || s.process || ' ' || s.step || ' ' || s.rule || ' ' || a.rule
+FROM core.step_authorities s
+JOIN jsonb_to_recordset(:'rows'::jsonb) AS a(process text, step text, rule text, above numeric)
+    ON (s.process, s.step) = (a.process, a.step)
+WHERE s.above IS NULL AND a.above IS NULL AND s.rule <> a.rule
+ORDER BY 1;
+"""
+
+
+def load_authorities(owner: str, files: list[str]) -> None:
+    rows = [
+        {"process": table["process"], "step": table["step"]} | row
+        for table in (load_yaml(path) for path in files)
+        for row in table["rows"]
+    ]
+    renamed = psql(ROOT_RENAMED_SQL, rows=json.dumps(rows)).split("\n")
+    problems = [
+        f"tenant {tenant}, bước {step} của {process}: dòng gốc đã nạp có mã '{old}', tệp khai '{new}'"
+        for tenant, process, step, old, new in (line.split(" ") for line in renamed if line)
+    ]
+    if problems:
+        raise SystemExit(
+            f"Bảng phân cấp của {owner} chưa nạp được:\n  "
+            + "\n  ".join(problems)
+            + "\nGiữ mã cũ cho dòng gốc trong tệp, hoặc người vận hành xóa mọi dòng của bước đó trong "
+            "core.step_authorities (mất dòng tenant cha đã sửa) rồi cài lại."
+        )
+    psql(AUTHORITIES_SQL, app=owner, rows=json.dumps(rows))
+    print(f"postgres: {len(rows)} dòng phân cấp mặc định của {owner} (dòng đã có giữ nguyên)")
+
+
 def read_knowledge(owner: str, files: list[str]) -> list[dict]:
     documents = [load_yaml(path) for path in files]
     problems = app_knowledge.problems(documents)
@@ -338,7 +388,7 @@ def main() -> int:
     workflows = commands.add_parser("workflows")
     workflows.add_argument("--bpmn", nargs="+", required=True)
     workflows.add_argument("--steps", nargs="+", required=True)
-    for name in ("rules", "knowledge"):
+    for name in ("rules", "knowledge", "authorities"):
         command = commands.add_parser(name)
         command.add_argument("--owner", required=True)
         command.add_argument("files", nargs="+")
@@ -357,6 +407,9 @@ def main() -> int:
         return 0
     if args.command == "knowledge":
         load_knowledge(args.owner, read_knowledge(args.owner, args.files))
+        return 0
+    if args.command == "authorities":
+        load_authorities(args.owner, args.files)
         return 0
     if args.command == "menu":
         # Mục menu của lõi không có app.yaml; tệp có đúng dạng mục `menu` để dùng chung bộ nạp với gói. Bộ nạp
@@ -386,6 +439,11 @@ def main() -> int:
                 for entry in app_knowledge.assistant_configs(args.directory, app)
             ],
         )
+        # Bảng phân cấp nạp trước BPMN: quy trình mới đọc bảng ngay khi deploy xong, thiếu dòng thì hồ sơ lập
+        # trong khoảng đó bị từ chối.
+        load_authorities(
+            app["id"], [os.path.join(args.directory, path) for path in app.get("authorities", [])]
+        )
         deploy(bpmn, every, package_settings(app))
         load_steps(steps)
         load_menu(args.directory, app)
@@ -399,11 +457,12 @@ def main() -> int:
         "DELETE FROM platform.menu_items WHERE app = :'app';"
         "DELETE FROM core.threshold_rules WHERE app = :'app';"
         "DELETE FROM platform.knowledge_passages WHERE app = :'app';"
-        "DELETE FROM platform.knowledge_documents WHERE app = :'app';",
+        "DELETE FROM platform.knowledge_documents WHERE app = :'app';"
+        "DELETE FROM core.step_authorities WHERE app = :'app';",
         processes=",".join(processes),
         app=app["id"],
     )
-    print(f"postgres: xóa khai báo bước, menu, luật ngưỡng và văn bản của {app['id']}")
+    print(f"postgres: xóa khai báo bước, menu, luật ngưỡng, văn bản và bảng phân cấp của {app['id']}")
     return 0
 
 

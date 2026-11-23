@@ -22,8 +22,8 @@ TOKEN=$(curl -fsS http://localhost:9080/auth/realms/mortise/protocol/openid-conn
   -d username=user.a -d "password=$DEMO_USER_PASSWORD" | jq -r .access_token)
 ```
 
-Người duyệt (vai trò `manager`) gửi kèm mã OTP, ví dụ `-d username=manager.a -d totp=<mã>`; `make otp` in mã của tài
-khoản demo. Thiếu mã thì Keycloak trả `invalid_grant`. Mỗi mã chỉ dùng được một lần.
+Người duyệt (vai trò `manager`) và người có vai trò `otp_required` của client `mortise-web` (tài khoản demo
+`admin2.a`) gửi kèm mã OTP, ví dụ `-d username=manager.a -d totp=<mã>`; `make otp` in mã của tài khoản demo. Thiếu mã thì Keycloak trả `invalid_grant`. Mỗi mã chỉ dùng được một lần.
 
 Token mang các claim lõi dùng để phân quyền (hợp đồng: [`contracts/token-claims.schema.json`](../contracts/token-claims.schema.json)):
 
@@ -158,6 +158,23 @@ Chống gửi trùng: giao diện sinh một mã ngẫu nhiên (ví dụ UUID) m
 mới, kể cả khi quy trình đó đã kết thúc. Người khác dùng trùng mã vẫn tạo quy trình của riêng họ. Hai lần gửi cùng
 lúc chỉ được xếp lần lượt khi workflow-api chạy một bản như trong `compose.yaml`.
 
+Bảng phân cấp thẩm quyền ([ADR 0028](adr/0028-step-authority-table.md)): bước có `candidateGroups` là
+`${authority_<id của bước>}` lấy vai trò từ bảng `core.step_authorities` của tenant lúc khởi tạo. workflow-api chọn
+dòng có ngưỡng (`above`) cao nhất mà biến của dòng vượt hẳn; biến thiếu, không phải số hay âm thì coi như vượt mọi
+ngưỡng; không vượt dòng nào thì dùng dòng gốc. Vai trò được ghi vào biến `authority_<bước>` của hồ sơ, nên đổi bảng chỉ
+áp cho hồ sơ lập sau. Hoàn thành bước đó cần đăng nhập có OTP, với mọi vai trò: Keycloak chỉ hỏi OTP người có vai trò `otp_required` của
+client `mortise-web` (mọi `manager` có sẵn), nên người vận hành gán vai trò đó cho tài khoản nhận bước, như `admin2.a`
+của bản demo. Biến ngưỡng nên là dữ liệu người lập không tự khai được
+(do lõi hay hệ thống đặt, ví dụ iot-bridge, hay tính từ dữ liệu đã kiểm): người lập khai thấp là né được cấp duyệt
+cao. Dùng biến người lập gửi thì người duyệt cấp thấp phải đối chiếu với hồ sơ; kiểm chéo giá trị là việc sau. Quy
+trình mẫu `core-authority` dùng biến `amount` do người lập gửi, chỉ để kiểm thử; quản trị (`tenant_admin`) của tenant cha sửa vai trò và ngưỡng của tenant con qua GraphQL:
+
+```bash
+curl -fsS -X POST http://localhost:9080/v1/graphql \
+  -H "Authorization: Bearer $ADMIN_TINH" -H 'X-Hasura-Role: tenant_admin' -H 'Content-Type: application/json' \
+  -d '{"query":"mutation { update_core_step_authorities(where: {tenant_id: {_eq: \"xa-a\"}, process: {_eq: \"core-authority\"}, step: {_eq: \"decide\"}, rule: {_eq: \"default\"}}, _set: {role: \"tenant_admin\"}) { affected_rows } }"}'
+```
+
 Tài khoản dịch vụ ([ADR 0017](adr/0017-service-account-for-tenant.md)): client Keycloak `mortise-iot-bridge` lấy
 token bằng client credentials, secret `IOT_BRIDGE_CLIENT_SECRET` trong `.env`. Token này không có tenant; mỗi yêu cầu
 ghi tenant ở header `X-Mortise-Tenant` và chỉ được khởi tạo quy trình. Với tài khoản dịch vụ, `Idempotency-Key` chỉ
@@ -174,13 +191,13 @@ curl -fsS -X POST http://localhost:9080/v1/workflow/processes/core-approval/inst
 | Mã trả về | Khi nào |
 |---|---|
 | `201` / `204` | Khởi tạo / hoàn thành thành công |
-| `400` | Ghi đè biến dành riêng của lõi (`initiator`, `initiatorName`, `tenant`, `idempotencyKey`); khởi tạo kèm biến quyết định, tức tên dùng trong điều kiện rẽ nhánh sau một userTask của quy trình, ví dụ `approved` của `core-approval` ([ADR 0025](adr/0025-decision-variables.md)); `Idempotency-Key` sai định dạng (8–100 ký tự chữ, số, `-`, `_`); người dùng gửi `X-Mortise-Tenant`; tài khoản dịch vụ thiếu header đó |
+| `400` | Ghi đè biến dành riêng của lõi (`initiator`, `initiatorName`, `tenant`, `idempotencyKey`, mọi biến bắt đầu bằng `authority_`); khởi tạo kèm biến quyết định, tức tên dùng trong điều kiện rẽ nhánh sau một userTask của quy trình, ví dụ `approved` của `core-approval` ([ADR 0025](adr/0025-decision-variables.md)); `Idempotency-Key` sai định dạng (8–100 ký tự chữ, số, `-`, `_`); người dùng gửi `X-Mortise-Tenant`; tài khoản dịch vụ thiếu header đó |
 | `401` | Thiếu hoặc sai token |
-| `403` | Tài khoản không thuộc đúng một tenant; tài khoản dịch vụ gọi đường khác ngoài khởi tạo quy trình; người duyệt (`manager`) đăng nhập chưa qua bước OTP; task đã giao cho người khác; không có vai trò ứng viên; người gửi tự duyệt yêu cầu của mình |
+| `403` | Tài khoản không thuộc đúng một tenant; tài khoản dịch vụ gọi đường khác ngoài khởi tạo quy trình; người duyệt (`manager`), hay người hoàn thành bước lấy vai trò từ bảng phân cấp, đăng nhập chưa qua bước OTP; task đã giao cho người khác; không có vai trò ứng viên; người gửi tự duyệt yêu cầu của mình |
 | `404` | Task hay quy trình không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại); tenant chưa có quy trình đó |
-| `409` | Task vừa được người khác nhận |
+| `409` | Hoàn thành: task vừa được người khác nhận. Khởi tạo: bảng phân cấp của tenant chưa có dòng cho một bước của quy trình (người vận hành chạy lại `make app-install`, quy trình mẫu: `make seed`) |
 | `422` | Thân yêu cầu sai định dạng hoặc có khóa ngoài `variables`, ví dụ gửi `{"approved": true}` thiếu lớp `variables` |
-| `502` / `503` | Flowable trả lỗi (thông điệp được chuyển lại) / không kết nối được Flowable |
+| `502` / `503` | Flowable trả lỗi (thông điệp được chuyển lại) / không kết nối được Flowable, hay không đọc được bảng phân cấp trong CSDL |
 
 ## Tệp: `/v1/files`
 

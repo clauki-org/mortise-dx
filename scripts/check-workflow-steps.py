@@ -6,14 +6,17 @@
 # có khai báo, không khai bước mà BPMN không có, `id` nút không trùng trong một bước, trường bắt buộc của
 # biểu mẫu có trong biểu mẫu. Thiếu bước này, task của bước quên khai báo hiện ra trên bảng việc mà không
 # có nút để xử lý. BPMN của gói chỉ được dùng {{tên}} đã khai trong `settings` của app.yaml cùng gói
-# (ADR 0019); BPMN của lõi không có settings. Gọi từ scripts/contracts.sh: --bpmn <tệp BPMN...>
-# --steps <tệp khai báo...>.
+# (ADR 0019); BPMN của lõi không có settings. Bước đọc bảng phân cấp thẩm quyền phải có dòng gốc khai sẵn
+# (scripts/workflow_authorities.py, ADR 0028). Gọi từ scripts/contracts.sh: --bpmn <tệp BPMN...>
+# --steps <tệp khai báo...> [--authorities <bảng phân cấp của lõi...>] [--packages <thư mục gói...>]; bảng của
+# gói đọc từ app.yaml.
 
 import argparse
 import os
 import sys
 import xml.etree.ElementTree as ET
 
+import workflow_authorities
 import yaml
 from workflow_settings import placeholders
 
@@ -24,17 +27,23 @@ class Unreadable(Exception):
     pass
 
 
-def user_tasks(bpmn_files: list[str]) -> tuple[dict[str, set[str]], list[str]]:
+def parse(bpmn_files: list[str]) -> dict[str, ET.Element]:
+    roots = {}
+    for path in bpmn_files:
+        try:
+            # Tệp BPMN nằm trong repo, do người đóng góp viết, không phải dữ liệu từ bên ngoài.
+            roots[path] = ET.parse(path).getroot()  # noqa: S314
+        except (ET.ParseError, OSError) as error:
+            raise Unreadable(f"{path}: không đọc được BPMN ({error})") from error
+    return roots
+
+
+def user_tasks(roots: dict[str, ET.Element]) -> tuple[dict[str, set[str]], list[str]]:
     """Khóa quy trình -> id các userTask, chỉ với quy trình có ít nhất một userTask."""
     found: dict[str, set[str]] = {}
     where: dict[str, str] = {}
     errors = []
-    for path in bpmn_files:
-        try:
-            # Tệp BPMN nằm trong repo, do người đóng góp viết, không phải dữ liệu từ bên ngoài.
-            root = ET.parse(path).getroot()  # noqa: S314
-        except (ET.ParseError, OSError) as error:
-            raise Unreadable(f"{path}: không đọc được BPMN ({error})") from error
+    for path, root in roots.items():
         for process in root.iter(f"{BPMN}process"):
             key = process.get("id")
             if not key:
@@ -116,11 +125,16 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--bpmn", nargs="*", default=[], required=True)
     parser.add_argument("--steps", nargs="*", default=[], required=True)
+    parser.add_argument("--authorities", nargs="*", default=[])
+    # Thư mục gói có bảng phân cấp phải kiểm dù không có BPMN nào.
+    parser.add_argument("--packages", nargs="*", default=[])
     args = parser.parse_args()
     try:
-        processes, errors = user_tasks(args.bpmn)
+        roots = parse(args.bpmn)
+        processes, errors = user_tasks(roots)
         errors += problems(processes, args.steps)
         errors += settings_problems(args.bpmn)
+        errors += workflow_authorities.problems(roots, args.authorities, args.packages)
     except Unreadable as error:
         errors = [str(error)]
     for error in errors:

@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: nút đặt biến mang tiền tố `authority_`, do lõi đặt từ bảng
+# phân cấp thẩm quyền (ADR 0028). Nếu lọt, người lập tự chọn được người duyệt nếu lõi không chặn.
+
+title: Danh mục
+source: app_example_items
+fields:
+  - name: name
+    label: Tên
+list:
+  columns: [name]
+detail:
+  actions:
+    - id: request
+      label: Đề nghị
+      process: approval
+      variables:
+        authority_review: name

@@ -57,10 +57,10 @@ echo "keycloak: tài khoản dịch vụ mortise-iot-bridge"
 # Máy chủ phát triển giao diện (Vite) chạy ở địa chỉ khác URL công khai, nên client giao diện nhận thêm địa chỉ đó làm
 # redirect URI, địa chỉ sau đăng xuất và web origin. Chỉ làm khi bản cài chạy trên máy cục bộ (URL công khai là
 # localhost), để seed chạy nhầm trên máy chủ thật không mở thêm địa chỉ đăng nhập; realm trong tệp không đổi.
+web_client=$(kc get clients -r mortise -q clientId=mortise-web --fields id --format csv --noquotes)
 public_url="${MORTISE_PUBLIC_URL:-http://localhost:9080}"
 if [[ "$public_url" =~ ^http://(localhost|127\.0\.0\.1)(:|/|$) ]]; then
   web_dev_url="${WEB_DEV_URL:-http://localhost:5173}"
-  web_client=$(kc get clients -r mortise -q clientId=mortise-web --fields id --format csv --noquotes)
   kc get "clients/$web_client" -r mortise | jq --arg u "$web_dev_url" \
     '{redirectUris: ((.redirectUris + [$u + "/*"]) | unique), webOrigins: ((.webOrigins + [$u]) | unique),
       attributes: (.attributes + {"post.logout.redirect.uris": (((.attributes["post.logout.redirect.uris"] // "")
@@ -69,12 +69,15 @@ if [[ "$public_url" =~ ^http://(localhost|127\.0\.0\.1)(:|/|$) ]]; then
   echo "keycloak: mortise-web nhận thêm $web_dev_url cho máy chủ phát triển giao diện"
 fi
 
-# username  tenant   vai trò thêm. admin.<x> quản trị một tenant (tenant_admin): gói dùng vai trò này để tenant tự
-# sửa dữ liệu cấu hình của mình, ví dụ phân công cán bộ.
+# username  tenant   vai trò thêm   otp nếu phải nhập OTP. admin.<x> quản trị một tenant (tenant_admin): gói dùng vai trò
+# này để tenant tự sửa dữ liệu cấu hình của mình, ví dụ phân công cán bộ. admin.tinh sửa bảng phân cấp thẩm quyền của
+# các xã con (ADR 0028). admin2.a là quản trị xã A có otp_required, nhận được bước mà bảng phân cấp giao cho
+# tenant_admin; admin.a giữ đăng nhập bằng mật khẩu. manager luôn phải nhập OTP vì gộp otp_required.
 users=(
   "user.a  xa-a  -"
   "manager.a  xa-a  manager"
   "admin.a  xa-a  tenant_admin"
+  "admin2.a  xa-a  tenant_admin  otp"
   "user.b  xa-b  -"
   "manager.b  xa-b  manager"
   "admin.b  xa-b  tenant_admin"
@@ -82,6 +85,8 @@ users=(
   "manager.c  xa-c  manager"
   "admin.c  xa-c  tenant_admin"
   "leader.tinh  tinh-mau  rollup_reader"
+  "admin.tinh  tinh-mau  tenant_admin"
+  "manager.tinh  tinh-mau  manager"
 )
 
 # Tệp realm chỉ được nạp khi Keycloak khởi động lần đầu. Bản cài dựng trước khi có vai trò rollup_reader và tenant
@@ -91,8 +96,27 @@ if ! kc get roles/rollup_reader -r mortise >/dev/null 2>&1; then
     -s "description=Đọc số liệu tổng hợp của các tenant con (ADR 0016)" >/dev/null
 fi
 
+# Điều kiện OTP của hai luồng đăng nhập là vai trò otp_required của client mortise-web, và manager gộp vai trò đó
+# (ADR 0011, bổ sung 2026-11-22). Vai trò của client nằm ở resource_access của token, không ở realm_access, nên Hasura
+# không cho chọn nó và workflow-api không coi nó là nhóm ứng viên. Bản cài dựng trước đó còn điều kiện theo manager:
+# tạo bù vai trò, gộp vào manager và đổi điều kiện ở đây; chạy lại không đổi gì.
+if ! kc get "clients/$web_client/roles/otp_required" -r mortise >/dev/null 2>&1; then
+  kc create "clients/$web_client/roles" -r mortise -s name=otp_required \
+    -s "description=Phải nhập OTP khi đăng nhập (ADR 0011, ADR 0028)" >/dev/null 2>&1
+fi
+kc add-roles -r mortise --rname manager --cclientid mortise-web --rolename otp_required >/dev/null
+for flow in "browser-mfa%20approver%20otp" "direct-grant-mfa%20approver%20otp"; do
+  kc get "authentication/flows/$flow/executions" -r mortise |
+    jq -r '.[] | select(.providerId == "conditional-user-role") | .authenticationConfig' |
+    while read -r config; do
+      kc update "authentication/config/$config" -r mortise -s 'config.condUserRole=mortise-web.otp_required' \
+        >/dev/null 2>&1
+    done
+done
+echo "keycloak: luồng đăng nhập hỏi OTP người có otp_required (mọi manager)"
+
 for entry in "${users[@]}"; do
-  read -r username tenant role <<<"$entry"
+  read -r username tenant role otp <<<"$entry"
   if [[ -z "$(kc get users -r mortise -q "username=$username" -q exact=true --fields id --format csv --noquotes)" ]]; then
     kc create users -r mortise -s "username=$username" -s enabled=true \
       -s "email=$username@demo.invalid" -s emailVerified=true \
@@ -106,9 +130,12 @@ for entry in "${users[@]}"; do
   if [[ "$role" != "-" ]]; then
     kc add-roles -r mortise --uusername "$username" --rolename "$role" >/dev/null
   fi
-  # Người duyệt phải nhập mã OTP khi đăng nhập (ADR 0011). Gắn sẵn khóa từ .env để demo và kiểm thử không phải quét mã
-  # QR; xóa khóa cũ trước để chạy lại seed không tích nhiều khóa. Người dùng thật tự cài khi đăng nhập lần đầu.
-  if [[ "$role" == manager ]]; then
+  if [[ "$otp" == otp ]]; then
+    kc add-roles -r mortise --uusername "$username" --cclientid mortise-web --rolename otp_required >/dev/null
+  fi
+  # Người có otp_required phải nhập mã OTP khi đăng nhập (ADR 0011). Gắn sẵn khóa từ .env để demo và kiểm thử không phải
+  # quét mã QR; xóa khóa cũ trước để chạy lại seed không tích nhiều khóa. Người dùng thật tự cài khi đăng nhập lần đầu.
+  if [[ "$role" == manager || "$otp" == otp ]]; then
     : "${DEMO_OTP_SECRET:?Thiếu DEMO_OTP_SECRET trong .env; chạy make env}"
     kc get "users/$user_id/credentials" -r mortise | jq -r '.[] | select(.type == "otp") | .id' |
       while read -r credential; do kc delete "users/$user_id/credentials/$credential" -r mortise; done
@@ -118,7 +145,7 @@ for entry in "${users[@]}"; do
         credentialData: ({subType: "totp", digits: 6, period: 30, counter: 0, algorithm: "HmacSHA1"} | tojson)
       }]}' | kc update "users/$user_id" -r mortise -f - >/dev/null
   fi
-  echo "keycloak: $username, tenant $tenant, vai trò thêm: $role"
+  echo "keycloak: $username, tenant $tenant, vai trò thêm: $role${otp:+, OTP}"
 done
 
 # Tenant demo là dữ liệu, không phải lược đồ, nên nằm ở seed chứ không nằm trong migration:
@@ -137,11 +164,17 @@ echo "postgres: tenant demo tinh-mau (cha), xa-a, xa-b, xa-c"
 # Quyền dữ liệu của Hasura: áp tệp khai báo theo kiểu ghi đè, nên chạy lại seed cũng sửa được quyền đã bị đổi sai.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py apply
 
+# Bảng phân cấp mặc định của quy trình mẫu core-authority (ADR 0028), nạp trước khi deploy để hồ sơ đầu tiên đã có dòng
+# để chọn. Chỉ thêm dòng chưa có: dòng đã sửa giữ nguyên khi seed lại; `make smoke` tự đặt lại dòng của nó.
+uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py authorities \
+  --owner core contracts/examples/authority.example.yaml
 # Quy trình mẫu dùng để kiểm thử lõi và khai báo bước của nó, cho mọi tenant có trong core.tenants; chung một bộ nạp
 # với gói (scripts/app-deploy.py), nên chạy lại không deploy lại tệp không đổi. Ví dụ của hợp đồng viết cho
-# core-approval nên cũng là khai báo của nó; `make check-fast` đã kiểm tệp theo schema và theo BPMN.
+# core-approval nên cũng là khai báo của nó; khai báo của quy trình mẫu khác nằm cạnh BPMN. `make check-fast` đã kiểm
+# tệp theo schema và theo BPMN.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py workflows \
-  --bpmn core/workflow/fixtures/*.bpmn20.xml --steps contracts/examples/workflow.example.yaml
+  --bpmn core/workflow/fixtures/*.bpmn20.xml \
+  --steps contracts/examples/workflow.example.yaml core/workflow/fixtures/*.yaml
 # Luật ngưỡng mẫu của lõi, mở core-approval; `make smoke` kiểm đường mở hồ sơ khi vượt ngưỡng bằng luật này.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/app-deploy.py rules \
   --owner core contracts/examples/threshold-rule.example.yaml

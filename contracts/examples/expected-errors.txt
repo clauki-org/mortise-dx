@@ -23,6 +23,13 @@ assistant.document-not-slug.yaml	$.documents[0]	'knowledge/example-rules.yaml' d
 assistant.duplicate-document.yaml	$.documents	['example-rules', 'example-rules'] has non-unique elements
 assistant.no-documents.yaml	$.documents	[] should be non-empty
 assistant.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
+authority.above-too-large.yaml	$.rows[1].above	1000000000000000 is greater than or equal to the maximum of 1000000000000000
+authority.role-reserved-prefix.yaml	$.rows[0].role	'authority_decide' should not be valid under {'pattern': '^authority_'}
+authority.role-with-comma.yaml	$.rows[0].role	'manager,user' does not match '^[a-z][a-z0-9_]*(-[a-z0-9_]+)*$'
+authority.root-in-parent.yaml	$.rows[0].scope	'tenant' was expected
+authority.threshold-without-variable.yaml	$.rows[1]	'variable' is a required property
+authority.two-roots.yaml	$.rows	Too many items match the given schema (expected at most 1)
+catalog.action-authority-variable.yaml	$.detail.actions[0].variables	'authority_review' should not be valid under {'pattern': '^authority_'}
 catalog.action-missing-process.yaml	$.detail.actions[0]	'process' is a required property
 catalog.action-reserved-variable.yaml	$.detail.actions[0].variables	'initiator' should not be valid under {'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}
 catalog.blank-field-label.yaml	$.fields[0].label	'   ' does not match '\\\\S'
@@ -78,6 +85,7 @@ token-claims.amr-not-array.json	$.amr	'otp' is not of type 'array'
 token-claims.missing-tenant.json	$	'tenant' is a required property
 token-claims.missing-user-role.json	$.realm_access.roles	['default-roles-mortise', 'manager', 'offline_access', 'uma_authorization'] does not contain items matching the given schema
 token-claims.two-tenants.json	$.tenant	['xa-a', 'xa-b'] is too long
+workflow.authority-variable.yaml	$.steps.review.actions[0].variables	'authority_review' should not be valid under {'pattern': '^authority_'}
 workflow.blank-action-label.yaml	$.steps.review.actions[0].label	' ' does not match '\\\\S'
 workflow.due-outside-bpmn.yaml	$.steps.review	Additional properties are not allowed ('due' was unexpected)
 workflow.form-not-object.yaml	$.steps.review.form.type	'object' was expected
