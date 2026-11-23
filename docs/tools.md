@@ -57,7 +57,7 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   ứng dụng đăng nhập ở một chỗ.
 - **Trong dự án:**
   - Realm `mortise` chứa toàn bộ người dùng của nền tảng.
-  - Mỗi tenant là một nhóm (`xa-a`, `xa-b`, `xa-c`: ba xã demo, con của `tinh-mau`); bộ ánh xạ đưa tên nhóm vào claim `tenant` của
+  - Mỗi tenant là một nhóm (`xa-a`, `xa-b`, `xa-c`: ba xã demo, con của `tinh-mau`; `tinh-khac` không có con); bộ ánh xạ đưa tên nhóm vào claim `tenant` của
     token. Các thành phần khác dựa vào claim này để tách dữ liệu.
   - Vai trò realm: `user`, `manager`, `tenant_admin`, `rollup_reader` (đọc tổng hợp của tenant con,
     [ADR 0016](adr/0016-parent-tenant-rollup.md)).

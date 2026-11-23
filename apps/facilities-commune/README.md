@@ -143,6 +143,7 @@ workflow-api chọn dòng lúc lập hồ sơ và đặt biến `authority_decid
 | Mã dòng | So biến | Ngưỡng | Vai trò | Phạm vi |
 |---|---|---|---|---|
 | `default` | | | `manager` | xã của hồ sơ |
+| `province` | `excessM2` | 1000 (minh họa) | `manager` | tỉnh, tenant cha của xã |
 
 - **Ai sửa:** `tenant_admin` của tỉnh (tenant cha), qua GraphQL, chỉ cột `role` và `above` của dòng thuộc xã con. Quản
   trị xã không sửa được bảng của chính xã mình. Cài lại gói chỉ thêm dòng chưa có, nên giữ dòng tỉnh đã sửa.
@@ -150,15 +151,22 @@ workflow-api chọn dòng lúc lập hồ sơ và đặt biến `authority_decid
 - **Bước quyết định cần OTP với mọi vai trò.** `manager` luôn có OTP. Giao bước cho vai trò khác, ví dụ
   `tenant_admin`, thì người vận hành gán vai trò `otp_required` của client `mortise-web` cho tài khoản nhận bước; bản
   demo có `admin2.a`. Tài khoản cùng vai trò mà không có nó (`admin.a`) thấy việc nhưng bị từ chối khi hoàn thành.
-- **Chưa có dòng ngưỡng.** Mọi hồ sơ tới `decide` đã vượt trên ngưỡng công khai hoặc thiếu số liệu, nên một dòng
-  ngưỡng từ 300 m² trở xuống thay hẳn dòng gốc; mức cao hơn để chuyển hồ sơ lên cấp khác chưa đối chiếu được với văn
-  bản nào. Dòng chuyển hồ sơ lên tỉnh (`scope: parent`) chờ #110, khi người của tỉnh thấy được việc của xã.
+- **Dòng `province` giao bước quyết định lên tỉnh** khi phần vượt trên 1000 m² ([ADR 0029](../../docs/adr/0029-parent-completes-delegated-step.md)).
+  1000 m² là ngưỡng minh họa, không lấy từ văn bản nào: chưa đối chiếu được văn bản đặt mức phần vượt chuyển hồ sơ
+  lên cấp khác; quản trị tỉnh sửa `above` của dòng ở từng xã. Mọi hồ sơ tới `decide` đã vượt trên ngưỡng công khai
+  hoặc thiếu số liệu, nên ngưỡng từ 300 m² trở xuống là giao mọi hồ sơ lên tỉnh. Hồ sơ thiếu hay âm `excessM2` coi
+  như vượt mọi ngưỡng (ADR 0028), nên tới tỉnh. Xã A của dữ liệu demo vượt 420 m², bước quyết định vẫn ở xã.
+- **Tỉnh chỉ thấy bước được giao lên.** `manager.tinh` thấy và hoàn thành `decide` của hồ sơ xã con, cùng mọi biến
+  của hồ sơ ở bước đó; không thấy bước duyệt, bước trình, không đọc được trạng thái hồ sơ, không đọc được bảng cơ sở
+  của xã. Người của xã khác và của tỉnh khác (`manager.k`, tenant `tinh-khac`) nhận 404.
 
 `tests/workflow.sh` kiểm: quản trị tỉnh (`admin.tinh`) đổi dòng của xã A sang `tenant_admin`, hồ sơ lập sau có bước
 `decide` ở `tenant_admin`, hồ sơ lập trước vẫn ở `manager`; `admin.a` không sửa được bảng và bị từ chối ở bước
 `decide` vì thiếu OTP; `admin2.a` và `manager.a` đăng nhập kèm OTP thì ghi nhận được quyết định. Bài đặt lại dòng về
 `manager` ngay sau khi lập hồ sơ thứ hai. Bài cũng kiểm lập hồ sơ kèm `decision`, và hoàn thành bước `submit` kèm
-`decision`, đều nhận `400`.
+`decision`, đều nhận `400`. Hồ sơ thứ ba vượt 1500 m²: `manager.tinh` không thấy bước duyệt và bước trình của nó, thấy
+và ghi nhận được bước `decide`; `manager.a`, `manager.b` và `manager.k` không thấy bước đó và nhận 404 khi gửi thẳng
+mã task; trạng thái hồ sơ trả 404 với tỉnh.
 
 Ngưỡng và thời hạn là `settings` trong `app.yaml` (ADR 0019): `review_threshold_m2: 300`, `publication_period: P30D`
 theo Điều 3a khoản 2, 3 NĐ 155/2025/NĐ-CP, bổ sung bởi Điều 3 NĐ 369/2026/NĐ-CP. Demo và CI ghi đè thời hạn khi cài:
@@ -169,8 +177,8 @@ theo Điều 3a khoản 2, 3 NĐ 155/2025/NĐ-CP, bổ sung bởi Điều 3 NĐ 
 - `excessM2` do trình duyệt đọc từ `area_summary` lúc bấm nút rồi gửi đi. Người gọi thẳng API vẫn gửi được số khác,
   nên người duyệt đối chiếu với hồ sơ. Quy trình chưa tự lấy phần vượt ở phía máy chủ; đó là việc sau.
 - Lập hai hồ sơ cho cùng một cơ sở không bị chặn. Bấm đúp trong cùng hộp xác nhận chỉ tạo một hồ sơ.
-- Khi bảng có dòng ngưỡng trên `excessM2`, người lập khai thấp là né được cấp có thẩm quyền cao hơn, vì
-  `excessM2` do người lập gửi (ADR 0028, giới hạn đã biết). Người có thẩm quyền ở cấp thấp phải đối chiếu với hồ sơ.
+- Người lập khai thấp `excessM2` là né được dòng `province`, tức hồ sơ ở lại xã thay vì lên tỉnh, vì `excessM2` do
+  người lập gửi (ADR 0028, giới hạn đã biết). Người có thẩm quyền của xã phải đối chiếu với hồ sơ.
 - Với dòng mặc định, cùng một `manager` của xã làm được cả bước trình lẫn bước quyết định: bốn mắt chỉ loại người lập.
 - Biến người lập gửi (`title`, `facilityId`, `excessM2`) không phải trường của bước nào, nên người hoàn thành bước sau
   vẫn ghi đè được chúng qua API ([ADR 0031](../../docs/adr/0031-step-fields.md)): workflow-api chỉ chặn trường của
@@ -213,7 +221,7 @@ make simulate ARGS="--set xa-a/archive-01:humidity=78"   # giữ độ ẩm kho 
 
 ## Chưa có
 
-Tỉnh nhận và duyệt hồ sơ của xã (#110); phần bù diện tích sử dụng chung theo Tiêu chuẩn quốc gia; diện tích sử
+Phần bù diện tích sử dụng chung theo Tiêu chuẩn quốc gia; diện tích sử
 dụng chung khi nhiều cơ quan chung một trụ sở (Điều 6 khoản 2 điểm a, sửa bởi NĐ 369).
 
 ## Dữ liệu demo

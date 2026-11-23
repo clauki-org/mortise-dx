@@ -141,7 +141,7 @@ không có đường vào trực tiếp từ bên ngoài.
 | Phương thức | Đường dẫn | Việc |
 |---|---|---|
 | `POST` | `/v1/workflow/processes/{key}/instances` | Khởi tạo một quy trình của tenant mình; thân `{"variables": {...}}` hoặc không có thân; header `Idempotency-Key` tùy chọn |
-| `GET` | `/v1/workflow/tasks` | Các task giao cho mình hoặc cho vai trò của mình, trong tenant mình; mỗi task có `process`, `step` (id của userTask) và `due` (hạn, có thể null) |
+| `GET` | `/v1/workflow/tasks` | Các task giao cho mình hoặc cho vai trò của mình, trong tenant mình, cùng bước của tenant con mà bảng phân cấp giao lên tenant mình; mỗi task có `tenant` (tenant của hồ sơ), `process`, `step` (id của userTask) và `due` (hạn, có thể null) |
 | `POST` | `/v1/workflow/tasks/{id}/complete` | Hoàn thành task; thân `{"variables": {...}}` hoặc không có thân |
 | `GET` | `/v1/workflow/instances/{id}` | Trạng thái một quy trình của tenant mình |
 
@@ -169,6 +169,12 @@ của bản demo. Biến ngưỡng nên là dữ liệu người lập không t�
 cao. Dùng biến người lập gửi thì người duyệt cấp thấp phải đối chiếu với hồ sơ; kiểm chéo giá trị là việc sau. Quy
 trình mẫu `core-authority` dùng biến `amount` do người lập gửi, chỉ để kiểm thử; quản trị (`tenant_admin`) của tenant cha sửa vai trò và ngưỡng của tenant con qua GraphQL:
 
+Dòng `scope: parent` giao bước lên tenant cha ([ADR 0029](adr/0029-parent-completes-delegated-step.md)): nhóm ứng
+viên là `<tenant cha>/<vai trò>`. Người của tenant cha có vai trò đó thấy task trong `GET /v1/workflow/tasks`, với
+`tenant` là tenant con, kèm mọi biến của hồ sơ, và hoàn thành được nó; luôn cần OTP, quy tắc bốn mắt vẫn áp. Chỉ tenant
+con trực tiếp lúc gọi, đọc từ `core.tenants.parent_id`. Các bước khác của hồ sơ và `GET /v1/workflow/instances/{id}`
+vẫn trả 404 với tenant cha; tenant khác, kể cả tenant cùng cha, nhận 404 với task đó.
+
 ```bash
 curl -fsS -X POST http://localhost:9080/v1/graphql \
   -H "Authorization: Bearer $ADMIN_TINH" -H 'X-Hasura-Role: tenant_admin' -H 'Content-Type: application/json' \
@@ -194,10 +200,10 @@ curl -fsS -X POST http://localhost:9080/v1/workflow/processes/core-approval/inst
 | `400` | Ghi đè biến dành riêng của lõi (`initiator`, `initiatorName`, `tenant`, `idempotencyKey`, mọi biến bắt đầu bằng `authority_`); khởi tạo kèm biến quyết định, tức tên dùng trong điều kiện rẽ nhánh sau một userTask của quy trình, ví dụ `approved` của `core-approval` ([ADR 0025](adr/0025-decision-variables.md)); khởi tạo kèm trường của một bước, tức `id` của một `flowable:formProperty` khai trong userTask, ví dụ `comment` của `core-approval`; hoàn thành một bước kèm trường của bước khác mà bước này không khai ([ADR 0031](adr/0031-step-fields.md)); `Idempotency-Key` sai định dạng (8–100 ký tự chữ, số, `-`, `_`); người dùng gửi `X-Mortise-Tenant`; tài khoản dịch vụ thiếu header đó |
 | `401` | Thiếu hoặc sai token |
 | `403` | Tài khoản không thuộc đúng một tenant; tài khoản dịch vụ gọi đường khác ngoài khởi tạo quy trình; người duyệt (`manager`), hay người hoàn thành bước lấy vai trò từ bảng phân cấp, đăng nhập chưa qua bước OTP; task đã giao cho người khác; không có vai trò ứng viên; người gửi tự duyệt yêu cầu của mình |
-| `404` | Task hay quy trình không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại); tenant chưa có quy trình đó |
+| `404` | Task hay quy trình không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại), trừ bước tenant con giao lên tenant mình; tenant chưa có quy trình đó |
 | `409` | Hoàn thành: task vừa được người khác nhận. Khởi tạo: bảng phân cấp của tenant chưa có dòng cho một bước của quy trình (người vận hành chạy lại `make app-install`, quy trình mẫu: `make seed`) |
 | `422` | Thân yêu cầu sai định dạng hoặc có khóa ngoài `variables`, ví dụ gửi `{"approved": true}` thiếu lớp `variables` |
-| `502` / `503` | Flowable trả lỗi (thông điệp được chuyển lại) / không kết nối được Flowable, hay không đọc được bảng phân cấp trong CSDL |
+| `502` / `503` | Flowable trả lỗi (thông điệp được chuyển lại) / không kết nối được Flowable, hay không đọc được bảng phân cấp hoặc tenant con trong CSDL |
 
 ## Tệp: `/v1/files`
 

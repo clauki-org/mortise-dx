@@ -65,7 +65,7 @@ tenant và do người sửa lúc chạy, nên không nằm trong BPMN được.
     nhất, như BPMN của gói coi phần vượt thiếu hay âm là nhánh nặng. Cùng ngưỡng thì chọn theo mã dòng. Không vượt
     dòng nào thì dùng dòng gốc.
   - Dòng `scope: parent` bị bỏ qua khi tenant không có cha. Khi có cha, nhóm ứng viên là `<tenant cha>/<vai trò>`.
-    Người của tenant cha chưa thấy được task của tenant con; đó là #110.
+    Người của tenant cha có vai trò đó thấy và hoàn thành đúng bước này ([ADR 0029](0029-parent-completes-delegated-step.md)).
   - Đặt biến `authority_<bước>` bằng vai trò đã chọn. Bước không có dòng nào thì trả 409, kèm lệnh nạp lại dòng mặc
     định. 409 ở route hoàn thành task đã có nghĩa "task vừa bị nhận", nên thông điệp nói rõ là bảng phân cấp.
   - Kết nối CSDL chỉ mở khi quy trình có bước đọc bảng. Quy trình khác vẫn chạy khi CSDL lỗi.

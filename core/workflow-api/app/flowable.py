@@ -80,10 +80,24 @@ def started_with(
     return data[0] if data else None
 
 
-def tasks(tenant: str, *, groups: list[str] | None = None, assignee: str | None = None) -> list[dict]:
-    query: dict[str, object] = {"tenantId": tenant, "includeProcessVariables": True, "size": 200}
+def tasks(
+    tenant: str | None,
+    *,
+    groups: list[str] | None = None,
+    assignee: str | None = None,
+    any_assignee: bool = False,
+) -> list[dict]:
+    """Task đang chờ; tenant None là mọi tenant.
+
+    Theo `groups` thì mặc định chỉ task chưa ai nhận; any_assignee thì cả task đã giao, vì Flowable bỏ task
+    đã giao khỏi truy vấn theo nhóm nếu không có ignoreAssignee.
+    """
+    query: dict[str, object] = {"includeProcessVariables": True, "size": 200}
+    if tenant is not None:
+        query["tenantId"] = tenant
     if groups is not None:
-        query |= {"candidateGroupIn": groups, "unassigned": True}
+        query["candidateGroupIn"] = groups
+        query["ignoreAssignee" if any_assignee else "unassigned"] = True
     if assignee is not None:
         query["assignee"] = assignee
     response = _call("POST", "/query/tasks", json=query)

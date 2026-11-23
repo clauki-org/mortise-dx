@@ -57,4 +57,5 @@ Chọn cách thứ ba.
 - **Tenant cha cũng là một tenant bình thường**, có dữ liệu, quy trình và thiết bị riêng như mọi tenant khác.
 - **Giao diện web chưa gửi `X-Hasura-Role`**, nên `leader.tinh` chưa thấy tổng hợp trên giao diện; hiện chỉ đọc
   được qua GraphQL.
-- **Việc tiếp theo:** tỉnh duyệt các bước được phân cấp của hồ sơ xã (#110).
+- **Tenant cha hoàn thành bước được phân cấp của tenant con** theo [ADR 0029](0029-parent-completes-delegated-step.md),
+  cùng quy tắc "chỉ con trực tiếp" và cùng cột `parent_id`.

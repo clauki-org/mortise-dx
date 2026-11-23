@@ -120,7 +120,8 @@
     { "name": "xa-a" },
     { "name": "xa-b" },
     { "name": "xa-c" },
-    { "name": "tinh-mau" }
+    { "name": "tinh-mau" },
+    { "name": "tinh-khac" }
   ],
   "clients": [
     {

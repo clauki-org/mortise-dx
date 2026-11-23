@@ -60,7 +60,7 @@
           "allOf": [{ "not": { "pattern": "^authority_" } }]
         },
         "scope": {
-          "description": "`tenant`: vai trò trong chính tenant của hồ sơ; `parent`: vai trò ở tenant cha, bỏ qua khi tenant không có cha. Người của tenant cha chưa thấy được task của tenant con (#110)",
+          "description": "`tenant`: vai trò trong chính tenant của hồ sơ; `parent`: vai trò ở tenant cha, bỏ qua khi tenant không có cha. Người của tenant cha có vai trò đó thấy và hoàn thành bước này, không thấy bước nào khác của hồ sơ (ADR 0029)",
           "enum": ["tenant", "parent"],
           "default": "tenant"
         }

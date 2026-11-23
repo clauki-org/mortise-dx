@@ -4,15 +4,21 @@
 # Dòng mặc định của bảng phân cấp (contracts/authority.schema.json, ADR 0028) cho bước quyết định `decide` của
 # bpmn/facilities-review.bpmn20.xml. Cài gói thì mọi tenant có các dòng này; quản trị của tỉnh (tenant cha) đổi vai
 # trò của dòng ở từng xã qua GraphQL, cài lại gói không ghi đè dòng đã đổi. tests/workflow.sh đổi dòng gốc của xã A
-# rồi kiểm hồ sơ lập sau tới vai trò mới.
+# rồi kiểm hồ sơ lập sau tới vai trò mới, và kiểm hồ sơ vượt dòng `province` tới tỉnh.
 #
-# Chỉ có dòng gốc, vai trò manager như hai bước duyệt. Chưa có dòng ngưỡng: chưa đối chiếu văn bản nào đặt mức phần
-# vượt chuyển hồ sơ lên cấp khác, và mọi hồ sơ tới bước này đã vượt trên ngưỡng công khai (300 m²) hoặc thiếu số liệu,
-# nên dòng ngưỡng từ 300 trở xuống thay hẳn dòng gốc. Dòng ngưỡng chuyển hồ sơ lên tỉnh (scope parent) chờ #110: người
-# của tỉnh chưa thấy việc của xã, hồ sơ sẽ nằm lại không ai xử lý.
+# Dòng gốc: vai trò manager của chính xã, như hai bước duyệt. Dòng `province`: phần vượt trên 1000 m² thì bước quyết
+# định tới người duyệt (manager) của tỉnh, tenant cha của xã (ADR 0029); xã không có tỉnh cha bỏ qua dòng này. 1000 m²
+# là ngưỡng minh họa, không lấy từ văn bản nào: chưa đối chiếu được văn bản đặt mức phần vượt chuyển hồ sơ lên cấp
+# khác. Quản trị tỉnh sửa `above` của dòng ở từng xã theo phân cấp thật. Như mọi dòng ngưỡng, hồ sơ thiếu hay âm
+# excessM2 coi như vượt (ADR 0028), nên tới tỉnh; xã A của dữ liệu demo vượt 420 m², vẫn ở xã.
 
 process: facilities-review
 step: decide
 rows:
   - rule: default
     role: manager
+  - rule: province
+    variable: excessM2
+    above: 1000
+    role: manager
+    scope: parent

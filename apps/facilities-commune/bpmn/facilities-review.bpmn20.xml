@@ -8,8 +8,8 @@ m²); người có vai trò manager trong cùng xã duyệt, người lập khô
 chặn). Phần vượt từ ngưỡng trở xuống: duyệt xong là báo cáo để tiếp tục sử dụng. Vượt trên ngưỡng: duyệt xong thì
 công khai một thời hạn, hết hạn mới sang bước trình người có thẩm quyền, rồi tới bước quyết định của người có thẩm
 quyền. Vai trò của bước quyết định lấy từ bảng phân cấp của xã (authorities/facilities-review.yaml, ADR 0028):
-workflow-api đặt biến authority_decide lúc khởi tạo, nên đổi bảng thì hồ sơ lập sau tới vai trò mới. Tỉnh nhận và
-duyệt hồ sơ của xã thuộc #110.
+workflow-api đặt biến authority_decide lúc khởi tạo, nên đổi bảng thì hồ sơ lập sau tới vai trò mới. Dòng scope
+parent giao riêng bước này cho người duyệt của tỉnh (tenant cha); các bước khác vẫn chỉ người trong xã thấy (ADR 0029).
 
 Ngưỡng và thời hạn là settings review_threshold_m2 và publication_period của app.yaml: bộ cài thay vào tệp này lúc
 deploy (ADR 0019), nên chúng nằm trong định nghĩa quy trình, người lập hay người duyệt không ghi đè được bằng biến.
