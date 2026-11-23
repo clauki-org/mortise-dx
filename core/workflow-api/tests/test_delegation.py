@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Kiểm thử bước tenant con giao lên tenant cha (ADR 0029): quy tắc hoàn thành (hàm thuần), bảng việc của người
-# tenant cha, và các route với Flowable và CSDL giả. Tenant demo: tinh-mau là cha của xa-a, xa-b; tinh-khac
-# không có con; thon-1 là con của xa-a (cháu của tinh-mau).
+# Kiểm thử bước thuộc thẩm quyền của tenant cha trong hồ sơ tenant con (ADR 0029): quy tắc hoàn thành (hàm
+# thuần), bảng việc của người tenant cha, và các route với Flowable và CSDL giả. Tenant demo: tinh-mau là cha
+# của xa-a, xa-b; tinh-khac không có con; thon-1 là con của xa-a (cháu của tinh-mau).
 
 from dataclasses import replace
 
@@ -76,7 +76,7 @@ def test_groups_are_built_from_the_caller_tenant_and_roles():
         (MANAGER_B, decide_task()),
         # Tỉnh khác: cùng vai trò manager nhưng nhóm mang tên tỉnh khác.
         (MANAGER_K, decide_task()),
-        # Chính xã A: task giao lên tỉnh thì người trong xã cũng không làm được.
+        # Chính xã A: task được gán cho tỉnh thì người trong xã cũng không làm được.
         (MANAGER_A, decide_task()),
     ],
 )
@@ -240,7 +240,7 @@ def test_listing_reads_the_database_only_when_a_foreign_task_was_found(stack):
 def test_listing_keeps_own_tenant_tasks_with_own_tenant(stack):
     stack["caller"] = MANAGER_A
     stack["own"] = [raw_task("t9", "xa-a")]
-    # Truy vấn không lọc tenant trả cả task của chính tenant; không được thành task giao lên.
+    # Truy vấn không lọc tenant trả cả task của chính tenant; không được thành việc của tenant cha.
     stack["foreign"] = []
     assert [(t["id"], t["tenant"]) for t in client.get(TASKS).json()] == [("t9", "xa-a")]
     assert stack["reads"] == []

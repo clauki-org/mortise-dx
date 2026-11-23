@@ -29,8 +29,8 @@ class Task(BaseModel):
     id: str
     name: str
     tenant: str = Field(
-        description="Tenant của hồ sơ. Khác tenant của người gọi khi bảng phân cấp giao bước của tenant con "
-        "lên tenant cha (ADR 0029)"
+        description="Tenant của hồ sơ. Khác tenant của người gọi khi bước thuộc thẩm quyền của tenant cha "
+        "theo bảng phân cấp: lúc lập hồ sơ, workflow-api gán bước cho nhóm của tenant cha (ADR 0029)"
     )
     step: str = Field(
         description="Mã bước trong BPMN (id của userTask); cùng `process` xác định khai báo của bước"

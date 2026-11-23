@@ -69,11 +69,12 @@ if [[ "$public_url" =~ ^http://(localhost|127\.0\.0\.1)(:|/|$) ]]; then
   echo "keycloak: mortise-web nhận thêm $web_dev_url cho máy chủ phát triển giao diện"
 fi
 
-# username  tenant   vai trò thêm   otp nếu phải nhập OTP. admin.<x> quản trị một tenant (tenant_admin): gói dùng vai trò
-# này để tenant tự sửa dữ liệu cấu hình của mình, ví dụ phân công cán bộ. admin.tinh sửa bảng phân cấp thẩm quyền của
-# các xã con (ADR 0028), manager.tinh hoàn thành bước của xã con mà bảng phân cấp giao lên tỉnh (ADR 0029);
-# manager.k là người duyệt của tỉnh khác, không có quyền gì với xã của Tỉnh Mẫu. admin2.a là quản trị xã A có otp_required, nhận được bước mà bảng phân cấp giao cho
-# tenant_admin; admin.a giữ đăng nhập bằng mật khẩu. manager luôn phải nhập OTP vì gộp otp_required.
+# username  tenant   vai trò thêm   otp nếu phải nhập OTP. admin.<x> quản trị một tenant (tenant_admin): gói dùng vai
+# trò này để tenant tự sửa dữ liệu cấu hình của mình, ví dụ phân công cán bộ. admin.tinh sửa bảng phân cấp thẩm quyền
+# của các xã con (ADR 0028), manager.tinh hoàn thành bước thuộc thẩm quyền của tỉnh trong hồ sơ của xã con (ADR 0029);
+# manager.k là người duyệt của tỉnh khác, không có quyền gì với xã của Tỉnh Mẫu. admin2.a là quản trị xã A có
+# otp_required, nhận được bước mà workflow-api gán cho tenant_admin theo bảng phân cấp; admin.a giữ đăng nhập bằng mật
+# khẩu. manager luôn phải nhập OTP vì gộp otp_required.
 users=(
   "user.a  xa-a  -"
   "manager.a  xa-a  manager"

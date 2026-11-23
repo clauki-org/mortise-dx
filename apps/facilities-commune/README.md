@@ -151,12 +151,13 @@ workflow-api chọn dòng lúc lập hồ sơ và đặt biến `authority_decid
 - **Bước quyết định cần OTP với mọi vai trò.** `manager` luôn có OTP. Giao bước cho vai trò khác, ví dụ
   `tenant_admin`, thì người vận hành gán vai trò `otp_required` của client `mortise-web` cho tài khoản nhận bước; bản
   demo có `admin2.a`. Tài khoản cùng vai trò mà không có nó (`admin.a`) thấy việc nhưng bị từ chối khi hoàn thành.
-- **Dòng `province` giao bước quyết định lên tỉnh** khi phần vượt trên 1000 m² ([ADR 0029](../../docs/adr/0029-parent-completes-delegated-step.md)).
-  1000 m² là ngưỡng minh họa, không lấy từ văn bản nào: chưa đối chiếu được văn bản đặt mức phần vượt chuyển hồ sơ
-  lên cấp khác; quản trị tỉnh sửa `above` của dòng ở từng xã. Mọi hồ sơ tới `decide` đã vượt trên ngưỡng công khai
-  hoặc thiếu số liệu, nên ngưỡng từ 300 m² trở xuống là giao mọi hồ sơ lên tỉnh. Hồ sơ thiếu hay âm `excessM2` coi
-  như vượt mọi ngưỡng (ADR 0028), nên tới tỉnh. Xã A của dữ liệu demo vượt 420 m², bước quyết định vẫn ở xã.
-- **Tỉnh chỉ thấy bước được giao lên.** `manager.tinh` thấy và hoàn thành `decide` của hồ sơ xã con, cùng mọi biến
+- **Dòng `province`: bước quyết định thuộc thẩm quyền của tỉnh** khi phần vượt trên 1000 m²
+  ([ADR 0029](../../docs/adr/0029-parent-completes-delegated-step.md)). 1000 m² là ngưỡng minh họa, không lấy từ văn bản
+  nào: chưa đối chiếu được văn bản đặt mức phần vượt chuyển hồ sơ lên cấp khác; quản trị tỉnh sửa `above` của dòng ở
+  từng xã. Mọi hồ sơ tới `decide` đã vượt trên ngưỡng công khai hoặc thiếu số liệu, nên ngưỡng từ 300 m² trở xuống là
+  mọi bước quyết định thuộc về tỉnh. Hồ sơ thiếu hay âm `excessM2` coi như vượt mọi ngưỡng (ADR 0028), nên tới tỉnh. Xã
+  A của dữ liệu demo vượt 420 m², bước quyết định vẫn ở xã.
+- **Tỉnh chỉ thấy bước của tỉnh.** `manager.tinh` thấy và hoàn thành `decide` của hồ sơ xã con, cùng mọi biến
   của hồ sơ ở bước đó; không thấy bước duyệt, bước trình, không đọc được trạng thái hồ sơ, không đọc được bảng cơ sở
   của xã. Người của xã khác và của tỉnh khác (`manager.k`, tenant `tinh-khac`) nhận 404.
 

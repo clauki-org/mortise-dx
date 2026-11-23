@@ -125,7 +125,7 @@ def my_tasks(caller: CallerDep) -> list[dict]:
     # Hai truy vấn vì Flowable không gộp "chưa giao, thuộc nhóm của tôi" với "đã giao cho tôi".
     found = {t["id"]: t for t in flowable.tasks(caller.tenant, groups=sorted(caller.roles))}
     found |= {t["id"]: t for t in flowable.tasks(caller.tenant, assignee=caller.sub)}
-    # Bước của tenant con mà bảng phân cấp giao lên tenant của người gọi (ADR 0029).
+    # Bước của tenant con mà workflow-api đã gán cho nhóm tenant của người gọi lúc lập hồ sơ (ADR 0029).
     found |= {t["id"]: t for t in delegation.tasks(caller)}
     return [_task_out(t) for t in found.values()]
 

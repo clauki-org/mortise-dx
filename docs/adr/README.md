@@ -49,7 +49,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0026](0026-start-process-from-catalog-row.md) | Nút của danh mục khởi tạo quy trình của cùng gói, biến lấy từ dòng đang xem; Idempotency-Key ngẫu nhiên cho mỗi lần mở hộp xác nhận | Chấp nhận |
 | [0027](0027-data-assistant-guarded-graphql.md) | Trợ lý hỏi dữ liệu: câu GraphQL chỉ đọc qua guard trên cây cú pháp, chạy qua Hasura bằng token người hỏi; bảng, cột được phép do mục menu khai | Chấp nhận |
 | [0028](0028-step-authority-table.md) | Vai trò của một bước lấy từ bảng phân cấp theo tenant; workflow-api đọc lúc khởi tạo bằng vai trò CSDL chỉ đọc, tenant cha sửa, bước đọc bảng cần OTP với mọi vai trò | Chấp nhận |
-| [0029](0029-parent-completes-delegated-step.md) | Tenant cha hoàn thành bước bảng phân cấp giao lên từ tenant con: workflow-api tìm theo nhóm `<tenant cha>/<vai trò>`, kiểm tenant cha lúc gọi, mọi bước khác vẫn 404 | Chấp nhận |
+| [0029](0029-parent-completes-delegated-step.md) | Tenant cha hoàn thành bước thuộc thẩm quyền của mình trong hồ sơ tenant con: workflow-api tìm theo nhóm `<tenant cha>/<vai trò>`, kiểm tenant cha lúc gọi, mọi bước khác vẫn 404 | Chấp nhận |
 | [0030](0030-form-component.md) | Thành phần biểu mẫu: cấu hình riêng dịch sang rjsf, khởi tạo quy trình hoặc thêm dòng của gói, Idempotency-Key đổi theo dữ liệu, check-fast kiểm theo gói | Chấp nhận |
 | [0031](0031-step-fields.md) | Trường của một bước chỉ do người làm bước đó ghi: userTask khai trường bằng `flowable:formProperty`, workflow-api từ chối người lập và người làm bước khác gửi nó | Chấp nhận |
 

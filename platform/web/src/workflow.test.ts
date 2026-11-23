@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Kiểm thử nhận ra task của tenant khác giao lên tenant của người đăng nhập (workflow.ts, ADR 0029).
+// Kiểm thử nhận ra task của tenant khác được gán cho tenant của người đăng nhập (workflow.ts, ADR 0029).
 
 import { describe, expect, it } from "vitest";
 import { delegatedFrom, type Task } from "./workflow";
@@ -25,7 +25,7 @@ describe("delegatedFrom", () => {
     expect(delegatedFrom(task("parent"), ["parent"])).toBeUndefined();
   });
 
-  it("trả mã tenant của task giao lên từ tenant khác", () => {
+  it("trả mã tenant của task được gán từ hồ sơ tenant khác", () => {
     expect(delegatedFrom(task("child"), ["parent"])).toBe("child");
   });
 

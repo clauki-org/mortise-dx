@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 Mortise DX contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# 0029. Tenant cha hoàn thành bước bảng phân cấp giao lên từ tenant con; mọi bước khác của hồ sơ vẫn 404
+# 0029. Tenant cha hoàn thành bước thuộc thẩm quyền của mình trong hồ sơ tenant con; mọi bước khác vẫn 404
 
 - Trạng thái: Chấp nhận
 - Ngày: 2026-11-23
@@ -13,7 +13,7 @@ SPDX-License-Identifier: Apache-2.0
 Bảng phân cấp ([ADR 0028](0028-step-authority-table.md)) đã có dòng `scope: parent`: khi tenant có cha, nhóm ứng viên
 của bước là `<tenant cha>/<vai trò>`. Nhưng workflow-api chỉ liệt kê và cho hoàn thành task cùng tenant với người gọi
 ([ADR 0004](0004-workflow-access-control.md)), nên task đó không ai nhận. Cần người của tenant cha (tỉnh) thấy và hoàn
-thành đúng bước được giao lên của tenant con (xã), trong khi:
+thành đúng bước thuộc thẩm quyền của tenant cha trong hồ sơ của tenant con (xã), trong khi:
 
 - **Các bước khác của hồ sơ vẫn chỉ người trong tenant con thấy**, và trạng thái hồ sơ không lộ cho tenant cha.
 - **Tenant cùng cha và tenant không phải cha nhận 404**, như với task của tenant khác hiện nay.
@@ -50,8 +50,8 @@ Chọn cách cuối.
   gọi có>`. Không khớp thì vẫn đi đường cũ và nhận 404, không đọc CSDL. Khớp thì đủ cả ba mới được xét tiếp, thiếu
   một điều là 404:
   - tenant của task là con trực tiếp của người gọi lúc này;
-  - hồ sơ có biến `authority_<bước>`, tức bước đọc bảng phân cấp. Nhóm có dấu `/` viết sẵn trong BPMN không giao lên
-    được.
+  - hồ sơ có biến `authority_<bước>`, tức bước đọc bảng phân cấp. Bước có nhóm chứa dấu `/` viết sẵn trong BPMN
+    không thành việc của tenant cha.
   - Sau đó: luôn cần OTP, không xét vai trò; task đã giao cho người khác thì 403; quy tắc bốn mắt như cũ.
 - **Nhóm ghép từ người gọi, không tách từ task.** Vai trò không chứa `/` (CHECK của `core.step_authorities`), nhưng
   mã tenant (`core.tenants.id`) không có ràng buộc nào cấm. Tách nhóm thì `a/b` + `c` và `a` + `b/c` cho cùng một
@@ -75,9 +75,9 @@ Chọn cách cuối.
 - **Tenant cha cần khai báo bước của gói**, đọc theo tenant mình (`platform.workflow_steps`). Bộ cài nạp cho mọi
   tenant nên đã có. Tenant cha tạo sau khi cài gói thì thấy task nhưng màn hình báo bước chưa có khai báo, cho tới khi
   chạy lại `make app-install`.
-- **Đổi `parent_id` làm mồ côi bước đã giao lên.** Nhóm ghi lúc lập hồ sơ mang tên cha cũ: cha cũ mất quyền ngay, cha
-  mới không nhận được. Hồ sơ đó cần người vận hành xử lý ở Flowable. `make smoke` kiểm điều này bằng cách đổi tạm cha
-  của xã A.
+- **Đổi `parent_id` làm mồ côi bước đã gán cho tenant cha.** Nhóm ghi lúc lập hồ sơ mang tên cha cũ: cha cũ mất quyền
+  ngay, cha mới không nhận được. Hồ sơ đó cần người vận hành xử lý ở Flowable. `make smoke` kiểm điều này bằng cách đổi
+  tạm cha của xã A.
 - **OTP chỉ nhập một lần mỗi phiên** ([ADR 0011](0011-approver-mfa.md)): token ghi `otp` suốt phiên, nên workflow-api
   không đòi mã mới cho từng quyết định. Điều này giờ áp cho cả quyết định thay tenant con. Đây là giới hạn đã biết;
   đòi xác thực lại cho từng quyết định là việc sau.

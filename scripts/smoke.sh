@@ -610,7 +610,7 @@ for pair in "$before_case dòng gốc" "$large_case dòng ngưỡng"; do
   IFS=$'\t' read -r status _ < <(api POST "$manager_a" "/tasks/$(task_in "$manager_a" "$authority_task")/complete" '{}')
   check "Bảng phân cấp: manager.a có OTP hoàn thành được hồ sơ theo $row" "$status" 204
 done
-# Bước giao lên tenant cha (ADR 0029): hồ sơ vượt dòng `parent` của quy trình mẫu (trên 100000) có nhóm ứng viên
+# Bước của tenant cha (ADR 0029): hồ sơ vượt dòng `parent` của quy trình mẫu (trên 100000) có nhóm ứng viên
 # tinh-mau/manager. manager.tinh thấy và hoàn thành bước đó; người của chính xã A, xã cùng tỉnh và tỉnh khác không
 # thấy và nhận 404; hồ sơ của xã A vẫn 404 với tỉnh. Đổi tạm cha của xã A sang tinh-khac: nhóm của task vẫn mang tên
 # tinh-mau, nên manager.tinh mất task chỉ vì workflow-api đọc tenant cha lúc này; đặt lại ngay, cả khi bài dừng giữa
@@ -619,32 +619,32 @@ manager_tinh=$(token manager.tinh "$(otp manager.tinh)")
 manager_k=$(token manager.k "$(otp manager.k)")
 parent_case=$(case_id "$user_a" 200000)
 parent_task=$(task_in "$manager_tinh" "$parent_case")
-check "Giao lên tenant cha: manager.tinh thấy bước của xã A, task ghi tenant xa-a" \
+check "Bước của tenant cha: manager.tinh thấy bước của xã A, task ghi tenant xa-a" \
   "$(api GET "$manager_tinh" /tasks | cut -f2 | jq -r --arg t "$parent_task" '.[] | select(.id == $t) | .tenant')" xa-a
 seen=""
 for viewer in "$manager_a" "$manager_b" "$manager_k" "$(token leader.tinh)"; do seen+="$(seen_by "$viewer" "$parent_case") "; done
-check "Giao lên tenant cha: manager.a, manager.b, manager.k, leader.tinh không thấy bước đó" "$seen" \
+check "Bước của tenant cha: manager.a, manager.b, manager.k, leader.tinh không thấy bước đó" "$seen" \
   "không không không không "
 for pair in "manager.b $manager_b" "manager.k $manager_k"; do
   read -r name stranger <<<"$pair"
   IFS=$'\t' read -r status _ < <(api POST "$stranger" "/tasks/$parent_task/complete" '{}')
-  check "Giao lên tenant cha: $name hoàn thành bằng mã task nhận 404" "$status" 404
+  check "Bước của tenant cha: $name hoàn thành bằng mã task nhận 404" "$status" 404
 done
 IFS=$'\t' read -r status _ < <(api GET "$manager_tinh" "/instances/$parent_case")
-check "Giao lên tenant cha: tỉnh không đọc được trạng thái hồ sơ của xã A" "$status" 404
+check "Bước của tenant cha: tỉnh không đọc được trạng thái hồ sơ của xã A" "$status" 404
 restore_parent() { sql -c "UPDATE core.tenants SET parent_id = 'tinh-mau' WHERE id = 'xa-a'" >/dev/null; }
 trap 'rm -f "$claims_file"; restore_parent' EXIT
 sql -c "UPDATE core.tenants SET parent_id = 'tinh-khac' WHERE id = 'xa-a'" >/dev/null
 IFS=$'\t' read -r status _ < <(api POST "$manager_tinh" "/tasks/$parent_task/complete" '{}')
-check "Giao lên tenant cha: xã A đổi sang tỉnh khác thì manager.tinh không thấy bước đó nữa, hoàn thành nhận 404" \
+check "Bước của tenant cha: xã A đổi sang tỉnh khác thì manager.tinh không thấy bước đó nữa, hoàn thành nhận 404" \
   "$(seen_by "$manager_tinh" "$parent_case") $status" "không 404"
-check "Giao lên tenant cha: cha mới (manager.k) cũng không thấy, vì nhóm của task mang tên cha lúc lập hồ sơ" \
+check "Bước của tenant cha: cha mới (manager.k) cũng không thấy, vì nhóm của task mang tên cha lúc lập hồ sơ" \
   "$(seen_by "$manager_k" "$parent_case")" không
 restore_parent
 trap 'rm -f "$claims_file"' EXIT
 IFS=$'\t' read -r status _ < <(api POST "$manager_tinh" "/tasks/$parent_task/complete" '{}')
-check "Giao lên tenant cha: manager.tinh (có OTP) hoàn thành bước của xã A" "$status" 204
-check "Giao lên tenant cha: hồ sơ của xã A kết thúc" \
+check "Bước của tenant cha: manager.tinh (có OTP) hoàn thành bước của xã A" "$status" 204
+check "Bước của tenant cha: hồ sơ của xã A kết thúc" \
   "$(api GET "$user_a" "/instances/$parent_case" | cut -f2 | jq -r .ended)" true
 IFS=$'\t' read -r status _ < <(api POST "$user_a" /processes/core-authority/instances \
   '{"variables":{"authority_decide":"user"}}')

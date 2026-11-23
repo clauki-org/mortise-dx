@@ -73,7 +73,7 @@ export function DueBadge({ due, now }: { due: string | null; now: number }) {
 }
 
 /**
- * Nhãn mã tenant của hồ sơ khi bước thuộc tenant khác, giao lên tenant của người đăng nhập theo bảng phân cấp. Chỉ có
+ * Nhãn mã tenant của hồ sơ khi bước thuộc hồ sơ tenant khác, được gán cho tenant của người đăng nhập. Chỉ có
  * mã, không có tên: quyền Hasura của người đăng nhập không đọc được dòng tenant của tenant con.
  */
 export function DelegatedBadge({ task }: { task: Task }) {

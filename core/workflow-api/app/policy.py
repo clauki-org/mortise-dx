@@ -81,7 +81,7 @@ def check_can_complete(caller: Caller, task: TaskView) -> None:
 
 
 def parent_groups(caller: Caller) -> list[str]:
-    """Nhóm ứng viên của bước giao lên tenant của caller: `<tenant>/<vai trò>` (ADR 0029).
+    """Nhóm ứng viên của bước được gán cho tenant của caller: `<tenant>/<vai trò>` (ADR 0029).
 
     Ghép từ tenant và vai trò của caller chứ không tách nhóm của task ra: mã tenant không bị cấm chứa `/`, nên
     tách thì `a/b` + `c` và `a` + `b/c` cho cùng một nhóm. Phép so tenant cha ở check_parent_can_complete phân
@@ -96,17 +96,17 @@ def delegated_to(caller: Caller, task: TaskView) -> bool:
 
 
 def check_parent_can_complete(caller: Caller, task: TaskView, children: frozenset[str]) -> None:
-    """Người của tenant cha hoàn thành bước của tenant con mà bảng phân cấp giao lên (ADR 0029).
+    """Người của tenant cha hoàn thành bước thuộc thẩm quyền của mình trong hồ sơ tenant con (ADR 0029).
 
     `children` là tenant con trực tiếp của caller lúc này, đọc từ core.tenants.
     """
     # Mọi điều kiện xác định task có thuộc phạm vi của caller hay không đều trả 404 như task của tenant khác:
-    # 403 cho biết task tồn tại. Bước không đọc bảng phân cấp thì không giao lên được, kể cả khi BPMN viết sẵn
-    # nhóm có dấu `/`.
+    # 403 cho biết task tồn tại. Bước không đọc bảng phân cấp thì không thành việc của tenant cha, kể cả khi
+    # BPMN viết sẵn nhóm có dấu `/`.
     if not (delegated_to(caller, task) and task.tenant in children and task.authority):
         raise Denied(404, "Không tìm thấy task.")
-    # Luôn cần OTP, không xét vai trò: bước giao lên là bước đọc bảng phân cấp (ADR 0028), và người ở tenant
-    # khác quyết định thay cho tenant con.
+    # Luôn cần OTP, không xét vai trò: bước của tenant cha là bước đọc bảng phân cấp (ADR 0028), và người ở
+    # tenant khác quyết định thay cho tenant con.
     if SECOND_FACTOR not in caller.methods:
         raise Denied(403, _NEED_SECOND_FACTOR)
     if task.assignee is not None and task.assignee != caller.sub:

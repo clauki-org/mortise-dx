@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Bước của tenant con mà bảng phân cấp giao lên tenant cha (ADR 0029): dòng `scope: parent` đặt nhóm ứng
-# viên `<tenant cha>/<vai trò>` lúc khởi tạo (ADR 0028). Module này tìm các task đó cho bảng việc của người
-# tenant cha; quyền hoàn thành nằm ở policy.check_parent_can_complete, main.py ghép hai phần.
+# Bước thuộc thẩm quyền của tenant cha trong hồ sơ tenant con (ADR 0029): hồ sơ khớp dòng `scope: parent` thì
+# lúc khởi tạo workflow-api gán bước cho nhóm ứng viên `<tenant cha>/<vai trò>` (ADR 0028). Module này tìm các
+# task đó cho bảng việc của người tenant cha; quyền hoàn thành nằm ở policy.check_parent_can_complete, main.py
+# ghép hai phần.
 
 from . import db, flowable
 from .policy import RESERVED_PREFIX, Caller, parent_groups

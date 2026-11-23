@@ -148,9 +148,9 @@ check "Bảng phân cấp: hồ sơ lập theo dòng mặc định có bước q
 # Vượt 1500 m², trên ngưỡng minh họa 1000 của dòng province: bước quyết định ở người duyệt của tỉnh, các bước trước
 # vẫn ở xã.
 province=$(file "{\"title\": \"$title P\", \"excessM2\": 1500}")
-check "Giao lên tỉnh: hồ sơ vượt 1500 m² có bước quyết định ở tinh-mau/manager" "$(decider_of "$province")" \
+check "Bước của tỉnh: hồ sơ vượt 1500 m² có bước quyết định ở tinh-mau/manager" "$(decider_of "$province")" \
   tinh-mau/manager
-check "Giao lên tỉnh: manager.tinh không thấy bước duyệt để công khai của xã A" "[$(step_of "$province" \
+check "Bước của tỉnh: manager.tinh không thấy bước duyệt để công khai của xã A" "[$(step_of "$province" \
   "$manager_tinh")]" "[]"
 check "Bảng phân cấp: quản trị xã A không sửa được bảng của chính xã mình" "$(set_decider "$admin_a" tenant_admin)" 0
 trap 'restore_decider >/dev/null || true' EXIT
@@ -188,7 +188,7 @@ else
   else
     check "Hết thời hạn công khai: hồ sơ sang bước trình người có thẩm quyền" \
       "$(step_of "$above") $(step_of "$later") $(step_of "$province")" "submit submit submit"
-    check "Giao lên tỉnh: manager.tinh không thấy bước trình của xã A" "[$(step_of "$province" "$manager_tinh")]" "[]"
+    check "Bước của tỉnh: manager.tinh không thấy bước trình của xã A" "[$(step_of "$province" "$manager_tinh")]" "[]"
     # Trường của bước (ADR 0031): decision là trường của bước quyết định, người trình không ghi sẵn được.
     check "Người trình không gửi được nội dung quyết định khi hoàn thành bước trình" \
       "$(complete "$manager" "$above" '{"recipient": "Đơn vị kiểm thử", "submitted": true, "decision": "Đặt sẵn"}')" 400
@@ -217,22 +217,22 @@ else
     check "Ghi nhận quyết định xong: hai hồ sơ kết thúc ở đã có quyết định" "$(status "$above") $(status "$later")" \
       "true decided true decided"
     delegated=$(task_of "$province" "$manager_tinh")
-    check "Giao lên tỉnh: trình xong, manager.tinh thấy bước quyết định, task ghi tenant xa-a" \
+    check "Bước của tỉnh: trình xong, manager.tinh thấy bước quyết định, task ghi tenant xa-a" \
       "$(pending "$province" step "$manager_tinh") $(pending "$province" tenant "$manager_tinh")" "decide xa-a"
-    check "Giao lên tỉnh: manager.a, manager.b, manager.k không thấy bước quyết định đó" \
+    check "Bước của tỉnh: manager.a, manager.b, manager.k không thấy bước quyết định đó" \
       "[$(step_of "$province")$(step_of "$province" "$manager_b")$(step_of "$province" "$manager_k")]" "[]"
     for pair in "manager.b $manager_b" "manager.k $manager_k" "manager.a $manager"; do
       read -r name stranger <<<"$pair"
       out=$(api "$stranger" POST "/tasks/$delegated/complete" "{\"variables\": $decision}" | tail -1)
       # manager.a ở chính xã của hồ sơ: thấy task tồn tại nên nhận 403 của luật vai trò, như mọi task trong xã.
       [[ $name == manager.a ]] && want=403 || want=404
-      check "Giao lên tỉnh: $name hoàn thành bước quyết định bằng mã task bị từ chối" "$out" "$want"
+      check "Bước của tỉnh: $name hoàn thành bước quyết định bằng mã task bị từ chối" "$out" "$want"
     done
-    check "Giao lên tỉnh: tỉnh không đọc được trạng thái hồ sơ của xã A" \
+    check "Bước của tỉnh: tỉnh không đọc được trạng thái hồ sơ của xã A" \
       "$(api "$manager_tinh" GET "/instances/$province" | tail -1)" 404
-    check "Giao lên tỉnh: manager.tinh (có OTP) ghi nhận quyết định" \
+    check "Bước của tỉnh: manager.tinh (có OTP) ghi nhận quyết định" \
       "$(complete "$manager_tinh" "$province" "$decision")" 204
-    check "Giao lên tỉnh: hồ sơ của xã A kết thúc ở đã có quyết định" "$(status "$province")" "true decided"
+    check "Bước của tỉnh: hồ sơ của xã A kết thúc ở đã có quyết định" "$(status "$province")" "true decided"
   fi
 fi
 # Hồ sơ chưa kết thúc vì một bước ở trên hỏng (hết giờ chờ công khai, bị từ chối) thì xóa: hồ sơ đang công khai không

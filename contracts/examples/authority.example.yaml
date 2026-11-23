@@ -3,9 +3,9 @@
 #
 # Ví dụ bảng phân cấp hợp lệ theo contracts/authority.schema.json, viết cho quy trình mẫu
 # core/workflow/fixtures/core-authority.bpmn20.xml. `make seed` nạp tệp này làm dòng mặc định của lõi cho mọi tenant;
-# `make smoke` đổi vai trò của dòng gốc ở một xã rồi kiểm hồ sơ lập sau tới vai trò mới, và kiểm dòng `parent` giao
-# bước lên người duyệt của tenant cha (ADR 0029). Ngưỡng là số kiểm thử, không theo quy định nào. Gói thật đặt tệp
-# ở apps/<gói>/authorities/ và khai trong `authorities` của app.yaml.
+# `make smoke` đổi vai trò của dòng gốc ở một xã rồi kiểm hồ sơ lập sau tới vai trò mới, và kiểm dòng `parent`: hồ sơ
+# khớp dòng này thì workflow-api gán bước cho người duyệt của tenant cha (ADR 0029). Ngưỡng là số kiểm thử, không theo
+# quy định nào. Gói thật đặt tệp ở apps/<gói>/authorities/ và khai trong `authorities` của app.yaml.
 
 process: core-authority
 step: decide
