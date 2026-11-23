@@ -10,5 +10,5 @@ panels:
     title: Tổng
     description: View tổng của đơn vị.
     graphql: { field: app_example_totals }
-    workflow: {}
+    workflow: { process: approval, counts: tenant }
     cards: [{ column: score, label: Điểm, description: Tổng điểm. }]

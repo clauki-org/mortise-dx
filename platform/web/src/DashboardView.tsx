@@ -42,10 +42,13 @@ function CardBox({ card, row }: { card: Card; row: Row }) {
   );
 }
 
-/** Thẻ số cần đúng một dòng: không dòng là chưa có số liệu; nhiều dòng là cấu hình sai, không chọn đại một dòng. */
-export function CardsView({ cards, rows }: { cards: Card[]; rows: Row[] }) {
+/**
+ * Thẻ số cần đúng một dòng: không dòng là chưa có số liệu (`empty`); nhiều dòng là cấu hình sai, không chọn đại một
+ * dòng.
+ */
+export function CardsView({ cards, rows, empty = NO_DATA }: { cards: Card[]; rows: Row[]; empty?: string }) {
   const [row] = rows;
-  if (!row) return <Text c="dimmed">{NO_DATA}.</Text>;
+  if (!row) return <Text c="dimmed">{empty}.</Text>;
   if (rows.length > 1) {
     return (
       <Alert color="red" title="Cấu hình khối sai">
@@ -96,8 +99,18 @@ function Bars({ chart, rows }: { chart: Chart; rows: Row[] }) {
 }
 
 /** Biểu đồ cột ngang và bảng số liệu của nó; bảng là bản đọc được của biểu đồ, luôn hiện. */
-export function ChartView({ chart, rows, title }: { chart: Chart; rows: Row[]; title: string }) {
-  if (rows.length === 0) return <Text c="dimmed">{NO_DATA}.</Text>;
+export function ChartView({
+  chart,
+  rows,
+  title,
+  empty = NO_DATA,
+}: {
+  chart: Chart;
+  rows: Row[];
+  title: string;
+  empty?: string;
+}) {
+  if (rows.length === 0) return <Text c="dimmed">{empty}.</Text>;
   return (
     <Stack gap="sm">
       <Bars chart={chart} rows={rows} />
@@ -139,12 +152,15 @@ export function ChartView({ chart, rows, title }: { chart: Chart; rows: Row[]; t
 
 const KIND_LABEL: Record<string, string> = {
   graphql: "GraphQL (Hasura), bằng token của người xem",
-  workflow: "workflow-api",
-  context: "context-api",
+  workflow: "API quy trình (workflow-api), bằng token của người xem",
+  context: "API dữ liệu thiết bị (context-api, NGSI-LD), bằng token của người xem",
 };
 
-/** Mục "Nguồn": đủ để người xem chạy lại đúng câu truy vấn và đối chiếu từng số. */
-export function SourceDetails({ panel, request }: { panel: Panel; request?: PanelQuery }) {
+/** Yêu cầu REST của khối: đường dẫn đã gửi qua cổng và các dòng giải thích thêm, ví dụ phần đếm trên trình duyệt. */
+export type RestSent = { path: string; notes: string[] };
+
+/** Mục "Nguồn": đủ để người xem chạy lại đúng câu truy vấn hay yêu cầu và đối chiếu từng số. */
+export function SourceDetails({ panel, request, rest }: { panel: Panel; request?: PanelQuery; rest?: RestSent }) {
   return (
     <Box component="details">
       <Box component="summary" style={{ cursor: "pointer" }}>
@@ -155,8 +171,24 @@ export function SourceDetails({ panel, request }: { panel: Panel; request?: Pane
       <Stack gap={4} mt="xs">
         <Text size="sm">Loại nguồn: {KIND_LABEL[sourceKind(panel)]}</Text>
         {panel.graphql && <Text size="sm">Bảng: {panel.graphql.field}</Text>}
-        <Text size="sm">Cột: {columnsOf(panel).join(", ")}</Text>
-        <Text size="sm">Vai trò: {panelRole(panel)}</Text>
+        <Text size="sm">
+          {panel.graphql ? "Cột" : "Giá trị"}: {columnsOf(panel).join(", ")}
+        </Text>
+        {/* Nguồn REST không gửi vai trò: workflow-api, context-api đọc vai trò và tenant từ token. */}
+        <Text size="sm">
+          {panel.graphql ? "Vai trò" : "Khối chỉ hiện với vai trò"}: {panelRole(panel)}
+        </Text>
+        {rest && (
+          <>
+            <Text size="sm">Yêu cầu đã gửi:</Text>
+            <Code block>GET {rest.path}</Code>
+            {rest.notes.map((note) => (
+              <Text size="sm" key={note}>
+                {note}
+              </Text>
+            ))}
+          </>
+        )}
         {request && (
           <>
             <Text size="sm">Câu truy vấn đã gửi:</Text>

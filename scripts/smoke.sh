@@ -475,7 +475,7 @@ check "Cùng mã sau khi quy trình đã kết thúc: mở quy trình mới" \
 api POST "$manager_a" "/tasks/$(task_in "$manager_a" "$reopened")/complete" '{"variables":{"approved":false}}' >/dev/null
 
 check "Dịch vụ thiếu X-Mortise-Tenant bị từ chối" "$(service_start "")" 400
-for path in /tasks "/instances/$opened" /cases "/cases/$opened"; do
+for path in /tasks "/instances/$opened" /cases "/cases/$opened" /processes/core-approval/counts; do
   status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $service" -H 'X-Mortise-Tenant: xa-a' \
     "$wf$path")
   check "Dịch vụ chỉ được mở quy trình, không đọc được ${path/$opened/<id>}" "$status" 403
@@ -733,6 +733,28 @@ check "Theo dõi hồ sơ: hồ sơ đã duyệt có kết quả theo tên trong
 check "Theo dõi hồ sơ: bước của tỉnh ghi nhóm tinh-mau/manager; core-authority không khai trường nên không có biến" \
   "$(api GET "$user_a" "/cases/$parent_case" | cut -f2 | jq -c '[([.steps[].groups[]] | join(",")), (.variables | length)]')" \
   '["tinh-mau/manager",0]'
+
+# Số hồ sơ của một quy trình (ADR 0035): manager.a (vai trò của bước duyệt) thấy số của xã A; lập hồ sơ thì số còn mở
+# tăng một, duyệt xong thì trở lại và số đã kết thúc tăng một; manager.b thấy số của xã B, không đổi theo xã A. user.a
+# không làm bước nào của core-approval nên nhận đúng câu 404 của quy trình không có.
+counts() { api GET "$1" /processes/core-approval/counts | cut -f2 | jq -c '[.open, .finished]'; }
+counts_before=$(counts "$manager_a")
+counts_b=$(counts "$manager_b")
+IFS=$'\t' read -r _ body < <(api POST "$user_a" /processes/core-approval/instances '{"variables":{"title":"Đếm hồ sơ"}}')
+counted=$(jq -r .id <<<"$body")
+check "Số hồ sơ: lập một hồ sơ thì số còn mở tăng một, số đã kết thúc giữ nguyên" "$(counts "$manager_a")" \
+  "$(jq -c '[.[0] + 1, .[1]]' <<<"$counts_before")"
+check "Số hồ sơ: theo bước chỉ có bước review, đủ trường, không có biến hay mã hồ sơ" \
+  "$(api GET "$manager_a" /processes/core-approval/counts | cut -f2 |
+    jq -c '[(keys | join(",")), ([.steps[] | "\(.step):\(keys | join(","))"] | join(" "))]')" \
+  '["counted_at,finished,open,overdue,process,steps","review:name,open,overdue,step"]'
+api POST "$manager_a" "/tasks/$(task_in "$manager_a" "$counted")/complete" '{"variables":{"approved":false}}' >/dev/null
+check "Số hồ sơ: duyệt xong thì số còn mở trở lại, số đã kết thúc tăng một" "$(counts "$manager_a")" \
+  "$(jq -c '[.[0], .[1] + 1]' <<<"$counts_before")"
+check "Số hồ sơ: manager.b thấy số của xã B, không đổi theo hồ sơ của xã A" "$(counts "$manager_b")" "$counts_b"
+check "Số hồ sơ: user.a không có vai trò của bước nào nhận 404 như quy trình không có" \
+  "$(api GET "$user_a" /processes/core-approval/counts)" "$(api GET "$manager_a" /processes/khong-co/counts |
+    sed "s/khong-co/core-approval/")"
 IFS=$'\t' read -r status _ < <(api POST "$user_a" /processes/core-authority/instances \
   '{"variables":{"authority_decide":"user"}}')
 check "Bảng phân cấp: người lập không tự đặt được biến authority_*" "$status" 400

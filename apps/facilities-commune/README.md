@@ -18,7 +18,8 @@ schema/migrations/   migration dbmate của gói; bảng theo dõi public.facili
 hasura/tables.yaml   bảng đăng ký, quan hệ và quyền theo tenant và phân công, cùng định dạng với core/hasura/
 catalog/             cấu hình thành phần danh mục (cơ sở → tòa → phòng) theo contracts/catalog.schema.json
 map-layers/          cấu hình thành phần bản đồ (trụ sở tô theo phần vượt) theo contracts/map.schema.json
-dashboards/          cấu hình bảng điều hành (diện tích của xã, tổng hợp cho tỉnh) theo contracts/dashboard.schema.json
+dashboards/          cấu hình bảng điều hành (diện tích, hồ sơ, độ ẩm của xã, tổng hợp cho tỉnh) theo
+                      contracts/dashboard.schema.json
 assistant/           cấu hình trợ lý hỏi dữ liệu (diện tích của xã, cơ sở được phân công) theo
                      contracts/assistant.schema.json
 cases/               trang hồ sơ rà soát đã lập theo contracts/cases.schema.json
@@ -89,6 +90,11 @@ hiện diện tích được phép, đang dùng, phần vượt và dôi dư c�
 tính và câu truy vấn đã gửi. Số tính cho cả xã, kể cả với cán bộ chỉ được phân công một phần cơ sở. Lãnh đạo xã
 (`manager`) thấy thêm số cơ sở chưa có người phụ trách, chưa có người duyệt (`facility_coverage`). Tỉnh
 (`rollup_reader`) thấy biểu đồ và bảng số của từng xã con (`area_rollup`); các xã không được cộng lại.
+
+Khối đọc qua API của lõi ([ADR 0035](../../docs/adr/0035-case-counts-and-device-readings-on-dashboards.md)): lãnh đạo xã
+thấy số hồ sơ rà soát (tổng và theo bước) và số hồ sơ kiểm tra kho do luật ngưỡng mở, do workflow-api đếm; số đó là số
+hồ sơ, không phải số lần đo vượt ngưỡng. Mọi người thấy số việc rà soát đang chờ chính mình và độ ẩm mới nhất của từng
+thiết bị của xã.
 
 ## Diện tích được phép và phần vượt
 

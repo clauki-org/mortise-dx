@@ -43,7 +43,8 @@ Các lựa chọn đã xét:
   header `X-Hasura-Role`; token không có vai trò đó thì khối không được truy vấn và không hiện. Truy vấn luôn đọc lại
   từ máy chủ, vì bộ nhớ đệm của urql không phân biệt vai trò.
 - **Nguồn `workflow` và `context`** có tên trong schema để gói biết chỗ của chúng, nhưng chưa được hỗ trợ:
-  `make check-fast` từ chối, giao diện báo chưa hỗ trợ.
+  `make check-fast` từ chối, giao diện báo chưa hỗ trợ. Hai nguồn này nay được hỗ trợ theo
+  [ADR 0035](0035-case-counts-and-device-readings-on-dashboards.md).
 - **Kiểm theo gói lúc `make check-fast`** (`scripts/check-dashboard-config.py`): bảng của nguồn thuộc quyền Hasura
   của gói; vai trò của khối có quyền đọc bảng đó và mọi cột khối nhắc tới (thẻ, trục, cột số, chi tiết, `where`,
   `order_by`); `link.menu` là mục menu khác của gói; không trùng tên khối hay cột số. Thành phần kiểm lại lúc chạy

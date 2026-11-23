@@ -354,6 +354,53 @@
         "title": "InstanceStatus",
         "type": "object"
       },
+      "ProcessCounts": {
+        "properties": {
+          "counted_at": {
+            "description": "Thời điểm đếm, ISO 8601 UTC; hạn so với thời điểm này",
+            "title": "Counted At",
+            "type": "string"
+          },
+          "finished": {
+            "description": "Số hồ sơ đã kết thúc, kể cả hồ sơ bị dừng giữa chừng",
+            "title": "Finished",
+            "type": "integer"
+          },
+          "open": {
+            "description": "Số hồ sơ còn mở trong tenant của người gọi; có thể lớn hơn tổng `steps[].open` khi hồ sơ đang ở bước chờ (hẹn giờ) hay ở bước chỉ có trong phiên bản BPMN cũ",
+            "title": "Open",
+            "type": "integer"
+          },
+          "overdue": {
+            "description": "Số bước đang chờ (không phải số hồ sơ) có hạn xử lý trước `counted_at`, tính trên mọi bước của quy trình",
+            "title": "Overdue",
+            "type": "integer"
+          },
+          "process": {
+            "description": "Khóa của định nghĩa quy trình (BPMN)",
+            "title": "Process",
+            "type": "string"
+          },
+          "steps": {
+            "description": "Mỗi bước người làm của BPMN mới nhất, theo thứ tự trong tệp",
+            "items": {
+              "$ref": "#/components/schemas/StepCounts"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "process",
+          "open",
+          "finished",
+          "overdue",
+          "steps",
+          "counted_at"
+        ],
+        "title": "ProcessCounts",
+        "type": "object"
+      },
       "ProcessStarted": {
         "properties": {
           "id": {
@@ -372,6 +419,37 @@
           "process"
         ],
         "title": "ProcessStarted",
+        "type": "object"
+      },
+      "StepCounts": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "open": {
+            "description": "Số bước này đang chờ",
+            "title": "Open",
+            "type": "integer"
+          },
+          "overdue": {
+            "description": "Trong số đó, số bước có hạn xử lý trước `counted_at`",
+            "title": "Overdue",
+            "type": "integer"
+          },
+          "step": {
+            "description": "id của bước người làm (userTask) trong BPMN mới nhất của quy trình",
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "name",
+          "open",
+          "overdue"
+        ],
+        "title": "StepCounts",
         "type": "object"
       },
       "Task": {
@@ -938,6 +1016,140 @@
           }
         },
         "summary": "Instance Status"
+      }
+    },
+    "/v1/workflow/processes/{key}/counts": {
+      "get": {
+        "description": "Số hồ sơ của quy trình `key` trong tenant của người gọi; chỉ người có vai trò của một bước được xem.",
+        "operationId": "process_counts_v1_workflow_processes__key__counts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+            "in": "header",
+            "name": "X-Mortise-Tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+              "title": "X-Mortise-Tenant"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessCounts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Process Counts"
       }
     },
     "/v1/workflow/processes/{key}/instances": {

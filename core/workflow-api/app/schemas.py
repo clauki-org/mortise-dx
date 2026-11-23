@@ -103,6 +103,28 @@ class CaseDetail(CaseSummary):
     steps: list[CaseStep] = Field(description="Bước đã qua và đang chờ, theo thời điểm bắt đầu")
 
 
+class StepCounts(BaseModel):
+    step: str = Field(description="id của bước người làm (userTask) trong BPMN mới nhất của quy trình")
+    name: str
+    open: int = Field(description="Số bước này đang chờ")
+    overdue: int = Field(description="Trong số đó, số bước có hạn xử lý trước `counted_at`")
+
+
+class ProcessCounts(BaseModel):
+    process: str = Field(description="Khóa của định nghĩa quy trình (BPMN)")
+    open: int = Field(
+        description="Số hồ sơ còn mở trong tenant của người gọi; có thể lớn hơn tổng `steps[].open` khi hồ "
+        "sơ đang ở bước chờ (hẹn giờ) hay ở bước chỉ có trong phiên bản BPMN cũ"
+    )
+    finished: int = Field(description="Số hồ sơ đã kết thúc, kể cả hồ sơ bị dừng giữa chừng")
+    overdue: int = Field(
+        description="Số bước đang chờ (không phải số hồ sơ) có hạn xử lý trước `counted_at`, tính trên mọi "
+        "bước của quy trình"
+    )
+    steps: list[StepCounts] = Field(description="Mỗi bước người làm của BPMN mới nhất, theo thứ tự trong tệp")
+    counted_at: str = Field(description="Thời điểm đếm, ISO 8601 UTC; hạn so với thời điểm này")
+
+
 class ErrorBody(BaseModel):
     error: str = Field(description="Lý do bằng tiếng Việt, hiển thị được cho người dùng")
 
