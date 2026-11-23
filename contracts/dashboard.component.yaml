@@ -16,6 +16,7 @@ capabilities:
   - Số, dù đến dạng số hay chuỗi thập phân, viết theo kiểu Việt Nam (dấu chấm ngăn hàng nghìn, dấu phẩy thập phân); format integer làm tròn tới hàng đơn vị.
   - Mỗi khối có mục "Nguồn" mở ra được, ghi loại nguồn, bảng, các cột, vai trò đã dùng và nguyên văn câu truy vấn cùng biến đã gửi.
   - Khối khai role chỉ được truy vấn và chỉ hiện khi token của người xem có vai trò đó; truy vấn luôn gửi kèm header X-Hasura-Role (bỏ trống là user) và luôn đọc lại từ máy chủ.
+  - Hasura từ chối câu truy vấn vì cấu hình (validation-failed, data-exception) thì khối báo bằng tiếng Việt, nêu vai trò đã dùng, cột của where và dẫn tới người quản trị sửa cấu hình của gói.
   - link dẫn tới một mục menu khác của cùng gói; mục dành cho vai trò khác thì đường dẫn không hiện.
 limits:
   - Chỉ đọc; không lọc, không chọn kỳ, không tải xuống.
@@ -23,4 +24,5 @@ limits:
   - Chỉ có biểu đồ cột ngang; không có biểu đồ đường, tròn hay chuỗi thời gian.
   - Nguồn workflow và context có trong schema nhưng chưa được hỗ trợ; make check-fast từ chối và giao diện báo chưa hỗ trợ.
   - Biểu đồ hiện tối đa graphql.limit dòng (mặc định 50, trần 200); nhiều hơn thì chỉ hiện các dòng đầu và báo ra.
+  - where.equals luôn gửi dạng chữ và make check-fast không kiểm nó với kiểu của cột (tệp quyền Hasura không ghi kiểu, cột của view không khai kiểu trong migration); giá trị không hợp kiểu chỉ lộ ra khi mở trang, thành lời báo nêu cột và dẫn tới người quản trị. Nên chỉ lọc theo cột kiểu chữ.
   - Cấu hình không cấp và không giới hạn quyền; người xem thấy số nào do quyền Hasura của bảng và vai trò quyết định.

@@ -58,4 +58,8 @@ Các lựa chọn đã xét:
 - Số cần thêm thì gói thêm view và quyền trong migration và `hasura/`; thành phần không đổi.
 - Số trên trang là số của cả đơn vị theo quyền của view, có thể khác số dòng người xem thấy ở danh mục; khối nên ghi
   điều đó trong `description` hay nhãn của `link`.
+- `where.equals` luôn là chữ và check-fast không kiểm nó với kiểu của cột: tệp quyền Hasura không ghi kiểu, cột của
+  view không khai kiểu trong migration, nên đoán kiểu sẽ sai với view. Giá trị không hợp kiểu chỉ lộ ra khi mở
+  trang; khối đổi lỗi `validation-failed`, `data-exception` của Hasura thành lời báo nêu vai trò, cột của `where` và
+  dẫn tới người quản trị. Gói nên chỉ lọc theo cột kiểu chữ.
 - Chưa có biểu đồ đường, chuỗi thời gian, chọn kỳ hay lọc cho người xem.

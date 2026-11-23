@@ -15,6 +15,7 @@ import {
   numberText,
   type Panel,
   panelQuery,
+  queryErrorText,
   sentText,
   visiblePanels,
 } from "./dashboardConfig";
@@ -165,5 +166,20 @@ describe("sentText", () => {
       .query(query, variables, { role: "rollup_reader", requestPolicy: "network-only" })
       .toPromise();
     expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body)).query).toBe(sentText(query));
+  });
+});
+
+describe("queryErrorText", () => {
+  it("lỗi do cấu hình nêu vai trò và where.equals cần sửa, dẫn tới người quản trị", () => {
+    const text = queryErrorText(totals, ["validation-failed"], 'expected a boolean for type "Boolean"');
+    expect(text).toContain("vai trò user");
+    expect(text).toContain('where.equals "active" không hợp kiểu của cột status');
+    expect(text).toContain("Báo người quản trị sửa cấu hình của gói");
+  });
+
+  it("lỗi khác bảo tải lại trang", () => {
+    expect(queryErrorText(children, [], "Failed to fetch")).toBe(
+      "Failed to fetch. Tải lại trang; nếu vẫn lỗi, báo người quản trị.",
+    );
   });
 });

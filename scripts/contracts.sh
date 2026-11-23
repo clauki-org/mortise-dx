@@ -440,6 +440,29 @@ panels:
     graphql: { field: app_example_totals }
     cards: [{ column: item_count, label: B, description: B. }]
 YAML
+# Cấu hình sai dạng (lệnh chạy riêng với --dashboard, chưa qua schema) phải thành một dòng lỗi, không traceback.
+dashboard_rejects "cần panels là danh sách khối không rỗng; sửa theo contracts/dashboard.schema.json" <<'YAML'
+title: Tổng quan
+YAML
+dashboard_rejects "khối thứ 1 thiếu id; sửa theo contracts/dashboard.schema.json" <<'YAML'
+title: Tổng quan
+panels:
+  - { title: Tổng, description: Thiếu id., graphql: { field: app_example_totals }, cards: [] }
+YAML
+dashboard_rejects "khối 't': thiếu nguồn: cần graphql: { field: <lược đồ>_<bảng> }; sửa theo \
+contracts/dashboard.schema.json" <<'YAML'
+title: Tổng quan
+panels:
+  - { id: t, title: Tổng, description: Thiếu nguồn., cards: [{ column: score, label: Điểm, description: Điểm. }] }
+YAML
+# Hasura bắt buộc columns trong quyền select; thiếu là tệp quyền sai dạng, không coi là mọi cột hay không cột nào.
+result=$(dashboard_check contracts/examples/dashboard.example.yaml $'- table: { schema: app_example, name: totals }
+  select_permissions: [{ role: user, permission: { filter: {} } }]') && result="không bị từ chối"
+if [[ "$result" != *': mục 1: quyền select_permissions, vai trò user thiếu columns (Hasura bắt buộc), cần là danh sách tên'\
+' cột hoặc "*"; sửa theo dạng của core/hasura/tables.yaml' || "$result" == *Traceback* ]]; then
+  echo "check-dashboard-config.py phải báo quyền select thiếu columns bằng một dòng lỗi. Đang nhận: $result" >&2
+  exit 1
+fi
 result=$(dashboard_check contracts/examples/dashboard.example.yaml \
   $'- table: { schema: app_example, name: totals }\n  select_permissions: [{ permission: {} }]') && result="không bị từ chối"
 if [[ "$result" != *": mục 1: một mục của select_permissions thiếu role; sửa theo dạng của core/hasura/tables.yaml" ||
@@ -447,7 +470,7 @@ if [[ "$result" != *": mục 1: một mục của select_permissions thiếu rol
   echo "check-dashboard-config.py phải báo tệp quyền sai dạng bằng một dòng lỗi. Đang nhận: $result" >&2
   exit 1
 fi
-echo "ok -- 8 bảng điều hành và tệp quyền sai bị check-dashboard-config.py từ chối đúng luật"
+echo "ok -- 12 bảng điều hành và tệp quyền sai bị check-dashboard-config.py từ chối đúng luật"
 
 # Chiều ngược: dòng của tệp đã xóa hay đổi tên nằm im trong expected-errors.txt mà không ai biết.
 while IFS=$'\t' read -r name _; do

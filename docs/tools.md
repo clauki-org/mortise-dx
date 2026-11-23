@@ -287,9 +287,11 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - GraphQL tới Hasura qua `/v1/graphql` bằng urql, gửi bằng POST; Hasura lọc dữ liệu theo tenant trong token.
   - Menu gồm màn hình dùng chung cộng mục của các gói đã cài, đọc từ `platform_menu_items`; mục của gói mở ở
     `/apps/<gói>/<mục>` và vẽ thành phần Tầng 2 mà mục khai (`catalog`, `map`, `form`, `dashboard`, `assistant`) với
-    cấu hình của gói. Mục khai `roles` chỉ hiện với người có vai trò đó. Truy vấn chạy với vai trò `user`; lớp bản đồ,
-    biểu mẫu và khối bảng điều hành khai `role` thì gửi `X-Hasura-Role` khi token có vai trò ấy
-    ([ADR 0024](adr/0024-map-component.md), [ADR 0030](adr/0030-form-component.md),
+    cấu hình của gói. Mục khai `roles` chỉ hiện với người có vai trò đó. Lớp bản đồ không khai `role` không gửi
+    `X-Hasura-Role` (Hasura dùng vai trò mặc định của token, `user`), lớp khai `role` gửi header đó khi token có vai
+    trò ấy ([ADR 0024](adr/0024-map-component.md)). Biểu mẫu và khối bảng điều hành luôn gửi `X-Hasura-Role`, là
+    `role` đã khai hoặc `user` khi bỏ trống, để Hasura dùng đúng vai trò mà `make check-fast` đã kiểm; token không có
+    vai trò đó thì biểu mẫu không hiện, khối không được truy vấn ([ADR 0030](adr/0030-form-component.md),
     [ADR 0033](adr/0033-dashboard-component.md)).
   - Bản đồ vẽ bằng MapLibre GL JS 6.18.0 trên nền trơn, không tải tile từ máy chủ nào; mã của nó chỉ tải khi mở
     trang bản đồ, worker chạy từ tệp cùng origin nên CSP không mở `blob:`.

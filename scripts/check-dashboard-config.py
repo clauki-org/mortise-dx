@@ -73,7 +73,74 @@ def panel_problems(panel: dict, own: str | None, context: dict) -> list[str]:
     return errors
 
 
+def _named(value: object, key: str = "column") -> bool:
+    """Danh sách các bảng khóa, mỗi mục có khóa `key` là chữ."""
+    return isinstance(value, list) and all(isinstance(i, dict) and isinstance(i.get(key), str) for i in value)
+
+
+def _source_shape(panel: dict) -> str | None:
+    source = panel.get("graphql")
+    if not isinstance(source, dict) or not isinstance(source.get("field"), str):
+        return "thiếu nguồn: cần graphql: { field: <lược đồ>_<bảng> }"
+    where = source.get("where")
+    if where is not None and not (isinstance(where, dict) and isinstance(where.get("field"), str)):
+        return "graphql.where cần { field, equals }"
+    if source.get("order_by") is not None and not _named(source["order_by"]):
+        return "graphql.order_by cần là danh sách { column, direction }"
+    return None
+
+
+def _display_shape(panel: dict) -> str | None:
+    if ("cards" in panel) == ("chart" in panel):
+        return "cần đúng một trong cards, chart"
+    if "cards" in panel:
+        return None if _named(panel["cards"]) else "cards cần là danh sách { column, label, description }"
+    chart = panel["chart"]
+    if not (
+        isinstance(chart, dict)
+        and isinstance(chart.get("x"), dict)
+        and isinstance(chart["x"].get("column"), str)
+        and _named(chart.get("y"))
+        and (chart.get("details") is None or _named(chart["details"]))
+    ):
+        return "chart cần x: { column, label } và y: [{ column, label, color }]"
+    return None
+
+
+def shape_problem(dashboard: object) -> str | None:
+    """Lỗi dạng của những khóa mà bước kiểm đọc tới: cấu hình sai dạng thành một dòng lỗi, không traceback.
+
+    Khi chạy qua scripts/contracts.sh, schema đã kiểm tệp trước; bước này giữ cho lệnh chạy riêng (với
+    --dashboard) cũng không văng lỗi Python.
+    """
+    if (
+        not isinstance(dashboard, dict)
+        or not isinstance(dashboard.get("panels"), list)
+        or not dashboard["panels"]
+    ):
+        return "cần panels là danh sách khối không rỗng"
+    for index, panel in enumerate(dashboard["panels"], 1):
+        if not isinstance(panel, dict) or not isinstance(panel.get("id"), str):
+            return f"khối thứ {index} thiếu id"
+        if any(kind in panel for kind in UNSUPPORTED):
+            continue
+        problem = _source_shape(panel) or _display_shape(panel)
+        link = panel.get("link")
+        if (
+            not problem
+            and link is not None
+            and not (isinstance(link, dict) and isinstance(link.get("menu"), str))
+        ):
+            problem = "link cần { menu, label }"
+        if problem:
+            return f"khối '{panel['id']}': {problem}"
+    return None
+
+
 def dashboard_problems(dashboard: dict, own: str | None, context: dict) -> list[str]:
+    shape = shape_problem(dashboard)
+    if shape:
+        return [f"{shape}; sửa theo contracts/dashboard.schema.json"]
     ids = [panel["id"] for panel in dashboard["panels"]]
     errors = [f"khối '{name}' được khai hai lần" for name in sorted({n for n in ids if ids.count(n) > 1})]
     for panel in dashboard["panels"]:

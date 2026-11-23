@@ -18,6 +18,7 @@ import {
   type Panel,
   panelQuery,
   panelRole,
+  queryErrorText,
   type Row,
   sourceKind,
   visiblePanels,
@@ -44,7 +45,11 @@ function GraphqlBody({ panel }: { panel: GraphqlPanel }) {
     <>
       {error && (
         <Alert color="red" title={`Không đọc được số liệu của khối "${panel.title}"`}>
-          {error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
+          {queryErrorText(
+            panel,
+            error.graphQLErrors.map((item) => String(item.extensions?.code ?? "")),
+            error.graphQLErrors[0]?.message ?? error.message,
+          )}
         </Alert>
       )}
       {fetching && !data && <Loader size="sm" aria-label={`Đang tải ${panel.title}`} />}

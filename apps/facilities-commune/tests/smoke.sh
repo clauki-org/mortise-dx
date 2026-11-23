@@ -337,6 +337,10 @@ check "Xã không tự nhận vai trò rollup_reader khi token không có" \
 check "Cán bộ (user) không đọc được facility_coverage, view chỉ dành cho lãnh đạo và quản trị xã" \
   "$(gql "$token_a" '{ app_facilities_commune_facility_coverage { facility_count } }' | error_code)" validation-failed
 
+check "manager.a chỉ đọc được dòng facility_coverage của xã A, không của xã B" \
+  "$(gql "$manager_a" '{ app_facilities_commune_facility_coverage { tenant_id } }' "{}" manager |
+    jq -c '[.data.app_facilities_commune_facility_coverage[].tenant_id]')" '["xa-a"]'
+
 # Dữ liệu demo (`make seed-demo`, seed/demo.yaml): tổng diện tích thông thủy theo trạng thái cơ sở của từng xã đúng số
 # liệu của câu chuyện demo. Đọc bằng quản trị xã để thấy toàn xã, không phụ thuộc phân công. Chưa nạp thì bỏ qua, để
 # smoke của gói vẫn chạy được trên bản cài không có dữ liệu demo.

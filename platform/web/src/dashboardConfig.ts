@@ -161,6 +161,26 @@ export function panelQuery(panel: Panel & { graphql: GraphqlSource }): PanelQuer
  */
 export const sentText = (query: string) => stringifyDocument(formatDocument(createRequest(query, {}).query));
 
+// Mã lỗi của Hasura khi câu hay biến không hợp với lược đồ, hay khi CSDL không đọc được giá trị theo kiểu của cột.
+const CONFIG_ERRORS = ["validation-failed", "data-exception"];
+
+/**
+ * Lời báo khi nguồn từ chối câu truy vấn của khối. Hai mã lỗi trên thường do cấu hình của gói, kể cả where.equals
+ * không hợp kiểu của cột: giá trị đó luôn gửi dạng chữ và make check-fast không biết kiểu cột (ADR 0033). Người xem
+ * không tự sửa được, nên lời báo dẫn tới người quản trị kèm chỗ cần sửa, không bảo tải lại trang.
+ */
+export function queryErrorText(panel: Panel, codes: string[], message: string): string {
+  if (!codes.some((code) => CONFIG_ERRORS.includes(code))) {
+    return `${message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.`;
+  }
+  const where = panel.graphql?.where;
+  const typed = where ? `, hoặc where.equals "${where.equals}" không hợp kiểu của cột ${where.field}` : "";
+  return (
+    `Hasura từ chối câu truy vấn: ${message}. Thường do cấu hình của gói: bảng hay cột không nằm trong quyền đọc ` +
+    `của vai trò ${panelRole(panel)}${typed}. Báo người quản trị sửa cấu hình của gói.`
+  );
+}
+
 // Hasura có thể trả số dạng chuỗi thập phân (HASURA_GRAPHQL_STRINGIFY_NUMERIC_TYPES). Chỉ nhận dạng thập phân thường:
 // Number() còn nhận "1e5", "0x10" hay chuỗi toàn khoảng trắng, đổi các chuỗi đó thành số là hiện sai giá trị.
 const DECIMAL = /^-?\d+(\.\d+)?$/;
