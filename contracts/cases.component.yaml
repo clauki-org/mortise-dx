@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bản mô tả thành phần theo dõi hồ sơ theo contracts/component.schema.json; `make check-fast` kiểm tệp này. Mã của
+# thành phần ở platform/web/src/ (CasesPanel.tsx, CaseScreen.tsx, cases.ts); luật cấu hình theo gói ở
+# scripts/check-cases-config.py. Đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
+
+component: cases
+summary: Hồ sơ người đăng nhập đã lập của các quy trình do gói chọn, bước đang chờ, các bước đã qua và kết quả.
+config_schema: cases.schema.json
+example: examples/cases.example.yaml
+capabilities:
+  - Danh sách hồ sơ do chính người đăng nhập lập trong đơn vị của mình, mới nhất trước, giao diện hiện 20 hồ sơ mỗi trang (API cho tối đa 100), lọc còn mở, đã kết thúc hay tất cả; mỗi dòng có tên hồ sơ, bước đang chờ hay kết quả, hạn và lúc lập.
+  - Tên hồ sơ lấy từ biến mà khai báo bước của quy trình chỉ ở `title`; quy trình không khai thì hiện lúc lập.
+  - Màn hình một hồ sơ ở /apps/<gói>/<mục>/<mã hồ sơ> có thông tin theo `details` của các bước, bước đang chờ cùng vai trò hay đơn vị đang xử lý và đã có người nhận chưa, các bước đã qua theo thời gian (kể cả bước chờ hẹn giờ) và kết quả theo tên sự kiện kết thúc trong BPMN.
+  - Biểu mẫu khởi tạo quy trình và nút của danh mục hiện đường dẫn "Xem hồ sơ vừa lập" khi gói có mục cases liệt kê quy trình đó.
+limits:
+  - Chỉ đọc; không rút, không sửa hồ sơ đã lập.
+  - Không hiện tên hay tài khoản của người xử lý, chỉ vai trò và đơn vị.
+  - Không hiện ý kiến, quyết định hay bất kỳ trường nào người xử lý một bước ghi (ADR 0031), kể cả khi hồ sơ đã kết thúc; quy trình không khai trường cho bước nào thì không hiện biến nào.
+  - Người khác cùng đơn vị, quản trị đơn vị và đơn vị cấp trên không xem được hồ sơ của người lập; hồ sơ do tài khoản dịch vụ mở không có người lập nào thấy.

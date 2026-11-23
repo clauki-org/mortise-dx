@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Trang theo dõi đề nghị cấp vật tư theo contracts/cases.schema.json; app.yaml trỏ tới tệp này ở mục menu
+# `my-requests` và `make check-fast` kiểm. Tên đề nghị và các giá trị người lập điền lấy từ `title`, `details`
+# trong workflows/supply-request.yaml; ý kiến của người duyệt không hiện (ADR 0032).
+
+title: Đề nghị đã lập
+description: Đề nghị cấp vật tư bạn đã gửi, đang chờ ai duyệt và kết quả.
+processes: [supply-request]

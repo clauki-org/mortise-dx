@@ -9,6 +9,9 @@ process: facilities-review
 steps:
   review_report:
     title: title
+    # Phần vượt người lập gửi; người duyệt đối chiếu với hồ sơ, người lập thấy lại trên trang hồ sơ đã lập.
+    details: &review_details
+      - { variable: excessM2, label: Phần vượt (m²) }
     form: &review_form
       type: object
       required: [comment]
@@ -33,6 +36,7 @@ steps:
       variable: facilityId
   review_publish:
     title: title
+    details: *review_details
     form: *review_form
     ui: *review_ui
     actions: *review_actions

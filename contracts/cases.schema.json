@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/cases.schema.json",
+  "title": "Cấu hình thành phần theo dõi hồ sơ (component: cases)",
+  "description": "Tệp mà một mục menu `component: cases` trong app.yaml trỏ tới (ADR 0032). Người đăng nhập thấy các hồ sơ chính mình đã lập của các quy trình liệt kê ở `processes`, bước hồ sơ đang chờ và các bước đã qua. Cấu hình không cấp quyền: workflow-api chỉ trả hồ sơ do người gọi lập trong tenant của họ, và chỉ những biến không thuộc bước nào. Tên hồ sơ và các dòng thông tin lấy từ `title` và `details` trong khai báo bước của quy trình (contracts/workflow.schema.json).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "processes"],
+  "properties": {
+    "title": { "description": "Tiêu đề của trang", "$ref": "#/$defs/text" },
+    "description": { "description": "Một đoạn hướng dẫn hiện dưới tiêu đề", "$ref": "#/$defs/text" },
+    "processes": {
+      "description": "Khóa các quy trình (id của <process> trong BPMN của cùng gói) có hồ sơ hiện ở trang này",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64 }
+    }
+  },
+  "$defs": {
+    "text": {
+      "description": "Chữ hiển thị cho người dùng: có ít nhất một ký tự không phải khoảng trắng",
+      "type": "string",
+      "pattern": "\\S"
+    }
+  }
+}

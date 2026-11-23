@@ -20,6 +20,7 @@ catalog/             cấu hình thành phần danh mục (cơ sở → tòa →
 map-layers/          cấu hình thành phần bản đồ (trụ sở tô theo phần vượt) theo contracts/map.schema.json
 assistant/           cấu hình trợ lý hỏi dữ liệu (diện tích của xã, cơ sở được phân công) theo
                      contracts/assistant.schema.json
+cases/               trang hồ sơ rà soát đã lập theo contracts/cases.schema.json
 bpmn/                quy trình BPMN của gói, deploy cho từng tenant khi cài
 workflows/           khai báo bước của từng quy trình theo contracts/workflow.schema.json
 authorities/         bảng phân cấp mặc định của bước quyết định theo contracts/authority.schema.json (ADR 0028)
@@ -132,6 +133,11 @@ có cổng rẽ nhánh. Người lập không tự quyết định hồ sơ củ
 `decide`, nên workflow-api từ chối người lập gửi chúng lúc lập hồ sơ, và người duyệt hay người trình gửi chúng khi
 hoàn thành bước của mình. `comment` là trường chung của hai bước duyệt và bước trình, nên bước nào trong ba bước đó
 cũng ghi được.
+
+Người lập theo dõi hồ sơ ở mục menu "Hồ sơ rà soát đã lập" (`cases/reviews.yaml`, thành phần `cases`,
+[ADR 0032](../../docs/adr/0032-case-tracking-for-initiators.md)): bước đang chờ (kể cả "Công khai"), vai trò hay đơn
+vị đang xử lý, các bước đã qua và kết quả, cùng phần vượt (`details` của bước duyệt). Ý kiến, nơi nhận và quyết định
+là trường của bước nên không hiện cho người lập.
 
 ### Bảng phân cấp của bước quyết định
 

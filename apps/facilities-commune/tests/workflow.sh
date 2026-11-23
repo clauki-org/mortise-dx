@@ -175,6 +175,10 @@ else
   for instance in "$later" "$province"; do complete "$manager" "$instance" '{"approved": true}' >/dev/null; done
   check "Đang công khai: chưa kết thúc, chưa có bước nào cho người dùng" "$(status "$above") [$(step_of "$above")]" \
     "false null []"
+  # Theo dõi hồ sơ (ADR 0032): người lập thấy hồ sơ đang ở bước chờ "Công khai" dù không có việc nào.
+  check "Người lập thấy hồ sơ đang ở bước công khai" "$(api "$user" GET "/cases?process=$process&state=open&limit=100" |
+    sed '$d' | jq -r --arg i "$above" '.items[] | select(.id == $i) | .current[] | "\(.step) \(.name)"')" \
+    "publication Công khai"
   # Hai hồ sơ công khai cùng lúc nên chỉ chờ một lần.
   waited=0
   while [[ -z "$(step_of "$above")" || -z "$(step_of "$later")" || -z "$(step_of "$province")" ]] &&
@@ -216,6 +220,9 @@ else
       "$(complete "$manager" "$above" "$decision")" 204
     check "Ghi nhận quyết định xong: hai hồ sơ kết thúc ở đã có quyết định" "$(status "$above") $(status "$later")" \
       "true decided true decided"
+    check "Người lập thấy kết quả và các bước đã qua, không thấy ý kiến, nơi nhận hay quyết định" \
+      "$(api "$user" GET "/cases/$above" | sed '$d' | jq -c '[.outcomeName, ([.steps[].step] | join(" ")),
+        (.variables | keys)]')" '["Đã có quyết định","review_publish publication submit decide",["excessM2","title"]]'
     delegated=$(task_of "$province" "$manager_tinh")
     check "Bước của tỉnh: trình xong, manager.tinh thấy bước quyết định, task ghi tenant xa-a" \
       "$(pending "$province" step "$manager_tinh") $(pending "$province" tenant "$manager_tinh")" "decide xa-a"

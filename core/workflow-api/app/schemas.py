@@ -6,6 +6,8 @@
 # contracts/workflow-api.openapi.json làm hợp đồng cho giao diện và gói nghiệp vụ. Đổi
 # model thì chạy `make contracts`.
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -52,5 +54,61 @@ class InstanceStatus(BaseModel):
     outcome: str | None = Field(description="Mã sự kiện kết thúc; null khi quy trình chưa xong")
 
 
+class CurrentStep(BaseModel):
+    step: str = Field(description="id của bước người làm (userTask) hay bước chờ trong BPMN")
+    name: str
+    due: str | None = Field(description="Hạn xử lý, ISO 8601; null nếu bước không đặt hạn hay là bước chờ")
+
+
+class CaseSummary(BaseModel):
+    id: str = Field(description="Mã hồ sơ (quy trình)")
+    process: str = Field(description="Khóa của định nghĩa quy trình (BPMN)")
+    started: str = Field(description="Thời điểm lập, ISO 8601")
+    ended: str | None = Field(description="Thời điểm kết thúc, ISO 8601; null khi hồ sơ còn mở")
+    outcome: str | None = Field(
+        description="Mã sự kiện kết thúc; null khi hồ sơ còn mở hay bị dừng mà không tới sự kiện kết thúc nào"
+    )
+    outcomeName: str | None = Field(description="Tên sự kiện kết thúc trong BPMN")
+    current: list[CurrentStep] = Field(description="Bước hồ sơ đang chờ; rỗng khi hồ sơ đã kết thúc")
+    variables: dict[str, object] = Field(
+        description="Biến người lập thấy: không có biến lõi đặt và trường của bất kỳ bước nào (ADR 0032)"
+    )
+
+
+class CaseList(BaseModel):
+    total: int = Field(description="Số hồ sơ khớp bộ lọc, không chỉ trang này")
+    items: list[CaseSummary]
+
+
+class CaseStep(BaseModel):
+    step: str
+    name: str
+    kind: Literal["task", "wait"] = Field(
+        description="`task`: bước người làm; `wait`: bước chờ, ví dụ hẹn giờ"
+    )
+    started: str
+    ended: str | None
+    due: str | None
+    status: Literal["open", "done", "cancelled"] = Field(
+        description="`cancelled`: bước dừng mà không ai hoàn thành, ví dụ hết hạn hay hồ sơ bị hủy"
+    )
+    groups: list[str] = Field(
+        description="Nhóm ứng viên: vai trò, hoặc `<tenant>/<vai trò>` với bước của tenant cha (ADR 0029); "
+        "không có tên hay mã người xử lý"
+    )
+    claimed: bool = Field(description="Đã có người nhận bước")
+
+
+class CaseDetail(CaseSummary):
+    steps: list[CaseStep] = Field(description="Bước đã qua và đang chờ, theo thời điểm bắt đầu")
+
+
 class ErrorBody(BaseModel):
     error: str = Field(description="Lý do bằng tiếng Việt, hiển thị được cho người dùng")
+
+
+# 400, 401 và 422 khai cho mọi route: route nào cũng kiểm token và header X-Mortise-Tenant, và FastAPI tự ghi
+# 422 theo dạng mặc định của nó vào OpenAPI nếu route không khai, lệch với dạng {"error": "..."} thật sự trả
+# về.
+def error_responses(*codes: int) -> dict:
+    return {code: {"model": ErrorBody} for code in (400, 401, 422, *codes)}

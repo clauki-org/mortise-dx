@@ -12,6 +12,12 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Người lập theo dõi hồ sơ của mình trên web (ADR 0032): thành phần Tầng 2 `cases` (`contracts/cases.schema.json`,
+  mục menu `component: cases`) liệt kê hồ sơ người đăng nhập đã lập, bước đang chờ cùng vai trò hay đơn vị xử lý, các
+  bước đã qua và kết quả; không hiện ý kiến, quyết định hay danh tính người xử lý. API quy trình có thêm
+  `GET /v1/workflow/cases` và `GET /v1/workflow/cases/{id}`. Biểu mẫu và nút của danh mục có đường "Xem hồ sơ vừa
+  lập". Gói kho vật tư có mục "Đề nghị đã lập", gói xã có mục "Hồ sơ rà soát đã lập"; bản cài cũ dựng lại image
+  (`docker compose build workflow-api web`), chạy `make up` và cài lại hai gói.
 - Thành phần biểu mẫu nhập liệu Tầng 2 (ADR 0030, `contracts/form.schema.json`, mục menu `component: form`): gói
   khai trường, danh sách chọn cố định hay đọc từ bảng của gói (lọc theo trường trước), rồi khởi tạo quy trình của
   gói kèm Idempotency-Key hoặc thêm một dòng vào bảng của gói; `make check-fast` kiểm biểu mẫu với BPMN, khai báo

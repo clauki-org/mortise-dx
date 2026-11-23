@@ -13,6 +13,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useClient } from "urql";
+import { casesPathFor } from "./cases";
 import {
   clearDependents,
   type FormConfig,
@@ -47,8 +48,7 @@ function useSubmit(config: FormConfig) {
   return useMutation({
     mutationFn: async ({ payload, key }: { payload: Values; key: string }) => {
       if (config.submit.process) {
-        await startProcess(getToken(), config.submit.process, payload, key);
-        return;
+        return (await startProcess(getToken(), config.submit.process, payload, key)).id;
       }
       const table = config.submit.insert ?? "";
       // additionalTypenames: kết quả chỉ có affected_rows, không mang kiểu của bảng, nên urql không tự biết danh sách
@@ -59,20 +59,31 @@ function useSubmit(config: FormConfig) {
       if (result.data?.result?.affected_rows !== 1) {
         throw new Error("Máy chủ không thêm dòng nào. Tải lại trang rồi gửi lại; nếu vẫn lỗi, báo người quản trị.");
       }
+      return undefined;
     },
   });
 }
 
-function Done({ config, app, onAgain }: { config: FormConfig; app: string; onAgain: () => void }) {
+type DoneProps = { config: FormConfig; app: string; started?: string; onAgain: () => void };
+
+function Done({ config, app, started, onAgain }: DoneProps) {
   const { items } = usePackageMenu();
   // Mục menu dành cho vai trò khác thì không có trong danh sách, và không hiện đường dẫn tới trang không mở được.
   const next = config.done.menu ? findItem(items, app, config.done.menu) : undefined;
+  // Hồ sơ vừa lập mở được ở trang theo dõi hồ sơ của cùng gói, nếu gói có trang cho quy trình này (ADR 0032).
+  const opened =
+    started && config.submit.process ? casesPathFor(items, app, config.submit.process, started) : undefined;
   return (
     <Alert color="green" title={config.done.message}>
       <Group mt="xs">
         <Button variant="light" onClick={onAgain}>
           Lập tiếp
         </Button>
+        {opened && (
+          <Anchor component={Link} to={opened}>
+            Xem hồ sơ vừa lập
+          </Anchor>
+        )}
         {next && (
           <Anchor component={Link} to={itemPath(next)}>
             {next.label}
@@ -86,7 +97,8 @@ function Done({ config, app, onAgain }: { config: FormConfig; app: string; onAga
 function FormBody({ config, app }: { config: FormConfig; app: string }) {
   const { schema, uiSchema } = useMemo(() => formSchema(config), [config]);
   const [values, setValues] = useState<Values>({});
-  const [done, setDone] = useState(false);
+  // undefined: chưa gửi xong; chuỗi: mã hồ sơ vừa lập, rỗng khi biểu mẫu thêm dòng.
+  const [done, setDone] = useState<string>();
   const keys = useRef<KeyState>(freshKey());
   // Nút khóa theo trạng thái gửi, nhưng trạng thái đó chỉ đổi ở lần vẽ sau; lần bấm thứ hai đến trước lúc ấy vẫn
   // gọi onSubmit. Lệnh thêm dòng không có Idempotency-Key, nên chặn ở đây.
@@ -102,9 +114,9 @@ function FormBody({ config, app }: { config: FormConfig; app: string }) {
     submit.mutate(
       { payload, key: keys.current.key },
       {
-        onSuccess: () => {
+        onSuccess: (started) => {
           keys.current = freshKey();
-          setDone(true);
+          setDone(started ?? "");
         },
         onSettled: () => {
           sending.current = false;
@@ -115,13 +127,13 @@ function FormBody({ config, app }: { config: FormConfig; app: string }) {
   const again = () => {
     submit.reset();
     setValues({});
-    setDone(false);
+    setDone(undefined);
   };
   // Ô đánh dấu bắt buộc mang luật const: true; thông điệp chung "Giá trị không đúng" không nói phải làm gì.
   const transformErrors = (errors: RJSFValidationError[]) =>
     errors.map((error) => (error.name === "const" ? { ...error, message: "Cần đánh dấu ô này" } : error));
 
-  if (done) return <Done config={config} app={app} onAgain={again} />;
+  if (done !== undefined) return <Done config={config} app={app} started={done} onAgain={again} />;
   return (
     <MantineForm
       schema={schema}

@@ -29,3 +29,7 @@ menu:
     component: form
     config: forms/item.yaml
     roles: [tenant_admin]
+  - id: my-requests
+    label: Đề nghị đã lập
+    component: cases
+    config: cases/supply-requests.yaml

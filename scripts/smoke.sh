@@ -424,7 +424,7 @@ check "Cùng mã sau khi quy trình đã kết thúc: mở quy trình mới" \
 api POST "$manager_a" "/tasks/$(task_in "$manager_a" "$reopened")/complete" '{"variables":{"approved":false}}' >/dev/null
 
 check "Dịch vụ thiếu X-Mortise-Tenant bị từ chối" "$(service_start "")" 400
-for path in /tasks "/instances/$opened"; do
+for path in /tasks "/instances/$opened" /cases "/cases/$opened"; do
   status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $service" -H 'X-Mortise-Tenant: xa-a' \
     "$wf$path")
   check "Dịch vụ chỉ được mở quy trình, không đọc được ${path/$opened/<id>}" "$status" 403
@@ -646,6 +646,42 @@ IFS=$'\t' read -r status _ < <(api POST "$manager_tinh" "/tasks/$parent_task/com
 check "Bước của tenant cha: manager.tinh (có OTP) hoàn thành bước của xã A" "$status" 204
 check "Bước của tenant cha: hồ sơ của xã A kết thúc" \
   "$(api GET "$user_a" "/instances/$parent_case" | cut -f2 | jq -r .ended)" true
+
+# Theo dõi hồ sơ của người lập (ADR 0032): user.a thấy hồ sơ mình lập, bước đang chờ và các bước đã qua, không thấy
+# trường người xử lý ghi (note, comment, approved). Người khác cùng xã (admin.a), xã khác (user.b) và tỉnh
+# (manager.tinh) không thấy hồ sơ trong danh sách và nhận đúng câu 404 của hồ sơ không có.
+IFS=$'\t' read -r _ body < <(api POST "$user_a" /processes/core-handoff/instances \
+  '{"variables":{"title":"Theo dõi hồ sơ"}}')
+tracked=$(jq -r .id <<<"$body")
+listed() { # TOKEN: bước đang chờ của hồ sơ $tracked trong danh sách của người gọi
+  api GET "$1" "/cases?process=core-handoff&state=open&limit=100" | cut -f2 |
+    jq -r --arg p "$tracked" '[.items[]? | select(.id == $p) | .current[].step] | join(",")'
+}
+check "Theo dõi hồ sơ: user.a thấy hồ sơ mình lập, đang ở bước prepare" "$(listed "$user_a")" prepare
+api POST "$user_a" "/tasks/$(task_in "$user_a" "$tracked")/complete" '{"variables":{"note":"Ghi chú"}}' >/dev/null
+check "Theo dõi hồ sơ: sau bước prepare, hồ sơ ở bước confirm, không thấy note của bước prepare" \
+  "$(api GET "$user_a" "/cases/$tracked" | cut -f2 |
+    jq -c '[.current[].step, ([.steps[] | "\(.step):\(.status)"] | join(" ")), (.variables | keys)]')" \
+  '["confirm","prepare:done confirm:open",["title"]]'
+not_found=$(api GET "$user_a" /cases/khong-co-ho-so)
+for pair in "admin.a $admin_a" "user.b $user_b" "manager.tinh $manager_tinh"; do
+  read -r name other <<<"$pair"
+  check "Theo dõi hồ sơ: $name không thấy hồ sơ của user.a, mở bằng mã nhận 404 như hồ sơ không có" \
+    "$(listed "$other")|$([[ "$(api GET "$other" "/cases/$tracked")" == "$not_found" ]] && echo giống)" "|giống"
+done
+check "Theo dõi hồ sơ: hồ sơ không có trả 404" "$(cut -f1 <<<"$not_found")" 404
+api POST "$manager_a" "/tasks/$(task_in "$manager_a" "$tracked")/complete" '{"variables":{"confirmed":true}}' >/dev/null
+IFS=$'\t' read -r _ body < <(api POST "$user_a" /processes/core-approval/instances \
+  '{"variables":{"title":"Theo dõi kết quả"}}')
+approved_case=$(jq -r .id <<<"$body")
+api POST "$manager_a" "/tasks/$(task_in "$manager_a" "$approved_case")/complete" \
+  '{"variables":{"approved":true,"comment":"Ý kiến của người duyệt"}}' >/dev/null
+check "Theo dõi hồ sơ: hồ sơ đã duyệt có kết quả theo tên trong BPMN, không thấy approved hay comment" \
+  "$(api GET "$user_a" "/cases/$approved_case" | cut -f2 | jq -c '[.outcomeName, (.variables | keys)]')" \
+  '["Đã duyệt",["title"]]'
+check "Theo dõi hồ sơ: bước của tỉnh ghi nhóm tinh-mau/manager; core-authority không khai trường nên không có biến" \
+  "$(api GET "$user_a" "/cases/$parent_case" | cut -f2 | jq -c '[([.steps[].groups[]] | join(",")), (.variables | length)]')" \
+  '["tinh-mau/manager",0]'
 IFS=$'\t' read -r status _ < <(api POST "$user_a" /processes/core-authority/instances \
   '{"variables":{"authority_decide":"user"}}')
 check "Bảng phân cấp: người lập không tự đặt được biến authority_*" "$status" 400

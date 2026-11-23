@@ -1,6 +1,314 @@
 {
   "components": {
     "schemas": {
+      "CaseDetail": {
+        "properties": {
+          "current": {
+            "description": "Bước hồ sơ đang chờ; rỗng khi hồ sơ đã kết thúc",
+            "items": {
+              "$ref": "#/components/schemas/CurrentStep"
+            },
+            "title": "Current",
+            "type": "array"
+          },
+          "ended": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Thời điểm kết thúc, ISO 8601; null khi hồ sơ còn mở",
+            "title": "Ended"
+          },
+          "id": {
+            "description": "Mã hồ sơ (quy trình)",
+            "title": "Id",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mã sự kiện kết thúc; null khi hồ sơ còn mở hay bị dừng mà không tới sự kiện kết thúc nào",
+            "title": "Outcome"
+          },
+          "outcomeName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tên sự kiện kết thúc trong BPMN",
+            "title": "Outcomename"
+          },
+          "process": {
+            "description": "Khóa của định nghĩa quy trình (BPMN)",
+            "title": "Process",
+            "type": "string"
+          },
+          "started": {
+            "description": "Thời điểm lập, ISO 8601",
+            "title": "Started",
+            "type": "string"
+          },
+          "steps": {
+            "description": "Bước đã qua và đang chờ, theo thời điểm bắt đầu",
+            "items": {
+              "$ref": "#/components/schemas/CaseStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "variables": {
+            "additionalProperties": true,
+            "description": "Biến người lập thấy: không có biến lõi đặt và trường của bất kỳ bước nào (ADR 0032)",
+            "title": "Variables",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "process",
+          "started",
+          "ended",
+          "outcome",
+          "outcomeName",
+          "current",
+          "variables",
+          "steps"
+        ],
+        "title": "CaseDetail",
+        "type": "object"
+      },
+      "CaseList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CaseSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "description": "Số hồ sơ khớp bộ lọc, không chỉ trang này",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "CaseList",
+        "type": "object"
+      },
+      "CaseStep": {
+        "properties": {
+          "claimed": {
+            "description": "Đã có người nhận bước",
+            "title": "Claimed",
+            "type": "boolean"
+          },
+          "due": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "ended": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended"
+          },
+          "groups": {
+            "description": "Nhóm ứng viên: vai trò, hoặc `<tenant>/<vai trò>` với bước của tenant cha (ADR 0029); không có tên hay mã người xử lý",
+            "items": {
+              "type": "string"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "kind": {
+            "description": "`task`: bước người làm; `wait`: bước chờ, ví dụ hẹn giờ",
+            "enum": [
+              "task",
+              "wait"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "started": {
+            "title": "Started",
+            "type": "string"
+          },
+          "status": {
+            "description": "`cancelled`: bước dừng mà không ai hoàn thành, ví dụ hết hạn hay hồ sơ bị hủy",
+            "enum": [
+              "open",
+              "done",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step": {
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "name",
+          "kind",
+          "started",
+          "ended",
+          "due",
+          "status",
+          "groups",
+          "claimed"
+        ],
+        "title": "CaseStep",
+        "type": "object"
+      },
+      "CaseSummary": {
+        "properties": {
+          "current": {
+            "description": "Bước hồ sơ đang chờ; rỗng khi hồ sơ đã kết thúc",
+            "items": {
+              "$ref": "#/components/schemas/CurrentStep"
+            },
+            "title": "Current",
+            "type": "array"
+          },
+          "ended": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Thời điểm kết thúc, ISO 8601; null khi hồ sơ còn mở",
+            "title": "Ended"
+          },
+          "id": {
+            "description": "Mã hồ sơ (quy trình)",
+            "title": "Id",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mã sự kiện kết thúc; null khi hồ sơ còn mở hay bị dừng mà không tới sự kiện kết thúc nào",
+            "title": "Outcome"
+          },
+          "outcomeName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tên sự kiện kết thúc trong BPMN",
+            "title": "Outcomename"
+          },
+          "process": {
+            "description": "Khóa của định nghĩa quy trình (BPMN)",
+            "title": "Process",
+            "type": "string"
+          },
+          "started": {
+            "description": "Thời điểm lập, ISO 8601",
+            "title": "Started",
+            "type": "string"
+          },
+          "variables": {
+            "additionalProperties": true,
+            "description": "Biến người lập thấy: không có biến lõi đặt và trường của bất kỳ bước nào (ADR 0032)",
+            "title": "Variables",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "process",
+          "started",
+          "ended",
+          "outcome",
+          "outcomeName",
+          "current",
+          "variables"
+        ],
+        "title": "CaseSummary",
+        "type": "object"
+      },
+      "CurrentStep": {
+        "properties": {
+          "due": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hạn xử lý, ISO 8601; null nếu bước không đặt hạn hay là bước chờ",
+            "title": "Due"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "step": {
+            "description": "id của bước người làm (userTask) hay bước chờ trong BPMN",
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "name",
+          "due"
+        ],
+        "title": "CurrentStep",
+        "type": "object"
+      },
       "ErrorBody": {
         "properties": {
           "error": {
@@ -186,6 +494,319 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/workflow/cases": {
+      "get": {
+        "description": "Hồ sơ do người gọi lập trong tenant của mình, mới nhất trước, kèm bước đang chờ.",
+        "operationId": "my_cases_v1_workflow_cases_get",
+        "parameters": [
+          {
+            "description": "Chỉ hồ sơ của các quy trình này; bỏ trống là mọi quy trình",
+            "in": "query",
+            "name": "process",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_.-]{0,254}$",
+                    "type": "string"
+                  },
+                  "maxItems": 20,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Chỉ hồ sơ của các quy trình này; bỏ trống là mọi quy trình",
+              "title": "Process"
+            }
+          },
+          {
+            "description": "Hồ sơ còn mở, đã kết thúc hay cả hai",
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "description": "Hồ sơ còn mở, đã kết thúc hay cả hai",
+              "enum": [
+                "open",
+                "ended",
+                "all"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+            "in": "header",
+            "name": "X-Mortise-Tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+              "title": "X-Mortise-Tenant"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "My Cases"
+      }
+    },
+    "/v1/workflow/cases/{instance_id}": {
+      "get": {
+        "description": "Một hồ sơ do người gọi lập, với các bước đã qua và đang chờ.",
+        "operationId": "my_case_v1_workflow_cases__instance_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instance_id",
+            "required": true,
+            "schema": {
+              "title": "Instance Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+            "in": "header",
+            "name": "X-Mortise-Tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Chỉ tài khoản dịch vụ gửi: tenant mà dịch vụ mở quy trình thay (ADR 0017)",
+              "title": "X-Mortise-Tenant"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "My Case"
+      }
+    },
     "/v1/workflow/instances/{instance_id}": {
       "get": {
         "operationId": "instance_status_v1_workflow_instances__instance_id__get",
