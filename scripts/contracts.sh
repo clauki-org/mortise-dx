@@ -107,7 +107,7 @@ done
 "${checker[@]}" --schemafile contracts/device-message.schema.json contracts/examples/device-message.example.json
 "${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml \
   --steps contracts/examples/workflow.example.yaml core/workflow/fixtures/*.yaml \
-  --authorities contracts/examples/authority.example.yaml
+  --authorities contracts/examples/authority.example.yaml --rules contracts/examples/threshold-rule.example.yaml
 # Gói thật, nếu đã có. Khai báo bước của một gói chỉ đối chiếu với BPMN của chính gói đó.
 shopt -s nullglob globstar
 apps=(apps/*/app.yaml)
@@ -170,7 +170,29 @@ done
 # lại hay khi gỡ.
 "${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml apps/**/*.bpmn20.xml \
   --steps contracts/examples/workflow.example.yaml core/workflow/fixtures/*.yaml apps/*/workflows/*.yaml \
-  --authorities contracts/examples/authority.example.yaml --packages apps/*/
+  --authorities contracts/examples/authority.example.yaml --rules contracts/examples/threshold-rule.example.yaml \
+  --packages apps/*/
+
+# Ví dụ sai của bước kiểm BPMN với khai báo bước, luật ngưỡng và danh mục (scripts/check-workflow-steps.py): mỗi thư
+# mục trong contracts/examples/invalid-steps/ là một quy trình (process.bpmn20.xml, steps.yaml, có thể có rule.yaml
+# và catalog.yaml) phạm đúng một luật, và lỗi phải đúng từng ký tự với expected.txt của thư mục, như ví dụ sai của
+# schema ở dưới: bước kiểm bị nới lỏng hay hỏng mà vẫn qua mọi tệp thật thì không ai biết.
+cases=(contracts/examples/invalid-steps/*/)
+for case in "${cases[@]}"; do
+  args=(--bpmn "${case}process.bpmn20.xml" --steps "${case}steps.yaml")
+  [[ -f "${case}rule.yaml" ]] && args+=(--rules "${case}rule.yaml")
+  [[ -f "${case}catalog.yaml" ]] && args+=(--catalogs "${case}catalog.yaml")
+  if result=$("${steps[@]}" "${args[@]}" 2>&1); then
+    echo "$case phải bị scripts/check-workflow-steps.py từ chối mà lại qua." >&2
+    exit 1
+  fi
+  if [[ "$result" != "$(grep -v '^#' "${case}expected.txt")" ]]; then
+    echo "$case phải gây đúng lỗi trong ${case}expected.txt. Đang nhận:" >&2
+    echo "$result" >&2
+    exit 1
+  fi
+done
+echo "ok -- ${#cases[@]} ví dụ sai bị scripts/check-workflow-steps.py từ chối đúng luật"
 
 # Ví dụ sai trong contracts/examples/invalid/ phải bị từ chối. Thiếu bước này, một schema
 # bị nới lỏng vẫn qua mọi ví dụ đúng mà không ai biết nó không còn chặn được gì.

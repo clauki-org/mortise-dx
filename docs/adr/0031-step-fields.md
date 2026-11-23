@@ -58,16 +58,27 @@ Chọn cách cuối.
   cấp, nhớ theo mã định nghĩa suốt đời tiến trình. Không đọc được thì từ chối (`502`).
 - **`make check-fast`:** với mỗi BPMN có khai báo bước, trường của một bước trong khai báo (`form.properties`,
   `variables` của nút) phải đúng bằng formProperty của userTask cùng id. formProperty có thuộc tính khác `id`, có
-  phần tử con, trùng id, hay nằm ngoài userTask là lỗi. Bước kiểm đọc trường bằng chính mã của workflow-api
-  (`core/workflow-api/app/fields.py`).
-- `scripts/check-declarative.sh` không đổi. formProperty chỉ có `id` không chạy mã nên gói khai báo dùng được;
-  listener và bước chạy mã vẫn bị cấm.
+  phần tử con, trùng id, hay nằm ngoài userTask là lỗi; hai userTask cùng id trong một quy trình cũng vậy. Bước
+  kiểm đọc trường bằng chính mã của workflow-api (`core/workflow-api/app/fields.py`).
+- **Biến khởi tạo viết sẵn không được trùng trường:** người lập là máy cũng bị từ chối, và với biến viết sẵn thì mọi
+  lần mở đều hỏng. `make check-fast` kiểm hai nguồn. Một là bộ biến iot-bridge gửi khi mở hồ sơ của luật ngưỡng
+  (`CASE_VARIABLES` trong `core/iot-bridge/app/rules.py`, đọc thẳng từ mã, kiểm thử của iot-bridge giữ nó đúng
+  bằng biến thật gửi đi), với mọi luật của lõi và của gói. Hai là `variables` của nút danh mục
+  ([ADR 0026](0026-start-process-from-catalog-row.md)). Thiếu bước này, hồ sơ cảnh báo của luật ngưỡng không mở mà
+  chỉ để lại một dòng nhật ký của iot-bridge.
+- **Ví dụ sai:** `contracts/examples/invalid-steps/` có một thư mục cho mỗi luật trên, phạm đúng luật đó; lỗi phải
+  đúng từng ký tự với `expected.txt`, như ví dụ sai của schema.
+- `scripts/check-declarative.sh` cấm thêm `expression=` và `variable=` trên formProperty; formProperty chỉ có `id`
+  không chạy mã nên gói khai báo dùng được. Listener và bước chạy mã vẫn bị cấm.
 
 ## Hệ quả
 
 - Nội dung của một bước chỉ do người làm bước đó ghi. Người lập không gửi sẵn được `decision` hay `comment`; người
   trình không ghi sẵn được `decision`; người xác nhận không sửa được trường của bước trước. Điều ADR 0025 ghi là
   "chưa chặn giữa hai bước" nay được chặn với mọi biến quyết định khai làm trường của bước.
+- **Biến không là trường của bước nào vẫn bị người làm bước sau ghi đè được**, ví dụ `title`, `facilityId`, `excessM2`
+  của quy trình rà soát: workflow-api chỉ chặn trường của bước. Khóa chúng lại là quyết định "chỉ cho gửi biến đã
+  khai" đã loại ở trên.
 - Trường dùng chung thì mọi bước khai nó đều ghi đè được nhau. Nội dung phải giữ riêng thì đặt tên riêng, như
   `decision` tách khỏi `comment`.
 - workflow-api vẫn không kiểm giá trị hay trường bắt buộc của biểu mẫu: người làm bước bỏ trống `decision` qua API

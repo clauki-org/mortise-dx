@@ -27,9 +27,13 @@ create+='(function|procedure|trigger|rule)([^a-z_]|$)'
 block='do[[:space:]]+(\$|'\''|language[^a-z_])'
 procedural="(^|[^a-z_])($create|$block)"
 # BPMN cũng chở được mã: bước script, bước gọi lớp Java hay biểu thức, và listener. Biểu thức điều kiện trên nhánh
-# rẽ (${...}) vẫn được dùng, vì cổng rẽ nhánh cần nó (ADR 0022, Hệ quả).
+# rẽ (${...}) vẫn được dùng, vì cổng rẽ nhánh cần nó (ADR 0022, Hệ quả). formProperty khai trường của bước (ADR 0031)
+# chỉ được có id: thuộc tính expression, variable của nó không mang tiền tố flowable:, và expression là biểu thức
+# Flowable chạy. Chỉ bắt được khi thẻ nằm trên một dòng; scripts/workflow_fields.py (cũng trong check-fast) đọc XML
+# nên bắt cả thẻ xuống dòng.
 bpmn_code='<([A-Za-z]+:)?(scriptTask|serviceTask|sendTask|businessRuleTask|executionListener|taskListener)([^A-Za-z]|$)'
 bpmn_code+='|flowable:(class|delegateExpression|expression)='
+bpmn_code+='|<([A-Za-z]+:)?formProperty[[:space:]][^>]*(expression|variable)='
 
 errors=0
 fail() {
@@ -65,7 +69,7 @@ print(yaml.safe_load(open(sys.argv[1], encoding="utf-8"))["database"]["migration
       *.yaml | *.md) ;;
       *.bpmn20.xml)
         if grep -Eq "$bpmn_code" "$file"; then
-          fail "$file" "có bước chạy mã (scriptTask, serviceTask, listener, flowable:class...); chỉ dùng userTask"
+          fail "$file" "có bước chạy mã (scriptTask, serviceTask, listener, flowable:class, formProperty có expression hay variable...); chỉ dùng userTask"
         fi
         ;;
       "$migrations"/*.sql)

@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Một phần của ví dụ sai cùng thư mục (process.bpmn20.xml nêu luật bị phạm); scripts/contracts.sh kiểm.
+
+process: invalid-steps
+steps:
+  review:
+    form:
+      type: object
+      properties:
+        value:
+          type: string
+    actions:
+      - id: done
+        label: Xong
+        variables: {}

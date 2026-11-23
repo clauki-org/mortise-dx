@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Mortise DX contributors
+SPDX-License-Identifier: Apache-2.0
+
+Nút danh mục mở quy trình này với biến comment, mà comment là trường của bước review.
+-->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="https://mortise-dx/workflow">
+  <process id="invalid-steps" isExecutable="true">
+    <startEvent id="submitted"/>
+    <sequenceFlow id="toReview" sourceRef="submitted" targetRef="review"/>
+    <userTask id="review" flowable:candidateGroups="manager">
+      <extensionElements>
+        <flowable:formProperty id="comment"/>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="toDone" sourceRef="review" targetRef="done"/>
+    <endEvent id="done"/>
+  </process>
+</definitions>

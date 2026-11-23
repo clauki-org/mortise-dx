@@ -172,6 +172,10 @@ theo Điều 3a khoản 2, 3 NĐ 155/2025/NĐ-CP, bổ sung bởi Điều 3 NĐ 
 - Khi bảng có dòng ngưỡng trên `excessM2`, người lập khai thấp là né được cấp có thẩm quyền cao hơn, vì
   `excessM2` do người lập gửi (ADR 0028, giới hạn đã biết). Người có thẩm quyền ở cấp thấp phải đối chiếu với hồ sơ.
 - Với dòng mặc định, cùng một `manager` của xã làm được cả bước trình lẫn bước quyết định: bốn mắt chỉ loại người lập.
+- Biến người lập gửi (`title`, `facilityId`, `excessM2`) không phải trường của bước nào, nên người hoàn thành bước sau
+  vẫn ghi đè được chúng qua API ([ADR 0031](../../docs/adr/0031-step-fields.md)): workflow-api chỉ chặn trường của
+  bước. Nhánh và người nhận bước quyết định đã chọn lúc lập hồ sơ nên không đổi, nhưng tên, cơ sở và phần vượt hiện
+  trên hồ sơ thì đổi được.
 - Mọi hồ sơ rà soát, kể cả nhánh báo cáo, cần xã có dòng trong bảng phân cấp: xã tạo sau khi cài gói nhận `409` khi
   lập hồ sơ cho tới khi chạy lại `make app-install APP=facilities-commune`.
 

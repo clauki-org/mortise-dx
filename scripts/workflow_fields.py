@@ -48,6 +48,10 @@ def shape_problems(path: str, process: ET.Element) -> list[str]:
     (ADR 0022). formProperty ở nút khác userTask thì workflow-api không đọc.
     """
     errors = []
+    # Hai userTask cùng id thì một bước mất trường của bước kia; Flowable cũng từ chối deploy, nhưng muộn hơn.
+    ids = [task.get("id") for task in process.iter(f"{BPMN}userTask")]
+    for duplicate in sorted({i for i in ids if i and ids.count(i) > 1}):
+        errors.append(f"{path}: quy trình '{process.get('id')}' có hai userTask cùng id '{duplicate}'")
     owned = set()
     for task in process.iter(f"{BPMN}userTask"):
         ids = []

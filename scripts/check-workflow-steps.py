@@ -8,9 +8,11 @@
 # có nút để xử lý. BPMN của gói chỉ được dùng {{tên}} đã khai trong `settings` của app.yaml cùng gói
 # (ADR 0019); BPMN của lõi không có settings. Bước đọc bảng phân cấp thẩm quyền phải có dòng gốc khai sẵn
 # (scripts/workflow_authorities.py, ADR 0028). Trường mà khai báo của một bước gửi phải khớp formProperty của
-# userTask đó (scripts/workflow_fields.py, ADR 0031). Gọi từ scripts/contracts.sh: --bpmn <tệp BPMN...>
-# --steps <tệp khai báo...> [--authorities <bảng phân cấp của lõi...>] [--packages <thư mục gói...>]; bảng của
-# gói đọc từ app.yaml.
+# userTask đó (scripts/workflow_fields.py), và biến mà iot-bridge hay nút danh mục gửi lúc khởi tạo không được
+# trùng trường của bước (scripts/workflow_starts.py, ADR 0031). Gọi từ scripts/contracts.sh:
+# --bpmn <tệp BPMN...> --steps <tệp khai báo...> [--authorities <bảng phân cấp của lõi...>]
+# [--rules <luật ngưỡng của lõi...>] [--catalogs <cấu hình danh mục...>] [--packages <thư mục gói...>]; bảng,
+# luật và danh mục của gói đọc từ app.yaml.
 
 import argparse
 import os
@@ -19,6 +21,7 @@ import xml.etree.ElementTree as ET
 
 import workflow_authorities
 import workflow_fields
+import workflow_starts
 import yaml
 from workflow_settings import placeholders
 
@@ -137,6 +140,9 @@ def main() -> int:
     parser.add_argument("--bpmn", nargs="*", default=[], required=True)
     parser.add_argument("--steps", nargs="*", default=[], required=True)
     parser.add_argument("--authorities", nargs="*", default=[])
+    # Luật ngưỡng và danh mục không thuộc gói nào (của lõi, hay của ví dụ sai); của gói đọc từ app.yaml.
+    parser.add_argument("--rules", nargs="*", default=[])
+    parser.add_argument("--catalogs", nargs="*", default=[])
     # Thư mục gói có bảng phân cấp phải kiểm dù không có BPMN nào.
     parser.add_argument("--packages", nargs="*", default=[])
     args = parser.parse_args()
@@ -147,6 +153,7 @@ def main() -> int:
         errors += settings_problems(args.bpmn)
         errors += workflow_authorities.problems(roots, args.authorities, args.packages)
         errors += workflow_fields.problems(roots, declared_steps(args.steps))
+        errors += workflow_starts.problems(roots, args.rules, args.catalogs, args.packages)
     except Unreadable as error:
         errors = [str(error)]
     for error in errors:
