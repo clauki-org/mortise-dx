@@ -15,7 +15,12 @@ Người có vai trò manager trong xã ghi kết quả kiểm tra. Khai báo b�
     <sequenceFlow id="toInspect" sourceRef="opened" targetRef="inspect"/>
 
     <!-- Hạn 1 ngày: độ ẩm cao kéo dài làm hỏng hồ sơ giấy, nên việc này không để lâu như việc duyệt thường. -->
-    <userTask id="inspect" name="Kiểm tra kho lưu trữ" flowable:candidateGroups="manager" flowable:dueDate="P1D"/>
+    <userTask id="inspect" name="Kiểm tra kho lưu trữ" flowable:candidateGroups="manager" flowable:dueDate="P1D">
+      <extensionElements>
+        <flowable:formProperty id="finding"/>
+        <flowable:formProperty id="inspected"/>
+      </extensionElements>
+    </userTask>
     <sequenceFlow id="toDone" sourceRef="inspect" targetRef="inspected"/>
 
     <endEvent id="inspected" name="Đã kiểm tra"/>

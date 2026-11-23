@@ -50,6 +50,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0027](0027-data-assistant-guarded-graphql.md) | Trợ lý hỏi dữ liệu: câu GraphQL chỉ đọc qua guard trên cây cú pháp, chạy qua Hasura bằng token người hỏi; bảng, cột được phép do mục menu khai | Chấp nhận |
 | [0028](0028-step-authority-table.md) | Vai trò của một bước lấy từ bảng phân cấp theo tenant; workflow-api đọc lúc khởi tạo bằng vai trò CSDL chỉ đọc, tenant cha sửa, bước đọc bảng cần OTP với mọi vai trò | Chấp nhận |
 | [0030](0030-form-component.md) | Thành phần biểu mẫu: cấu hình riêng dịch sang rjsf, khởi tạo quy trình hoặc thêm dòng của gói, Idempotency-Key đổi theo dữ liệu, check-fast kiểm theo gói | Chấp nhận |
+| [0031](0031-step-fields.md) | Trường của một bước chỉ do người làm bước đó ghi: userTask khai trường bằng `flowable:formProperty`, workflow-api từ chối người lập và người làm bước khác gửi nó | Chấp nhận |
 
 ## Quyết định còn mở
 

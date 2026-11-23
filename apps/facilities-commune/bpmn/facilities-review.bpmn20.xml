@@ -37,7 +37,12 @@ lập, người duyệt đối chiếu với hồ sơ; lấy số ở phía máy
     <!-- Hai bước duyệt cùng luật, khác nhánh. Người lập không đặt sẵn được approved: cổng sau bước duyệt đọc biến này
          nên workflow-api từ chối hồ sơ lập kèm approved (ADR 0025). -->
     <userTask id="review_report" name="Duyệt báo cáo tiếp tục sử dụng" flowable:candidateGroups="manager"
-              flowable:category="four-eyes"/>
+              flowable:category="four-eyes">
+      <extensionElements>
+        <flowable:formProperty id="comment"/>
+        <flowable:formProperty id="approved"/>
+      </extensionElements>
+    </userTask>
     <sequenceFlow id="toReportDecision" sourceRef="review_report" targetRef="report_decision"/>
     <exclusiveGateway id="report_decision" default="toReportRejected"/>
     <sequenceFlow id="toRetained" sourceRef="report_decision" targetRef="retained">
@@ -48,7 +53,12 @@ lập, người duyệt đối chiếu với hồ sơ; lấy số ở phía máy
     <endEvent id="rejected_report" name="Trả lại"/>
 
     <userTask id="review_publish" name="Duyệt để công khai" flowable:candidateGroups="manager"
-              flowable:category="four-eyes"/>
+              flowable:category="four-eyes">
+      <extensionElements>
+        <flowable:formProperty id="comment"/>
+        <flowable:formProperty id="approved"/>
+      </extensionElements>
+    </userTask>
     <sequenceFlow id="toPublishDecision" sourceRef="review_publish" targetRef="publish_decision"/>
     <exclusiveGateway id="publish_decision" default="toPublishRejected"/>
     <sequenceFlow id="toPublication" sourceRef="publish_decision" targetRef="publication">
@@ -65,16 +75,25 @@ lập, người duyệt đối chiếu với hồ sơ; lấy số ở phía máy
     </intermediateCatchEvent>
     <sequenceFlow id="toSubmit" sourceRef="publication" targetRef="submit"/>
 
-    <userTask id="submit" name="Trình người có thẩm quyền" flowable:candidateGroups="manager"/>
+    <userTask id="submit" name="Trình người có thẩm quyền" flowable:candidateGroups="manager">
+      <extensionElements>
+        <flowable:formProperty id="recipient"/>
+        <flowable:formProperty id="comment"/>
+        <flowable:formProperty id="submitted"/>
+      </extensionElements>
+    </userTask>
     <sequenceFlow id="toDecide" sourceRef="submit" targetRef="decide"/>
 
-    <!-- Bước quyết định chỉ ghi nhận quyết định, không có cổng rẽ nhánh phía sau: workflow-api cho người hoàn thành
-         một bước gửi mọi biến, nên người trình đặt sẵn được biến mà một cổng sau bước này đọc (ADR 0025, chưa chặn
-         giữa hai bước). Người lập không tự quyết định hồ sơ của mình (bốn mắt). Nội dung quyết định (decision)
-         thì chưa được bảo vệ: người lập, người duyệt hay người trình gửi sẵn được nó, vì lõi chỉ chặn biến mà cổng
-         rẽ nhánh đọc; chặn ở lõi là kế hoạch (README của gói, mục Giới hạn). -->
+    <!-- Bước quyết định chỉ ghi nhận quyết định, không có cổng rẽ nhánh phía sau. Người lập không tự quyết định hồ
+         sơ của mình (bốn mắt). decision và decided là trường của bước này (formProperty), nên workflow-api từ chối
+         người lập, người duyệt hay người trình gửi sẵn chúng (ADR 0031). -->
     <userTask id="decide" name="Quyết định của người có thẩm quyền" flowable:candidateGroups="${authority_decide}"
-              flowable:category="four-eyes"/>
+              flowable:category="four-eyes">
+      <extensionElements>
+        <flowable:formProperty id="decision"/>
+        <flowable:formProperty id="decided"/>
+      </extensionElements>
+    </userTask>
     <sequenceFlow id="toDecided" sourceRef="decide" targetRef="decided"/>
     <endEvent id="decided" name="Đã có quyết định"/>
   </process>

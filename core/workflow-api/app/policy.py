@@ -5,6 +5,7 @@
 # đầy đủ; main.py lấy dữ liệu từ Flowable rồi hỏi các hàm ở đây.
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 FOUR_EYES = "four-eyes"
@@ -108,6 +109,40 @@ def check_not_preset(variables: dict[str, object], decisions: frozenset[str]) ->
             400,
             f"Không được đặt sẵn biến do người xử lý bước quyết định: {', '.join(sorted(preset))}. "
             "Biến này chỉ gửi khi hoàn thành bước.",
+        )
+
+
+def check_start_fields(variables: dict[str, object], fields: Mapping[str, frozenset[str]]) -> None:
+    """Người lập không được gửi trường của một bước (ADR 0031): nội dung của bước chỉ người làm bước ghi.
+
+    Gửi sẵn được thì người làm bước bỏ trống trường đó là nội dung người lập đặt thành nội dung của bước.
+    """
+    _refuse_fields(variables, fields, frozenset(), "Người lập không gửi được trường của một bước")
+
+
+def check_step_fields(variables: dict[str, object], fields: Mapping[str, frozenset[str]], step: str) -> None:
+    """Người hoàn thành bước `step` không được gửi trường của bước khác (ADR 0031).
+
+    Trường mà nhiều bước cùng khai thì mỗi bước đó đều ghi được. Biến không là trường của bước nào vẫn gửi
+    được như trước.
+    """
+    own = fields.get(step, frozenset())
+    _refuse_fields(variables, fields, own, f"Hoàn thành bước '{step}' không gửi được trường của bước khác")
+
+
+def _refuse_fields(
+    variables: dict[str, object], fields: Mapping[str, frozenset[str]], own: frozenset[str], refusal: str
+) -> None:
+    foreign = {
+        name: sorted(other for other, names in fields.items() if name in names)
+        for name in sorted(variables.keys() - own)
+        if any(name in names for names in fields.values())
+    }
+    if foreign:
+        listed = "; ".join(f"{name} (bước {', '.join(steps)})" for name, steps in foreign.items())
+        raise Denied(
+            400,
+            f"{refusal}: {listed}. Trường của một bước chỉ do người hoàn thành bước đó gửi.",
         )
 
 

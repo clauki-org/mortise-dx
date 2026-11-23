@@ -126,11 +126,12 @@ lập hồ sơ ─┬─ vượt ≤ ngưỡng ─ review_report ─┬─ duy�
               thiếu hay âm                      └─ trả lại ─ trả lại
 ```
 
-Bước `decide` chỉ có một nút, "Ghi nhận quyết định", với nội dung quyết định ở trường `decision`. Sau bước này không
-có cổng rẽ nhánh: workflow-api cho người hoàn thành một bước gửi mọi biến, nên người duyệt hay người trình đặt sẵn
-được biến mà một cổng sau `decide` đọc ([ADR 0025](../../docs/adr/0025-decision-variables.md), chưa chặn giữa hai
-bước). Người lập không tự quyết định hồ sơ của mình (bốn mắt). Nội dung quyết định thì chưa được bảo vệ như vậy (mục
-Giới hạn).
+Bước `decide` chỉ có một nút, "Ghi nhận quyết định", với nội dung quyết định ở trường `decision`; sau bước này không
+có cổng rẽ nhánh. Người lập không tự quyết định hồ sơ của mình (bốn mắt). Mỗi bước khai trong BPMN trường nó ghi
+(`flowable:formProperty`, [ADR 0031](../../docs/adr/0031-step-fields.md)): `decision` và `decided` là trường của
+`decide`, nên workflow-api từ chối người lập gửi chúng lúc lập hồ sơ, và người duyệt hay người trình gửi chúng khi
+hoàn thành bước của mình. `comment` là trường chung của hai bước duyệt và bước trình, nên bước nào trong ba bước đó
+cũng ghi được.
 
 ### Bảng phân cấp của bước quyết định
 
@@ -156,7 +157,8 @@ workflow-api chọn dòng lúc lập hồ sơ và đặt biến `authority_decid
 `tests/workflow.sh` kiểm: quản trị tỉnh (`admin.tinh`) đổi dòng của xã A sang `tenant_admin`, hồ sơ lập sau có bước
 `decide` ở `tenant_admin`, hồ sơ lập trước vẫn ở `manager`; `admin.a` không sửa được bảng và bị từ chối ở bước
 `decide` vì thiếu OTP; `admin2.a` và `manager.a` đăng nhập kèm OTP thì ghi nhận được quyết định. Bài đặt lại dòng về
-`manager` ngay sau khi lập hồ sơ thứ hai.
+`manager` ngay sau khi lập hồ sơ thứ hai. Bài cũng kiểm lập hồ sơ kèm `decision`, và hoàn thành bước `submit` kèm
+`decision`, đều nhận `400`.
 
 Ngưỡng và thời hạn là `settings` trong `app.yaml` (ADR 0019): `review_threshold_m2: 300`, `publication_period: P30D`
 theo Điều 3a khoản 2, 3 NĐ 155/2025/NĐ-CP, bổ sung bởi Điều 3 NĐ 369/2026/NĐ-CP. Demo và CI ghi đè thời hạn khi cài:
@@ -170,12 +172,6 @@ theo Điều 3a khoản 2, 3 NĐ 155/2025/NĐ-CP, bổ sung bởi Điều 3 NĐ 
 - Khi bảng có dòng ngưỡng trên `excessM2`, người lập khai thấp là né được cấp có thẩm quyền cao hơn, vì
   `excessM2` do người lập gửi (ADR 0028, giới hạn đã biết). Người có thẩm quyền ở cấp thấp phải đối chiếu với hồ sơ.
 - Với dòng mặc định, cùng một `manager` của xã làm được cả bước trình lẫn bước quyết định: bốn mắt chỉ loại người lập.
-- **Nội dung quyết định đặt sẵn được.** Người lập (khi lập hồ sơ), người duyệt hay người trình (khi hoàn thành bước
-  của mình) gửi được `decision` và `decided`, vì lõi chỉ chặn đặt sẵn biến mà cổng rẽ nhánh đọc (ADR 0025), và không
-  cổng nào đọc hai biến này. Trường `decision` bắt buộc chỉ do giao diện ép; workflow-api không kiểm biểu mẫu, nên
-  người có thẩm quyền hoàn thành bước qua API mà không gửi `decision` thì nội dung người khác đặt sẵn thành quyết
-  định trên hồ sơ. Trên giao diện, nội dung đặt sẵn hiện trong thông tin hồ sơ của bước `decide`, nên người có thẩm
-  quyền phải tự nhập quyết định của mình chứ không chép lại. Chặn ở lõi là kế hoạch.
 - Mọi hồ sơ rà soát, kể cả nhánh báo cáo, cần xã có dòng trong bảng phân cấp: xã tạo sau khi cài gói nhận `409` khi
   lập hồ sơ cho tới khi chạy lại `make app-install APP=facilities-commune`.
 

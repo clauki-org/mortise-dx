@@ -6,10 +6,11 @@
 # diện: phần vượt trên ngưỡng thì sau khi duyệt chờ hết thời hạn công khai rồi mới sang bước trình và bước quyết
 # định, từ ngưỡng trở xuống thì duyệt xong là kết thúc; người lập không tự duyệt; biến gửi kèm khi lập hay khi duyệt
 # không đổi được nhánh. Bảng phân cấp (ADR 0028): quản trị tỉnh đổi dòng của xã A thì hồ sơ lập sau có bước quyết
-# định ở vai trò mới, hồ sơ đã lập giữ vai trò cũ, và bước quyết định cần OTP. Ngưỡng 300 m² là giá trị trong
-# app.yaml; thời hạn công khai đọc từ quy trình đã deploy (ADR 0019): chỉ chờ hết hạn khi gói được cài với thời hạn
-# ngắn, ví dụ make app-install APP=facilities-commune SETTINGS=publication_period=PT20S, còn không thì báo SKIP phần
-# đó. Mọi hồ sơ tạo ra đều được đưa tới kết thúc hoặc bị xóa; dòng của xã A được đặt lại về manager.
+# định ở vai trò mới, hồ sơ đã lập giữ vai trò cũ, và bước quyết định cần OTP. Trường của bước (ADR 0031): người lập
+# hay người trình không gửi sẵn được nội dung quyết định. Ngưỡng 300 m² là giá trị trong app.yaml; thời hạn công
+# khai đọc từ quy trình đã deploy (ADR 0019): chỉ chờ hết hạn khi gói được cài với thời hạn ngắn, ví dụ
+# make app-install APP=facilities-commune SETTINGS=publication_period=PT20S, còn không thì báo SKIP phần đó. Mọi
+# hồ sơ tạo ra đều được đưa tới kết thúc hoặc bị xóa; dòng của xã A được đặt lại về manager.
 # smoke.sh của gói gọi tệp này; cần lõi đang chạy, đã `make seed` và đã cài gói.
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
@@ -168,6 +169,9 @@ else
   else
     check "Hết thời hạn công khai: hồ sơ sang bước trình người có thẩm quyền" \
       "$(step_of "$above") $(step_of "$later")" "submit submit"
+    # Trường của bước (ADR 0031): decision là trường của bước quyết định, người trình không ghi sẵn được.
+    check "Người trình không gửi được nội dung quyết định khi hoàn thành bước trình" \
+      "$(complete "$manager" "$above" '{"recipient": "Đơn vị kiểm thử", "submitted": true, "decision": "Đặt sẵn"}')" 400
     for instance in "$above" "$later"; do
       complete "$manager" "$instance" '{"recipient": "Đơn vị kiểm thử", "submitted": true}' >/dev/null
     done
@@ -221,6 +225,12 @@ check "Phần vượt không phải số: không lập được hồ sơ" \
 check "Không lập được hồ sơ đặt sẵn quyết định của người duyệt" \
   "$(api "$user" POST "/processes/$process/instances" \
     "{\"variables\": {\"title\": \"$title F\", \"excessM2\": 100, \"approved\": true}}" | tail -1)" 400
+
+# Nội dung quyết định là trường của bước quyết định (ADR 0031): người lập không gửi sẵn được, kể cả khi không cổng
+# nào đọc nó.
+check "Không lập được hồ sơ đặt sẵn nội dung quyết định của người có thẩm quyền" \
+  "$(api "$user" POST "/processes/$process/instances" \
+    "{\"variables\": {\"title\": \"$title H\", \"excessM2\": 100, \"decision\": \"Đặt sẵn\"}}" | tail -1)" 400
 
 # Trả lại để các hồ sơ còn lại kết thúc.
 for instance in "$just" "$missing" "$negative"; do

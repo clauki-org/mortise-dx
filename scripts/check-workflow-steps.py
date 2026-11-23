@@ -7,7 +7,8 @@
 # biểu mẫu có trong biểu mẫu. Thiếu bước này, task của bước quên khai báo hiện ra trên bảng việc mà không
 # có nút để xử lý. BPMN của gói chỉ được dùng {{tên}} đã khai trong `settings` của app.yaml cùng gói
 # (ADR 0019); BPMN của lõi không có settings. Bước đọc bảng phân cấp thẩm quyền phải có dòng gốc khai sẵn
-# (scripts/workflow_authorities.py, ADR 0028). Gọi từ scripts/contracts.sh: --bpmn <tệp BPMN...>
+# (scripts/workflow_authorities.py, ADR 0028). Trường mà khai báo của một bước gửi phải khớp formProperty của
+# userTask đó (scripts/workflow_fields.py, ADR 0031). Gọi từ scripts/contracts.sh: --bpmn <tệp BPMN...>
 # --steps <tệp khai báo...> [--authorities <bảng phân cấp của lõi...>] [--packages <thư mục gói...>]; bảng của
 # gói đọc từ app.yaml.
 
@@ -17,6 +18,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 import workflow_authorities
+import workflow_fields
 import yaml
 from workflow_settings import placeholders
 
@@ -69,6 +71,15 @@ def read_declaration(path: str) -> dict:
     if not isinstance(declared, dict) or "process" not in declared or "steps" not in declared:
         raise Unreadable(f"{path}: không phải khai báo bước; kiểm lại theo contracts/workflow.schema.json")
     return declared
+
+
+def declared_steps(declarations: list[str]) -> dict[str, tuple[str, dict]]:
+    """Khóa quy trình -> (tệp khai báo, các bước), theo tệp đầu tiên khai quy trình; tệp trùng đã bị báo."""
+    found: dict[str, tuple[str, dict]] = {}
+    for path in declarations:
+        declared = read_declaration(path)
+        found.setdefault(declared["process"], (path, declared["steps"]))
+    return found
 
 
 def step_problems(path: str, name: str, step: dict) -> list[str]:
@@ -135,6 +146,7 @@ def main() -> int:
         errors += problems(processes, args.steps)
         errors += settings_problems(args.bpmn)
         errors += workflow_authorities.problems(roots, args.authorities, args.packages)
+        errors += workflow_fields.problems(roots, declared_steps(args.steps))
     except Unreadable as error:
         errors = [str(error)]
     for error in errors:

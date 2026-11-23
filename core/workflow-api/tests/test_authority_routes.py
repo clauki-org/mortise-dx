@@ -53,6 +53,7 @@ def stack(monkeypatch) -> dict:
             "tenantId": "xa-a",
             "assignee": None,
             "category": None,
+            "processDefinitionId": "core-authority:1:a",
             "taskDefinitionKey": "decide",
             "variables": state["task_variables"],
         }
@@ -61,6 +62,9 @@ def stack(monkeypatch) -> dict:
     monkeypatch.setattr(flowable, "start", start)
     monkeypatch.setattr(
         flowable, "definition", lambda _key, _tenant: flowable.Definition(frozenset(), frozenset({"decide"}))
+    )
+    monkeypatch.setattr(
+        flowable, "definition_of", lambda _id: flowable.Definition(frozenset(), frozenset({"decide"}))
     )
     monkeypatch.setattr(flowable, "task", task)
     monkeypatch.setattr(flowable, "candidate_groups", lambda _id: frozenset({"tenant_admin"}))
