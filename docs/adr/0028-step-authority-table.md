@@ -109,5 +109,5 @@ tenant và do người sửa lúc chạy, nên không nằm trong BPMN được.
   tài khoản nào có `otp_required`, nên tenant cha đổi dòng không được báo trước điều này.
 - **workflow-api phụ thuộc CSDL khi khởi tạo quy trình có bước đọc bảng.** CSDL lỗi thì quy trình đó trả 503; quy
   trình khác không bị ảnh hưởng.
-- Gói `facilities-commune` chưa dùng bảng: bước "Trình người có thẩm quyền" vẫn viết `manager`. Chuyển bước đó sang
-  bảng là việc của gói.
+- Gói `facilities-commune` dùng bảng cho bước `decide` ("Quyết định của người có thẩm quyền") sau bước trình của
+  quy trình rà soát; bước trình vẫn là của `manager` trong xã.

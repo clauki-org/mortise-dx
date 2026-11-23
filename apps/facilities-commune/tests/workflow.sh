@@ -3,12 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Kiểm quy trình rà soát của gói (bpmn/facilities-review.bpmn20.xml) qua cổng, bằng API quy trình như giao
-# diện: phần vượt trên ngưỡng thì sau khi duyệt chờ hết thời hạn công khai rồi mới sang bước trình, từ ngưỡng trở
-# xuống thì duyệt xong là kết thúc; người lập không tự duyệt; biến gửi kèm khi lập hay khi duyệt không đổi được
-# nhánh. Ngưỡng 300 m² là giá trị trong app.yaml; thời hạn công khai đọc từ quy trình đã deploy (ADR 0019): chỉ chờ
-# hết hạn khi gói được cài với thời hạn ngắn, ví dụ make app-install APP=facilities-commune
-# SETTINGS=publication_period=PT20S, còn không thì báo SKIP phần đó. Mọi hồ sơ tạo ra đều được đưa tới kết thúc
-# hoặc bị xóa.
+# diện: phần vượt trên ngưỡng thì sau khi duyệt chờ hết thời hạn công khai rồi mới sang bước trình và bước quyết
+# định, từ ngưỡng trở xuống thì duyệt xong là kết thúc; người lập không tự duyệt; biến gửi kèm khi lập hay khi duyệt
+# không đổi được nhánh. Bảng phân cấp (ADR 0028): quản trị tỉnh đổi dòng của xã A thì hồ sơ lập sau có bước quyết
+# định ở vai trò mới, hồ sơ đã lập giữ vai trò cũ, và bước quyết định cần OTP. Ngưỡng 300 m² là giá trị trong
+# app.yaml; thời hạn công khai đọc từ quy trình đã deploy (ADR 0019): chỉ chờ hết hạn khi gói được cài với thời hạn
+# ngắn, ví dụ make app-install APP=facilities-commune SETTINGS=publication_period=PT20S, còn không thì báo SKIP phần
+# đó. Mọi hồ sơ tạo ra đều được đưa tới kết thúc hoặc bị xóa; dòng của xã A được đặt lại về manager.
 # smoke.sh của gói gọi tệp này; cần lõi đang chạy, đã `make seed` và đã cài gói.
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
@@ -47,24 +48,44 @@ file() {
   api "$user" POST "/processes/$process/instances" "{\"variables\": $1}" | sed '$d' | jq -r .id
 }
 
-# step_of INSTANCE: bước đang chờ người duyệt của hồ sơ (rỗng nếu không có bước nào).
-step_of() {
-  api "$manager" GET /tasks | sed '$d' | jq -r --arg i "$1" '[.[] | select(.processInstanceId == $i) | .step] | join(",")'
+# pending INSTANCE FIELD [TOKEN]: trường FIELD của các việc đang chờ của hồ sơ mà TOKEN thấy (mặc định manager.a),
+# nối bằng dấu phẩy; rỗng nếu không thấy việc nào.
+pending() {
+  api "${3:-$manager}" GET /tasks | sed '$d' |
+    jq -r --arg i "$1" --arg f "$2" '[.[] | select(.processInstanceId == $i) | .[$f]] | join(",")'
+}
+step_of() { pending "$1" step "${2:-}"; }
+task_of() { pending "$1" id "${2:-}"; }
+# Vai trò workflow-api đặt cho bước quyết định lúc lập hồ sơ, đọc trên việc đang chờ mà manager.a thấy.
+decider_of() {
+  api "$manager" GET /tasks | sed '$d' |
+    jq -r --arg i "$1" '[.[] | select(.processInstanceId == $i) | .variables.authority_decide][0] // ""'
 }
 
-task_of() {
-  api "$manager" GET /tasks | sed '$d' | jq -r --arg i "$1" '[.[] | select(.processInstanceId == $i) | .id][0] // ""'
-}
-
-# complete TOKEN INSTANCE VARIABLES_JSON: hoàn thành bước đang chờ của hồ sơ, in mã HTTP.
+# complete TOKEN INSTANCE VARIABLES_JSON: TOKEN hoàn thành bước đang chờ của hồ sơ mà chính TOKEN thấy, in mã HTTP.
 complete() {
-  api "$1" POST "/tasks/$(task_of "$2")/complete" "{\"variables\": $3}" | tail -1
+  api "$1" POST "/tasks/$(task_of "$2" "$1")/complete" "{\"variables\": $3}" | tail -1
 }
 
 status() { api "$manager" GET "/instances/$1" | sed '$d' | jq -r '"\(.ended) \(.outcome)"'; }
 
-# Gọi thẳng Flowable trong máy chủ bằng tài khoản rest-admin, như scripts/smoke.sh của lõi, chỉ ở hai chỗ API quy
-# trình qua cổng không làm được: đọc thời hạn công khai đã deploy, và xóa hồ sơ không ai trong xã còn duyệt được.
+# set_decider TOKEN VAI_TRÒ: đổi vai trò của dòng gốc bước quyết định của xã A qua GraphQL với vai trò tenant_admin,
+# như quản trị tỉnh làm; in affected_rows, hoặc mã lỗi của Hasura.
+set_decider() {
+  # shellcheck disable=SC2016 # biến GraphQL, không phải biến shell
+  jq -nc --arg t "$tenant" --arg p "$process" --arg r "$2" '{query: "mutation($t: String!, $p: String!, $r: String!) {
+    update_core_step_authorities(where: {tenant_id: {_eq: $t}, process: {_eq: $p}, step: {_eq: \"decide\"},
+      rule: {_eq: \"default\"}}, _set: {role: $r}) { affected_rows } }", variables: {t: $t, p: $p, r: $r}}' |
+    curl -sS -X POST "$base/v1/graphql" -H "Authorization: Bearer $1" -H 'X-Hasura-Role: tenant_admin' \
+      -H 'Content-Type: application/json' -d @- |
+    jq -r '.data.update_core_step_authorities.affected_rows // .errors[0].extensions.code'
+}
+# Đặt lại dòng của xã A về manager như tệp mặc định của gói. Cài lại gói không ghi đè dòng đã đổi, nên lần chạy dừng
+# giữa chừng mà không đặt lại sẽ để bước quyết định của xã A ở vai trò khác cho tới khi có người sửa.
+restore_decider() { set_decider "$(token admin.tinh)" manager; }
+
+# Gọi thẳng Flowable trong máy chủ bằng tài khoản rest-admin, như scripts/smoke.sh của lõi, chỉ ở hai việc API quy
+# trình qua cổng không làm được: đọc thời hạn công khai đã deploy, và xóa hồ sơ mà bài không đưa tới kết thúc được.
 flowable() {
   curl -fsS -X "$1" -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" \
     "http://127.0.0.1:${FLOWABLE_PORT:-8083}/flowable-rest/service$2"
@@ -74,6 +95,7 @@ user=$(token user.a)
 # Người duyệt phải gửi kèm mã OTP (ADR 0011); một token dùng cho cả bài để không tốn mã.
 manager=$(token manager.a "$(uv run --quiet --no-project python scripts/otp.py next manager.a)")
 title="Rà soát kiểm thử $(date +%s)"
+admin_a=$(token admin.a)
 
 definition=$(flowable GET "/repository/process-definitions?key=$process&tenantId=$tenant&latest=true" |
   jq -r '.data[0].id // empty')
@@ -92,6 +114,9 @@ fi
 short=false
 if [[ "$period" =~ ^PT([0-9]+)S$ ]] && ((BASH_REMATCH[1] < wait_limit)); then short=true; fi
 
+# Lần chạy trước dừng giữa lúc đổi và đặt lại dòng thì dòng của xã A còn ở vai trò khác.
+restore_decider >/dev/null
+
 # Bốn mắt: manager.a có vai trò duyệt nhưng là người lập thì không tự duyệt được. Phải là người có vai trò manager,
 # vì người không có vai trò bị chặn ở bước kiểm vai trò trước khi tới quy tắc bốn mắt.
 own=$(api "$manager" POST "/processes/$process/instances" \
@@ -99,35 +124,81 @@ own=$(api "$manager" POST "/processes/$process/instances" \
 out=$(api "$manager" POST "/tasks/$(task_of "$own")/complete" '{"variables": {"approved": true}}')
 check "Người lập là manager cũng không tự duyệt hồ sơ của mình (bốn mắt)" \
   "$(tail -1 <<<"$out") $(sed '$d' <<<"$out" | jq -r '.error // "" | startswith("Quy tắc bốn mắt")')" "403 true"
-# Xã không còn manager nào khác để trả lại hồ sơ, và API quy trình không có lệnh hủy: xóa thẳng ở Flowable. Đây là
-# lần ghi duy nhất đi vòng qua cổng, chỉ trong bài kiểm; không xóa thì mỗi lần chạy, bảng việc của manager.a tích thêm
-# một hồ sơ cho tới khi gỡ gói.
+# Xã không còn manager nào khác để trả lại hồ sơ, và API quy trình không có lệnh hủy: xóa thẳng ở Flowable. Xóa hồ sơ
+# là lần ghi duy nhất đi vòng qua cổng, chỉ trong bài kiểm; không xóa thì mỗi lần chạy, bảng việc của manager.a tích
+# thêm một hồ sơ cho tới khi gỡ gói.
 flowable DELETE "/runtime/process-instances/$own" >/dev/null
 
-# Vượt 420 m², trên ngưỡng 300: bước duyệt để công khai.
+# Vượt 420 m², trên ngưỡng 300: bước duyệt để công khai. Hồ sơ A lập khi dòng của xã A là manager; quản trị tỉnh
+# đổi dòng sang tenant_admin rồi lập hồ sơ A2, rồi đặt lại ngay về manager: vai trò ghi vào hồ sơ lúc lập, nên A vẫn
+# ở manager, A2 vẫn ở tenant_admin dù dòng đã đổi lại.
 above=$(file "{\"title\": \"$title A\", \"excessM2\": 420}")
 check "Vượt 420 m² (trên ngưỡng): hồ sơ vào bước duyệt để công khai" "$(step_of "$above")" review_publish
+check "Bảng phân cấp: hồ sơ lập theo dòng mặc định có bước quyết định ở manager" "$(decider_of "$above")" manager
+check "Bảng phân cấp: quản trị xã A không sửa được bảng của chính xã mình" "$(set_decider "$admin_a" tenant_admin)" 0
+trap 'restore_decider >/dev/null || true' EXIT
+check "Bảng phân cấp: quản trị tỉnh đổi dòng của xã A sang tenant_admin" \
+  "$(set_decider "$(token admin.tinh)" tenant_admin)" 1
+later=$(file "{\"title\": \"$title A2\", \"excessM2\": 420}")
+check "Bảng phân cấp: quản trị tỉnh đặt lại dòng của xã A về manager" "$(restore_decider)" 1
+trap - EXIT
+check "Bảng phân cấp: hồ sơ lập sau khi đổi có bước quyết định ở tenant_admin, hồ sơ lập trước vẫn ở manager" \
+  "$(decider_of "$later") $(decider_of "$above")" "tenant_admin manager"
 if [[ $short == false ]]; then
   # Duyệt thì hồ sơ nằm chờ hết thời hạn thật; trả lại để hồ sơ kết thúc ngay.
   echo "SKIP  Thời hạn công khai đang deploy là '${period}', smoke chỉ chờ ${wait_limit} giây: bỏ qua phần công" \
-    "khai và trình. Kiểm cả phần này: make app-install APP=facilities-commune SETTINGS=publication_period=PT20S"
-  complete "$manager" "$above" '{"approved": false}' >/dev/null
+    "khai, trình và quyết định. Kiểm cả phần này: make app-install APP=facilities-commune" \
+    "SETTINGS=publication_period=PT20S"
+  for instance in "$above" "$later"; do complete "$manager" "$instance" '{"approved": false}' >/dev/null; done
 else
   # Người duyệt gửi kèm excessM2 = 0: nhánh đã chọn lúc lập hồ sơ nên không đổi.
   check "Người duyệt duyệt hồ sơ" "$(complete "$manager" "$above" '{"approved": true, "excessM2": 0}')" 204
+  complete "$manager" "$later" '{"approved": true}' >/dev/null
   check "Đang công khai: chưa kết thúc, chưa có bước nào cho người dùng" "$(status "$above") [$(step_of "$above")]" \
     "false null []"
+  # Hai hồ sơ công khai cùng lúc nên chỉ chờ một lần.
   waited=0
-  while [[ -z "$(step_of "$above")" && $waited -lt $wait_limit ]]; do sleep 5; waited=$((waited + 5)); done
-  if [[ -z "$(step_of "$above")" ]]; then
+  while [[ -z "$(step_of "$above")" || -z "$(step_of "$later")" ]] && ((waited < wait_limit)); do
+    sleep 5
+    waited=$((waited + 5))
+  done
+  if [[ -z "$(step_of "$above")" || -z "$(step_of "$later")" ]]; then
     echo "FAIL  Thời hạn công khai ${period} nhưng hết ${wait_limit} giây hồ sơ vẫn đang công khai"
     fail=1
   else
-    check "Hết thời hạn công khai: hồ sơ sang bước trình người có thẩm quyền" "$(step_of "$above")" submit
-    complete "$manager" "$above" '{"recipient": "Đơn vị kiểm thử", "submitted": true}' >/dev/null
-    check "Trình xong: hồ sơ kết thúc ở bước đã trình" "$(status "$above")" "true submitted"
+    check "Hết thời hạn công khai: hồ sơ sang bước trình người có thẩm quyền" \
+      "$(step_of "$above") $(step_of "$later")" "submit submit"
+    for instance in "$above" "$later"; do
+      complete "$manager" "$instance" '{"recipient": "Đơn vị kiểm thử", "submitted": true}' >/dev/null
+    done
+    check "Trình xong: hồ sơ A sang bước quyết định, manager.a thấy, admin.a không thấy" \
+      "$(step_of "$above") [$(step_of "$above" "$admin_a")]" "decide []"
+    check "Trình xong: hồ sơ A2 sang bước quyết định ở tenant_admin, admin.a thấy, manager.a không thấy" \
+      "$(step_of "$later" "$admin_a") [$(step_of "$later")]" "decide []"
+    decision='{"decision": "Quyết định kiểm thử", "decided": true}'
+    out=$(api "$admin_a" POST "/tasks/$(task_of "$later" "$admin_a")/complete" "{\"variables\": $decision}")
+    check "Bước quyết định cần OTP: admin.a (tenant_admin, đăng nhập bằng mật khẩu) bị từ chối" \
+      "$(tail -1 <<<"$out") $(sed '$d' <<<"$out" | jq -r '.error // "" | test("OTP")')" "403 true"
+    # Lớp chặn thật là kiểm vai trò khi hoàn thành, không phải bảng việc: manager.a gửi thẳng mã task (lấy qua
+    # admin.a) vẫn bị từ chối.
+    out=$(api "$manager" POST "/tasks/$(task_of "$later" "$admin_a")/complete" "{\"variables\": $decision}")
+    check "Bước quyết định ở tenant_admin: manager.a (có OTP) hoàn thành bằng mã task bị từ chối vì sai vai trò" \
+      "$(tail -1 <<<"$out") $(sed '$d' <<<"$out" | jq -r '.error // "" | startswith("Vai trò")')" "403 true"
+    # admin2.a là tenant_admin của xã A có otp_required (scripts/seed.sh), nên đăng nhập phải kèm mã OTP.
+    admin2_a=$(token admin2.a "$(uv run --quiet --no-project python scripts/otp.py next admin2.a)")
+    check "Bước quyết định: admin2.a (tenant_admin, có OTP) ghi nhận quyết định hồ sơ A2" \
+      "$(complete "$admin2_a" "$later" "$decision")" 204
+    check "Bước quyết định: manager.a (có OTP) ghi nhận quyết định hồ sơ A" \
+      "$(complete "$manager" "$above" "$decision")" 204
+    check "Ghi nhận quyết định xong: hai hồ sơ kết thúc ở đã có quyết định" "$(status "$above") $(status "$later")" \
+      "true decided true decided"
   fi
 fi
+# Hồ sơ chưa kết thúc vì một bước ở trên hỏng (hết giờ chờ công khai, bị từ chối) thì xóa: hồ sơ đang công khai không
+# trả lại được qua API, và để lại thì nó nằm trên bảng việc của xã A sau mỗi lần chạy hỏng.
+for instance in "$above" "$later"; do
+  [[ "$(status "$instance")" == true\ * ]] || flowable DELETE "/runtime/process-instances/$instance" >/dev/null
+done
 
 # Đúng bằng ngưỡng: không công khai, duyệt xong là báo cáo để tiếp tục sử dụng.
 equal=$(file "{\"title\": \"$title B\", \"excessM2\": 300}")
