@@ -1,10 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Trợ lý (ADR 0021, ADR 0027), đứng sau APISIX tại /v1/assistant. Hai đường: hỏi văn bản, nhận câu trả lời
-# kèm câu trích đã kiểm hoặc lời từ chối có lý do (pipeline.py), mô hình là Ollama ở profile `ai` hay một API
-# tương thích OpenAI theo cấu hình (providers.py); hỏi dữ liệu, chạy một câu GraphQL chỉ đọc đã qua guard bằng
-# token người hỏi và nhận bảng kèm câu đã chạy (data_run.py). Đường thứ hai không cần mô hình.
+# Trợ lý (ADR 0021, ADR 0027, ADR 0034), đứng sau APISIX tại /v1/assistant. Ba đường: hỏi văn bản, nhận câu
+# trả lời kèm câu trích đã kiểm hoặc lời từ chối có lý do (pipeline.py); chạy câu mẫu của mục hỏi dữ liệu, một
+# câu GraphQL chỉ đọc đã qua guard, bằng token người hỏi, nhận bảng kèm câu đã chạy (data_run.py), không cần
+# mô hình; hỏi dữ liệu gõ tự do, mô hình viết câu rồi câu đi cùng đường đó (data_question.py). Mô hình là
+# Ollama ở profile `ai` hay một API tương thích OpenAI theo cấu hình (providers.py).
 
 import logging
 import time
@@ -15,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from . import data_run, journal
+from . import data_question, data_run, journal
 from .auth import caller_from_token
 from .config import settings
 from .errors import Denied
@@ -23,7 +24,12 @@ from .model import Model
 from .pipeline import ask
 from .providers import configured
 from .retrieval import Caller
-from .schemas import Answer, DataAnswer, DataQuery, ErrorBody, Question
+from .schemas import Answer, DataAnswer, DataQuery, DataQuestion, ErrorBody, Question
+
+# Chỉ logger của dịch vụ ở mức cấu hình; gốc để WARNING, vì httpx ghi mỗi yêu cầu ở mức INFO. Không cấu hình
+# gì thì Python chỉ in WARNING trở lên và dòng INFO của mỗi lời gọi mô hình không tới log của container.
+logging.basicConfig(format="%(levelname)s %(name)s: %(message)s")
+logging.getLogger("assistant").setLevel(settings.log_level)
 
 # openapi_url=None: không phục vụ tài liệu qua cổng; hợp đồng nằm trong contracts/.
 app = FastAPI(
@@ -112,11 +118,7 @@ def data_queries(request: DataQuery, caller: CallerDep) -> DataAnswer:
     kèm câu truy vấn và số dòng, không kèm dòng; không ghi được thì trả 503 thay cho bảng.
     """
     started = time.monotonic()
-    text = request.question.strip()
-    if not text:
-        raise Denied(400, "Câu hỏi trống.")
-    if len(text) > settings.max_question_chars:
-        raise Denied(400, f"Câu hỏi dài quá {settings.max_question_chars} ký tự; hỏi ngắn hơn.")
+    _question_text(request.question)
     try:
         answer = data_run.answer(caller, request, data_run.data_config(caller, request.app, request.item))
     except Denied as error:
@@ -130,6 +132,53 @@ def data_queries(request: DataQuery, caller: CallerDep) -> DataAnswer:
         raise Denied(500, reason) from error
     journal.record_data(caller, request, _elapsed(started), answer)
     return answer
+
+
+@app.post(
+    "/v1/assistant/data-questions",
+    response_model=DataAnswer,
+    responses={code: {"model": ErrorBody} for code in (400, 401, 403, 404, 500, 502, 503, 504)},
+)
+def data_questions(request: DataQuestion, caller: CallerDep, chosen: ModelDep) -> DataAnswer:
+    """Trả lời câu hỏi dữ liệu gõ tự do: mô hình viết một câu GraphQL chỉ đọc, câu qua guard rồi chạy.
+
+    Mô hình chỉ nhận câu hỏi và mô tả bảng, cột của mục `item`, không nhận dòng dữ liệu. Guard từ chối thì
+    mô hình được viết lại một lần theo lý do của guard. Mô hình nói không trả lời được, guard vẫn từ chối hay
+    Hasura từ chối thì `outcome` là `refused` kèm `refused_by` (mã 200). Mô hình chưa chạy hay đang bận là
+    503, quá giờ ở lượt đầu là 504. Mỗi câu được ghi nhật ký kèm mô hình, câu truy vấn, số lượt và số dòng,
+    không kèm dòng.
+    """
+    started = time.monotonic()
+    text = _question_text(request.question)
+    progress = data_question.Progress()
+    try:
+        answer = data_question.ask(caller, request, text, chosen, progress)
+    except Denied as error:
+        if error.status >= 500:
+            journal.record_data_question(
+                caller, request, _elapsed(started), None, error.reason, progress.query, progress.attempts
+            )
+        raise
+    except Exception as error:
+        log.exception("Lỗi không lường trước khi trả lời câu hỏi dữ liệu")
+        reason = "Trợ lý gặp lỗi không lường trước; báo người vận hành xem log của assistant."
+        journal.record_data_question(
+            caller, request, _elapsed(started), None, reason, progress.query, progress.attempts
+        )
+        raise Denied(500, reason) from error
+    journal.record_data_question(caller, request, _elapsed(started), answer)
+    return answer
+
+
+def _question_text(question: str) -> str:
+    # Kiểm trước mọi lời gọi ra ngoài: câu hỏi trống hay quá dài không vào nhật ký, không tới Hasura hay mô
+    # hình.
+    text = question.strip()
+    if not text:
+        raise Denied(400, "Câu hỏi trống.")
+    if len(text) > settings.max_question_chars:
+        raise Denied(400, f"Câu hỏi dài quá {settings.max_question_chars} ký tự; hỏi ngắn hơn.")
+    return text
 
 
 def _elapsed(started: float) -> int:

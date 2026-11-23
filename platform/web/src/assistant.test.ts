@@ -21,6 +21,7 @@ import {
   MAX_DOCUMENTS,
   type ModelInfo,
   modelLine,
+  queryModelLine,
 } from "./assistant";
 
 describe("configProblems", () => {
@@ -70,6 +71,12 @@ describe("modelLine", () => {
       host: "llm.example.test",
     };
     expect(modelLine(model)).toBe("Trả lời bởi model-x, qua API llm.example.test");
+  });
+
+  it("câu hỏi dữ liệu ghi mô hình là người viết câu truy vấn", () => {
+    expect(queryModelLine({ name: "qwen3.5:4b", provider: "ollama", location: "local", host: null })).toBe(
+      "Câu truy vấn do qwen3.5:4b viết, chạy tại chỗ",
+    );
   });
 });
 
@@ -127,12 +134,26 @@ describe("hợp đồng", () => {
   it("DataAnswer và DataTable có đúng các trường của OpenAPI", () => {
     const data: Record<"DataAnswer" | "DataTable" | "DataColumn", Shape> = JSON.parse(openapiText).components.schemas;
     const table: DataTable = { title: "t", columns: [{ key: "k", label: "l" }], rows: [] };
-    const result: DataAnswer = { outcome: "data", reason: null, query: "{ }", tables: [table] };
+    const result: DataAnswer = {
+      outcome: "data",
+      reason: null,
+      query: "{ }",
+      tables: [table],
+      model: null,
+      attempts: null,
+      refused_by: null,
+    };
     const dataOutcomes = { data: true, refused: true } satisfies Record<DataAnswer["outcome"], true>;
+    const refusers = { model: true, guard: true, hasura: true } satisfies Record<
+      NonNullable<DataAnswer["refused_by"]>,
+      true
+    >;
     expect(Object.keys(result).sort()).toEqual([...data.DataAnswer.required].sort());
     expect(Object.keys(table).sort()).toEqual([...data.DataTable.required].sort());
     expect(Object.keys(table.columns[0] ?? {}).sort()).toEqual([...data.DataColumn.required].sort());
     expect(Object.keys(dataOutcomes).sort()).toEqual([...(data.DataAnswer.properties.outcome?.enum ?? [])].sort());
+    const refusedBy = data.DataAnswer.properties.refused_by as { anyOf: { enum?: string[] }[] } | undefined;
+    expect(Object.keys(refusers).sort()).toEqual([...(refusedBy?.anyOf[0]?.enum ?? [])].sort());
   });
 
   it("giới hạn của configProblems khớp hợp đồng", () => {

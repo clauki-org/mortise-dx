@@ -82,6 +82,21 @@ class DataQuery(BaseModel):
     )
 
 
+class DataQuestion(BaseModel):
+    """Câu hỏi dữ liệu gõ tự do (ADR 0034): mô hình viết câu truy vấn, câu qua cùng guard như `DataQuery`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(
+        description="Câu hỏi người dùng gõ; độ dài tối đa: ASSISTANT_MAX_QUESTION_CHARS. Không gửi bảng "
+        "hay câu truy vấn: dịch vụ đọc bảng, cột được phép từ mục `item` và mô hình viết câu."
+    )
+    app: str = Field(pattern=_SLUG, max_length=64, description="Gói của mục menu, hay `core` cho mục mẫu")
+    item: str = Field(
+        pattern=_SLUG, max_length=64, description="Mục menu `component: assistant` có khối `data`"
+    )
+
+
 class DataColumn(BaseModel):
     key: str = Field(description="Khóa của ô trong mỗi dòng: tên cột, hay <quan hệ>.<cột>")
     label: str = Field(description="Tiêu đề cột lấy từ cấu hình của gói")
@@ -99,7 +114,29 @@ class DataTable(BaseModel):
 
 
 class DataAnswer(BaseModel):
+    """Kết quả của cả câu mẫu (`/data-queries`) và câu hỏi gõ tự do (`/data-questions`)."""
+
+    # Ba trường của câu hỏi gõ tự do có mặc định null cho câu mẫu, nhưng phản hồi luôn mang chúng: OpenAPI ghi
+    # là bắt buộc để giao diện không phải đoán trường vắng hay null.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     outcome: Literal["data", "refused"]
     reason: str | None = Field(description="Lý do từ chối, hiển thị được cho người dùng; null khi có dữ liệu")
-    query: str = Field(description="Câu truy vấn đã chạy, hay câu bị từ chối; đúng chữ, không sửa")
+    query: str = Field(
+        description="Câu truy vấn đã chạy, hay câu bị từ chối; đúng chữ, không sửa. Chuỗi rỗng khi mô hình "
+        "không viết câu nào (`refused_by` là `model`)"
+    )
     tables: list[DataTable] = Field(description="Bảng kết quả; rỗng khi từ chối")
+    model: ModelInfo | None = Field(
+        default=None, description="Mô hình đã viết câu truy vấn; null với câu mẫu (không qua mô hình)"
+    )
+    attempts: int | None = Field(
+        default=None,
+        description="Số lượt mô hình viết câu: 1, hay 2 khi guard từ chối câu đầu và mô hình viết lại; null "
+        "với câu mẫu",
+    )
+    refused_by: Literal["model", "guard", "hasura"] | None = Field(
+        default=None,
+        description="Bước đã từ chối câu hỏi gõ tự do: mô hình nói không trả lời được, guard chặn câu mô "
+        "hình viết, hay Hasura từ chối câu đã qua guard; null khi có dữ liệu và với câu mẫu",
+    )

@@ -108,9 +108,24 @@ curl -fsS -X POST http://localhost:9080/v1/assistant/data-queries \
   -d '{"question":"Có những văn bản mẫu nào?","app":"core","item":"ask-data-example","query":"{ platform_knowledge_documents(order_by: {document_id: asc}, limit: 20) { document_id title } }"}'
 ```
 
+Câu hỏi gõ tự do ([ADR 0034](adr/0034-model-written-guarded-graphql.md)) đi qua `POST /v1/assistant/data-questions` với
+thân chỉ gồm câu hỏi, `app` và `item`: mô hình viết một câu GraphQL từ câu hỏi và mô tả bảng, cột của mục (không thấy
+dòng dữ liệu nào), câu đó qua cùng guard rồi chạy như trên. Guard từ chối thì mô hình được viết lại một lần theo lý do
+của guard, trong cùng hạn `ASSISTANT_TIMEOUT_SECONDS`. Phản hồi cùng dạng như trên, thêm `model` (mô hình đã viết câu),
+`attempts` (1 hay 2) và `refused_by` khi từ chối: `model` (mô hình nói không trả lời được; `query` rỗng, không chạy gì),
+`guard` (câu cuối vẫn không qua guard, kèm lý do của guard), `hasura` (lý do chung). `/data-queries` trả ba trường đó là
+null. Mô hình chưa chạy, cấu hình sai hay đang bận là 503, lời gọi đầu quá giờ là 504, mô hình trả sai dạng hay dừng vì
+hết `ASSISTANT_NUM_PREDICT` token là 502.
+
+```bash
+curl -fsS -X POST http://localhost:9080/v1/assistant/data-questions \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"question":"Đơn vị mình có bao nhiêu văn bản mẫu?","app":"core","item":"ask-data-example"}'
+```
+
 Câu hỏi dữ liệu cũng có một dòng ở `platform_assistant_questions`: `documents` rỗng, `item` là mục menu, `query` là câu
 đã chạy hay bị từ chối, `row_count` là số dòng trả về; dòng kết quả không được lưu. Câu mẫu chạy không qua mô hình nên `model` và
-`attempts` trống.
+`attempts` trống. Câu gõ tự do ghi mô hình theo cấu hình và `attempts`; `query` trống khi mô hình không viết câu nào.
 
 Văn bản cho trợ lý hỏi văn bản (`contracts/knowledge.schema.json`, [ADR 0021](adr/0021-document-assistant.md)) nằm ở
 `platform_knowledge_documents` (một dòng mỗi văn bản: tên, nguồn, băm và ngày tải bản gốc) và

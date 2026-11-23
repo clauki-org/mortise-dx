@@ -102,7 +102,31 @@
         "type": "object"
       },
       "DataAnswer": {
+        "description": "Kết quả của cả câu mẫu (`/data-queries`) và câu hỏi gõ tự do (`/data-questions`).",
         "properties": {
+          "attempts": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Số lượt mô hình viết câu: 1, hay 2 khi guard từ chối câu đầu và mô hình viết lại; null với câu mẫu",
+            "title": "Attempts"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mô hình đã viết câu truy vấn; null với câu mẫu (không qua mô hình)"
+          },
           "outcome": {
             "enum": [
               "data",
@@ -112,7 +136,7 @@
             "type": "string"
           },
           "query": {
-            "description": "Câu truy vấn đã chạy, hay câu bị từ chối; đúng chữ, không sửa",
+            "description": "Câu truy vấn đã chạy, hay câu bị từ chối; đúng chữ, không sửa. Chuỗi rỗng khi mô hình không viết câu nào (`refused_by` là `model`)",
             "title": "Query",
             "type": "string"
           },
@@ -128,6 +152,23 @@
             "description": "Lý do từ chối, hiển thị được cho người dùng; null khi có dữ liệu",
             "title": "Reason"
           },
+          "refused_by": {
+            "anyOf": [
+              {
+                "enum": [
+                  "model",
+                  "guard",
+                  "hasura"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Bước đã từ chối câu hỏi gõ tự do: mô hình nói không trả lời được, guard chặn câu mô hình viết, hay Hasura từ chối câu đã qua guard; null khi có dữ liệu và với câu mẫu",
+            "title": "Refused By"
+          },
           "tables": {
             "description": "Bảng kết quả; rỗng khi từ chối",
             "items": {
@@ -141,7 +182,10 @@
           "outcome",
           "reason",
           "query",
-          "tables"
+          "tables",
+          "model",
+          "attempts",
+          "refused_by"
         ],
         "title": "DataAnswer",
         "type": "object"
@@ -203,6 +247,38 @@
           "query"
         ],
         "title": "DataQuery",
+        "type": "object"
+      },
+      "DataQuestion": {
+        "additionalProperties": false,
+        "description": "Câu hỏi dữ liệu gõ tự do (ADR 0034): mô hình viết câu truy vấn, câu qua cùng guard như `DataQuery`.",
+        "properties": {
+          "app": {
+            "description": "Gói của mục menu, hay `core` cho mục mẫu",
+            "maxLength": 64,
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "title": "App",
+            "type": "string"
+          },
+          "item": {
+            "description": "Mục menu `component: assistant` có khối `data`",
+            "maxLength": 64,
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "title": "Item",
+            "type": "string"
+          },
+          "question": {
+            "description": "Câu hỏi người dùng gõ; độ dài tối đa: ASSISTANT_MAX_QUESTION_CHARS. Không gửi bảng hay câu truy vấn: dịch vụ đọc bảng, cột được phép từ mục `item` và mô hình viết câu.",
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question",
+          "app",
+          "item"
+        ],
+        "title": "DataQuestion",
         "type": "object"
       },
       "DataTable": {
@@ -538,6 +614,143 @@
           }
         },
         "summary": "Data Queries"
+      }
+    },
+    "/v1/assistant/data-questions": {
+      "post": {
+        "description": "Trả lời câu hỏi dữ liệu gõ tự do: mô hình viết một câu GraphQL chỉ đọc, câu qua guard rồi chạy.\n\nMô hình chỉ nhận câu hỏi và mô tả bảng, cột của mục `item`, không nhận dòng dữ liệu. Guard từ chối thì\nmô hình được viết lại một lần theo lý do của guard. Mô hình nói không trả lời được, guard vẫn từ chối hay\nHasura từ chối thì `outcome` là `refused` kèm `refused_by` (mã 200). Mô hình chưa chạy hay đang bận là\n503, quá giờ ở lượt đầu là 504. Mỗi câu được ghi nhật ký kèm mô hình, câu truy vấn, số lượt và số dòng,\nkhông kèm dòng.",
+        "operationId": "data_questions_v1_assistant_data_questions_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataQuestion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataAnswer"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Data Questions"
       }
     },
     "/v1/assistant/questions": {

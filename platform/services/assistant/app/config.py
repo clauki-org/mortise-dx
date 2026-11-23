@@ -41,6 +41,15 @@ def _pinned_model(path: str) -> str:
     return lines[0][0]
 
 
+def _log_level(name: str) -> str:
+    # Không bắt buộc: mặc định INFO (một dòng mỗi lời gọi mô hình, không kèm nội dung). DEBUG thêm lý do mô
+    # hình tự ghi khi viết câu truy vấn, chỉ để người vận hành gỡ lỗi.
+    value = (os.environ.get(name) or "INFO").upper()
+    if value not in ("DEBUG", "INFO", "WARNING", "ERROR"):
+        raise RuntimeError(f"Biến môi trường {name} chỉ nhận DEBUG, INFO, WARNING, ERROR; nhận: {value}.")
+    return value
+
+
 # compose.yaml truyền chuỗi rỗng cho biến không có trong .env, nên rỗng cũng là chưa khai.
 _PROVIDER = os.environ.get("ASSISTANT_LLM_PROVIDER") or "ollama"
 _BASE_URL = os.environ.get("ASSISTANT_LLM_BASE_URL", "")
@@ -78,6 +87,7 @@ class Settings:
     db_name: str
     db_user: str
     db_password: str
+    log_level: str
 
 
 settings = Settings(
@@ -103,4 +113,5 @@ settings = Settings(
     db_name=_required("ASSISTANT_DB_NAME"),
     db_user=_required("ASSISTANT_DB_USER"),
     db_password=_required("ASSISTANT_DB_PASSWORD"),
+    log_level=_log_level("ASSISTANT_LOG_LEVEL"),
 )

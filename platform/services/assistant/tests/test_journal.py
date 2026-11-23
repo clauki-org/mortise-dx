@@ -13,7 +13,17 @@ from pg8000.exceptions import DatabaseError, InterfaceError
 
 from app import journal
 from app.errors import Denied
-from app.schemas import Answer, Citation, DataAnswer, DataColumn, DataQuery, DataTable, Question
+from app.schemas import (
+    Answer,
+    Citation,
+    DataAnswer,
+    DataColumn,
+    DataQuery,
+    DataQuestion,
+    DataTable,
+    ModelInfo,
+    Question,
+)
 from tests.passages import AMENDMENT, USER_A
 
 QUESTION = Question(
@@ -179,4 +189,72 @@ def test_failed_data_query_keeps_the_query_it_was_given(monkeypatch):
         "failed",
         "Không đọc được dữ liệu",
         DATA_QUERY.query,
+    )
+
+
+DATA_QUESTION = DataQuestion(question=" Có những văn bản nào? ", app="core", item="ask-data-example")
+INFO = ModelInfo(name="qwen3.5:4b", provider="ollama", location="local", host=None)
+
+
+def test_free_text_answer_stores_model_query_attempts_and_row_count(monkeypatch):
+    connection = FakeConnection()
+    monkeypatch.setattr(journal, "_connect", lambda: connection)
+    table = DataTable(
+        title="Văn bản", columns=[DataColumn(key="title", label="Tên")], rows=[{"title": INJECTION}]
+    )
+    answer = DataAnswer(
+        outcome="data", reason=None, query=DATA_QUERY.query, tables=[table], model=INFO, attempts=2
+    )
+    journal.record_data_question(USER_A, DATA_QUESTION, 12, answer)
+    params = connection.runs[2][1]
+    assert (params["outcome"], params["query"], params["attempts"], params["row_count"]) == (
+        "answered",
+        DATA_QUERY.query,
+        2,
+        1,
+    )
+    assert (params["model"], params["model_provider"], params["item"]) == (
+        "qwen3.5:4b",
+        "ollama",
+        "ask-data-example",
+    )
+    assert INJECTION not in repr(params)
+
+
+def test_model_refusal_stores_no_query_but_keeps_the_model(monkeypatch):
+    connection = FakeConnection()
+    monkeypatch.setattr(journal, "_connect", lambda: connection)
+    answer = DataAnswer(
+        outcome="refused", reason="x", query="", tables=[], model=INFO, attempts=1, refused_by="model"
+    )
+    journal.record_data_question(USER_A, DATA_QUESTION, 3, answer)
+    params = connection.runs[2][1]
+    # Bảng đòi có mô hình hay có câu truy vấn, và attempts >= 1: dòng này có mô hình, không có câu.
+    assert (params["outcome"], params["query"], params["model"], params["attempts"]) == (
+        "refused",
+        None,
+        "qwen3.5:4b",
+        1,
+    )
+
+
+def test_failed_free_text_question_records_the_configured_model(monkeypatch):
+    connection = FakeConnection()
+    monkeypatch.setattr(journal, "_connect", lambda: connection)
+    api = {"llm_provider": "openai-compatible", "llm_host": "llm.example.test", "model": "model-x"}
+    monkeypatch.setattr(journal, "settings", replace(journal.settings, **api))
+    journal.record_data_question(USER_A, DATA_QUESTION, 3, None, "API mô hình đang quá tải")
+    params = connection.runs[2][1]
+    assert (
+        params["outcome"],
+        params["model"],
+        params["model_host"],
+        params["query"],
+        params["attempts"],
+    ) == (
+        "failed",
+        "model-x",
+        "llm.example.test",
+        None,
+        None,
     )

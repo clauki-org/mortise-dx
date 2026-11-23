@@ -525,9 +525,10 @@ services:
       retries: 20
 
   assistant:
-    # Trợ lý hỏi văn bản (ADR 0021), sau cổng tại /v1/assistant. Đọc văn bản qua cổng bằng token của người hỏi; tài
-    # khoản CSDL `assistant` chỉ thêm được dòng vào nhật ký câu hỏi. Mặc định gọi Ollama trong mạng nội bộ; chạy cùng
-    # lõi; Ollama ở profile `ai` (`make ai-up`), chưa bật thì dịch vụ trả 503 kèm cách bật cho câu hỏi cần mô hình.
+    # Trợ lý hỏi văn bản và hỏi dữ liệu (ADR 0021, ADR 0027, ADR 0034), sau cổng tại /v1/assistant. Đọc văn bản và dữ
+    # liệu qua cổng bằng token của người hỏi; tài khoản CSDL `assistant` chỉ thêm được dòng vào nhật ký câu hỏi. Mặc
+    # định gọi Ollama trong mạng nội bộ; chạy cùng lõi; Ollama ở profile `ai` (`make ai-up`), chưa bật thì dịch vụ trả
+    # 503 kèm cách bật cho câu hỏi cần mô hình.
     build: platform/services/assistant
     restart: unless-stopped
     environment:
@@ -555,8 +556,15 @@ services:
       # Số đoạn tối đa đưa cho mô hình.
       ASSISTANT_TOP_PASSAGES: "4"
       ASSISTANT_NUM_PREDICT: "400"
-      # Thời gian chờ mô hình, giây; nhỏ hơn thời gian chờ đọc của upstream assistant trong core/apisix/apisix.yaml.
+      # Thời gian chờ mô hình, giây; nhỏ hơn thời gian chờ đọc của upstream assistant trong core/apisix/apisix.yaml
+      # (200 giây). Câu hỏi dữ liệu gõ tự do (ADR 0034) dùng số này làm hạn chung cho cả lượt viết câu và lượt sửa;
+      # cộng thời gian chờ đã cấu hình của việc đọc mục menu và chạy câu qua Hasura (10 giây mỗi lời gọi, data_run.py)
+      # và ghi nhật ký (10 giây, journal.py), tổng vẫn dưới 200 giây của cổng. Tăng số này thì tăng cả thời gian chờ
+      # đọc ở cổng.
       ASSISTANT_TIMEOUT_SECONDS: "150"
+      # Mức log của dịch vụ: INFO ghi một dòng mỗi lời gọi mô hình (nhà cung cấp, số token, lý do dừng, thời gian),
+      # không kèm nội dung; DEBUG thêm lý do mô hình tự ghi khi viết câu truy vấn, chỉ để gỡ lỗi.
+      ASSISTANT_LOG_LEVEL: ${ASSISTANT_LOG_LEVEL:-INFO}
     volumes:
       - ./core/ollama/models.txt:/srv/models.txt:ro
     # Không chờ Ollama: lõi phải khởi động được khi không bật profile `ai`. Không phụ thuộc apisix: cổng chỉ cần lúc có

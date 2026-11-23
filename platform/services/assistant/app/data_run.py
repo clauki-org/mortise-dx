@@ -3,9 +3,10 @@
 #
 # Trả lời câu hỏi dữ liệu (ADR 0027): đọc cấu hình của mục menu bằng token người hỏi, cho câu GraphQL qua
 # guard (guard.py), chạy đúng câu đó qua cổng tới Hasura bằng token người hỏi với vai trò `user`, rồi dựng
-# bảng theo khai báo của gói. Bảng, cột được phép chỉ đến từ mục menu mà Hasura trả cho tenant trong token,
-# không bao giờ từ thân yêu cầu. Quyền theo dòng do Hasura quyết định; ở đây không lọc lại vì nguồn không có
-# cột tenant.
+# bảng theo khai báo của gói. Câu mẫu đi hết đường ở đây (`answer`); câu do mô hình viết (data_question.py,
+# ADR 0034) dùng cùng các bước đọc cấu hình và chạy. Bảng, cột được phép chỉ đến từ mục menu mà Hasura trả cho
+# tenant trong token, không bao giờ từ thân yêu cầu. Quyền theo dòng do Hasura quyết định; ở đây không lọc lại
+# vì nguồn không có cột tenant.
 
 import json
 import logging
@@ -80,22 +81,33 @@ def refuse(reason: str, query: str) -> DataAnswer:
     return DataAnswer(outcome="refused", reason=reason, query=query, tables=[])
 
 
-def answer(caller: Caller, request: DataQuery, data: dict) -> DataAnswer:
+def allowlist_of(data: dict, app: str, item: str) -> guard.Allowlist:
     try:
-        allow = guard.allowlist(data)
+        return guard.allowlist(data)
     except (KeyError, TypeError, ValueError) as error:
-        log.error("Cấu hình trợ lý dữ liệu %s/%s sai: %s", request.app, request.item, error)
+        log.error("Cấu hình trợ lý dữ liệu %s/%s sai: %s", app, item, error)
         raise Denied(
             502, "Cấu hình trợ lý dữ liệu của mục này sai; báo người quản trị cài lại gói."
         ) from error
+
+
+def run(caller: Caller, checked: guard.Checked) -> list[DataTable] | None:
+    """Bảng của câu đã qua guard, hay None khi Hasura từ chối câu (lý do chung: HASURA_REFUSED)."""
+    # Không thử lại hay sửa câu: lỗi sau guard thường là quyền hay kiểu dữ liệu, chạy lại cũng vậy.
+    try:
+        return _tables(checked, _post(caller, {"query": checked.query}))
+    except _HasuraRefused:
+        return None
+
+
+def answer(caller: Caller, request: DataQuery, data: dict) -> DataAnswer:
+    allow = allowlist_of(data, request.app, request.item)
     try:
         checked = guard.check(request.query, allow)
     except guard.Refused as refused:
         return refuse(refused.reason, request.query)
-    # Không thử lại hay sửa câu: lỗi sau guard thường là quyền hay kiểu dữ liệu, chạy lại cũng vậy.
-    try:
-        tables = _tables(checked, _post(caller, {"query": checked.query}))
-    except _HasuraRefused:
+    tables = run(caller, checked)
+    if tables is None:
         return refuse(HASURA_REFUSED, request.query)
     return DataAnswer(outcome="data", reason=None, query=checked.query, tables=tables)
 

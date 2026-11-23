@@ -4,19 +4,13 @@
 # Đường ống cố định của ADR 0021: kiểm đầu vào, tìm, phân loại bằng điểm tìm, sinh, kiểm, trả. Thứ tự không
 # đổi theo câu hỏi và mô hình không gọi công cụ nào, để mọi câu trả lời đi qua cùng các bước kiểm.
 
-import threading
-
 from . import retrieval
 from .config import settings
 from .errors import Denied
-from .model import Model
+from .model import Model, one_turn
 from .retrieval import Caller
 from .schemas import Answer, Citation, ModelInfo, Question
 from .verify import Unverified, check
-
-# Một lượt sinh mỗi lúc: mô hình chạy trên CPU, lượt thứ hai chạy song song chỉ làm cả hai chậm hơn (ADR
-# 0021).
-_generating = threading.Lock()
 
 NO_EVIDENCE = "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời."
 DECLINED = "Các đoạn tìm được không đủ để trả lời câu hỏi này."
@@ -36,12 +30,8 @@ def ask(caller: Caller, question: Question, model: Model) -> Answer:
     sentences = retrieval.evidence(text, passages)
     if not sentences:
         return refuse(NO_EVIDENCE)
-    if not _generating.acquire(blocking=False):
-        raise Denied(503, "Trợ lý đang trả lời một câu hỏi khác; thử lại sau ít phút.")
-    try:
+    with one_turn():
         reply = model.generate(text, sentences)
-    finally:
-        _generating.release()
     if not reply["answerable"]:
         return refuse(DECLINED, model.info)
     try:
