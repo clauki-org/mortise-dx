@@ -224,7 +224,8 @@ for file in contracts/examples/invalid/*; do
   esac
 done
 # Luật của scripts/check-form-config.py cũng phải chặn được thật: biểu mẫu sai đọc từ stdin, đối chiếu với quy trình
-# mẫu core-approval, khai báo bước mẫu và một bảng mẫu; mỗi biểu mẫu phạm đúng một luật và lỗi phải đúng từng ký tự.
+# mẫu core-approval, khai báo bước mẫu và một bảng mẫu (hay bảng trong biến tables nếu đặt); mỗi biểu mẫu phạm đúng
+# một luật và lỗi phải đúng từng ký tự.
 # Thiếu bước này, một luật bị nới (ví dụ quên biến quyết định) vẫn qua mọi biểu mẫu đúng của gói mà không ai biết.
 form_tables='- table: { schema: app_example, name: items }
   insert_permissions:
@@ -234,7 +235,7 @@ form_rejects() { # LỖI_MONG_ĐỢI, biểu mẫu ở stdin
   local result
   result=$("${yaml[@]}" scripts/check-form-config.py --app contracts/examples/app.example.yaml \
     --bpmn core/workflow/fixtures/core-approval.bpmn20.xml --steps contracts/examples/workflow.example.yaml \
-    --hasura <(printf '%s\n' "$form_tables") --form /dev/stdin 2>&1) && result="không bị từ chối"
+    --hasura <(printf '%s\n' "${tables:-$form_tables}") --form /dev/stdin 2>&1) && result="không bị từ chối"
   if [[ "$result" != "/dev/stdin: $1" ]]; then
     echo "check-form-config.py phải báo đúng lỗi: $1" >&2
     echo "Đang nhận: $result" >&2
@@ -267,7 +268,31 @@ fields: [{ name: code, label: Mã, type: string }, { name: tenant_id, label: Đ�
 submit: { label: Thêm, insert: app_example_items }
 done: { message: Đã thêm }
 YAML
-echo "ok -- 4 biểu mẫu sai bị check-form-config.py từ chối đúng luật"
+# Quyền ghi tenant_id trong columns thay vì set: check vẫn buộc đúng tenant, nhưng ô đó vô nghĩa với người dùng và
+# trái nguyên tắc trình duyệt không gửi tenant.
+tables='- table: { schema: app_example, name: items }
+  insert_permissions:
+    - role: tenant_admin
+      permission: { columns: [code, tenant_id], check: { tenant_id: { _eq: X-Hasura-Tenant-Id } } }' \
+  form_rejects "cột 'tenant_id' là cột tenant của 'app_example_items'; trình duyệt không gửi tenant: bỏ trường này \
+khỏi biểu mẫu và đặt cột bằng set: { tenant_id: X-Hasura-Tenant-Id } trong quyền thêm dòng của gói" <<'YAML'
+title: Thêm
+role: tenant_admin
+fields: [{ name: code, label: Mã, type: string }, { name: tenant_id, label: Đơn vị, type: string }]
+submit: { label: Thêm, insert: app_example_items }
+done: { message: Đã thêm }
+YAML
+# Tệp quyền sai dạng phải thành một dòng lỗi chỉ tệp và mục, không phải traceback của Python.
+result=$("${yaml[@]}" scripts/check-form-config.py --app contracts/examples/app.example.yaml \
+  --bpmn core/workflow/fixtures/core-approval.bpmn20.xml --steps contracts/examples/workflow.example.yaml \
+  --hasura <(printf '%s\n' '- table: { schema: app_example, name: items }' '  insert_permissions: [{ permission: {} }]') \
+  --form contracts/examples/form.example.yaml 2>&1) && result="không bị từ chối"
+if [[ "$result" != *": mục 1: một mục của insert_permissions thiếu role; sửa theo dạng của core/hasura/tables.yaml" ||
+  "$result" == *Traceback* ]]; then
+  echo "check-form-config.py phải báo tệp quyền sai dạng bằng một dòng lỗi. Đang nhận: $result" >&2
+  exit 1
+fi
+echo "ok -- 6 biểu mẫu và tệp quyền sai bị check-form-config.py từ chối đúng luật"
 
 # Chiều ngược: dòng của tệp đã xóa hay đổi tên nằm im trong expected-errors.txt mà không ai biết.
 while IFS=$'\t' read -r name _; do

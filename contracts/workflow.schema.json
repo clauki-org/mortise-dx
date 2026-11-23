@@ -30,7 +30,7 @@
           "$ref": "#/$defs/variable"
         },
         "details": {
-          "description": "Biến của quy trình hiện chỉ đọc trong thông tin hồ sơ, theo thứ tự khai, ví dụ các giá trị người lập điền ở biểu mẫu khởi tạo. Biến chưa có giá trị thì không hiện.",
+          "description": "Biến của quy trình hiện chỉ đọc trong thông tin hồ sơ, theo thứ tự khai, ví dụ các giá trị người lập điền ở biểu mẫu khởi tạo. Biến chưa có giá trị thì không hiện; biến khai lại chỉ hiện ở lần khai đầu.",
           "type": "array",
           "items": {
             "type": "object",

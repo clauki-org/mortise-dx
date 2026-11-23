@@ -11,8 +11,8 @@ import { useMemo } from "react";
 import { useQuery } from "urql";
 import { type Source, sourceLimit, sourceOptions, sourceQuery, type Values } from "./formConfig";
 
-/** Dữ liệu chung FormPanel đưa cho mọi ô: giá trị hiện tại của biểu mẫu và vai trò gửi kèm truy vấn. */
-export type FormContext = { values: Values; role?: string };
+/** Dữ liệu chung FormPanel đưa cho mọi ô: giá trị hiện tại của biểu mẫu và vai trò gửi kèm truy vấn (formRole). */
+export type FormContext = { values: Values; role: string };
 
 export function SourceChoice(props: WidgetProps) {
   const { id, value, required, disabled, readonly, label, rawErrors, onChange, onBlur, onFocus, options } = props;
@@ -22,7 +22,7 @@ export function SourceChoice(props: WidgetProps) {
   // Trường cha chưa chọn thì chưa có gì để lọc; truy vấn không điều kiện sẽ trả mục của mọi trường cha.
   const waiting = source.where !== undefined && (parent === undefined || parent === "");
   const { query, variables } = useMemo(() => sourceQuery(source, parent), [source, parent]);
-  const context = useMemo(() => (role ? { role } : {}), [role]);
+  const context = useMemo(() => ({ role }), [role]);
   // Mỗi lần mở biểu mẫu đọc lại từ máy chủ: danh sách vừa được thêm mục (ví dụ vật tư mới) phải hiện ngay, và bộ nhớ
   // đệm của urql không phân biệt vai trò.
   const [{ data, fetching, error }] = useQuery<{ rows: Values[] }>({
@@ -56,7 +56,7 @@ export function SourceChoice(props: WidgetProps) {
         placeholder={
           waiting ? `Chọn ${String(options.parentLabel ?? "trường trước")} trước` : fetching ? "Đang tải…" : undefined
         }
-        error={rawErrors?.length ? rawErrors.join("\n") : problem}
+        error={rawErrors?.length ? rawErrors.join("; ") : problem}
         comboboxProps={{ withinPortal: false }}
       />
       {!waiting && !fetching && !error && items.length === 0 && (

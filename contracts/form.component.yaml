@@ -16,8 +16,8 @@ capabilities:
   - Danh sách source dài hơn limit (mặc định 200, trần 500) thì chỉ hiện limit mục đầu và báo ra.
   - Kiểm dữ liệu ở trình duyệt theo các luật trên, lỗi hiện cạnh từng ô bằng tiếng Việt; máy chủ vẫn là nơi quyết định.
   - submit.process khởi tạo quy trình của gói với biến là các trường đã điền (trường trống không gửi) kèm Idempotency-Key; bấm đúp hay gửi lại cùng dữ liệu chỉ tạo một hồ sơ, đổi dữ liệu rồi gửi là hồ sơ mới.
-  - submit.insert thêm một dòng vào bảng của gói, tên trường là tên cột; tenant_id do quyền Hasura của gói đặt từ token, không gửi từ trình duyệt; lỗi ràng buộc và quyền của Hasura được báo bằng tiếng Việt kèm cách sửa.
-  - role gửi kèm header X-Hasura-Role với danh sách source và lệnh thêm dòng; token không có vai trò đó thì biểu mẫu không hiện mà báo lý do.
+  - submit.insert thêm một dòng vào bảng của gói, tên trường là tên cột; tenant_id do quyền Hasura của gói đặt từ token, không gửi từ trình duyệt, và không cột nào gắn với tenant được làm trường; lỗi ràng buộc và quyền của Hasura được báo bằng tiếng Việt kèm cách sửa; thiếu cột bắt buộc mà biểu mẫu không có ô thì lời báo nêu tên cột và báo người quản trị thêm trường, vì người gửi không tự sửa được.
+  - role (bỏ trống là user) gửi kèm header X-Hasura-Role với danh sách source và lệnh thêm dòng; token không có vai trò đó thì biểu mẫu không hiện mà báo lý do.
   - Gửi được thì hiện done.message, nút "Lập tiếp" và đường dẫn tới mục menu done.menu của cùng gói nếu người dùng thấy mục đó.
   - Nhãn, tiêu đề và hướng dẫn hiện dạng chữ, không dạng HTML; gói không truyền được tùy chọn vẽ nào của rjsf.
 limits:
@@ -25,5 +25,5 @@ limits:
   - Không tải tệp lên, không có trường chọn nhiều giá trị.
   - Giá trị của danh sách source luôn gửi dạng chữ; thêm dòng vào cột kiểu Int của Hasura thì bị từ chối.
   - submit.insert không có Idempotency-Key; nút bị khóa khi đang gửi, nhưng gửi lại sau khi mất phản hồi có thể báo trùng mã dù dòng đã được thêm.
-  - Ràng buộc NOT NULL và CHECK của bảng không được make check-fast kiểm; cột bắt buộc mà biểu mẫu không khai chỉ lộ ra khi gửi.
+  - Ràng buộc NOT NULL và CHECK của bảng không được make check-fast kiểm; cột bắt buộc mà biểu mẫu không khai chỉ lộ ra khi gửi, thành lời báo nêu tên cột cho người quản trị.
   - Cấu hình không cấp và không giới hạn quyền; ai được khởi tạo, được thêm dòng do workflow-api và quyền Hasura quyết định.

@@ -33,9 +33,9 @@ describe("details của bước", () => {
       { variable: "missing", label: "Chưa có" },
     ];
     expect(detailRows(task, step(declared))).toEqual([
-      ["Ghi chú", "Gấp"],
-      ["Số lượng", "1.234,5"],
-      ["Gấp", "Có"],
+      ["note", "Ghi chú", "Gấp"],
+      ["amount", "Số lượng", "1.234,5"],
+      ["urgent", "Gấp", "Có"],
     ]);
   });
 
@@ -43,5 +43,13 @@ describe("details của bước", () => {
     expect(detailRows(task, step("amount"))).toEqual([]);
     expect(detailRows(task, step([null, { variable: 1, label: "x" }]))).toEqual([]);
     expect(detailRows(task, undefined)).toEqual([]);
+  });
+
+  it("biến khai hai lần chỉ hiện một dòng, để mỗi dòng có khóa riêng", () => {
+    const declared = [
+      { variable: "note", label: "Ghi chú" },
+      { variable: "note", label: "Ghi chú lại" },
+    ];
+    expect(detailRows(task, step(declared))).toEqual([["note", "Ghi chú", "Gấp"]]);
   });
 });

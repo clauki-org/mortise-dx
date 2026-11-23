@@ -37,7 +37,7 @@ const config: FormConfig = {
   done: { message: "Đã gửi" },
 };
 
-function render(roles: string[]): string {
+function render(roles: string[], form: FormConfig = config): string {
   const payload = btoa(JSON.stringify({ realm_access: { roles } }));
   const session = { user: {} as User, getToken: () => `x.${payload}.y` };
   return renderToStaticMarkup(
@@ -46,7 +46,7 @@ function render(roles: string[]): string {
         <SessionContext.Provider value={session}>
           <QueryClientProvider client={new QueryClient()}>
             <Provider value={client}>
-              <FormPanel config={config} app="example" />
+              <FormPanel config={form} app="example" />
             </Provider>
           </QueryClientProvider>
         </SessionContext.Provider>
@@ -81,6 +81,14 @@ describe("FormPanel", () => {
   it("token thiếu vai trò của biểu mẫu thì báo, không vẽ ô nhập", () => {
     const html = render(["user"]);
     expect(html).toContain("Tài khoản chưa dùng được biểu mẫu này");
+    expect(html).not.toContain('id="root_title"');
+  });
+
+  it("biểu mẫu không khai role dùng vai trò user: token có user thì vẽ, không có thì báo", () => {
+    const { role: _, ...plain } = config;
+    expect(render(["user"], plain)).toContain('id="root_title"');
+    const html = render([], plain);
+    expect(html).toContain("Biểu mẫu cần vai trò user");
     expect(html).not.toContain('id="root_title"');
   });
 });

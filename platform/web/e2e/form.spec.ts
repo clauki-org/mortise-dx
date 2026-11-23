@@ -4,10 +4,11 @@
 // Thành phần biểu mẫu trên trình duyệt (ADR 0030), qua hai biểu mẫu của gói kho vật tư. Cán bộ xã A lập đề nghị cấp
 // vật tư: chọn kho thì danh sách vật tư đổi theo kho, bấm đúp nút gửi mà chỉ có một hồ sơ, người duyệt xã A thấy hồ sơ
 // kèm các giá trị đã điền, người duyệt xã B không thấy. Quản trị xã A thêm vật tư bằng biểu mẫu thêm dòng: yêu cầu
-// không mang tenant_id, dòng thuộc xã A, quản trị xã B không thấy. Cần gói đã cài
+// không mang tenant_id, dòng thuộc xã A, quản trị xã B không thấy. Mất phản hồi giữa chừng thì gửi lại nguyên dữ liệu
+// chỉ một hồ sơ, sửa rồi gửi là hồ sơ mới. Cần gói đã cài
 // (`make app-install APP=supplies-commune`); bài tự tạo và tự dọn dữ liệu.
 
-import { type APIRequestContext, expect, type Request, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, type Request, test } from "@playwright/test";
 import { complete, graphql, signIn, token, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
@@ -157,6 +158,90 @@ test("cán bộ xã A lập đề nghị trên web; người duyệt xã A thấ
       }
     } catch (error) {
       problems.push(`tìm đề nghị ${title}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    report(passed, [...problems, ...(await removeStores(request, code))]);
+  }
+});
+
+/** Điền đề nghị cấp vật tư với vật tư duy nhất của kho; trang đang mở biểu mẫu. */
+async function fillRequest(page: Page, storeName: string, itemName: string, title: string) {
+  await page.getByRole("combobox", { name: "Kho" }).click();
+  await page.getByRole("option", { name: storeName }).click();
+  await page.getByRole("combobox", { name: "Vật tư" }).click();
+  await page.getByRole("option", { name: itemName }).click();
+  await page.getByLabel(/Tên đề nghị/).fill(title);
+  await page.getByLabel(/Số lượng/).fill("1");
+  await page.getByLabel(/Lý do/).fill("Kiểm thử gửi lại");
+}
+
+test("mất phản hồi khi gửi đề nghị: gửi lại nguyên dữ liệu dùng lại mã và chỉ một hồ sơ; sửa rồi gửi là mã mới", async ({
+  page,
+  request,
+}) => {
+  const code = uniqueTitle("e2e-lai").replaceAll(" ", "-");
+  const titles = {
+    same: `Đề nghị gửi lại ${code}`,
+    before: `Đề nghị trước sửa ${code}`,
+    after: `Đề nghị sau sửa ${code}`,
+  };
+  const storeName = `Kho thử ${code}`;
+  const itemName = `Vật tư ${code}`;
+  let passed = false;
+  try {
+    await addStore(request, code, storeName);
+    await addItem(request, code, `${code}-v`, itemName);
+    const keys: string[] = [];
+    // Lần gửi đầu sau mỗi lần bật tới được workflow-api (hồ sơ được tạo thật) nhưng trình duyệt không nhận phản hồi,
+    // giống mất mạng giữa chừng.
+    let drop = true;
+    await page.route("**/v1/workflow/processes/supply-request/instances", async (route) => {
+      keys.push(route.request().headers()["idempotency-key"] ?? "");
+      if (!drop) return route.continue();
+      drop = false;
+      await route.fetch();
+      await route.abort("connectionreset");
+    });
+
+    await page.goto("/");
+    await signIn(page, "user.a");
+    await page.getByRole("link", { name: "Lập đề nghị cấp vật tư", exact: true }).click();
+    const send = page.getByRole("button", { name: "Gửi" });
+
+    await fillRequest(page, storeName, itemName, titles.same);
+    await send.click();
+    await expect(page.getByText("Chưa gửi được")).toBeVisible();
+    await send.click();
+    await expect(page.getByText("Đã gửi đề nghị")).toBeVisible();
+    expect(keys).toHaveLength(2);
+    expect(keys[1], "gửi lại cùng dữ liệu dùng lại mã").toBe(keys[0]);
+    expect(await requestsOf(request, "manager.a", titles.same), "gửi lại không tạo hồ sơ thứ hai").toHaveLength(1);
+
+    drop = true;
+    await page.getByRole("button", { name: "Lập tiếp" }).click();
+    await fillRequest(page, storeName, itemName, titles.before);
+    await send.click();
+    await expect(page.getByText("Chưa gửi được")).toBeVisible();
+    await page.getByLabel(/Tên đề nghị/).fill(titles.after);
+    await send.click();
+    await expect(page.getByText("Đã gửi đề nghị")).toBeVisible();
+    expect(keys).toHaveLength(4);
+    expect(keys[2], "lập tiếp là mã mới").not.toBe(keys[0]);
+    expect(keys[3], "đổi dữ liệu rồi gửi là mã mới").not.toBe(keys[2]);
+    // Hồ sơ của lần mất phản hồi đã được tạo; dùng lại mã thì workflow-api trả hồ sơ đó và nội dung mới bị mất.
+    expect(await requestsOf(request, "manager.a", titles.after), "nội dung đã sửa thành hồ sơ riêng").toHaveLength(1);
+    expect(await requestsOf(request, "manager.a", titles.before)).toHaveLength(1);
+    passed = true;
+  } finally {
+    const problems: string[] = [];
+    for (const title of Object.values(titles)) {
+      try {
+        for (const task of await requestsOf(request, "manager.a", title)) {
+          const status = await complete(request, "manager.a", task.id, { approved: false });
+          if (status !== 204) problems.push(`trả lại đề nghị ${task.id}: ${status}`);
+        }
+      } catch (error) {
+        problems.push(`tìm đề nghị ${title}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
     report(passed, [...problems, ...(await removeStores(request, code))]);
   }

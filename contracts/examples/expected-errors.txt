@@ -63,6 +63,7 @@ map.role-not-name.yaml	$.layers[0].role	'Rollup Reader' does not match '^[a-z][a
 form.authority-prefix.yaml	$.fields[0].name	'authority_level' should not be valid under {'anyOf': [{'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}, {'pattern': '^authority_'}]}
 form.choices-on-string.yaml	$.fields[0]	False schema does not allow [{'value': 'a', 'label': 'A'}]
 form.choice-without-options.yaml	$.fields[0]	{'name': 'kind', 'label': 'Loại', 'type': 'choice'} is not valid under any of the given schemas
+form.empty-choice-value.yaml	$.fields[0].choices[0].value	'' should be non-empty
 form.min-on-string.yaml	$.fields[0]	False schema does not allow 1
 form.reserved-name.yaml	$.fields[0].name	'initiator' should not be valid under {'anyOf': [{'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}, {'pattern': '^authority_'}]}
 form.source-limit-too-large.yaml	$.fields[0].source.limit	501 is greater than the maximum of 500

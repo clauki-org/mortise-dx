@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/form.schema.json từ chối. Giá trị rỗng được coi là chưa chọn: trường bắt buộc chọn
+# mục này vẫn bị bỏ khi gửi.
+
+title: x
+submit: { label: Gửi, process: core-approval }
+done: { message: Đã gửi }
+fields:
+  - { name: kind, label: Loại, type: choice, required: true, choices: [{ value: "", label: Không rõ }] }

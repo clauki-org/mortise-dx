@@ -42,12 +42,18 @@ export type Values = Record<string, unknown>;
 
 export const sourceLimit = (source: Source) => source.limit ?? 200;
 
+/**
+ * Vai trò Hasura của mọi yêu cầu từ biểu mẫu. Không khai thì là user, đúng vai trò `make check-fast` đã kiểm; để
+ * trống header thì Hasura dùng vai trò mặc định của token, có thể là vai trò khác mà check-fast chưa kiểm.
+ */
+export const formRole = (config: FormConfig) => config.role ?? "user";
+
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const ROLE = /^[a-z][a-z0-9_]*$/;
 const TYPES = new Set(["string", "number", "integer", "boolean", "date", "choice"]);
-// Biến lõi tự đặt (docs/api.md) và tiền tố dành cho biến do hệ thống đặt; người lập ghi được các tên này thì giả
-// được người khởi tạo hay đơn vị.
+// Biến lõi tự đặt (docs/api.md), và tiền tố authority_ lõi dành riêng cho biến chọn nhóm xử lý của bước theo bảng
+// phân cấp thẩm quyền. Người lập ghi được các tên này thì giả được người khởi tạo, đơn vị hay nhóm duyệt.
 const RESERVED = new Set(["initiator", "initiatorName", "tenant", "idempotencyKey"]);
 
 function fieldProblems(field: FormField, earlier: string[]): string[] {
@@ -59,6 +65,11 @@ function fieldProblems(field: FormField, earlier: string[]): string[] {
   if (!TYPES.has(field.type)) problems.push(`${at}: kiểu "${field.type}" không có`);
   if (field.type === "choice" && (field.choices === undefined) === (field.source === undefined)) {
     problems.push(`${at}: trường chọn cần đúng một trong choices và source`);
+  }
+  // Giá trị rỗng bị payloadOf coi là chưa điền: chọn mục đó thì trường bắt buộc vẫn bị bỏ khi gửi, và trường con lọc
+  // theo nó bị khóa mãi.
+  if (field.choices?.some((choice) => typeof choice?.value !== "string" || choice.value === "")) {
+    problems.push(`${at}: mỗi mục của choices cần value khác rỗng`);
   }
   const source = field.source;
   if (!source) return problems;

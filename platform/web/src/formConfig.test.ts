@@ -11,6 +11,7 @@ import {
   type FormConfig,
   type FormField,
   formProblems,
+  formRole,
   formSchema,
   keyFor,
   payloadOf,
@@ -72,6 +73,18 @@ describe("lỗi cấu hình", () => {
       'trường "Nhóm": trường chọn cần đúng một trong choices và source',
       "submit cần đúng một trong process và insert",
     ]);
+  });
+
+  it("từ chối mục chọn có giá trị rỗng, vì giá trị rỗng bị coi là chưa chọn", () => {
+    const kind = { name: "kind", label: "Loại", type: "choice" as const, choices: [{ value: "", label: "Không rõ" }] };
+    expect(formProblems({ ...config, fields: [kind] })).toEqual([
+      'trường "Loại": mỗi mục của choices cần value khác rỗng',
+    ]);
+  });
+
+  it("không khai role thì mọi yêu cầu dùng vai trò user, đúng vai trò check-fast đã kiểm", () => {
+    expect(formRole(config)).toBe("user");
+    expect(formRole({ ...config, role: "tenant_admin" })).toBe("tenant_admin");
   });
 });
 
@@ -163,5 +176,43 @@ describe("lệnh thêm dòng", () => {
     );
     expect(insertError(fail("unexpected", "boom"), "user")).toBe("boom. Bấm gửi lại; nếu vẫn lỗi, báo người quản trị.");
     expect(insertError({ networkError: new Error("x"), graphQLErrors: [] }, "user")).toMatch(/^Không kết nối/);
+  });
+
+  // Mã và thông điệp chép từ Hasura v2.51.4-ce khi thêm dòng vi phạm từng ràng buộc.
+  const notNull = {
+    graphQLErrors: [
+      {
+        message:
+          'Not-NULL violation. null value in column "unit_price" of relation "items" violates not-null constraint',
+        extensions: { code: "constraint-violation" },
+      },
+    ],
+  };
+
+  it("thiếu cột bắt buộc mà biểu mẫu không có ô: dẫn tới người quản trị, nêu tên cột", () => {
+    const message = insertError(notNull, "tenant_admin", [{ name: "code", label: "Mã" }]);
+    expect(message).toMatch(/^Bảng cần giá trị cho cột unit_price mà biểu mẫu không có ô nào để điền/);
+    expect(message).toContain("thêm trường unit_price vào biểu mẫu của gói");
+    expect(message, "cột tenant không làm trường được; check-fast từ chối").toContain("đặt cột bằng set");
+    expect(message).not.toContain("Sửa giá trị");
+  });
+
+  it("thiếu cột bắt buộc mà biểu mẫu có ô bỏ trống: chỉ ô cần điền", () => {
+    expect(insertError(notNull, "tenant_admin", [{ name: "unit_price", label: "Đơn giá" }])).toMatch(
+      /^Bảng cần giá trị cho ô "Đơn giá"\. Điền ô đó rồi gửi lại\./,
+    );
+  });
+
+  it("ràng buộc CHECK của bảng Hasura báo bằng permission-error: vẫn bảo sửa giá trị, không bảo xin quyền", () => {
+    const check = {
+      graphQLErrors: [
+        {
+          message:
+            'Check constraint violation. new row for relation "items" violates check constraint "items_quantity_check"',
+          extensions: { code: "permission-error" },
+        },
+      ],
+    };
+    expect(insertError(check, "tenant_admin")).toMatch(/^Một giá trị không hợp lệ theo luật của bảng/);
   });
 });

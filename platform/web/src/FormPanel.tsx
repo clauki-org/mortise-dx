@@ -17,6 +17,7 @@ import {
   clearDependents,
   type FormConfig,
   formProblems,
+  formRole,
   formSchema,
   type KeyState,
   keyFor,
@@ -42,7 +43,7 @@ const freshKey = (): KeyState => ({ key: idempotencyKey() });
 function useSubmit(config: FormConfig) {
   const { getToken } = useSession();
   const client = useClient();
-  const role = config.role ?? "user";
+  const role = formRole(config);
   return useMutation({
     mutationFn: async ({ payload, key }: { payload: Values; key: string }) => {
       if (config.submit.process) {
@@ -54,7 +55,7 @@ function useSubmit(config: FormConfig) {
       // đã đọc từ bảng này (ví dụ danh mục ở done.menu) cần đọc lại.
       const context = { role, additionalTypenames: [table] };
       const result = await client.mutation(insertMutation(table), { object: payload }, context).toPromise();
-      if (result.error) throw new Error(insertError(result.error, role));
+      if (result.error) throw new Error(insertError(result.error, role, config.fields));
       if (result.data?.result?.affected_rows !== 1) {
         throw new Error("Máy chủ không thêm dòng nào. Tải lại trang rồi gửi lại; nếu vẫn lỗi, báo người quản trị.");
       }
@@ -91,7 +92,7 @@ function FormBody({ config, app }: { config: FormConfig; app: string }) {
   // gọi onSubmit. Lệnh thêm dòng không có Idempotency-Key, nên chặn ở đây.
   const sending = useRef(false);
   const submit = useSubmit(config);
-  const context: FormContext = { values, role: config.role };
+  const context: FormContext = { values, role: formRole(config) };
 
   const send = (data: Values) => {
     if (sending.current) return;
@@ -163,7 +164,8 @@ export function FormPanel({ config, app }: { config: FormConfig; app: string }) 
       </Alert>
     );
   }
-  const allowed = config.role === undefined || rolesOf(getToken()).includes(config.role);
+  const role = formRole(config);
+  const allowed = rolesOf(getToken()).includes(role);
   return (
     <Stack maw={720}>
       <Title order={1} size="h2">
@@ -176,8 +178,8 @@ export function FormPanel({ config, app }: { config: FormConfig; app: string }) 
         </Paper>
       ) : (
         <Alert color="yellow" title="Tài khoản chưa dùng được biểu mẫu này">
-          Biểu mẫu cần vai trò {config.role} mà tài khoản đang đăng nhập không có. Báo người quản trị cấp vai trò, hoặc
-          đăng nhập bằng tài khoản có vai trò đó.
+          Biểu mẫu cần vai trò {role} mà tài khoản đang đăng nhập không có. Báo người quản trị cấp vai trò, hoặc đăng
+          nhập bằng tài khoản có vai trò đó.
         </Alert>
       )}
     </Stack>

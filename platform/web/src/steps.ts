@@ -52,15 +52,21 @@ export function variableText(value: unknown): string {
 }
 
 /**
- * Dòng thông tin hồ sơ theo `details` của bước. Khai báo đọc qua GraphQL không được kiểm lại lúc chạy, nên mục sai
- * dạng bị bỏ thay vì làm hỏng màn hình; biến chưa có giá trị không hiện.
+ * Dòng thông tin hồ sơ theo `details` của bước: [biến, nhãn, giá trị]. Khai báo đọc qua GraphQL không được kiểm lại
+ * lúc chạy, nên mục sai dạng bị bỏ thay vì làm hỏng màn hình; biến chưa có giá trị không hiện. Biến khai lại lần nữa
+ * chỉ hiện ở lần khai đầu: cùng một giá trị hiện hai lần không thêm gì, và tên biến là khóa của dòng trên màn hình.
  */
-export function detailRows(task: Task, step: StepConfig | undefined): [string, string][] {
+export function detailRows(task: Task, step: StepConfig | undefined): [string, string, string][] {
   const details = Array.isArray(step?.details) ? step.details : [];
-  return details.flatMap((detail): [string, string][] => {
+  const seen = new Set<string>();
+  return details.flatMap((detail): [string, string, string][] => {
     if (typeof detail?.variable !== "string" || typeof detail.label !== "string") return [];
+    if (seen.has(detail.variable)) return [];
+    seen.add(detail.variable);
     const value = task.variables[detail.variable];
-    return value === undefined || value === null || value === "" ? [] : [[detail.label, variableText(value)]];
+    return value === undefined || value === null || value === ""
+      ? []
+      : [[detail.variable, detail.label, variableText(value)]];
   });
 }
 

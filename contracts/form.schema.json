@@ -10,7 +10,7 @@
     "title": { "description": "Tiêu đề của trang biểu mẫu", "$ref": "#/$defs/text" },
     "description": { "description": "Một đoạn hướng dẫn hiện dưới tiêu đề", "$ref": "#/$defs/text" },
     "role": {
-      "description": "Vai trò Hasura gửi kèm truy vấn danh mục chọn và lệnh thêm dòng (header X-Hasura-Role). Token của người dùng không có vai trò này thì biểu mẫu không hiện. Khai vai trò không cấp quyền gì: Hasura vẫn kiểm vai trò với token. Bỏ trống là vai trò mặc định.",
+      "description": "Vai trò Hasura gửi kèm truy vấn danh mục chọn và lệnh thêm dòng (header X-Hasura-Role). Token của người dùng không có vai trò này thì biểu mẫu không hiện. Khai vai trò không cấp quyền gì: Hasura vẫn kiểm vai trò với token. Bỏ trống là user, vai trò `make check-fast` kiểm, và header vẫn được gửi để không rơi về vai trò mặc định của token.",
       "type": "string",
       "pattern": "^[a-z][a-z0-9_]*$"
     },
@@ -60,7 +60,14 @@
             "type": "object",
             "additionalProperties": false,
             "required": ["value", "label"],
-            "properties": { "value": { "type": "string" }, "label": { "$ref": "#/$defs/text" } }
+            "properties": {
+              "value": {
+                "description": "Giá trị gửi đi; không rỗng, vì giá trị rỗng được coi là chưa chọn",
+                "type": "string",
+                "minLength": 1
+              },
+              "label": { "$ref": "#/$defs/text" }
+            }
           }
         },
         "source": { "$ref": "#/$defs/source" }
@@ -121,7 +128,7 @@
       "oneOf": [{ "required": ["process"] }, { "required": ["insert"] }]
     },
     "name": {
-      "description": "Tên biến hay tên cột theo luật tên biến của quy trình; không trùng biến dành riêng mà lõi đặt (docs/api.md) và không bắt đầu bằng authority_, tiền tố dành cho biến do hệ thống đặt",
+      "description": "Tên biến hay tên cột theo luật tên biến của quy trình; không trùng biến dành riêng mà lõi đặt (docs/api.md) và không bắt đầu bằng authority_, tiền tố lõi dành riêng cho biến chọn nhóm xử lý của bước theo bảng phân cấp thẩm quyền",
       "type": "string",
       "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
       "not": {

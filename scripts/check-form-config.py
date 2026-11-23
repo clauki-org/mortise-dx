@@ -4,10 +4,11 @@
 # Kiểm cấu hình biểu mẫu (contracts/form.schema.json) với gói chứa nó, những luật JSON Schema không diễn đạt
 # được (ADR 0030): quy trình đích có trong BPMN của gói; không trường nào là biến quyết định (ADR 0025) hay
 # trùng biến mà bước của quy trình ghi; bước lấy tên hồ sơ từ một biến thì biểu mẫu có trường đó; bảng, cột
-# của lệnh thêm dòng và của danh sách chọn thuộc gói và nằm trong quyền Hasura của vai trò; mục menu sau khi
-# gửi có trong app.yaml. Thiếu bước này, lỗi chỉ lộ ra khi người dùng bấm Gửi. Thành phần kiểm lại luật tên
-# lúc chạy. Gọi từ scripts/contracts.sh: --app <app.yaml>; mặc định đọc BPMN, khai báo bước, quyền Hasura và
-# mọi biểu mẫu trên menu theo app.yaml, còn --bpmn, --steps, --hasura, --form thay từng phần để kiểm một biểu
+# của lệnh thêm dòng và của danh sách chọn thuộc gói và nằm trong quyền Hasura của vai trò (đọc qua
+# scripts/form_permissions.py), không trường nào là cột tenant; mục menu sau khi gửi có trong app.yaml.
+# Thiếu bước này, lỗi chỉ lộ ra khi người dùng bấm Gửi. Thành phần kiểm lại luật tên lúc chạy. Gọi từ
+# scripts/contracts.sh: --app <app.yaml>; mặc định đọc BPMN, khai báo bước, quyền Hasura và mọi biểu mẫu
+# trên menu theo app.yaml, còn --bpmn, --steps, --hasura, --form thay từng phần để kiểm một biểu
 # mẫu với tệp mẫu.
 
 import argparse
@@ -18,6 +19,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 import yaml
+from form_permissions import permission, tables_of, tenant_columns
 
 BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -48,18 +50,6 @@ def bpmn_by_key(paths: list[str]) -> dict[str, bytes]:
         for process in ET.fromstring(content).iter(f"{BPMN}process"):  # noqa: S314
             found[process.get("id")] = content
     return found
-
-
-def tables_of(paths: list[str]) -> dict[str, dict]:
-    tables = {}
-    for path in paths:
-        for entry in read_yaml(path) or []:
-            tables[f"{entry['table']['schema']}_{entry['table']['name']}"] = entry
-    return tables
-
-
-def permission(table: dict, kind: str, role: str) -> dict | None:
-    return next((p["permission"] for p in table.get(kind, []) if p["role"] == role), None)
 
 
 def step_names(steps: list[dict], process: str) -> tuple[set[str], list[str]]:
@@ -112,9 +102,18 @@ def insert_problems(form: dict, names: list[str], role: str, tables: dict) -> li
     if allowed is None:
         return [f"vai trò '{role}' không có quyền thêm dòng vào '{target}'; sửa role hoặc quyền của gói"]
     errors = []
+    # tenant_id luôn bị cấm, kể cả khi quyền ghi nó trong columns thay vì set: người dùng không có gì để gõ
+    # vào ô đó ngoài tenant của chính mình, gõ khác thì check chặn.
+    tenant = tenant_columns(allowed) | {"tenant_id"}
     for name in names:
         if name in (allowed.get("set") or {}):
             errors.append(f"cột '{name}' do Hasura đặt từ token (set); bỏ trường này khỏi biểu mẫu")
+        elif name in tenant:
+            errors.append(
+                f"cột '{name}' là cột tenant của '{target}'; trình duyệt không gửi tenant: bỏ trường này "
+                f"khỏi biểu mẫu và đặt cột bằng set: {{ {name}: X-Hasura-Tenant-Id }} trong quyền thêm dòng "
+                "của gói"
+            )
         elif allowed.get("columns") != "*" and name not in allowed.get("columns", []):
             errors.append(f"vai trò '{role}' không được ghi cột '{name}' của '{target}'")
     return errors

@@ -35,23 +35,29 @@ function labelOf(name: string, step: StepConfig | undefined): string | undefined
 
 function Details({ task, step }: { task: Task; step: StepConfig | undefined }) {
   const declared = new Set((Array.isArray(step?.details) ? step.details : []).map((detail) => detail?.variable));
-  const rows: [string, string][] = [
-    ["Người gửi", String(task.variables.initiatorName ?? "")],
-    ["Nhận lúc", dateTime.format(new Date(task.created))],
-    ["Hạn", task.due === null ? "Không đặt hạn" : dateTime.format(new Date(task.due))],
-    ...detailRows(task, step),
-    ...Object.entries(task.variables).flatMap(([name, value]): [string, string][] => {
+  // Khóa của dòng theo nguồn và tên biến, không theo nhãn: gói khai được hai nhãn trùng nhau (hay trùng "Hạn"), và
+  // khóa trùng làm React vẽ nhầm dòng.
+  const rows: [string, string, string][] = [
+    ["core/initiatorName", "Người gửi", String(task.variables.initiatorName ?? "")],
+    ["core/created", "Nhận lúc", dateTime.format(new Date(task.created))],
+    ["core/due", "Hạn", task.due === null ? "Không đặt hạn" : dateTime.format(new Date(task.due))],
+    ...detailRows(task, step).map(([name, label, value]): [string, string, string] => [
+      `details/${name}`,
+      label,
+      value,
+    ]),
+    ...Object.entries(task.variables).flatMap(([name, value]): [string, string, string][] => {
       const label = labelOf(name, step);
       // Tên hồ sơ đã là tiêu đề màn hình; biến khai ở details đã hiện ở trên.
       if (label === undefined || HIDDEN_VARIABLES.has(name) || name === step?.title || declared.has(name)) return [];
-      return [[label, typeof value === "string" ? value : JSON.stringify(value)]];
+      return [[`variable/${name}`, label, typeof value === "string" ? value : JSON.stringify(value)]];
     }),
   ];
   return (
     <Table variant="vertical" layout="fixed">
       <Table.Tbody>
-        {rows.map(([label, value]) => (
-          <Table.Tr key={label}>
+        {rows.map(([key, label, value]) => (
+          <Table.Tr key={key}>
             <Table.Th w={120}>{label}</Table.Th>
             <Table.Td style={{ overflowWrap: "anywhere" }}>{value}</Table.Td>
           </Table.Tr>
