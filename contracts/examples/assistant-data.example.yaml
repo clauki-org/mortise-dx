@@ -1,0 +1,58 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ cấu hình trợ lý hỏi dữ liệu hợp lệ theo contracts/assistant.schema.json (ADR 0027); `make check-fast` kiểm
+# tệp này theo schema và chạy mọi câu mẫu qua guard (scripts/check-assistant-data.py), `make seed` dùng nó cho mục
+# menu mẫu của lõi (/apps/core/ask-data-example). Nguồn là hai bảng văn bản của Tầng 2 mà vai trò `user` đọc được,
+# để thử trợ lý dữ liệu khi chưa cài gói nào; `make smoke` và `make e2e` hỏi qua mục này.
+
+intro: Hỏi về các văn bản mẫu đã nạp cho đơn vị của bạn; kết quả là bảng lấy thẳng từ dữ liệu, kèm câu truy vấn đã chạy.
+data:
+  max_rows: 20
+  sources:
+    - field: platform_knowledge_documents
+      label: Văn bản
+      description: Mỗi văn bản đã nạp cho trợ lý một dòng, gồm mã, tên và ngày tải bản gốc.
+      columns:
+        - { name: app, label: Gói, description: "Gói sở hữu văn bản; core là văn bản mẫu của lõi" }
+        - { name: document_id, label: Mã văn bản, description: Mã văn bản do gói đặt }
+        - { name: title, label: Tên văn bản, description: Tên đầy đủ của văn bản }
+        - { name: retrieved, label: Ngày tải, description: Ngày tải bản gốc }
+    - field: platform_knowledge_passages
+      label: Đoạn văn bản
+      description: Mỗi đoạn của một văn bản một dòng, theo thứ tự trong văn bản.
+      columns:
+        - { name: app, label: Gói, description: Gói sở hữu văn bản }
+        - { name: document_id, label: Mã văn bản, description: Mã văn bản chứa đoạn }
+        - { name: position, label: Thứ tự, description: "Thứ tự của đoạn trong văn bản, bắt đầu từ 0" }
+        - { name: label, label: Vị trí, description: "Nhãn vị trí của đoạn, ví dụ Điều 1 khoản 2" }
+        - { name: text, label: Nội dung, description: Nguyên văn của đoạn }
+      relations:
+        - { name: document, label: Văn bản, source: platform_knowledge_documents }
+  examples:
+    - id: documents
+      question: Đơn vị mình có những văn bản mẫu nào?
+      query: |
+        {
+          platform_knowledge_documents(where: {app: {_eq: "core"}}, order_by: {document_id: asc}, limit: 20) {
+            document_id
+            title
+            retrieved
+          }
+        }
+    - id: passages
+      question: Quy chế mẫu có những đoạn nào?
+      query: |
+        {
+          platform_knowledge_passages(
+            where: {app: {_eq: "core"}, document_id: {_eq: "example-rules"}}
+            order_by: {position: asc}
+            limit: 20
+          ) {
+            label
+            text
+            document {
+              title
+            }
+          }
+        }

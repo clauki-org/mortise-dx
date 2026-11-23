@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/assistant.schema.json từ chối: tenant khai thành cột được hỏi.
+# Nếu lọt, câu truy vấn có thể lọc theo tenant như thể đó là tham số, trong khi tenant chỉ đến từ token.
+
+intro: Hỏi về các văn bản đã nạp.
+data:
+  max_rows: 20
+  sources:
+    - field: platform_knowledge_documents
+      label: Văn bản
+      description: Văn bản đã nạp.
+      columns: [{ name: tenant_id, label: Đơn vị, description: Đơn vị sở hữu }]
+  examples:
+    - id: titles
+      question: Có những văn bản nào?
+      query: '{ platform_knowledge_documents(limit: 20) { tenant_id } }'

@@ -6,7 +6,7 @@
 from app.retrieval import Caller, Passage
 
 # Token giả: kiểm thử chỉ xem nó được chuyển nguyên cho Hasura.
-USER_A = Caller(sub="u-a", tenant="xa-a", token="token-of-user-a")  # noqa: S106
+USER_A = Caller(sub="u-a", tenant="xa-a", token="token-of-user-a", roles=("user",))  # noqa: S106
 
 BOOKING = Passage(
     "example-rules",

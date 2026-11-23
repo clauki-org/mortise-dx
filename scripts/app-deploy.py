@@ -12,9 +12,8 @@
 #   workflows --bpmn ... --steps ...   chỉ deploy và nạp khai báo bước; make seed gọi cho quy trình mẫu
 #   rules --owner core <tệp> ...       chỉ nạp luật ngưỡng; make seed gọi cho luật mẫu
 #   knowledge --owner core <tệp> ...   chỉ nạp văn bản; make seed gọi cho văn bản mẫu
-#   menu --owner core --id ... --label ... --component ... <tệp cấu hình>
-#                                      chỉ nạp một mục menu, kiểm như mục menu của gói; make seed gọi cho
-#                                      mục hỏi văn bản mẫu
+#   menu --owner core <tệp menu>       chỉ nạp mọi mục menu liệt kê trong tệp (dạng mục `menu` của app.yaml),
+#                                      kiểm như mục menu của gói; make seed gọi với scripts/core-menu.yaml
 # Chạy lại không tạo bản trùng: tên deployment mang băm của tệp, nên tệp không đổi thì không deploy lại.
 # BPMN của gói có thể chứa {{tên}}: được thay bằng giá trị trong `settings` của app.yaml, ghi đè lúc cài
 # bằng biến môi trường APP_SETTINGS (make app-install SETTINGS=tên=giá trị), trước khi băm và deploy
@@ -281,11 +280,31 @@ def check_menu_entry(owner: str, entry: dict) -> None:
     if checked.returncode != 0:
         output = (checked.stdout + checked.stderr).strip()
         raise SystemExit(f"Mục menu {entry['id']} của {owner}: {entry['config']} sai cấu hình.\n{output}")
+    if component == "assistant":
+        check_assistant_data(owner, [os.path.abspath(entry["config"])])
     # Văn bản của chủ sở hữu nạp bằng lệnh `knowledge` trước đó, nên đối chiếu với CSDL chứ không với tệp.
     sql = "SELECT DISTINCT document_id FROM platform.knowledge_documents WHERE app = :'app';"
     problems = app_knowledge.menu_problems(".", {"menu": [entry]}, set(psql(sql, app=owner).split()))
     if problems:
         raise SystemExit(f"Mục menu của {owner}: {'; '.join(problems)}; chạy lệnh knowledge trước.")
+
+
+def check_assistant_data(owner: str, configs: list[str]) -> None:
+    """Mục hỏi dữ liệu (ADR 0027): bảng của chủ sở hữu, cột trong quyền đọc của `user`, câu mẫu qua guard.
+
+    Chạy qua scripts/contracts.sh vì kiểm cần graphql-core đúng bản dịch vụ dùng, mà bộ cài chỉ có pyyaml."""
+    script = os.path.join(REPO, "scripts", "contracts.sh")
+    for path in configs:
+        with open(path, encoding="utf-8") as file:
+            if "data" not in (yaml.safe_load(file) or {}):
+                continue
+        # Lệnh cố định trong repo; owner là `core` hay thư mục gói mà chính bộ cài đang đọc.
+        checked = subprocess.run(  # noqa: S603
+            [script, "assistant-data", owner, path], capture_output=True, text=True, check=False
+        )
+        if checked.returncode != 0:
+            output = (checked.stdout + checked.stderr).strip()
+            raise SystemExit(f"Cấu hình trợ lý dữ liệu {path} chưa nạp được:\n{output}")
 
 
 def package(directory: str) -> tuple[dict, list[str], list[str]]:
@@ -324,9 +343,8 @@ def main() -> int:
         command.add_argument("--owner", required=True)
         command.add_argument("files", nargs="+")
     menu = commands.add_parser("menu")
-    for flag in ("--owner", "--id", "--label", "--component"):
-        menu.add_argument(flag, required=True)
-    menu.add_argument("config")
+    menu.add_argument("--owner", required=True)
+    menu.add_argument("file")
     args = parser.parse_args()
 
     every = tenants()
@@ -341,10 +359,15 @@ def main() -> int:
         load_knowledge(args.owner, read_knowledge(args.owner, args.files))
         return 0
     if args.command == "menu":
-        # Mục menu của lõi không có app.yaml; dựng đúng dạng một mục của `menu` để dùng chung bộ nạp với gói.
-        entry = {"id": args.id, "label": args.label, "component": args.component, "config": args.config}
-        check_menu_entry(args.owner, entry)
-        load_menu(".", {"id": args.owner, "menu": [entry]})
+        # Mục menu của lõi không có app.yaml; tệp có đúng dạng mục `menu` để dùng chung bộ nạp với gói. Bộ nạp
+        # xóa mục không có trong danh sách, nên mọi mục của chủ sở hữu phải nạp trong một lần gọi.
+        entries = (load_yaml(args.file) or {}).get("menu") or []
+        ids = [entry["id"] for entry in entries]
+        if not entries or len(ids) != len(set(ids)):
+            raise SystemExit(f"{args.file}: cần ít nhất một mục menu và id không trùng ({', '.join(ids)}).")
+        for entry in entries:
+            check_menu_entry(args.owner, entry)
+        load_menu(".", {"id": args.owner, "menu": entries})
         return 0
     app, bpmn, steps = package(args.directory)
     if args.command == "install":
@@ -356,6 +379,13 @@ def main() -> int:
         )
         if problems:
             raise SystemExit(f"{args.directory}/app.yaml: " + "; ".join(problems))
+        check_assistant_data(
+            os.path.abspath(args.directory),
+            [
+                os.path.abspath(entry["path"])
+                for entry in app_knowledge.assistant_configs(args.directory, app)
+            ],
+        )
         deploy(bpmn, every, package_settings(app))
         load_steps(steps)
         load_menu(args.directory, app)

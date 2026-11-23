@@ -47,6 +47,7 @@ biệt.
 | Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy | `make smoke` (cổng, CSP, luồng PKCE), `make web-check`, `make e2e` |
 | Bảng việc: danh sách việc đang chờ người đăng nhập theo hạn; màn hình xử lý với biểu mẫu và nút theo khai báo của bước | Đã chạy | `make e2e` (trình duyệt: duyệt, bốn mắt, cách ly đơn vị), `make web-check` |
 | Menu dựng từ các gói đã cài; mục của gói mở thành phần danh mục (danh sách, tìm, lọc, chi tiết cha–con) theo cấu hình của gói, không có mã giao diện riêng của gói | Đã chạy | `make e2e` (trình duyệt: cán bộ xã A mở danh mục cơ sở từ menu, không thấy cơ sở của xã B; mọi mục menu của các gói đã cài mở được trang theo cấu hình), `make web-check` |
+| Trợ lý hỏi dữ liệu: câu mẫu của gói chạy câu GraphQL chỉ đọc qua guard (một thao tác query, chỉ bảng, cột gói khai, có limit, không introspection), bằng token người hỏi qua Hasura; kết quả là bảng kèm câu truy vấn đã chạy, mỗi câu có dòng nhật ký không kèm dòng dữ liệu; câu hỏi gõ tự do (mô hình viết câu) là kế hoạch | Đã chạy | `make test` (bảng ca của guard), `make check-fast` (câu mẫu qua guard), `make smoke`, `make e2e`, smoke gói xã (cách ly xã, lời chèn lệnh trong tên cơ sở) |
 | Thành phần bản đồ: lớp điểm theo cấu hình của gói trên nền trơn (không tải tile), tô màu theo giá trị, chú giải và danh sách điểm; lớp khai vai trò chỉ truy vấn khi token có vai trò đó | Đã chạy | `make web-check` |
 | Thành phần Tầng 2 khác (biểu mẫu nhập liệu) | Kế hoạch | |
 | Gói minh họa `apps/facilities-commune`: bảng cơ sở, tòa, phòng cách ly theo tenant, cán bộ chỉ thấy và sửa cơ sở được phân công (xã tự sửa phân công), có nhật ký; cài vào, gỡ ra bằng `make app-install`, `make app-uninstall`, kèm menu của gói; quy trình, khai báo bước và luật ngưỡng của gói nạp cùng lúc bằng bộ nạp chung với `make seed` | Đã chạy | CI: cài gói → smoke gói (gồm menu theo tenant) → `make seed`, `make smoke` khi gói đang cài → gỡ gói → `make smoke` |
@@ -81,6 +82,7 @@ make e2e     # kịch bản demo trên trình duyệt (cần Node và gói xã: 
 | `http://localhost:9080/v1/files` | API tệp, bắt buộc token |
 | `http://localhost:9080/v1/context/entities` | Dữ liệu thiết bị (NGSI-LD), chỉ đọc, bắt buộc token |
 | `http://localhost:9080/v1/assistant/questions` | Trợ lý hỏi văn bản, bắt buộc token; trả lời cần bật profile `ai` hay khai API |
+| `http://localhost:9080/v1/assistant/data-queries` | Trợ lý hỏi dữ liệu: câu GraphQL chỉ đọc qua guard, bắt buộc token; không cần mô hình |
 | `http://127.0.0.1:8081/auth/admin` | Quản trị Keycloak (chỉ máy chủ) |
 | `http://127.0.0.1:8082/console` | Quản trị Hasura (chỉ máy chủ) |
 | `http://127.0.0.1:8083/flowable-rest/docs` | REST API của Flowable (chỉ máy chủ) |
@@ -160,7 +162,8 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Công cụ kho lạnh (tự viết) | Python 3.13, DuckDB, pg8000, boto3 | khóa trong `core/cold-archive/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
 | Chạy mô hình ngôn ngữ tại chỗ, tùy chọn: profile `ai` ([ADR 0021](docs/adr/0021-document-assistant.md)) | Ollama | 0.40.16 | MIT |
 | Mô hình ngôn ngữ, tải khi `make ai-up` | Qwen3.5 4B | digest trọng số ghim trong `core/ollama/models.txt` | Apache-2.0 |
-| Trợ lý hỏi văn bản (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT | khóa trong `platform/services/assistant/uv.lock` | MIT / BSD-3-Clause |
+| Trợ lý hỏi văn bản và dữ liệu (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, pg8000 | khóa trong `platform/services/assistant/uv.lock` | MIT / BSD-3-Clause |
+| Phân tích câu GraphQL cho guard của trợ lý dữ liệu ([ADR 0027](docs/adr/0027-data-assistant-guarded-graphql.md)) | graphql-core | 3.3.2 | MIT |
 | Phục vụ giao diện | nginx | 1.30.6 | BSD-2-Clause |
 | Giao diện Tầng 2 (tự viết) | React, Mantine, oidc-client-ts, urql, React Router, TanStack Query, rjsf ([ADR 0006](docs/adr/0006-frontend-stack.md)) | khóa trong `platform/web/package-lock.json` | MIT / Apache-2.0 |
 | Vẽ bản đồ trong giao diện ([ADR 0024](docs/adr/0024-map-component.md)) | MapLibre GL JS | 6.18.0 | BSD-3-Clause |
@@ -187,7 +190,8 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
 platform/             Tầng 2
   web/                khung giao diện (React, Vite), phục vụ bằng nginx sau cổng
-  services/assistant/ trợ lý hỏi văn bản: tìm đoạn theo quyền người hỏi, sinh tại chỗ hay qua API, kiểm câu trích
+  services/assistant/ trợ lý: hỏi văn bản (tìm đoạn theo quyền người hỏi, sinh tại chỗ hay qua API, kiểm câu trích)
+                      và hỏi dữ liệu (câu GraphQL chỉ đọc qua guard) (Python)
   schema/migrations/  migration lược đồ `platform` (dbmate): khai báo bước của quy trình, menu của gói
 apps/facilities-commune/  Tầng 3: gói cơ sở vật chất xã (app.yaml, migration, quyền Hasura, smoke của gói)
 apps/supplies-commune/    Tầng 3: gói kho vật tư xã, chỉ gồm tệp khai báo (ADR 0022)

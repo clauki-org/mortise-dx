@@ -78,3 +78,6 @@ workflow.no-actions.yaml	$.steps.review.actions	[] should be non-empty
 workflow.no-steps.yaml	$.steps	{} should be non-empty
 workflow.reserved-variable.yaml	$.steps.review.actions[0].variables	'initiator' should not be valid under {'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}
 workflow.title-reserved-variable.yaml	$.steps.review.title	'initiator' should not be valid under {'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}
+assistant.data-tenant-column.yaml	$.data.sources[0].columns[0].name	'tenant_id' should not be valid under {'const': 'tenant_id'}
+assistant.data-too-many-rows.yaml	$.data.max_rows	5000 is greater than the maximum of 100
+assistant.documents-and-data.yaml	$	{'intro': 'Hỏi về quy chế đặt phòng họp.', 'documents': ['example-rules'], 'data': {'max_rows': 20, 'sources': [{'field': 'platform_knowledge_documents', 'label': 'Văn bản', 'description': 'Văn bản đã nạp.', 'columns': [{'name': 'title', 'label': 'Tên', 'description': 'Tên văn bản'}]}], 'examples': [{'id': 'titles', 'question': 'Có những văn bản nào?', 'query': '{ platform_knowledge_documents(limit: 20) { title } }'}]}} is not valid under any of the given schemas

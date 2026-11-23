@@ -199,6 +199,51 @@ else
     "$(tail -1 <<<"$reply") $(sed '$d' <<<"$reply" | jq -r '.error | contains("make ai-up")')" "503 true"
 fi
 
+# Trợ lý hỏi dữ liệu (ADR 0027) trên mục menu mẫu của lõi (/apps/core/ask-data-example), không cần mô hình: câu qua
+# guard chạy bằng token người hỏi và chỉ trả dòng của tenant đó (mỗi tenant có bản chép văn bản mẫu của mình, nên thấy
+# dòng của tenant khác là thấy văn bản trùng); câu ghi, introspection, bảng ngoài danh sách, thiếu hay quá limit bị
+# guard từ chối có lý do; mỗi câu có một dòng nhật ký kèm câu truy vấn và số dòng, không kèm dòng dữ liệu. Token riêng
+# vì giới hạn tần suất của /v1/assistant tính theo token.
+data_token=$(token user.a)
+data_question="Kiểm thử smoke trợ lý dữ liệu $(date +%s)-$RANDOM"
+data_ask() {
+  jq -nc --arg question "$data_question" --arg q "$1" \
+    '{question: $question, app: "core", item: "ask-data-example", query: $q}' |
+    curl -s -w '\n%{http_code}' -X POST "$base/v1/assistant/data-queries" -H "Authorization: Bearer $data_token" \
+      -H 'Content-Type: application/json' -d @-
+}
+# data_refused TỪ_KHÓA CÂU: in "<mã HTTP> <outcome> <lý do có chứa từ khóa>".
+data_refused() {
+  local reply
+  reply=$(data_ask "$2")
+  echo "$(tail -1 <<<"$reply") $(sed '$d' <<<"$reply" | jq -r --arg k "$1" '"\(.outcome) \(.reason // "" | contains($k))"')"
+}
+reply=$(data_ask '{ platform_knowledge_documents(where: {app: {_eq: "core"}}, order_by: {document_id: asc}, limit: 20) {
+  document_id title retrieved } }')
+check "Trợ lý dữ liệu: câu mẫu chạy bằng token người hỏi, chỉ thấy văn bản của tenant mình" \
+  "$(tail -1 <<<"$reply") $(sed '$d' <<<"$reply" | jq -c '[.outcome, [.tables[].rows[]."document_id"]]')" \
+  '200 ["data",["example-rules","example-rules-amendment"]]'
+check "Trợ lý dữ liệu: câu ghi (mutation) bị guard từ chối" \
+  "$(data_refused mutation 'mutation { delete_platform_knowledge_documents(where: {}) { affected_rows } }')" \
+  "200 refused true"
+check "Trợ lý dữ liệu: introspection (__schema) bị guard từ chối" \
+  "$(data_refused __schema '{ __schema { types { name } } }')" "200 refused true"
+check "Trợ lý dữ liệu: bảng ngoài danh sách của mục (nhật ký câu hỏi) bị guard từ chối" \
+  "$(data_refused platform_assistant_questions '{ platform_assistant_questions(limit: 1) { question } }')" \
+  "200 refused true"
+check "Trợ lý dữ liệu: danh sách thiếu limit bị guard từ chối" \
+  "$(data_refused 'phải có limit' '{ platform_knowledge_documents { title } }')" "200 refused true"
+check "Trợ lý dữ liệu: limit quá max_rows của mục bị guard từ chối" \
+  "$(data_refused 'từ 1 tới 20' '{ platform_knowledge_documents(limit: 500) { title } }')" "200 refused true"
+data_log=$(jq -nc --arg question "$data_question" '{query: "query($q: String!) { platform_assistant_questions(
+  where: {question: {_eq: $q}}) { tenant_id outcome item row_count answer model has_query: query } }", variables: {q: $question}}')
+check "Nhật ký câu hỏi: mỗi câu hỏi dữ liệu một dòng kèm mục menu, câu truy vấn và số dòng, không kèm dòng dữ liệu" \
+  "$(curl -fsS -X POST "$base/v1/graphql" -H "Authorization: Bearer $(token admin.a)" -H 'X-Hasura-Role: tenant_admin' \
+    -H 'Content-Type: application/json' -d "$data_log" | jq -c '.data.platform_assistant_questions | group_by(.outcome)
+    | map([.[0].tenant_id, .[0].outcome, length, (map(.row_count) | unique), (map(.answer, .model) | unique),
+      (map(.has_query != null) | unique), (map(.item) | unique)])')" \
+  '[["xa-a","answered",1,[2],[null],[true],["ask-data-example"]],["xa-a","refused",5,[null],[null],[true],["ask-data-example"]]]'
+
 # Quyền Hasura đang chạy phải khớp tệp khai báo (core/hasura/, platform/schema/hasura/); ai sửa tay trên trang quản
 # trị thì báo ở đây. Quyền hay quan hệ sai thì `make seed` đưa về đúng; bảng đăng ký thừa thì thông báo chỉ cách gỡ.
 if uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py check; then

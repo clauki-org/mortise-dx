@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/assistant.schema.json từ chối: trần số dòng vượt 100.
+# Nếu lọt, một câu hỏi kéo về hàng nghìn dòng mà màn hình không đọc nổi.
+
+intro: Hỏi về các văn bản đã nạp.
+data:
+  max_rows: 5000
+  sources:
+    - field: platform_knowledge_documents
+      label: Văn bản
+      description: Văn bản đã nạp.
+      columns: [{ name: title, label: Tên, description: Tên văn bản }]
+  examples:
+    - id: titles
+      question: Có những văn bản nào?
+      query: '{ platform_knowledge_documents(limit: 20) { title } }'

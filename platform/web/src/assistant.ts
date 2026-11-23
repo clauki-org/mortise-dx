@@ -1,13 +1,25 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Phần không có React của thành phần trợ lý hỏi văn bản (ADR 0021): kiểu cấu hình theo contracts/assistant.schema.json,
-// kiểm cấu hình lúc chạy, và lời gọi /v1/assistant/questions theo contracts/assistant.openapi.json. Assistant.tsx
-// hiển thị.
+// Phần không có React của thành phần trợ lý: kiểu cấu hình theo contracts/assistant.schema.json, kiểm cấu hình lúc chạy,
+// và lời gọi theo contracts/assistant.openapi.json. Mục menu chọn hỏi văn bản (`documents`, ADR 0021,
+// /v1/assistant/questions, Assistant.tsx hiển thị) hay hỏi dữ liệu (`data`, ADR 0027, /v1/assistant/data-queries,
+// AssistantData.tsx hiển thị).
 
 import { callApi } from "./api";
 
 export type AssistantConfig = { intro: string; examples?: string[]; documents: string[] };
+
+/** Câu mẫu của mục hỏi dữ liệu: bấm là chạy câu truy vấn viết sẵn, không qua mô hình. */
+export type DataExample = { id: string; question: string; query: string };
+
+/** Mục hỏi dữ liệu. Giao diện chỉ cần lời giới thiệu và câu mẫu; bảng, cột được phép do dịch vụ tự đọc từ mục menu. */
+export type DataAssistantConfig = { intro: string; data: { examples: DataExample[] } };
+
+export type DataTable = { title: string; columns: { key: string; label: string }[]; rows: Record<string, Cell>[] };
+export type Cell = string | number | boolean | null;
+
+export type DataAnswer = { outcome: "data" | "refused"; reason: string | null; query: string; tables: DataTable[] };
 
 export type Citation = { document_id: string; title: string; passage_id: string; label: string; sentence: string };
 
@@ -39,9 +51,14 @@ export const MAX_DOCUMENTS = 50;
  * cài từ ngoài repo không qua bước kiểm đó, và câu hỏi gửi đi với cấu hình hỏng chỉ nhận lỗi khó hiểu.
  */
 export function configProblems(config: unknown): string[] {
-  const value = (config ?? {}) as Partial<Record<keyof AssistantConfig, unknown>>;
+  const value = (config ?? {}) as Partial<Record<keyof AssistantConfig | "data", unknown>>;
   const problems: string[] = [];
   if (typeof value.intro !== "string" || !value.intro.trim()) problems.push("thiếu lời giới thiệu (intro)");
+  if (value.data !== undefined) {
+    if (value.documents !== undefined || value.examples !== undefined)
+      problems.push("mục hỏi dữ liệu (data) không khai thêm documents hay examples");
+    return [...problems, ...dataProblems(value.data)];
+  }
   if (!Array.isArray(value.documents) || value.documents.length === 0)
     problems.push("thiếu danh sách văn bản được hỏi (documents)");
   else if (value.documents.length > MAX_DOCUMENTS)
@@ -63,6 +80,34 @@ export function configProblems(config: unknown): string[] {
 export function modelLine(model: ModelInfo): string {
   const where = model.location === "local" ? "chạy tại chỗ" : `qua API ${model.host ?? "bên ngoài"}`;
   return `Trả lời bởi ${model.name}, ${where}`;
+}
+
+function dataProblems(data: unknown): string[] {
+  const examples = (data as { examples?: unknown } | null)?.examples;
+  const valid = (example: unknown) => {
+    const { id, question, query } = (example ?? {}) as Record<string, unknown>;
+    return (
+      typeof id === "string" && typeof question === "string" && question.trim() !== "" && typeof query === "string"
+    );
+  };
+  if (!Array.isArray(examples) || examples.length === 0) return ["thiếu câu mẫu của mục hỏi dữ liệu (data.examples)"];
+  if (!examples.every(valid)) return ["mỗi câu mẫu trong data.examples cần id, question và query"];
+  return [];
+}
+
+/** Mục menu hỏi dữ liệu hay hỏi văn bản: có khối `data` là hỏi dữ liệu. */
+export const isDataConfig = (config: unknown): config is DataAssistantConfig =>
+  typeof config === "object" && config !== null && "data" in config;
+
+/**
+ * Chạy câu truy vấn của một câu mẫu. Gửi gói và mục menu, không gửi bảng hay cột được phép: dịch vụ đọc chúng từ mục
+ * menu bằng token người hỏi, nên giao diện không mở rộng được danh sách cho phép.
+ */
+export function runDataQuery(token: string | undefined, app: string, item: string, example: DataExample) {
+  return callApi<DataAnswer>("/v1/assistant/data-queries", token, {
+    method: "POST",
+    body: JSON.stringify({ question: example.question, app, item, query: example.query }),
+  });
 }
 
 /** Gửi câu hỏi. `app` là gói của mục menu: văn bản được hỏi thuộc gói đó (hay `core` cho văn bản mẫu của lõi). */

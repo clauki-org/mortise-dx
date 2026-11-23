@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Trợ lý hỏi văn bản (ADR 0021), đứng sau APISIX tại /v1/assistant, chạy cùng lõi; mô hình là Ollama ở profile
-# `ai` hay một API tương thích OpenAI, theo cấu hình (providers.py). Một đường: gửi câu hỏi, nhận câu trả lời
-# kèm câu trích đã kiểm hoặc lời từ chối có lý do (pipeline.py).
+# Trợ lý (ADR 0021, ADR 0027), đứng sau APISIX tại /v1/assistant. Hai đường: hỏi văn bản, nhận câu trả lời
+# kèm câu trích đã kiểm hoặc lời từ chối có lý do (pipeline.py), mô hình là Ollama ở profile `ai` hay một API
+# tương thích OpenAI theo cấu hình (providers.py); hỏi dữ liệu, chạy một câu GraphQL chỉ đọc đã qua guard bằng
+# token người hỏi và nhận bảng kèm câu đã chạy (data_run.py). Đường thứ hai không cần mô hình.
 
 import logging
 import time
@@ -14,14 +15,15 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from . import journal
+from . import data_run, journal
 from .auth import caller_from_token
+from .config import settings
 from .errors import Denied
 from .model import Model
 from .pipeline import ask
 from .providers import configured
 from .retrieval import Caller
-from .schemas import Answer, ErrorBody, Question
+from .schemas import Answer, DataAnswer, DataQuery, ErrorBody, Question
 
 # openapi_url=None: không phục vụ tài liệu qua cổng; hợp đồng nằm trong contracts/.
 app = FastAPI(
@@ -94,6 +96,39 @@ def questions(question: Question, caller: CallerDep, chosen: ModelDep) -> Answer
         journal.record(caller, question, _elapsed(started), None, reason)
         raise Denied(500, reason) from error
     journal.record(caller, question, _elapsed(started), answer)
+    return answer
+
+
+@app.post(
+    "/v1/assistant/data-queries",
+    response_model=DataAnswer,
+    responses={code: {"model": ErrorBody} for code in (400, 401, 403, 404, 500, 502, 503)},
+)
+def data_queries(request: DataQuery, caller: CallerDep) -> DataAnswer:
+    """Chạy một câu GraphQL chỉ đọc trên các bảng mà mục menu `item` của gói `app` khai, bằng token người hỏi.
+
+    Câu không qua guard hay bị Hasura từ chối thì `outcome` là `refused` kèm lý do và câu bị từ chối (mã
+    200). Mục menu không có trong tenant của token, hay không hỏi dữ liệu, là 404. Mỗi câu được ghi nhật ký
+    kèm câu truy vấn và số dòng, không kèm dòng; không ghi được thì trả 503 thay cho bảng.
+    """
+    started = time.monotonic()
+    text = request.question.strip()
+    if not text:
+        raise Denied(400, "Câu hỏi trống.")
+    if len(text) > settings.max_question_chars:
+        raise Denied(400, f"Câu hỏi dài quá {settings.max_question_chars} ký tự; hỏi ngắn hơn.")
+    try:
+        answer = data_run.answer(caller, request, data_run.data_config(caller, request.app, request.item))
+    except Denied as error:
+        if error.status >= 500:
+            journal.record_data(caller, request, _elapsed(started), None, error.reason)
+        raise
+    except Exception as error:
+        log.exception("Lỗi không lường trước khi chạy câu hỏi dữ liệu")
+        reason = "Trợ lý gặp lỗi không lường trước; báo người vận hành xem log của assistant."
+        journal.record_data(caller, request, _elapsed(started), None, reason)
+        raise Denied(500, reason) from error
+    journal.record_data(caller, request, _elapsed(started), answer)
     return answer
 
 

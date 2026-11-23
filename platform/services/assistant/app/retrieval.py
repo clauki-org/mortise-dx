@@ -39,6 +39,8 @@ class Caller:
     sub: str
     tenant: str
     token: str
+    # Vai trò realm trong token (realm_access.roles); trợ lý dữ liệu so với `roles` của mục menu.
+    roles: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,69 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình trợ lý hỏi dữ liệu của gói theo contracts/assistant.schema.json (ADR 0027): mục menu `ask-data` trong
+# app.yaml. Nguồn là view tổng diện tích của xã và bảng cơ sở; cột nằm trong quyền đọc của vai trò user ở
+# hasura/tables.yaml, nên cán bộ chỉ thấy số của xã mình và cơ sở mình được phân công. `make check-fast` và bộ cài
+# gói kiểm điều đó và chạy từng câu mẫu qua guard của trợ lý.
+
+intro: Hỏi về diện tích được phép, phần vượt của xã và các cơ sở được phân công cho bạn.
+data:
+  max_rows: 50
+  sources:
+    - field: app_facilities_commune_area_summary
+      label: Diện tích của xã
+      description: Một dòng cho xã của người hỏi; diện tích được phép theo tiêu chuẩn, định mức, đang dùng và phần vượt.
+      columns:
+        - { name: working_allowed_m2, label: Làm việc được phép (m²), description: Diện tích làm việc theo biên chế }
+        - { name: shared_allowed_m2, label: Sử dụng chung được phép (m²), description: Bằng phần làm việc }
+        - name: specialized_allowed_m2
+          label: Chuyên dùng được phép (m²)
+          description: Do cấp có thẩm quyền quyết định
+        - { name: allowed_m2, label: Được phép (m²), description: Tổng diện tích được phép }
+        - { name: in_use_m2, label: Đang dùng (m²), description: Tổng diện tích thông thủy của cơ sở đang dùng }
+        - { name: surplus_m2, label: Dôi dư (m²), description: Tổng diện tích thông thủy của cơ sở dôi dư }
+        - { name: excess_m2, label: Phần vượt (m²), description: "Đang dùng trừ được phép, không âm" }
+    - field: app_facilities_commune_facilities
+      label: Cơ sở
+      description: Cơ sở nhà, đất của xã mà người hỏi được phân công phụ trách hay duyệt.
+      columns:
+        - { name: code, label: Mã, description: Mã cơ sở trong xã }
+        - { name: name, label: Tên, description: Tên cơ sở }
+        - { name: address, label: Địa chỉ, description: Địa chỉ cơ sở }
+        - { name: status, label: Trạng thái, description: "in_use là đang dùng, surplus là dôi dư" }
+      relations:
+        - { name: summary, label: Xã, source: app_facilities_commune_area_summary }
+  examples:
+    - id: excess
+      question: Xã mình vượt bao nhiêu m²?
+      query: |
+        {
+          app_facilities_commune_area_summary(limit: 1) {
+            allowed_m2
+            in_use_m2
+            excess_m2
+          }
+        }
+    - id: facilities
+      question: Mình phụ trách những cơ sở nào?
+      query: |
+        {
+          app_facilities_commune_facilities(order_by: {code: asc}, limit: 50) {
+            code
+            name
+            address
+            status
+          }
+        }
+    - id: surplus
+      question: Cơ sở nào đang dôi dư?
+      query: |
+        {
+          app_facilities_commune_facilities(where: {status: {_eq: "surplus"}}, order_by: {code: asc}, limit: 50) {
+            code
+            name
+            summary {
+              surplus_m2
+            }
+          }
+        }

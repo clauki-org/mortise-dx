@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/assistant.schema.json từ chối: một mục vừa hỏi văn bản vừa hỏi dữ liệu.
+# Nếu lọt, giao diện và dịch vụ phải đoán mục này làm việc nào.
+
+intro: Hỏi về quy chế đặt phòng họp.
+documents: [example-rules]
+data:
+  max_rows: 20
+  sources:
+    - field: platform_knowledge_documents
+      label: Văn bản
+      description: Văn bản đã nạp.
+      columns: [{ name: title, label: Tên, description: Tên văn bản }]
+  examples:
+    - id: titles
+      question: Có những văn bản nào?
+      query: '{ platform_knowledge_documents(limit: 20) { title } }'
