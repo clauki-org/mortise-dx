@@ -54,6 +54,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0031](0031-step-fields.md) | Trường của một bước chỉ do người làm bước đó ghi: userTask khai trường bằng `flowable:formProperty`, workflow-api từ chối người lập và người làm bước khác gửi nó | Chấp nhận |
 | [0032](0032-case-tracking-for-initiators.md) | Người lập theo dõi hồ sơ của mình: route riêng lọc theo tenant và `initiator` trong một truy vấn, không trả trường của bước hay danh tính người xử lý; thành phần `cases` | Chấp nhận |
 | [0033](0033-dashboard-component.md) | Thành phần bảng điều hành: mọi số là cột do gói tính sẵn trong view, không tính trên trình duyệt; mỗi số kèm cách tính, mỗi khối kèm câu truy vấn đã gửi; biểu đồ cột ngang luôn kèm bảng số liệu; check-fast kiểm theo quyền của gói | Chấp nhận |
+| [0034](0034-model-written-guarded-graphql.md) | Câu hỏi dữ liệu gõ tự do: mô hình viết đúng một câu GraphQL chỉ đọc từ mô tả bảng, cột của mục menu, không thấy dòng dữ liệu; câu qua cùng guard, sửa tối đa một lần theo lý do của guard trong một hạn chung; chạy bằng token người hỏi | Chấp nhận |
 
 ## Quyết định còn mở
 

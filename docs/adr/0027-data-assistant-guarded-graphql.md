@@ -69,9 +69,9 @@ Các lựa chọn đã xét:
   `outcome` là `answered`, `refused` hay `failed`, kèm `item`, `query`, `row_count` và `attempts`. Không lưu dòng kết quả: quản
   trị đọc nhật ký không được thấy qua đường này những dòng mà quyền của họ ở bảng nguồn không cho thấy. Câu mẫu chạy
   không qua mô hình nên `model` và `attempts` trống ở các dòng đó.
-- **Mô hình không bao giờ thấy dòng dữ liệu.** Phần mô hình viết câu từ câu hỏi gõ tự do (kèm một lượt sửa theo lý do
-  của guard và bộ câu hỏi đánh giá) là bước sau của issue #116; mô hình chỉ nhận mô tả nguồn và cột, câu nó viết đi qua
-  cùng guard, và kết quả vẫn là bảng do giao diện vẽ.
+- **Mô hình không bao giờ thấy dòng dữ liệu.** Câu hỏi gõ tự do, mô hình viết câu kèm một lượt sửa theo lý do của guard:
+  [ADR 0034](0034-model-written-guarded-graphql.md); mô hình chỉ nhận mô tả nguồn và cột, câu nó viết đi qua cùng
+  guard, và kết quả vẫn là bảng do giao diện vẽ. Bộ câu hỏi đánh giá là bước sau của issue #116.
 - **Trong phiên bản này chỉ quan hệ một-một.** Quan hệ một-nhiều cần `limit` lồng và làm bảng kết quả khó đọc; để sau
   khi có nhu cầu thật.
 

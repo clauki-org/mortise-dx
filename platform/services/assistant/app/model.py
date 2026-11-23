@@ -1,13 +1,19 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Gọi mô hình (ADR 0021, bước 4): phần chung cho mọi nhà cung cấp (prompt, JSON Schema, kiểm dạng câu trả
-# lời) và lời gọi Ollama tại chỗ. Lời gọi qua API tương thích OpenAI và việc chọn nhà cung cấp theo cấu hình ở
-# providers.py. Prompt chung, không có từ nghiệp vụ: mọi điều về lĩnh vực nằm trong các câu được đánh mã. JSON
-# Schema buộc mô hình trả đúng ba trường; mô hình chỉ chọn mã câu, câu trích do pipeline.py chép từ dữ liệu.
+# Gọi mô hình (ADR 0021, bước 4; ADR 0034): phần chung cho mọi nhà cung cấp (prompt hỏi văn bản, JSON Schema,
+# kiểm dạng câu trả lời, lượt sinh dùng chung, dòng log mỗi lời gọi) và lời gọi Ollama tại chỗ. Lời gọi qua
+# API tương thích OpenAI và việc chọn nhà cung cấp theo cấu hình ở providers.py. Mỗi nhà cung cấp có `chat`
+# (gửi các tin nhắn, nhận chữ JSON theo một schema) mà cả hỏi văn bản (`generate`, bọc mỏng quanh `chat`) và
+# hỏi dữ liệu (data_model.py) dùng. Prompt hỏi văn bản chung, không có từ nghiệp vụ: mọi điều về lĩnh vực nằm
+# trong các câu được đánh mã; mô hình chỉ chọn mã câu, câu trích do pipeline.py chép từ dữ liệu.
 
 import json
 import logging
+import threading
+import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Protocol
 
 import httpx
@@ -42,6 +48,16 @@ SYSTEM = (
 NOT_RUNNING = "Mô hình chưa chạy; người vận hành bật bằng make ai-up."
 TOO_SLOW = "Mô hình trả lời quá thời gian cho phép; thử lại sau ít phút."
 MALFORMED = "Mô hình trả nội dung không đúng dạng; báo người vận hành xem log."
+BUSY = "Trợ lý đang trả lời một câu hỏi khác; thử lại sau ít phút."
+TRUNCATED = (
+    "Mô hình dừng giữa chừng vì hết số token được sinh; người vận hành tăng ASSISTANT_NUM_PREDICT trong "
+    "compose.yaml rồi chạy make up."
+)
+
+# Một lượt sinh mỗi lúc, chung cho hỏi văn bản và hỏi dữ liệu: mô hình chạy trên CPU, lượt thứ hai chạy song
+# song chỉ làm cả hai chậm hơn (ADR 0021); qua API cũng vậy (bổ sung 2026-11-22 của ADR 0021). Câu hỏi dữ liệu
+# giữ lượt qua cả lời gọi đầu và lượt sửa, để lượt sửa không phải chờ sau câu hỏi của người khác.
+_generating = threading.Lock()
 
 
 class Model(Protocol):
@@ -51,10 +67,41 @@ class Model(Protocol):
 
     def generate(self, question: str, sentences: list[Sentence]) -> dict: ...
 
+    def chat(self, messages: list[dict], schema: dict, name: str, timeout: float) -> str | None: ...
+
 
 def prompt(question: str, sentences: list[Sentence]) -> str:
     lines = [f"[{s.id}] ({s.passage.title}, {s.passage.label}) {s.text}" for s in sentences]
     return f"Câu hỏi: {question}\n\nCác câu:\n" + "\n".join(lines)
+
+
+def answer_messages(question: str, sentences: list[Sentence]) -> list[dict]:
+    return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt(question, sentences)}]
+
+
+@contextmanager
+def one_turn() -> Iterator[None]:
+    """Giữ lượt sinh cho mọi lời gọi mô hình trong khối; đang có lượt khác thì 503 ngay, không xếp hàng."""
+    if not _generating.acquire(blocking=False):
+        raise Denied(503, BUSY)
+    try:
+        yield
+    finally:
+        _generating.release()
+
+
+def log_call(provider: str, tokens_in: object, tokens_out: object, stop: object, started: float) -> None:
+    # Không ghi nội dung prompt hay câu trả lời: câu hỏi có thể chứa dữ liệu cá nhân, mà log không có quyền
+    # theo tenant như nhật ký câu hỏi. Số token và lý do dừng đủ để người vận hành chỉnh
+    # ASSISTANT_NUM_PREDICT.
+    log.info(
+        "Gọi mô hình %s: %s token vào, %s token ra, dừng vì %s, %.1f giây",
+        provider,
+        tokens_in,
+        tokens_out,
+        stop,
+        time.monotonic() - started,
+    )
 
 
 class Ollama:
@@ -63,20 +110,44 @@ class Ollama:
         self.info = ModelInfo(name=settings.model, provider="ollama", location="local", host=None)
 
     def generate(self, question: str, sentences: list[Sentence]) -> dict:
+        content = self.chat(
+            answer_messages(question, sentences), ANSWER_SCHEMA, "answer", settings.timeout_seconds
+        )
+        return parse_reply(content, "Ollama")
+
+    def chat(self, messages: list[dict], schema: dict, name: str, timeout: float) -> str | None:
+        """Nội dung mô hình sinh theo `schema`, hay None khi phản hồi không có nội dung.
+
+        `name` chỉ có nghĩa với API tương thích OpenAI; Ollama nhận JSON Schema trần ở `format`."""
         body = {
             "model": settings.model,
-            "messages": [
-                {"role": "system", "content": SYSTEM},
-                {"role": "user", "content": prompt(question, sentences)},
-            ],
-            "format": ANSWER_SCHEMA,
+            "messages": messages,
+            "format": schema,
             "stream": False,
             # Không cho mô hình viết phần suy nghĩ trước câu trả lời: tốn thời gian sinh mà không được dùng.
             "think": False,
             "options": {"temperature": 0, "num_predict": settings.num_predict},
         }
+        started = time.monotonic()
+        response = self._post(body, timeout)
         try:
-            response = self._client.post("/api/chat", json=body, timeout=settings.timeout_seconds)
+            payload = response.json()
+        except ValueError:
+            payload = None
+        if not isinstance(payload, dict):
+            log.error("Ollama trả nội dung không phải JSON: %s", response.text[:2000])
+            return None
+        stop = payload.get("done_reason")
+        log_call("ollama", payload.get("prompt_eval_count"), payload.get("eval_count"), stop, started)
+        if stop == "length":
+            raise Denied(502, TRUNCATED)
+        message = payload.get("message")
+        content = message.get("content") if isinstance(message, dict) else None
+        return content if isinstance(content, str) else None
+
+    def _post(self, body: dict, timeout: float) -> httpx.Response:
+        try:
+            response = self._client.post("/api/chat", json=body, timeout=timeout)
         # Profile `ai` tắt thì tên ollama không phân giải được hay không kết nối được: đó là "chưa bật", không
         # phải "chậm", nên kiểm trước TimeoutException (ConnectTimeout là con của nó).
         except (httpx.ConnectError, httpx.ConnectTimeout) as error:
@@ -93,26 +164,28 @@ class Ollama:
         if not response.is_success:
             log.error("Ollama trả %s: %s", response.status_code, response.text[:2000])
             raise Denied(502, "Mô hình trả lỗi; báo người vận hành xem log của assistant.")
-        try:
-            content = response.json()["message"]["content"]
-        except (ValueError, KeyError, TypeError):
-            content = None
-        # `format` buộc đúng dạng ở phía Ollama; kiểm lại để một bản Ollama bỏ qua `format` không làm dịch vụ
-        # lỗi 500.
-        return parse_reply(content, "Ollama", response.text)
+        return response
 
 
-def parse_reply(content: object, source: str, raw: str) -> dict:
+def parse_reply(content: str | None, source: str) -> dict:
     """Câu trả lời từ chuỗi JSON mô hình sinh; sai dạng là 502, cùng cách với mọi nhà cung cấp."""
-    try:
-        reply = json.loads(content) if isinstance(content, str) else None
-    except ValueError:
-        reply = None
+    reply = load_json(content, source)
     if not _well_formed(reply):
-        # `raw` là phản hồi của mô hình, không chứa prompt; ghi ở mức ERROR để người vận hành thấy vì sao.
-        log.error("%s trả nội dung không đúng dạng: %s", source, raw[:2000])
-        raise Denied(502, MALFORMED)
+        raise malformed(content, source)
     return reply
+
+
+def load_json(content: str | None, source: str) -> object:
+    try:
+        return json.loads(content) if isinstance(content, str) else None
+    except ValueError:
+        return None
+
+
+def malformed(content: str | None, source: str) -> Denied:
+    # Nội dung là chữ mô hình sinh, không chứa prompt; ghi ở mức ERROR để người vận hành thấy vì sao.
+    log.error("%s trả nội dung không đúng dạng: %s", source, (content or "(không có nội dung)")[:2000])
+    return Denied(502, MALFORMED)
 
 
 def _well_formed(reply: object) -> bool:

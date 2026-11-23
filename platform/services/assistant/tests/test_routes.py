@@ -13,7 +13,8 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app import journal, pipeline, retrieval
+from app import journal, retrieval
+from app import model as model_module
 from app.auth import caller_from_token
 from app.errors import Denied
 from app.main import app, model
@@ -125,11 +126,11 @@ def test_model_timeout_is_a_504(use):
 
 def test_second_question_while_generating_gets_503(use):
     fake = use(FakeModel())
-    assert pipeline._generating.acquire(blocking=False)
+    assert model_module._generating.acquire(blocking=False)
     try:
         result = ask()
     finally:
-        pipeline._generating.release()
+        model_module._generating.release()
     assert (result["status"], fake.calls) == (503, 0)
 
 

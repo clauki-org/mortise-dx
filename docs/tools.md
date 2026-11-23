@@ -249,8 +249,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Làm gì:** chạy mô hình ngôn ngữ trên CPU của máy chủ, nhận yêu cầu qua HTTP trong mạng nội bộ; nhận một JSON
   Schema để buộc câu trả lời đúng dạng.
 - **Trong dự án:** profile `ai`, không chạy cùng `make up`; không mở cổng ra máy chủ hay qua cổng APISIX. Mô hình và
-  lý do chọn ở [ADR 0021](adr/0021-document-assistant.md); chỉ trợ lý hỏi văn bản gọi Ollama, trừ khi người vận
-  hành chuyển nó sang API (mục assistant bên dưới).
+  lý do chọn ở [ADR 0021](adr/0021-document-assistant.md); chỉ trợ lý (hỏi văn bản và câu hỏi dữ liệu gõ tự do) gọi
+  Ollama, trừ khi người vận hành chuyển nó sang API (mục assistant bên dưới).
 - **Cấu hình:** dịch vụ `ollama` trong `compose.yaml`, trọng số trong volume `ollama`; tên mô hình và digest lớp
   trọng số ở `core/ollama/models.txt`.
 - **Xem:** `make ai-up` (tải và đối chiếu digest); `docker compose exec ollama ollama list`.
@@ -261,10 +261,13 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   trả lời, kiểm câu trả lời rồi trả kèm câu trích nguyên văn, hoặc từ chối có lý do
   ([ADR 0021](adr/0021-document-assistant.md)). Tại `/v1/assistant/data-queries`: cho câu GraphQL qua guard
   (`app/guard.py`, phân tích bằng graphql-core) rồi chạy qua Hasura bằng token người hỏi, trả bảng kèm câu đã chạy
-  ([ADR 0027](adr/0027-data-assistant-guarded-graphql.md)).
+  ([ADR 0027](adr/0027-data-assistant-guarded-graphql.md)). Tại `/v1/assistant/data-questions`: mô hình viết câu
+  GraphQL từ câu hỏi gõ tự do và mô tả bảng, cột của mục menu, rồi câu đi cùng đường đó, sửa tối đa một lần theo lý
+  do của guard ([ADR 0034](adr/0034-model-written-guarded-graphql.md)).
 - **Trong dự án:** đọc đoạn qua cổng bằng token người hỏi, nên Hasura lọc theo tenant. Mỗi câu hỏi một dòng trong
   `platform.assistant_questions`, ghi bằng vai trò CSDL `assistant` chỉ được thêm dòng; không ghi được thì không trả
-  lời. Mô hình chỉ chọn mã câu; số trong câu trả lời phải có trong câu được trích. Mỗi lúc chỉ một lượt sinh. Chạy
+  lời. Mô hình chỉ chọn mã câu; số trong câu trả lời phải có trong câu được trích. Mỗi lúc chỉ một lượt sinh, chung cho
+  hỏi văn bản và hỏi dữ liệu; mỗi lời gọi mô hình một dòng log INFO không kèm nội dung (`ASSISTANT_LOG_LEVEL`). Chạy
   cùng lõi; Ollama chưa bật thì câu hỏi cần mô hình nhận 503 kèm cách bật.
 - **Cấu hình:** dịch vụ `assistant` trong `compose.yaml`: ngưỡng điểm tìm, số đoạn, độ dài câu hỏi,
   thời gian chờ. Mã ở `platform/services/assistant/`; route và giới hạn tần suất ở `core/apisix/apisix.yaml`. Nhà

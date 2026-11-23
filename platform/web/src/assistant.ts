@@ -3,8 +3,8 @@
 //
 // Phần không có React của thành phần trợ lý: kiểu cấu hình theo contracts/assistant.schema.json, kiểm cấu hình lúc chạy,
 // và lời gọi theo contracts/assistant.openapi.json. Mục menu chọn hỏi văn bản (`documents`, ADR 0021,
-// /v1/assistant/questions, Assistant.tsx hiển thị) hay hỏi dữ liệu (`data`, ADR 0027, /v1/assistant/data-queries,
-// AssistantData.tsx hiển thị).
+// /v1/assistant/questions, Assistant.tsx hiển thị) hay hỏi dữ liệu (`data`, ADR 0027 và ADR 0034: câu mẫu qua
+// /v1/assistant/data-queries, câu gõ tự do qua /v1/assistant/data-questions; AssistantData.tsx hiển thị).
 
 import { callApi } from "./api";
 
@@ -19,7 +19,16 @@ export type DataAssistantConfig = { intro: string; data: { examples: DataExample
 export type DataTable = { title: string; columns: { key: string; label: string }[]; rows: Record<string, Cell>[] };
 export type Cell = string | number | boolean | null;
 
-export type DataAnswer = { outcome: "data" | "refused"; reason: string | null; query: string; tables: DataTable[] };
+export type DataAnswer = {
+  outcome: "data" | "refused";
+  reason: string | null;
+  query: string;
+  tables: DataTable[];
+  // Ba trường dưới null với câu mẫu (không qua mô hình); có giá trị với câu hỏi gõ tự do.
+  model: ModelInfo | null;
+  attempts: number | null;
+  refused_by: "model" | "guard" | "hasura" | null;
+};
 
 export type Citation = { document_id: string; title: string; passage_id: string; label: string; sentence: string };
 
@@ -74,12 +83,20 @@ export function configProblems(config: unknown): string[] {
 }
 
 /**
- * Dòng cho người hỏi biết câu trả lời đến từ mô hình nào và câu hỏi đã đi đâu: qua API thì câu hỏi và các câu đã
- * tìm rời máy chủ của bản cài (ADR 0021), nên ghi cả tên máy của API.
+ * Mô hình chạy ở đâu: qua API thì câu hỏi và phần prompt đi kèm rời máy chủ của bản cài (ADR 0021, ADR 0034), nên
+ * ghi cả tên máy của API.
  */
+const modelWhere = (model: ModelInfo) =>
+  model.location === "local" ? "chạy tại chỗ" : `qua API ${model.host ?? "bên ngoài"}`;
+
+/** Dòng cho người hỏi văn bản biết câu trả lời đến từ mô hình nào và câu hỏi đã đi đâu. */
 export function modelLine(model: ModelInfo): string {
-  const where = model.location === "local" ? "chạy tại chỗ" : `qua API ${model.host ?? "bên ngoài"}`;
-  return `Trả lời bởi ${model.name}, ${where}`;
+  return `Trả lời bởi ${model.name}, ${modelWhere(model)}`;
+}
+
+/** Dòng cho người hỏi dữ liệu: mô hình chỉ viết câu truy vấn, dữ liệu trong bảng không qua mô hình. */
+export function queryModelLine(model: ModelInfo): string {
+  return `Câu truy vấn do ${model.name} viết, ${modelWhere(model)}`;
 }
 
 function dataProblems(data: unknown): string[] {
@@ -107,6 +124,17 @@ export function runDataQuery(token: string | undefined, app: string, item: strin
   return callApi<DataAnswer>("/v1/assistant/data-queries", token, {
     method: "POST",
     body: JSON.stringify({ question: example.question, app, item, query: example.query }),
+  });
+}
+
+/**
+ * Hỏi dữ liệu bằng câu gõ tự do: mô hình viết câu truy vấn, dịch vụ cho câu qua guard rồi chạy bằng token người hỏi.
+ * Như câu mẫu, chỉ gửi gói và mục menu; bảng, cột được phép do dịch vụ đọc từ mục menu.
+ */
+export function askData(token: string | undefined, app: string, item: string, question: string) {
+  return callApi<DataAnswer>("/v1/assistant/data-questions", token, {
+    method: "POST",
+    body: JSON.stringify({ question, app, item }),
   });
 }
 

@@ -15,8 +15,9 @@ import httpx
 import pytest
 
 from app import providers
+from app.data_model import QUERY_SCHEMA
 from app.errors import Denied
-from app.model import ANSWER_SCHEMA, MALFORMED, TOO_SLOW, Ollama
+from app.model import ANSWER_SCHEMA, MALFORMED, TOO_SLOW, TRUNCATED, Ollama
 from app.providers import OpenAICompatible, Unconfigured, configured
 from tests.test_model import SENTENCES
 
@@ -170,3 +171,51 @@ def test_misconfiguration_is_a_503_never_a_fallback(monkeypatch, caplog, changes
     assert raised.value.status == 503
     assert hint in raised.value.reason
     assert KEY not in caplog.text
+
+
+def test_chat_carries_schema_name_and_timeout_and_logs_usage_without_content(caplog):
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        body = {
+            "choices": [{"message": {"content": '{"answerable": true}'}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 900, "completion_tokens": 41},
+        }
+        return httpx.Response(200, json=body)
+
+    messages = [{"role": "user", "content": "Câu hỏi bí mật của người hỏi"}]
+    with caplog.at_level(logging.INFO, logger="assistant"):
+        assert api(handler).chat(messages, QUERY_SCHEMA, "query", 7.5) == '{"answerable": true}'
+    body = json.loads(seen[0].content)
+    assert body["response_format"] == {
+        "type": "json_schema",
+        "json_schema": {"name": "query", "strict": True, "schema": QUERY_SCHEMA},
+    }
+    assert (body["messages"], body["temperature"], body["max_tokens"]) == (messages, 0, 400)
+    assert seen[0].extensions["timeout"]["read"] == 7.5
+    (line,) = [r.getMessage() for r in caplog.records if r.name == "assistant.model"]
+    assert "openai-compatible: 900 token vào, 41 token ra, dừng vì stop" in line
+    assert "bí mật" not in caplog.text
+    assert KEY not in caplog.text
+
+
+def test_reply_cut_by_the_token_limit_is_a_502_naming_the_setting():
+    reply = {"choices": [{"message": {"content": '{"ans'}, "finish_reason": "length"}]}
+    with pytest.raises(Denied) as raised:
+        api(lambda request: httpx.Response(200, json=reply)).chat([], QUERY_SCHEMA, "query", 5)
+    assert (raised.value.status, raised.value.reason) == (502, TRUNCATED)
+
+
+def test_unconfigured_chat_is_a_503_with_the_fix():
+    with pytest.raises(Denied) as raised:
+        Unconfigured("thiếu ASSISTANT_LLM_API_KEY").chat([], QUERY_SCHEMA, "query", 5)
+    assert (raised.value.status, raised.value.reason) == (503, "thiếu ASSISTANT_LLM_API_KEY")
+
+
+def test_startup_warning_says_table_descriptions_also_leave(monkeypatch, caplog):
+    with_settings(monkeypatch, **API_SETTINGS)
+    with caplog.at_level(logging.WARNING):
+        configured()
+    assert "mô tả bảng, cột" in caplog.text
+    assert "Không gửi dòng dữ liệu" in caplog.text

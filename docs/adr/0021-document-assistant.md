@@ -140,8 +140,8 @@ khoản của bên cung cấp API (lưu bao lâu, có dùng để huấn luyện
 - prompt hệ thống, JSON Schema, tên mô hình, khóa API.
 
 Không gửi: token, `sub`, tenant hay tên người hỏi; đoạn ngoài quyền người hỏi; nhật ký câu hỏi. Câu hỏi bị từ chối vì
-không có đoạn đủ gần (bước 3) không gửi gì. Trợ lý hỏi dữ liệu (#116) là kế hoạch: khi làm, nó chỉ được gửi siêu dữ
-liệu (tên bảng, cột, mô tả), không gửi dòng dữ liệu, và ghi lại trong bản ghi của nó.
+không có đoạn đủ gần (bước 3) không gửi gì. Trợ lý hỏi dữ liệu gửi mô tả bảng, cột của mục menu, không gửi dòng dữ
+liệu; danh sách đầy đủ ở [ADR 0034](0034-model-written-guarded-graphql.md).
 
 **Hiện cho người hỏi và ghi nhật ký.** Câu trả lời có `model` (tên, nhà cung cấp, `location`, `host`), null khi không
 gọi mô hình; giao diện ghi "Trả lời bởi <mô hình>, chạy tại chỗ" hay "qua API <tên máy>". `location` theo nhà cung

@@ -25,13 +25,20 @@ capabilities:
   - Với mục có `data`, câu mẫu trong data.examples hiện thành nút; bấm là chạy câu GraphQL viết sẵn, không cần
     mô hình. Dịch vụ đọc bảng, cột được phép từ chính mục menu bằng token người hỏi, cho câu qua guard rồi chạy đúng
     câu đó qua Hasura với vai trò user.
+  - Với mục có `data`, ô hỏi nhận câu gõ tự do, mô hình viết một câu GraphQL chỉ đọc từ mô tả bảng, cột của mục, không
+    thấy dòng dữ liệu nào; câu qua cùng guard, bị từ chối thì mô hình viết lại một lần (ADR 0034). Kết quả ghi câu
+    truy vấn do mô hình nào viết, chạy tại chỗ hay qua API của máy nào, ghi khi mô hình đã viết lại, và nhắc đọc câu
+    đã chạy. Lời từ chối là chữ cố định theo bước từ chối (mô hình, guard kèm lý do của guard, Hasura), không phải chữ
+    của mô hình. Mô hình chưa chạy hay đang bận thì hiện thông điệp của dịch vụ.
   - Kết quả hỏi dữ liệu hiện thành bảng với tiêu đề cột của gói, mỗi ô là chữ thường; luôn kèm khối "Câu truy vấn đã
-    chạy". Câu bị guard hay Hasura từ chối hiện lý do và câu bị từ chối. Màn hình nói rõ dữ liệu chỉ trong phạm vi
+    chạy". Câu bị guard hay Hasura từ chối hiện lý do và câu bị từ chối; mô hình không viết câu nào thì không có khối
+    câu truy vấn. Màn hình nói rõ dữ liệu chỉ trong phạm vi
     quyền của tài khoản đang hỏi.
 limits:
   - Mỗi lần một câu hỏi; không giữ lịch sử hỏi đáp trên màn hình, không hỏi tiếp theo câu trước.
   - Chỉ hỏi văn bản của gói chứa mục menu (hay `core` cho mục mẫu của lõi); không hỏi văn bản của gói khác.
   - Không lọc văn bản theo vai trò; người hỏi thấy đoạn nào do quyền Hasura theo tenant quyết định.
-  - Hỏi dữ liệu chỉ chạy câu mẫu của gói; câu hỏi gõ tự do (mô hình viết câu truy vấn) là kế hoạch của issue #116.
+  - Câu hỏi dữ liệu gõ tự do cần mô hình (Ollama hay API theo cấu hình); mô hình có thể viết câu qua guard mà vẫn hiểu
+    sai câu hỏi, nên người hỏi đọc câu đã chạy. Mỗi câu tối đa hai lượt mô hình viết, trong một hạn chung.
   - Hỏi dữ liệu chỉ đọc bảng, cột của gói chứa mục menu, chỉ theo quan hệ một-một, tối đa max_rows dòng mỗi danh
     sách; không ghi, không introspection. Dòng nào hiện do quyền Hasura của vai trò user quyết định.

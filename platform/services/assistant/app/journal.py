@@ -3,8 +3,8 @@
 #
 # Nhật ký câu hỏi (ADR 0021, bước 6): mỗi câu hỏi đã qua bước kiểm đầu vào một dòng trong
 # platform.assistant_questions, ghi bằng vai trò CSDL `assistant` chỉ được thêm dòng. Không ghi được thì
-# main.py không trả câu trả lời: câu hỏi nào cũng phải có dấu vết. Câu hỏi dữ liệu (ADR 0027) ghi câu truy vấn
-# và số dòng, không ghi dòng kết quả.
+# main.py không trả câu trả lời: câu hỏi nào cũng phải có dấu vết. Câu hỏi dữ liệu (ADR 0027, ADR 0034) ghi
+# câu truy vấn và số dòng, không ghi dòng kết quả; câu do mô hình viết ghi thêm mô hình và số lượt.
 
 import json
 import logging
@@ -15,7 +15,7 @@ from pg8000.exceptions import DatabaseError, InterfaceError
 from .config import settings
 from .errors import Denied
 from .retrieval import Caller
-from .schemas import Answer, DataAnswer, DataQuery, Question
+from .schemas import Answer, DataAnswer, DataQuery, DataQuestion, Question
 
 log = logging.getLogger("assistant.journal")
 
@@ -97,6 +97,48 @@ def record_data(
         "query": answer.query if answer else request.query,
         "row_count": sum(len(table.rows) for table in answer.tables) if outcome == "answered" else None,
         "attempts": None,
+    }
+    _write(caller, params)
+
+
+def record_data_question(
+    caller: Caller,
+    request: DataQuestion,
+    duration_ms: int,
+    answer: DataAnswer | None,
+    failure: str = "",
+    query: str | None = None,
+    attempts: int | None = None,
+) -> None:
+    """Ghi một câu hỏi dữ liệu gõ tự do (ADR 0034): như record_data, kèm mô hình và số lượt mô hình viết câu.
+
+    `answer` None kèm `failure` khi lỗi chặn trả lời; khi đó `query` và `attempts` là phần đã có trước lỗi."""
+    outcome = "failed"
+    if answer:
+        outcome = "answered" if answer.outcome == "data" else "refused"
+        query, attempts = answer.query, answer.attempts
+    params = {
+        "tenant": caller.tenant,
+        "sub": caller.sub,
+        "app": request.app,
+        "documents": [],
+        "question": request.question.strip(),
+        "outcome": outcome,
+        "answer": None,
+        "reason": answer.reason if answer else failure,
+        "citations": "[]",
+        # Từ cấu hình như record(): dòng của câu lỗi trước khi gọi được mô hình vẫn ghi câu hỏi lẽ ra đi tới
+        # đâu, và ràng buộc "có mô hình hay có câu truy vấn" của bảng luôn được thỏa.
+        "model": settings.model,
+        "model_provider": settings.llm_provider,
+        "model_host": settings.llm_host,
+        "duration_ms": duration_ms,
+        "item": request.item,
+        # Mô hình từ chối thì không có câu nào: NULL, không phải chuỗi rỗng, để "có query" vẫn nghĩa là có
+        # câu.
+        "query": query or None,
+        "row_count": sum(len(table.rows) for table in answer.tables) if outcome == "answered" else None,
+        "attempts": attempts,
     }
     _write(caller, params)
 

@@ -52,7 +52,7 @@
           "maximum": 100
         },
         "examples": {
-          "description": "Câu hỏi mẫu kèm câu truy vấn viết sẵn; bấm là chạy ngay, không cần mô hình",
+          "description": "Câu hỏi mẫu kèm câu truy vấn viết sẵn; bấm là chạy ngay, không cần mô hình. Cũng là ví dụ gửi cho mô hình khi nó viết câu cho câu hỏi gõ tự do (ADR 0034)",
           "type": "array",
           "minItems": 1,
           "maxItems": 20,
@@ -111,7 +111,7 @@
       "properties": {
         "name": { "$ref": "#/$defs/name", "not": { "const": "tenant_id" } },
         "label": { "description": "Tiêu đề cột trên bảng kết quả", "$ref": "#/$defs/text" },
-        "description": { "description": "Cột chứa gì, đơn vị nếu có", "$ref": "#/$defs/text" }
+        "description": { "description": "Cột chứa gì, đơn vị nếu có; gửi cho mô hình khi viết câu cho câu hỏi gõ tự do, kể cả qua API (ADR 0034)", "$ref": "#/$defs/text" }
       }
     },
     "relation": {

@@ -12,6 +12,13 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Trợ lý hỏi dữ liệu nhận câu hỏi gõ tự do (ADR 0034, `POST /v1/assistant/data-questions`): mô hình (Ollama hay API theo
+  cấu hình) viết một câu GraphQL chỉ đọc từ mô tả bảng, cột của mục menu, không thấy dòng dữ liệu nào; câu qua cùng
+  guard với câu mẫu, bị từ chối thì mô hình viết lại một lần theo lý do của guard, rồi chạy qua Hasura bằng token người
+  hỏi. Giao diện có ô hỏi cạnh các câu mẫu, ghi mô hình đã viết câu và nơi chạy, kèm câu đã chạy hay bị từ chối. Phản
+  hồi hỏi dữ liệu có thêm `model`, `attempts`, `refused_by` (null với câu mẫu); nhật ký ghi mô hình và số lượt. Mỗi lời
+  gọi mô hình có một dòng log INFO (số token, lý do dừng, thời gian, không kèm nội dung), mức log đặt bằng
+  `ASSISTANT_LOG_LEVEL`. Bản cài cũ dựng lại image (`docker compose build assistant web`) rồi chạy `make up`.
 - Người lập theo dõi hồ sơ của mình trên web (ADR 0032): thành phần Tầng 2 `cases` (`contracts/cases.schema.json`,
   mục menu `component: cases`) liệt kê hồ sơ người đăng nhập đã lập, bước đang chờ cùng vai trò hay đơn vị xử lý, các
   bước đã qua và kết quả; không hiện ý kiến, quyết định hay danh tính người xử lý. API quy trình có thêm

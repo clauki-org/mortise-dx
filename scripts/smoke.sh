@@ -153,9 +153,20 @@ for pair in "user.a xa-a" "user.b xa-b"; do
 done
 
 # Trợ lý hỏi văn bản (ADR 0021) trên văn bản mẫu, chạy cùng lõi: cổng đòi token; câu hỏi ngoài văn bản bị từ chối vì
-# không có căn cứ mà không cần mô hình. Câu hỏi có trong văn bản tìm được đoạn rồi tới mô hình: Ollama (profile `ai`)
-# tắt thì dịch vụ trả 503 dạng JSON chỉ cách bật; bật thì trả lời kèm câu trích, hay từ chối với lý do khác "không tìm
-# thấy đoạn". Không đòi đúng một câu trả lời: độ đúng của mô hình đo bằng bộ câu hỏi có đáp án, không bằng smoke.
+# không có căn cứ mà không cần mô hình. Câu hỏi có trong văn bản tìm được đoạn rồi tới mô hình: mô hình chưa sẵn
+# sàng (dưới đây) thì dịch vụ trả 503 dạng JSON chỉ cách bật; sẵn sàng thì trả lời kèm câu trích, hay từ chối với lý
+# do khác "không tìm thấy đoạn". Không đòi đúng một câu trả lời: độ đúng của mô hình đo bằng bộ câu hỏi có đáp án,
+# không bằng smoke.
+#
+# Mô hình sẵn sàng hay không theo nhà cung cấp dịch vụ trợ lý đang dùng (ADR 0021, bổ sung 2026-11-22): với Ollama là
+# container ollama đang chạy; với API thì không có container nào để nhìn, nên coi là sẵn sàng và lỗi của API (khóa,
+# hạn mức) hiện thành FAIL kèm lý do. Chỉ đọc đúng một biến của container, không in biến nào khác.
+provider=$(docker compose exec -T assistant printenv ASSISTANT_LLM_PROVIDER 2>/dev/null || true)
+model_ready=yes
+if [[ "${provider:-ollama}" == ollama ]] &&
+  ! docker compose --profile ai ps --status running --services 2>/dev/null | grep -qx ollama; then
+  model_ready=no
+fi
 ask_url="$base/v1/assistant/questions"
 ask() {
   jq -nc --arg q "$1" '{question: $q, app: "core", documents: ["example-rules", "example-rules-amendment"]}' |
@@ -189,7 +200,7 @@ check "Nhật ký câu hỏi: vai trò CSDL của trợ lý không xóa được
     -c 'SET ROLE assistant; DELETE FROM platform.assistant_questions' 2>&1 | grep -o 'permission denied' | head -1)" \
   "permission denied"
 reply=$(ask "Phòng họp được đặt trước tối đa bao nhiêu ngày?" "$user_a_token")
-if docker compose --profile ai ps --status running --services 2>/dev/null | grep -qx ollama; then
+if [[ $model_ready == yes ]]; then
   check "Trợ lý: câu hỏi có trong văn bản tìm được đoạn và tới mô hình" \
     "$(tail -1 <<<"$reply") $(sed '$d' <<<"$reply" | jq -r --arg p "$no_evidence" 'if .outcome == "answered"
       then (.citations | length > 0) else ((.reason // "") | startswith($p) | not) end')" \
@@ -243,6 +254,46 @@ check "Nhật ký câu hỏi: mỗi câu hỏi dữ liệu một dòng kèm mụ
     | map([.[0].tenant_id, .[0].outcome, length, (map(.row_count) | unique), (map(.answer, .model) | unique),
       (map(.has_query != null) | unique), (map(.item) | unique)])')" \
   '[["xa-a","answered",1,[2],[null],[true],["ask-data-example"]],["xa-a","refused",5,[null],[null],[true],["ask-data-example"]]]'
+
+# Trợ lý dữ liệu, câu hỏi gõ tự do (ADR 0034) trên cùng mục mẫu: cổng đòi token; câu trống là 400 và mục không có là
+# 404, cả hai trước khi gọi mô hình. Mô hình sẵn sàng thì 200 với kết quả hay lời từ chối, kèm mô hình và số lượt viết
+# câu (1 hay 2); chưa sẵn sàng thì 503 dạng JSON chỉ cách bật. Không đòi câu truy vấn đúng hay đúng một kết quả: độ
+# đúng đo bằng bộ câu hỏi có đáp án. Câu hỏi riêng, khác $data_question, để kiểm nhật ký ở trên không đổi; token
+# riêng vì giới hạn tần suất tính theo token.
+free_token=$(token user.a)
+free_question="Kiểm thử smoke câu hỏi dữ liệu gõ tự do $(date +%s)-$RANDOM: đơn vị mình có bao nhiêu văn bản mẫu?"
+# free_ask CÂU_HỎI MỤC [TOKEN]: in thân phản hồi rồi mã HTTP ở dòng cuối.
+free_ask() {
+  jq -nc --arg q "$1" --arg item "$2" '{question: $q, app: "core", item: $item}' |
+    curl -s -w '\n%{http_code}' -X POST "$base/v1/assistant/data-questions" ${3:+-H "Authorization: Bearer $3"} \
+      -H 'Content-Type: application/json' -d @-
+}
+check "Trợ lý dữ liệu, câu gõ tự do: không token bị chặn tại cổng" \
+  "$(free_ask "$free_question" ask-data-example | tail -1)" 401
+check "Trợ lý dữ liệu, câu gõ tự do: câu trống là 400" "$(free_ask "  " ask-data-example "$free_token" | tail -1)" 400
+check "Trợ lý dữ liệu, câu gõ tự do: mục menu không có là 404" \
+  "$(free_ask "$free_question" no-such-item "$free_token" | tail -1)" 404
+reply=$(free_ask "$free_question" ask-data-example "$free_token")
+free_log=$(jq -nc --arg question "$free_question" '{query: "query($q: String!) { platform_assistant_questions(
+  where: {question: {_eq: $q}}) { tenant_id outcome item model attempts } }", variables: {q: $question}}')
+free_row() {
+  curl -fsS -X POST "$base/v1/graphql" -H "Authorization: Bearer $(token admin.a)" -H 'X-Hasura-Role: tenant_admin' \
+    -H 'Content-Type: application/json' -d "$free_log" | jq -c '[.data.platform_assistant_questions[] |
+      [.tenant_id, .item, .model != null, (if .attempts == null then null else (.attempts | IN(1, 2)) end),
+      (.outcome | IN("answered", "refused"))]]'
+}
+if [[ $model_ready == yes ]]; then
+  check "Trợ lý dữ liệu, câu gõ tự do: mô hình viết câu, trả kết quả hay lời từ chối kèm mô hình và số lượt" \
+    "$(tail -1 <<<"$reply") $(sed '$d' <<<"$reply" | jq -r '[(.outcome | IN("data", "refused")), .model != null,
+      (.attempts | IN(1, 2))] | all')" "200 true"
+  check "Nhật ký câu hỏi: câu gõ tự do có một dòng kèm mô hình và số lượt" "$(free_row)" \
+    '[["xa-a","ask-data-example",true,true,true]]'
+else
+  check "Trợ lý dữ liệu, câu gõ tự do: mô hình chưa bật thì 503 dạng JSON chỉ cách bật" \
+    "$(tail -1 <<<"$reply") $(sed '$d' <<<"$reply" | jq -r '.error | contains("make ai-up")')" "503 true"
+  check "Nhật ký câu hỏi: câu gõ tự do lỗi vì chưa có mô hình vẫn có một dòng kèm mô hình đã cấu hình" "$(free_row)" \
+    '[["xa-a","ask-data-example",true,null,false]]'
+fi
 
 # Quyền Hasura đang chạy phải khớp tệp khai báo (core/hasura/, platform/schema/hasura/); ai sửa tay trên trang quản
 # trị thì báo ở đây. Quyền hay quan hệ sai thì `make seed` đưa về đúng; bảng đăng ký thừa thì thông báo chỉ cách gỡ.
