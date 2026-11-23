@@ -19,7 +19,7 @@ DATA = {
             "columns": [
                 {"name": "code", "label": "Mã", "description": "Mã"},
                 {"name": "name", "label": "Tên", "description": "Tên"},
-                {"name": "area", "label": "Diện tích", "description": "m²"},
+                {"name": "area", "label": "Giá trị", "description": "m²"},
             ],
             "relations": [{"name": "group", "label": "Nhóm", "source": "app_x_groups"}],
         },
@@ -172,7 +172,7 @@ def test_aggregate_gives_one_row_table_and_a_nodes_table():
     )
     summary, nodes = checked.tables
     assert (summary.rows_at, summary.many) == (("aggregate",), False)
-    assert [c.label for c in summary.columns] == ["Số dòng", "Tổng diện tích"]
+    assert [c.label for c in summary.columns] == ["Số dòng", "Tổng giá trị"]
     assert (nodes.rows_at, nodes.many) == (("nodes",), True)
 
 

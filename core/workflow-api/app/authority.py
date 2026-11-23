@@ -81,7 +81,8 @@ def pick(rows: list[Row], variables: dict[str, object], parent: str | None) -> R
     """Dòng áp cho hồ sơ: dòng có ngưỡng cao nhất mà hồ sơ vượt, không có thì dòng gốc.
 
     Biến thiếu, không phải số, âm thì coi như vượt mọi ngưỡng, tức đi tới người có thẩm quyền cao nhất, như
-    BPMN của gói coi phần vượt thiếu hay âm là nhánh nặng: người lập bỏ trống biến thì không né được cấp trên.
+    BPMN của gói coi biến ngưỡng thiếu hay âm là nhánh nặng: người lập bỏ trống biến thì không né được cấp
+    trên.
     Dòng cấp tenant cha bị bỏ qua khi tenant không có cha, để hồ sơ không tới một nhóm không ai có.
     """
     usable = [row for row in rows if row.scope == TENANT or parent is not None]

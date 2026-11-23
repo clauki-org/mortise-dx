@@ -141,7 +141,7 @@ describe("pointsOf", () => {
 });
 
 describe("fieldText", () => {
-  const amount = { name: "a", label: "Diện tích", type: "number" } as const;
+  const amount = { name: "a", label: "Giá trị", type: "number" } as const;
 
   it("trường number viết số và chuỗi thập phân theo kiểu Việt Nam", () => {
     expect([fieldText(amount, 1234.5), fieldText(amount, "1234.50"), fieldText(amount, "21.00")]).toEqual([
