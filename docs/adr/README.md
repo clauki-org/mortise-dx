@@ -53,6 +53,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0030](0030-form-component.md) | Thành phần biểu mẫu: cấu hình riêng dịch sang rjsf, khởi tạo quy trình hoặc thêm dòng của gói, Idempotency-Key đổi theo dữ liệu, check-fast kiểm theo gói | Chấp nhận |
 | [0031](0031-step-fields.md) | Trường của một bước chỉ do người làm bước đó ghi: userTask khai trường bằng `flowable:formProperty`, workflow-api từ chối người lập và người làm bước khác gửi nó | Chấp nhận |
 | [0032](0032-case-tracking-for-initiators.md) | Người lập theo dõi hồ sơ của mình: route riêng lọc theo tenant và `initiator` trong một truy vấn, không trả trường của bước hay danh tính người xử lý; thành phần `cases` | Chấp nhận |
+| [0033](0033-dashboard-component.md) | Thành phần bảng điều hành: mọi số là cột do gói tính sẵn trong view, không tính trên trình duyệt; mỗi số kèm cách tính, mỗi khối kèm câu truy vấn đã gửi; biểu đồ cột ngang luôn kèm bảng số liệu; check-fast kiểm theo quyền của gói | Chấp nhận |
 
 ## Quyết định còn mở
 

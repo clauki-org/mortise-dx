@@ -241,6 +241,35 @@
     - role: tenant_admin
       permission: { columns: *area_summary_columns, filter: *tenant }
 
+# Ba view của bảng điều hành (ADR 0033): số của cả xã, không lộ cơ sở nào, như area_summary; riêng facility_coverage
+# cho biết bao nhiêu cơ sở chưa ai phụ trách nên chỉ lãnh đạo và quản trị xã đọc.
+- table: { schema: app_facilities_commune, name: facility_status_counts }
+  select_permissions:
+    - role: user
+      permission: { columns: &status_count_columns [tenant_id, status, facility_count, clear_area_m2], filter: *tenant }
+    - role: manager
+      permission: { columns: *status_count_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *status_count_columns, filter: *tenant }
+
+- table: { schema: app_facilities_commune, name: area_by_type }
+  select_permissions:
+    - role: user
+      permission: { columns: &area_type_columns [tenant_id, area_type, in_use_m2, allowed_m2], filter: *tenant }
+    - role: manager
+      permission: { columns: *area_type_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *area_type_columns, filter: *tenant }
+
+- table: { schema: app_facilities_commune, name: facility_coverage }
+  select_permissions:
+    - role: manager
+      permission:
+        columns: &coverage_columns [tenant_id, facility_count, without_custodian, without_approver]
+        filter: *tenant
+    - role: tenant_admin
+      permission: { columns: *coverage_columns, filter: *tenant }
+
 # Tổng hợp cho tenant cha (ADR 0016): chỉ vai trò rollup_reader đọc, chỉ dòng của tenant con có cha là tenant trong
 # token. Ngoài view này, vai trò này chỉ đọc facility_rollup ở cuối tệp; không có quyền ở bảng gốc nào của gói.
 - table: { schema: app_facilities_commune, name: area_rollup }

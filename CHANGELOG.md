@@ -18,6 +18,13 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   `GET /v1/workflow/cases` và `GET /v1/workflow/cases/{id}`. Biểu mẫu và nút của danh mục có đường "Xem hồ sơ vừa
   lập". Gói kho vật tư có mục "Đề nghị đã lập", gói xã có mục "Hồ sơ rà soát đã lập"; bản cài cũ dựng lại image
   (`docker compose build workflow-api web`), chạy `make up` và cài lại hai gói.
+- Thành phần bảng điều hành Tầng 2 (ADR 0033, `contracts/dashboard.schema.json`, mục menu `component: dashboard`):
+  khối thẻ số hay biểu đồ cột ngang đọc một bảng, view của gói qua GraphQL bằng token người xem; mọi số là cột do gói
+  tính sẵn, mỗi số kèm cách tính, mỗi khối có mục "Nguồn" ghi câu truy vấn đã gửi, biểu đồ luôn kèm bảng số liệu;
+  `make check-fast` kiểm bảng, cột với quyền Hasura của gói. Gói `facilities-commune` có mục "Bảng điều hành": diện
+  tích của xã, số cơ sở theo trạng thái, diện tích theo loại, biên chế, cơ sở chưa được phân công (lãnh đạo xã) và,
+  với tỉnh, số của từng xã con; ba view mới trong migration của gói. Bản cài cũ chạy lại
+  `make app-install APP=facilities-commune` và dựng lại image `web`.
 - Thành phần biểu mẫu nhập liệu Tầng 2 (ADR 0030, `contracts/form.schema.json`, mục menu `component: form`): gói
   khai trường, danh sách chọn cố định hay đọc từ bảng của gói (lọc theo trường trước), rồi khởi tạo quy trình của
   gói kèm Idempotency-Key hoặc thêm một dòng vào bảng của gói; `make check-fast` kiểm biểu mẫu với BPMN, khai báo

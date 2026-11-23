@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bản mô tả thành phần bảng điều hành theo contracts/component.schema.json; `make check-fast` kiểm tệp này. Mã của
+# thành phần ở platform/web/src/ (DashboardPanel.tsx, DashboardView.tsx, dashboardConfig.ts); luật cấu hình theo gói
+# ở scripts/check-dashboard-config.py. Đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
+
+component: dashboard
+summary: Các khối thẻ số và biểu đồ cột ngang đọc qua GraphQL theo cấu hình của gói, mỗi số kèm cách tính và nguồn để người xem đối chiếu.
+config_schema: dashboard.schema.json
+example: examples/dashboard.example.yaml
+capabilities:
+  - Mỗi khối đọc một bảng hay view qua Hasura (graphql.field) bằng token của người xem, lọc được theo một cột bằng một giá trị (graphql.where).
+  - Thẻ số (cards) hiện từng cột của đúng một dòng mà nguồn trả, kèm nhãn, đơn vị và cách tính; nguồn không trả dòng nào thì báo "Chưa có số liệu", trả nhiều hơn một dòng thì báo cấu hình sai thay vì chọn đại một dòng.
+  - Biểu đồ cột ngang (chart, type bar) vẽ mỗi dòng một nhóm, tối đa bốn cột số chung một thang, màu theo bảng màu của theme; luôn kèm bảng số liệu có chú thích, đủ cho người dùng trình đọc màn hình và để đối chiếu, gồm cả các cột chỉ để đọc (chart.details).
+  - Số, dù đến dạng số hay chuỗi thập phân, viết theo kiểu Việt Nam (dấu chấm ngăn hàng nghìn, dấu phẩy thập phân); format integer làm tròn tới hàng đơn vị.
+  - Mỗi khối có mục "Nguồn" mở ra được, ghi loại nguồn, bảng, các cột, vai trò đã dùng và nguyên văn câu truy vấn cùng biến đã gửi.
+  - Khối khai role chỉ được truy vấn và chỉ hiện khi token của người xem có vai trò đó; truy vấn luôn gửi kèm header X-Hasura-Role (bỏ trống là user) và luôn đọc lại từ máy chủ.
+  - Hasura từ chối câu truy vấn vì cấu hình (validation-failed, data-exception) thì khối báo bằng tiếng Việt, nêu vai trò đã dùng, cột của where và dẫn tới người quản trị sửa cấu hình của gói.
+  - link dẫn tới một mục menu khác của cùng gói; mục dành cho vai trò khác thì đường dẫn không hiện.
+limits:
+  - Chỉ đọc; không lọc, không chọn kỳ, không tải xuống.
+  - Không cộng, đếm hay tính trên trình duyệt và không dùng truy vấn _aggregate của Hasura; mọi con số phải là một cột do gói tính sẵn, thường là view trong migration của gói.
+  - Chỉ có biểu đồ cột ngang; không có biểu đồ đường, tròn hay chuỗi thời gian.
+  - Nguồn workflow và context có trong schema nhưng chưa được hỗ trợ; make check-fast từ chối và giao diện báo chưa hỗ trợ.
+  - Biểu đồ hiện tối đa graphql.limit dòng (mặc định 50, trần 200); nhiều hơn thì chỉ hiện các dòng đầu và báo ra.
+  - where.equals luôn gửi dạng chữ và make check-fast không kiểm nó với kiểu của cột (tệp quyền Hasura không ghi kiểu, cột của view không khai kiểu trong migration); giá trị không hợp kiểu chỉ lộ ra khi mở trang, thành lời báo nêu cột và dẫn tới người quản trị. Nên chỉ lọc theo cột kiểu chữ.
+  - Cấu hình không cấp và không giới hạn quyền; người xem thấy số nào do quyền Hasura của bảng và vai trò quyết định.

@@ -78,6 +78,7 @@ esac
 "${checker[@]}" --schemafile contracts/map.schema.json contracts/examples/map.example.yaml
 "${checker[@]}" --schemafile contracts/form.schema.json contracts/examples/form.example.yaml
 "${checker[@]}" --schemafile contracts/cases.schema.json contracts/examples/cases.example.yaml
+"${checker[@]}" --schemafile contracts/dashboard.schema.json contracts/examples/dashboard.example.yaml
 "${checker[@]}" --schemafile contracts/assistant.schema.json contracts/examples/assistant.example.yaml \
   contracts/examples/assistant-data.example.yaml
 "${data_check[@]}" --owner core contracts/examples/assistant-data.example.yaml
@@ -123,7 +124,7 @@ for app in apps/*/; do
   "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}" --packages "$app"
   # Cấu hình của thành phần có schema nằm ở đường dẫn do app.yaml khai, không theo tên thư mục cố định, nên phải
   # đọc app.yaml để biết tệp nào cần kiểm; dò theo tên thư mục sẽ bỏ sót tệp đặt ở chỗ khác.
-  for component in catalog map assistant form cases; do
+  for component in catalog map assistant form cases dashboard; do
     mapfile -t configs < <("${yaml[@]}" -c '
 import sys, yaml
 app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
@@ -148,6 +149,10 @@ for item in app.get("menu", []):
       # Trang theo dõi hồ sơ chỉ liệt kê quy trình của chính gói này (ADR 0032).
       if [[ "$component" == cases ]]; then
         "${yaml[@]}" scripts/check-cases-config.py --bpmn "$app"**/*.bpmn20.xml --cases "${configs[@]}"
+      fi
+      # Bảng điều hành chỉ đọc bảng của chính gói, trong quyền đọc của vai trò từng khối (ADR 0033).
+      if [[ "$component" == dashboard ]]; then
+        "${yaml[@]}" scripts/check-dashboard-config.py --app "${app}app.yaml"
       fi
     fi
   done
@@ -239,6 +244,7 @@ reject contracts/catalog.schema.json contracts/examples/invalid/catalog.*.yaml
 reject contracts/map.schema.json contracts/examples/invalid/map.*.yaml
 reject contracts/form.schema.json contracts/examples/invalid/form.*.yaml
 reject contracts/cases.schema.json contracts/examples/invalid/cases.*.yaml
+reject contracts/dashboard.schema.json contracts/examples/invalid/dashboard.*.yaml
 reject contracts/assistant.schema.json contracts/examples/invalid/assistant.*.yaml
 reject contracts/knowledge.schema.json contracts/examples/invalid/knowledge.*.yaml
 reject contracts/threshold-rule.schema.json contracts/examples/invalid/threshold-rule.*.yaml
@@ -251,10 +257,11 @@ reject contracts/device-message.schema.json contracts/examples/invalid/device-me
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
     token-claims.*.json | service-token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml | \
-    threshold-rule.*.yaml | authority.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml | map.*.yaml | form.*.yaml | cases.*.yaml) ;;
+    threshold-rule.*.yaml | authority.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml | map.*.yaml | form.*.yaml | \
+    cases.*.yaml | dashboard.*.yaml) ;;
     *)
       echo "$file không được kiểm: tên phải theo mẫu <token-claims|service-token-claims|device-message>.<lỗi>.json hoặc" \
-        "<app|workflow|catalog|map|form|cases|component|threshold-rule|authority|assistant|knowledge|seed>.<lỗi>.yaml." >&2
+        "<app|workflow|catalog|map|form|cases|dashboard|component|threshold-rule|authority|assistant|knowledge|seed>.<lỗi>.yaml." >&2
       exit 1
       ;;
   esac
@@ -338,6 +345,132 @@ if [[ "$result" != *": quy trình 'core-handoff' không có trong BPMN của gó
   exit 1
 fi
 echo "ok -- cấu hình theo dõi hồ sơ trỏ tới quy trình ngoài gói bị check-cases-config.py từ chối"
+
+# Luật của scripts/check-dashboard-config.py, như của biểu mẫu ở trên: cấu hình sai đọc từ stdin, đối chiếu với menu
+# của app.example.yaml và bảng quyền mẫu dưới đây; mỗi cấu hình phạm đúng một luật và lỗi phải đúng từng ký tự. Ví dụ
+# đúng của hợp đồng cũng phải qua bước này, để ví dụ không lệch với luật mà không ai biết.
+dashboard_tables='- table: { schema: app_example, name: totals }
+  select_permissions:
+    - role: user
+      permission: { columns: [tenant_id, item_count, score], filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } } }
+- table: { schema: app_example, name: rollup }
+  select_permissions:
+    - role: rollup_reader
+      permission: { columns: "*", filter: { parent_tenant_id: { _eq: X-Hasura-Tenant-Id } } }'
+dashboard_check() { # TỆP_CẤU_HÌNH [BẢNG_QUYỀN]
+  "${yaml[@]}" scripts/check-dashboard-config.py --app contracts/examples/app.example.yaml \
+    --hasura <(printf '%s\n' "${2:-$dashboard_tables}") --dashboard "$1" 2>&1
+}
+dashboard_check contracts/examples/dashboard.example.yaml
+dashboard_rejects() { # LỖI_MONG_ĐỢI, cấu hình ở stdin
+  local result
+  result=$(dashboard_check /dev/stdin) && result="không bị từ chối"
+  if [[ "$result" != "/dev/stdin: $1" ]]; then
+    echo "check-dashboard-config.py phải báo đúng lỗi: $1" >&2
+    echo "Đang nhận: $result" >&2
+    exit 1
+  fi
+}
+dashboard_rejects "khối 'flow': nguồn 'workflow' chưa được thành phần hỗ trợ; dùng graphql" <<'YAML'
+title: Tổng quan
+panels:
+  - { id: flow, title: Hồ sơ, description: Số hồ sơ., workflow: {}, cards: [{ column: n, label: N, description: N. }] }
+YAML
+dashboard_rejects "khối 't': graphql.field 'app_other_totals' không phải bảng trong quyền Hasura của gói" <<'YAML'
+title: Tổng quan
+panels:
+  - id: t
+    title: Tổng
+    description: Bảng của gói khác.
+    graphql: { field: app_other_totals }
+    cards: [{ column: score, label: Điểm, description: Tổng điểm. }]
+YAML
+dashboard_rejects "khối 't': vai trò 'user' không đọc được 'app_example_rollup'; sửa role hoặc quyền của gói" <<'YAML'
+title: Tổng quan
+panels:
+  - id: t
+    title: Đơn vị con
+    description: View tổng hợp, quên role.
+    graphql: { field: app_example_rollup }
+    chart: { type: bar, x: { column: unit_name, label: Đơn vị }, y: [{ column: score, label: Điểm, color: teal }] }
+YAML
+dashboard_rejects "khối 't': vai trò 'user' không đọc được cột 'secret' của 'app_example_totals'" <<'YAML'
+title: Tổng quan
+panels:
+  - id: t
+    title: Tổng
+    description: Lọc theo cột ngoài quyền.
+    graphql: { field: app_example_totals, where: { field: secret, equals: x } }
+    cards: [{ column: score, label: Điểm, description: Tổng điểm. }]
+YAML
+dashboard_rejects "khối 't': link.menu 'nowhere' không phải mục menu khác của gói" <<'YAML'
+title: Tổng quan
+panels:
+  - id: t
+    title: Tổng
+    description: Đường dẫn tới mục không có.
+    graphql: { field: app_example_totals }
+    cards: [{ column: score, label: Điểm, description: Tổng điểm. }]
+    link: { menu: nowhere, label: Xem }
+YAML
+dashboard_rejects "khối 't': cột 'score' khai hai lần trong chart.y" <<'YAML'
+title: Tổng quan
+panels:
+  - id: t
+    title: Đơn vị con
+    description: Hai thanh cùng một cột.
+    role: rollup_reader
+    graphql: { field: app_example_rollup }
+    chart:
+      type: bar
+      x: { column: unit_name, label: Đơn vị }
+      y: [{ column: score, label: Điểm, color: teal }, { column: score, label: Lại điểm, color: red }]
+YAML
+dashboard_rejects "khối 't' được khai hai lần" <<'YAML'
+title: Tổng quan
+panels:
+  - id: t
+    title: A
+    description: Khối đầu.
+    graphql: { field: app_example_totals }
+    cards: [{ column: score, label: A, description: A. }]
+  - id: t
+    title: B
+    description: Khối sau cùng tên.
+    graphql: { field: app_example_totals }
+    cards: [{ column: item_count, label: B, description: B. }]
+YAML
+# Cấu hình sai dạng (lệnh chạy riêng với --dashboard, chưa qua schema) phải thành một dòng lỗi, không traceback.
+dashboard_rejects "cần panels là danh sách khối không rỗng; sửa theo contracts/dashboard.schema.json" <<'YAML'
+title: Tổng quan
+YAML
+dashboard_rejects "khối thứ 1 thiếu id; sửa theo contracts/dashboard.schema.json" <<'YAML'
+title: Tổng quan
+panels:
+  - { title: Tổng, description: Thiếu id., graphql: { field: app_example_totals }, cards: [] }
+YAML
+dashboard_rejects "khối 't': thiếu nguồn: cần graphql: { field: <lược đồ>_<bảng> }; sửa theo \
+contracts/dashboard.schema.json" <<'YAML'
+title: Tổng quan
+panels:
+  - { id: t, title: Tổng, description: Thiếu nguồn., cards: [{ column: score, label: Điểm, description: Điểm. }] }
+YAML
+# Hasura bắt buộc columns trong quyền select; thiếu là tệp quyền sai dạng, không coi là mọi cột hay không cột nào.
+result=$(dashboard_check contracts/examples/dashboard.example.yaml $'- table: { schema: app_example, name: totals }
+  select_permissions: [{ role: user, permission: { filter: {} } }]') && result="không bị từ chối"
+if [[ "$result" != *': mục 1: quyền select_permissions, vai trò user thiếu columns (Hasura bắt buộc), cần là danh sách tên'\
+' cột hoặc "*"; sửa theo dạng của core/hasura/tables.yaml' || "$result" == *Traceback* ]]; then
+  echo "check-dashboard-config.py phải báo quyền select thiếu columns bằng một dòng lỗi. Đang nhận: $result" >&2
+  exit 1
+fi
+result=$(dashboard_check contracts/examples/dashboard.example.yaml \
+  $'- table: { schema: app_example, name: totals }\n  select_permissions: [{ permission: {} }]') && result="không bị từ chối"
+if [[ "$result" != *": mục 1: một mục của select_permissions thiếu role; sửa theo dạng của core/hasura/tables.yaml" ||
+  "$result" == *Traceback* ]]; then
+  echo "check-dashboard-config.py phải báo tệp quyền sai dạng bằng một dòng lỗi. Đang nhận: $result" >&2
+  exit 1
+fi
+echo "ok -- 12 bảng điều hành và tệp quyền sai bị check-dashboard-config.py từ chối đúng luật"
 
 # Chiều ngược: dòng của tệp đã xóa hay đổi tên nằm im trong expected-errors.txt mà không ai biết.
 while IFS=$'\t' read -r name _; do

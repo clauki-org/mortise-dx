@@ -311,9 +311,10 @@ check "Xóa cơ sở thì phân công của nó đi theo" "$(gql "$admin_a" "$le
 # của tenant khác.
 menu='{ platform_menu_items(where: {app: {_eq: "facilities-commune"}}, order_by: {position: asc}) {
   tenant_id item component config } }'
-check "Menu của gói: user.a thấy mục danh mục, bản đồ, hỏi dữ liệu và hồ sơ rà soát kèm cấu hình, chỉ của xã mình" \
+check "Menu của gói: user.a thấy mục danh mục, bản đồ, hỏi dữ liệu, hồ sơ rà soát và bảng điều hành kèm cấu hình, chỉ của xã mình" \
   "$(gql "$token_a" "$menu" | jq -c '[.data.platform_menu_items[] | [.tenant_id, .item, .component, .config.title]]')" \
-  '[["xa-a","facilities","catalog","Cơ sở nhà, đất"],["xa-a","map","map","Bản đồ trụ sở"],["xa-a","ask-data","assistant",null],["xa-a","reviews","cases","Hồ sơ rà soát đã lập"]]'
+  '[["xa-a","facilities","catalog","Cơ sở nhà, đất"],["xa-a","map","map","Bản đồ trụ sở"],["xa-a","ask-data","assistant",null],'\
+'["xa-a","reviews","cases","Hồ sơ rà soát đã lập"],["xa-a","dashboard","dashboard","Bảng điều hành cơ sở vật chất xã"]]'
 check "Menu của gói: user.b chỉ thấy mục của xã mình" \
   "$(gql "$token_b" "$menu" | jq -c '[.data.platform_menu_items[].tenant_id] | unique')" '["xa-b"]'
 
@@ -332,6 +333,13 @@ check "Tỉnh (user) không thấy phòng nào của xã" "$(gql "$leader" "$roo
 check "Xã không đọc được tổng hợp của tỉnh" "$(gql "$token_a" "$rollup" "{}" user | error_code)" validation-failed
 check "Xã không tự nhận vai trò rollup_reader khi token không có" \
   "$(gql "$token_a" "$rollup" "{}" rollup_reader | error_code)" access-denied
+
+check "Cán bộ (user) không đọc được facility_coverage, view chỉ dành cho lãnh đạo và quản trị xã" \
+  "$(gql "$token_a" '{ app_facilities_commune_facility_coverage { facility_count } }' | error_code)" validation-failed
+
+check "manager.a chỉ đọc được dòng facility_coverage của xã A, không của xã B" \
+  "$(gql "$manager_a" '{ app_facilities_commune_facility_coverage { tenant_id } }' "{}" manager |
+    jq -c '[.data.app_facilities_commune_facility_coverage[].tenant_id]')" '["xa-a"]'
 
 # Dữ liệu demo (`make seed-demo`, seed/demo.yaml): tổng diện tích thông thủy theo trạng thái cơ sở của từng xã đúng số
 # liệu của câu chuyện demo. Đọc bằng quản trị xã để thấy toàn xã, không phụ thuộc phân công. Chưa nạp thì bỏ qua, để
@@ -397,6 +405,48 @@ if ((loaded > 0)); then
       "\(.tenant_id) allowed=\(.allowed_m2 | tonumber + 0) in_use=\(.in_use_m2 | tonumber + 0)"
       + " surplus=\(.surplus_m2 | tonumber + 0) excess=\(.excess_m2 | tonumber + 0)"' | paste -sd ';')" \
     "$(for access in "$token_a" "$token_b" "$(token user.c)"; do summary "$access"; done | paste -sd ';')"
+  # View của bảng điều hành (ADR 0033) so với số tính lại cùng lúc từ bảng gốc, đọc bằng quản trị xã (thấy mọi cơ
+  # sở, tòa, phòng, phân công của xã), không so với số demo cố định: CSDL dùng lâu có thể còn cơ sở do bài kiểm khác
+  # để lại. Mỗi xã có dòng cho mọi trạng thái, loại diện tích dù chưa có cơ sở nào. Diện tích làm tròn hai chữ số vì
+  # jq cộng số thực còn CSDL cộng numeric.
+  m2='(tonumber * 100 | round) / 100'
+  rooms_by='.data as $d
+    | ($d.app_facilities_commune_facilities | map({(.id): .status}) | add // {}) as $status
+    | ($d.app_facilities_commune_buildings | map({(.id): $status[.facility_id]}) | add // {}) as $of'
+  status='{ app_facilities_commune_facility_status_counts(order_by: {status: asc}) {
+    status facility_count clear_area_m2 } }'
+  status_of_view() { gql "$1" "$status" | jq -c "[.data.app_facilities_commune_facility_status_counts[] |
+    [.status, .facility_count, (.clear_area_m2 | $m2)]]"; }
+  status_of_tables() { gql "$1" "$areas" "{}" "$admin" | jq -c "$rooms_by | [(\"in_use\", \"surplus\") as \$s | [\$s,
+    (\$d.app_facilities_commune_facilities | map(select(.status == \$s)) | length),
+    (\$d.app_facilities_commune_rooms | map(select(\$of[.building_id] == \$s) | .clear_area_m2 | tonumber) | add // 0
+      | tostring | $m2)]]"; }
+  check "Bảng điều hành: số cơ sở và diện tích theo trạng thái của xã A, xã C khớp bảng cơ sở, phòng" \
+    "$(status_of_view "$token_a") $(status_of_view "$(token user.c)")" \
+    "$(status_of_tables "$admin_a") $(status_of_tables "$admin_c")"
+  by_type='{ app_facilities_commune_area_by_type(order_by: {area_type: asc}) { area_type in_use_m2 allowed_m2 } }'
+  type_areas='{ app_facilities_commune_facilities { id status } app_facilities_commune_buildings { id facility_id }
+    app_facilities_commune_rooms { building_id area_type clear_area_m2 }
+    app_facilities_commune_area_summary { working_allowed_m2 shared_allowed_m2 specialized_allowed_m2 } }'
+  check "Bảng điều hành: diện tích đang dùng và được phép theo loại của xã A khớp bảng phòng và area_summary" \
+    "$(gql "$token_a" "$by_type" | jq -c "[.data.app_facilities_commune_area_by_type[] |
+      [.area_type, (.in_use_m2 | $m2), (.allowed_m2 | $m2)]]")" \
+    "$(gql "$admin_a" "$type_areas" "{}" "$admin" | jq -c "$rooms_by
+      | \$d.app_facilities_commune_area_summary[0] as \$allowed
+      | [(\"shared\", \"specialized\", \"working\") as \$t | [\$t,
+        (\$d.app_facilities_commune_rooms | map(select(\$of[.building_id] == \"in_use\" and .area_type == \$t)
+          | .clear_area_m2 | tonumber) | add // 0 | tostring | $m2),
+        (\$allowed[\$t + \"_allowed_m2\"] | tostring | $m2)]]")"
+  coverage='{ app_facilities_commune_facility_coverage { facility_count without_custodian without_approver } }'
+  assigned='{ app_facilities_commune_facilities { id } app_facilities_commune_facility_assignments { facility_id duty } }'
+  check "Bảng điều hành: manager.a thấy số cơ sở chưa có người phụ trách, chưa có người duyệt khớp bảng phân công" \
+    "$(gql "$manager_a" "$coverage" "{}" manager | jq -c '.data.app_facilities_commune_facility_coverage')" \
+    "$(gql "$admin_a" "$assigned" "{}" "$admin" | jq -c '.data as $d
+      | [$d.app_facilities_commune_facility_assignments[] | "\(.facility_id)/\(.duty)"] as $has
+      | [$d.app_facilities_commune_facilities[].id] as $ids
+      | def without($duty): $ids | map(select(("\(.)/" + $duty) | IN($has[]) | not)) | length;
+      [{facility_count: ($ids | length), without_custodian: without("custodian"),
+        without_approver: without("approver")}]')"
   # Bản đồ cần mọi cơ sở demo có tọa độ, kể cả cơ sở dôi dư; tỉnh thấy đúng các trụ sở đang dùng kèm phần vượt của xã,
   # không thấy cơ sở dôi dư; cán bộ thấy phần vượt của xã trên từng cơ sở mình phụ trách.
   unplaced='{ app_facilities_commune_facilities(where: {code: {_like: "TS-%"}, latitude: {_is_null: true}}) { code } }'

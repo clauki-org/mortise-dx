@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/dashboard.schema.json từ chối: một khối khai hai nguồn. Nếu lọt, người xem không biết
+# số đến từ nguồn nào.
+
+title: Tổng quan
+panels:
+  - id: totals
+    title: Tổng
+    description: View tổng của đơn vị.
+    graphql: { field: app_example_totals }
+    workflow: {}
+    cards: [{ column: score, label: Điểm, description: Tổng điểm. }]

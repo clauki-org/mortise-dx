@@ -18,6 +18,7 @@ schema/migrations/   migration dbmate của gói; bảng theo dõi public.facili
 hasura/tables.yaml   bảng đăng ký, quan hệ và quyền theo tenant và phân công, cùng định dạng với core/hasura/
 catalog/             cấu hình thành phần danh mục (cơ sở → tòa → phòng) theo contracts/catalog.schema.json
 map-layers/          cấu hình thành phần bản đồ (trụ sở tô theo phần vượt) theo contracts/map.schema.json
+dashboards/          cấu hình bảng điều hành (diện tích của xã, tổng hợp cho tỉnh) theo contracts/dashboard.schema.json
 assistant/           cấu hình trợ lý hỏi dữ liệu (diện tích của xã, cơ sở được phân công) theo
                      contracts/assistant.schema.json
 cases/               trang hồ sơ rà soát đã lập theo contracts/cases.schema.json
@@ -44,6 +45,9 @@ Lược đồ `app_facilities_commune`.
 | `specialized_allowances` | Diện tích chuyên dùng do cấp có thẩm quyền quyết định, kèm căn cứ | `UNIQUE (tenant_id, name)` |
 | `staffing_allowances` (view) | Mỗi dòng biên chế kèm mức m², diện tích được phép và trích dẫn dòng phụ lục | Chỉ đọc |
 | `area_summary` (view) | Mỗi xã một dòng: làm việc, sử dụng chung, chuyên dùng, được phép, đang dùng, dôi dư, phần vượt | Chỉ đọc |
+| `facility_status_counts` (view) | Mỗi xã và trạng thái (`in_use`, `surplus`) một dòng: số cơ sở, tổng diện tích thông thủy | Chỉ đọc; mọi vai trò trong xã |
+| `area_by_type` (view) | Mỗi xã và loại diện tích một dòng: đang dùng, được phép (lấy từ `area_summary`); chỉ để đối chiếu, phần vượt tính trên tổng | Chỉ đọc; mọi vai trò trong xã |
+| `facility_coverage` (view) | Mỗi xã một dòng: số cơ sở, số cơ sở chưa có người phụ trách, chưa có người duyệt | Chỉ đọc; `manager`, `tenant_admin` |
 | `facility_assignments` | Phân công: `user_id` (`sub` của cán bộ trong token) phụ trách (`custodian`) hay duyệt (`approver`) một cơ sở | Khóa ngoại ghép `(tenant_id, facility_id)`, `ON DELETE CASCADE`; `UNIQUE (tenant_id, facility_id, user_id, duty)` |
 | `area_rollup` (view) | Mỗi xã có tenant cha một dòng, lấy nguyên số của `area_summary`, kèm `parent_tenant_id` và tên xã | Chỉ đọc; chỉ vai trò `rollup_reader` của tenant cha đọc ([ADR 0016](../../docs/adr/0016-parent-tenant-rollup.md)) |
 | `facility_rollup` (view) | Mỗi cơ sở đang dùng của xã có tenant cha một dòng: mã, tên, tọa độ, phần vượt của cả xã | Chỉ đọc; chỉ vai trò `rollup_reader` của tenant cha đọc ([ADR 0020](../../docs/adr/0020-facility-locations.md)) |
@@ -76,6 +80,15 @@ có ba câu mẫu: phần vượt của xã, cơ sở mình phụ trách, cơ s�
 công; kết quả là bảng kèm câu truy vấn đã chạy. Tên cơ sở hiện nguyên văn trong ô, dù chứa chữ trông như lệnh. Smoke
 của gói kiểm cán bộ xã A hỏi đúng mã cơ sở của xã B không nhận dòng nào, câu xóa biên chế bị guard chặn, và nhật ký
 câu hỏi không chứa dòng dữ liệu.
+
+## Bảng điều hành
+
+Mục menu "Bảng điều hành" (`dashboard`, `dashboards/overview.yaml`, [ADR 0033](../../docs/adr/0033-dashboard-component.md))
+hiện diện tích được phép, đang dùng, phần vượt và dôi dư của cả xã (`area_summary`), số cơ sở theo trạng thái
+(`facility_status_counts`), diện tích theo loại (`area_by_type`), biên chế và diện tích chuyên dùng; mỗi số kèm cách
+tính và câu truy vấn đã gửi. Số tính cho cả xã, kể cả với cán bộ chỉ được phân công một phần cơ sở. Lãnh đạo xã
+(`manager`) thấy thêm số cơ sở chưa có người phụ trách, chưa có người duyệt (`facility_coverage`). Tỉnh
+(`rollup_reader`) thấy biểu đồ và bảng số của từng xã con (`area_rollup`); các xã không được cộng lại.
 
 ## Diện tích được phép và phần vượt
 

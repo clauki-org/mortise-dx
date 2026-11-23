@@ -1,0 +1,146 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình thành phần bảng điều hành của gói, theo contracts/dashboard.schema.json; app.yaml trỏ tới tệp này ở mục
+# menu `dashboard` và `make check-fast` kiểm (scripts/check-dashboard-config.py: bảng, cột nằm trong quyền đọc của vai
+# trò từng khối ở hasura/tables.yaml). Mọi số là cột của view do migration của gói tính; thành phần không cộng hay
+# đếm gì (ADR 0033). Mô tả cách tính chép theo chú thích của view trong schema/migrations/.
+
+title: Bảng điều hành cơ sở vật chất xã
+description: >-
+  Số liệu của cả xã, đọc bằng quyền của người xem. Mỗi số ghi cách tính; mục "Nguồn" của từng khối ghi câu truy vấn
+  đã gửi để đối chiếu.
+panels:
+  # Tỉnh (tenant cha) thấy số của từng xã con qua view area_rollup, không đọc được bảng gốc của xã (ADR 0016). Không
+  # cộng các xã lại: mỗi xã có tiêu chuẩn riêng, và facility_rollup lặp phần vượt của xã trên từng trụ sở.
+  - id: communes
+    title: Diện tích của các xã
+    description: >-
+      View area_rollup: mỗi xã con một dòng, lấy nguyên số của area_summary mà xã tự thấy, không tính lại. Chỉ tài
+      khoản có vai trò rollup_reader của tỉnh thấy khối này.
+    role: rollup_reader
+    graphql: { field: app_facilities_commune_area_rollup, order_by: [{ column: tenant_name }] }
+    chart:
+      type: bar
+      x: { column: tenant_name, label: Xã }
+      y:
+        - { column: allowed_m2, label: Được phép (m²), color: teal }
+        - { column: in_use_m2, label: Đang dùng (m²), color: blue }
+        - { column: excess_m2, label: Phần vượt (m²), color: red }
+  - id: area
+    title: Diện tích nhà làm việc của xã
+    description: >-
+      View area_summary, mỗi xã một dòng. Tiêu chuẩn tính trên tổng diện tích của mọi trụ sở xã đang dùng (Điều 3
+      khoản 3 NĐ 155/2025/NĐ-CP, sửa bởi Điều 2 NĐ 369/2026/NĐ-CP), không tính riêng từng cơ sở.
+    graphql: { field: app_facilities_commune_area_summary }
+    cards:
+      - column: allowed_m2
+        label: Diện tích được phép
+        unit: m²
+        description: >-
+          Làm việc theo biên chế (số người nhân mức m² của dòng phụ lục NĐ 369/2026/NĐ-CP) cộng sử dụng chung bằng
+          phần làm việc (Điều 6 khoản 2 điểm a NĐ 155, sửa bởi NĐ 369; phần bù theo Tiêu chuẩn quốc gia chưa tính)
+          cộng chuyên dùng do cấp có thẩm quyền quyết định.
+      - column: in_use_m2
+        label: Đang dùng
+        unit: m²
+        description: Tổng diện tích thông thủy của mọi phòng thuộc các cơ sở đang dùng của xã.
+      - column: excess_m2
+        label: Phần vượt tiêu chuẩn, định mức
+        unit: m²
+        description: Đang dùng trừ được phép, không nhỏ hơn 0.
+      - column: surplus_m2
+        label: Cơ sở dôi dư
+        unit: m²
+        description: Tổng diện tích thông thủy của phòng thuộc cơ sở dôi dư; tính riêng, không vào phần vượt.
+    link:
+      menu: facilities
+      label: >-
+        Xem danh mục cơ sở. Cán bộ chỉ thấy cơ sở mình được phân công, còn số trên đây tính cho cả xã.
+  # Hai khối riêng cho hai trạng thái: thẻ số cần đúng một dòng, và view có sẵn một dòng cho mỗi cặp xã, trạng thái.
+  - id: in-use
+    title: Cơ sở đang dùng
+    description: View facility_status_counts, dòng có status in_use của xã.
+    graphql: { field: app_facilities_commune_facility_status_counts, where: { field: status, equals: in_use } }
+    cards:
+      - column: facility_count
+        label: Số cơ sở đang dùng
+        format: integer
+        description: Đếm cơ sở có trạng thái đang dùng.
+      - column: clear_area_m2
+        label: Diện tích thông thủy
+        unit: m²
+        description: Tổng diện tích thông thủy của các phòng thuộc những cơ sở này; bằng số "Đang dùng" ở trên.
+  - id: surplus
+    title: Cơ sở dôi dư
+    description: View facility_status_counts, dòng có status surplus của xã.
+    graphql: { field: app_facilities_commune_facility_status_counts, where: { field: status, equals: surplus } }
+    cards:
+      - column: facility_count
+        label: Số cơ sở dôi dư
+        format: integer
+        description: Đếm cơ sở có trạng thái dôi dư.
+      - column: clear_area_m2
+        label: Diện tích thông thủy
+        unit: m²
+        description: Tổng diện tích thông thủy của các phòng thuộc những cơ sở này; không tính vào phần vượt.
+  - id: by-type
+    title: Diện tích theo loại
+    description: >-
+      View area_by_type: đang dùng cộng theo loại diện tích của phòng ở cơ sở đang dùng; được phép lấy nguyên các phần
+      làm việc, sử dụng chung, chuyên dùng của area_summary. Chỉ để đối chiếu, phần vượt theo luật tính trên tổng.
+    graphql: { field: app_facilities_commune_area_by_type }
+    chart:
+      type: bar
+      x:
+        column: area_type
+        label: Loại diện tích
+        choices:
+          - { value: working, label: Làm việc }
+          - { value: shared, label: Sử dụng chung }
+          - { value: specialized, label: Chuyên dùng }
+      y:
+        - { column: allowed_m2, label: Được phép (m²), color: teal }
+        - { column: in_use_m2, label: Đang dùng (m²), color: blue }
+  - id: staffing
+    title: Diện tích làm việc theo biên chế
+    description: >-
+      View staffing_allowances: mỗi dòng biên chế của xã, được phép bằng số người nhân mức m² của dòng phụ lục mà xã
+      xếp chức danh vào; nguồn ghi dòng phụ lục NĐ 369/2026/NĐ-CP.
+    graphql:
+      field: app_facilities_commune_staffing_allowances
+      order_by: [{ column: norm_row }, { column: position }]
+    chart:
+      type: bar
+      x: { column: position, label: Chức danh }
+      y: [{ column: allowed_m2, label: Được phép (m²), color: teal }]
+      details:
+        - { column: headcount, label: Số người, format: integer }
+        - { column: max_m2, label: Mức tối đa mỗi người (m²), format: number }
+        - { column: source, label: Nguồn }
+  - id: specialized
+    title: Diện tích chuyên dùng được duyệt
+    description: Bảng specialized_allowances do xã nhập, mỗi dòng một quyết định của cấp có thẩm quyền kèm căn cứ.
+    graphql: { field: app_facilities_commune_specialized_allowances, order_by: [{ column: name }] }
+    chart:
+      type: bar
+      x: { column: name, label: Hạng mục }
+      y: [{ column: area_m2, label: Diện tích (m²), color: grape }]
+      details: [{ column: basis, label: Căn cứ }]
+  - id: coverage
+    title: Phân công cơ sở
+    description: >-
+      View facility_coverage: đếm cơ sở của xã, cả đang dùng và dôi dư, theo bảng phân công. Chỉ lãnh đạo và quản trị
+      xã thấy khối này.
+    role: manager
+    graphql: { field: app_facilities_commune_facility_coverage }
+    cards:
+      - { column: facility_count, label: Số cơ sở, format: integer, description: Đếm mọi cơ sở của xã. }
+      - column: without_custodian
+        label: Chưa có người phụ trách
+        format: integer
+        description: Cơ sở không có dòng phân công nào với nhiệm vụ phụ trách (custodian).
+      - column: without_approver
+        label: Chưa có người duyệt
+        format: integer
+        description: Cơ sở không có dòng phân công nào với nhiệm vụ duyệt (approver).

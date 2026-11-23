@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Đọc quyền Hasura của gói (hasura/*.yaml, cùng định dạng core/hasura/tables.yaml) cho
-# scripts/check-form-config.py: bảng theo trường gốc GraphQL, quyền của một vai trò, và cột mà quyền gắn với
-# tenant của token. Tách khỏi tệp kiểm để luật của biểu mẫu không lẫn với việc kiểm dạng tệp quyền.
+# scripts/check-form-config.py và scripts/check-dashboard-config.py: bảng theo trường gốc GraphQL, quyền
+# của một vai trò, và cột mà quyền gắn với tenant của token. Tách khỏi tệp kiểm để luật của biểu mẫu, bảng
+# điều hành không lẫn với việc kiểm dạng tệp quyền.
 
 import yaml
 
@@ -18,6 +19,11 @@ def _rule_problem(kind: str, rule: object) -> str | None:
     permission = rule.get("permission")
     if not isinstance(permission, dict):
         return f"{where} thiếu permission"
+    # Tài liệu metadata của Hasura v2 ghi columns là bắt buộc trong quyền select (SelectPermission), không
+    # bắt buộc trong quyền insert. Thiếu ở select là tệp sai dạng: đoán "mọi cột" hay "không cột nào" đều có
+    # thể sai.
+    if kind == "select_permissions" and "columns" not in permission:
+        return f'{where} thiếu columns (Hasura bắt buộc), cần là danh sách tên cột hoặc "*"'
     columns = permission.get("columns", [])
     if columns != "*" and not (isinstance(columns, list) and all(isinstance(c, str) for c in columns)):
         return f'columns của {where}, cần là danh sách tên cột hoặc "*"'
