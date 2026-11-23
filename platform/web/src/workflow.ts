@@ -31,7 +31,12 @@ export type Task = {
  * 0029); undefined với task của chính tenant mình. `profileTenant` là claim `tenant` của ID token (mảng tên nhóm).
  */
 export function delegatedFrom(task: Task, profileTenant: unknown): string | undefined {
-  const own = Array.isArray(profileTenant) ? profileTenant : [profileTenant];
+  const own = (Array.isArray(profileTenant) ? profileTenant : [profileTenant]).filter(
+    (tenant): tenant is string => typeof tenant === "string" && tenant !== "",
+  );
+  // Không đọc được tenant của mình thì không gắn nhãn: gắn thì mọi task, kể cả của chính tenant mình, đều hiện như
+  // việc của đơn vị khác.
+  if (own.length === 0) return undefined;
   return own.includes(task.tenant) ? undefined : task.tenant;
 }
 

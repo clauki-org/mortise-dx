@@ -169,17 +169,17 @@ của bản demo. Biến ngưỡng nên là dữ liệu người lập không t�
 cao. Dùng biến người lập gửi thì người duyệt cấp thấp phải đối chiếu với hồ sơ; kiểm chéo giá trị là việc sau. Quy
 trình mẫu `core-authority` dùng biến `amount` do người lập gửi, chỉ để kiểm thử; quản trị (`tenant_admin`) của tenant cha sửa vai trò và ngưỡng của tenant con qua GraphQL:
 
-Dòng `scope: parent` giao bước lên tenant cha ([ADR 0029](adr/0029-parent-completes-delegated-step.md)): nhóm ứng
-viên là `<tenant cha>/<vai trò>`. Người của tenant cha có vai trò đó thấy task trong `GET /v1/workflow/tasks`, với
-`tenant` là tenant con, kèm mọi biến của hồ sơ, và hoàn thành được nó; luôn cần OTP, quy tắc bốn mắt vẫn áp. Chỉ tenant
-con trực tiếp lúc gọi, đọc từ `core.tenants.parent_id`. Các bước khác của hồ sơ và `GET /v1/workflow/instances/{id}`
-vẫn trả 404 với tenant cha; tenant khác, kể cả tenant cùng cha, nhận 404 với task đó.
-
 ```bash
 curl -fsS -X POST http://localhost:9080/v1/graphql \
   -H "Authorization: Bearer $ADMIN_TINH" -H 'X-Hasura-Role: tenant_admin' -H 'Content-Type: application/json' \
   -d '{"query":"mutation { update_core_step_authorities(where: {tenant_id: {_eq: \"xa-a\"}, process: {_eq: \"core-authority\"}, step: {_eq: \"decide\"}, rule: {_eq: \"default\"}}, _set: {role: \"tenant_admin\"}) { affected_rows } }"}'
 ```
+
+Dòng `scope: parent` giao bước lên tenant cha ([ADR 0029](adr/0029-parent-completes-delegated-step.md)): nhóm ứng
+viên là `<tenant cha>/<vai trò>`. Người của tenant cha có vai trò đó thấy task trong `GET /v1/workflow/tasks`, với
+`tenant` là tenant con, kèm mọi biến của hồ sơ, và hoàn thành được nó; luôn cần OTP, quy tắc bốn mắt vẫn áp. Chỉ tenant
+con trực tiếp lúc gọi, đọc từ `core.tenants.parent_id`. Các bước khác của hồ sơ và `GET /v1/workflow/instances/{id}`
+vẫn trả 404 với tenant cha; tenant khác, kể cả tenant cùng cha, nhận 404 với task đó.
 
 Tài khoản dịch vụ ([ADR 0017](adr/0017-service-account-for-tenant.md)): client Keycloak `mortise-iot-bridge` lấy
 token bằng client credentials, secret `IOT_BRIDGE_CLIENT_SECRET` trong `.env`. Token này không có tenant; mỗi yêu cầu

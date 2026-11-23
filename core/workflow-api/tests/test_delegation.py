@@ -7,8 +7,10 @@
 
 from dataclasses import replace
 
+import pg8000.native
 import pytest
 from fastapi.testclient import TestClient
+from pg8000.exceptions import InterfaceError
 
 from app import db, delegation, flowable
 from app.auth import caller_from_token
@@ -159,11 +161,14 @@ def stack(monkeypatch) -> dict:
         "groups": frozenset({"tinh-mau/manager"}),
     }
 
-    def tasks(tenant, *, groups=None, assignee=None, any_assignee=False):
-        state["queries"].append((tenant, groups, assignee, any_assignee))
-        if tenant is None:
-            return state["foreign"]
-        return [t for t in state["own"] if (assignee is None) == (t["assignee"] is None)]
+    # Như Flowable: theo nhóm thì chỉ task chưa ai nhận, theo người nhận thì đúng người đó; tenant None là mọi
+    # tenant.
+    def tasks(tenant, *, groups=None, assignee=None):
+        state["queries"].append((tenant, groups, assignee))
+        pool = state["foreign"] + state["own"] if tenant is None else state["own"]
+        if groups is not None:
+            return [t for t in pool if t["assignee"] is None]
+        return [t for t in pool if t["assignee"] == assignee]
 
     def children(tenant):
         state["reads"].append(tenant)
@@ -185,6 +190,7 @@ def stack(monkeypatch) -> dict:
 
 
 client = TestClient(app)
+real_children = db.children
 TASKS = "/v1/workflow/tasks"
 
 
@@ -192,7 +198,10 @@ def test_listing_shows_delegated_tasks_of_children_with_their_tenant(stack):
     response = client.get(TASKS)
     assert response.status_code == 200
     assert [(t["id"], t["tenant"]) for t in response.json()] == [("t1", "xa-a")]
-    assert (None, ["tinh-mau/manager", "tinh-mau/user"], None, True) in stack["queries"]
+    # Hai truy vấn không lọc tenant: theo nhóm (chỉ task chưa ai nhận) và theo người nhận là chính caller, để
+    # task đã giao cho người khác không chiếm chỗ trong các trang.
+    assert (None, ["tinh-mau/manager", "tinh-mau/user"], None) in stack["queries"]
+    assert (None, None, "m-tinh") in stack["queries"]
 
 
 def test_listing_drops_tasks_of_tenants_that_are_not_current_children(stack):
@@ -203,6 +212,12 @@ def test_listing_drops_tasks_of_tenants_that_are_not_current_children(stack):
 def test_listing_drops_tasks_claimed_by_someone_else_and_keeps_own_claims(stack):
     stack["foreign"] = [raw_task("t1", "xa-a", "other"), raw_task("t2", "xa-a", "m-tinh")]
     assert [t["id"] for t in client.get(TASKS).json()] == ["t2"]
+
+
+def test_listing_drops_own_claims_whose_group_is_not_the_caller_group(stack):
+    stack["foreign"] = [raw_task("t2", "xa-a", "m-tinh")]
+    stack["groups"] = frozenset({"manager"})
+    assert client.get(TASKS).json() == []
 
 
 def test_listing_drops_steps_that_do_not_read_the_authority_table(stack):
@@ -222,7 +237,7 @@ def test_listing_keeps_own_tenant_tasks_with_own_tenant(stack):
     stack["caller"] = MANAGER_A
     stack["own"] = [raw_task("t9", "xa-a")]
     # Truy vấn không lọc tenant trả cả task của chính tenant; không được thành task giao lên.
-    stack["foreign"] = [raw_task("t9", "xa-a")]
+    stack["foreign"] = []
     assert [(t["id"], t["tenant"]) for t in client.get(TASKS).json()] == [("t9", "xa-a")]
     assert stack["reads"] == []
 
@@ -270,3 +285,29 @@ def test_start_in_a_child_tenant_names_the_parent_group(monkeypatch):
     client.post("/v1/workflow/processes/core-authority/instances", json={"variables": {"amount": 5000}})
     client.post("/v1/workflow/processes/core-authority/instances", json={"variables": {"amount": 10}})
     assert [v["authority_decide"] for v in sent] == ["tinh-mau/manager", "manager"]
+
+
+def test_listing_is_503_when_the_database_cannot_be_read(stack, monkeypatch):
+    def refuse(*_args, **_kwargs):
+        raise InterfaceError("connection refused")
+
+    # db.children thật, chỉ kết nối hỏng: người có task từ tenant con nhận 503 kèm cách khắc phục, không nhận
+    # bảng việc thiếu task.
+    monkeypatch.setattr(db, "children", real_children)
+    monkeypatch.setattr(pg8000.native, "Connection", refuse)
+    response = client.get(TASKS)
+    assert response.status_code == 503
+    assert "make ps" in response.json()["error"]
+
+
+def test_tenant_with_a_slash_cannot_borrow_the_group_of_another_tenant():
+    # Tenant "a" có vai trò "b/c" (Keycloak không cấm "/" trong tên vai trò) ghép ra nhóm "a/b/c", trùng nhóm
+    # mà dòng parent đặt cho tenant con của tenant "a/b" có vai trò "c". Nhóm khớp, nhưng task không thuộc
+    # tenant con của "a", nên vẫn 404.
+    caller = replace(MANAGER_TINH, tenant="a", roles=frozenset({"b/c"}))
+    task = decide_task(tenant="x", candidate_groups=frozenset({"a/b/c"}))
+    assert delegated_to(caller, task)
+    with pytest.raises(Denied) as error:
+        check_parent_can_complete(caller, task, frozenset({"y"}))
+    assert error.value.status == 404
+    check_parent_can_complete(caller, task, frozenset({"x"}))

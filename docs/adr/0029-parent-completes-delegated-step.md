@@ -34,11 +34,14 @@ Các cách đã xét:
 
 Chọn cách cuối.
 
-- **Bảng việc (`GET /v1/workflow/tasks`)** thêm một truy vấn Flowable không lọc tenant: `candidateGroupIn` là
-  `<tenant của người gọi>/<vai trò>` cho mọi vai trò realm của người gọi, gồm cả task đã giao (`ignoreAssignee`).
-  - Giữ task của tenant khác, của bước đọc bảng phân cấp (hồ sơ có biến `authority_<bước>`), chưa giao hay đã giao
-    cho chính người gọi. Task đã giao vẫn hiện, vì người nhận rồi mà
-    lần hoàn thành lỗi thì task nằm ở tên họ. Task đã giao cho người khác không hiện.
+- **Bảng việc (`GET /v1/workflow/tasks`)** thêm hai truy vấn Flowable không lọc tenant: task chưa ai nhận có
+  `candidateGroupIn` là `<tenant của người gọi>/<vai trò>` cho mọi vai trò realm của người gọi, và task đã giao cho
+  chính người gọi.
+  - Giữ task của tenant khác, của bước đọc bảng phân cấp (hồ sơ có biến `authority_<bước>`). Task đã giao cho chính
+    người gọi vẫn hiện, vì người nhận rồi mà lần hoàn thành lỗi thì task nằm ở tên họ; nhóm của nó được kiểm từng
+    task. Người nhận lọc ngay ở Flowable, nên task đã giao cho người khác không chiếm chỗ trong trang.
+  - Mọi truy vấn task, kể cả của tenant mình, đọc hết các trang (200 task một trang, sắp theo id), tối đa 10 trang;
+    chạm trần thì workflow-api ghi cảnh báo vào nhật ký thay vì lặng lẽ bỏ task.
   - Chỉ khi truy vấn trả task mới đọc tenant con trực tiếp của người gọi (`core.tenants.parent_id`, vai trò CSDL
     `workflow_api`), rồi bỏ task không thuộc tenant con. Người không có task nào từ tenant con không phụ thuộc CSDL.
   - Task có thêm trường `tenant` (tenantId của Flowable). Giao diện hiện mã tenant cạnh task của tenant khác. Không
@@ -62,8 +65,7 @@ Chọn cách cuối.
   minh họa không lấy từ văn bản nào; quản trị tỉnh sửa `above` của từng xã.
 - **Đã kiểm:** Flowable 7.2.0 (container riêng, H2, ngày 2026-11-23): nhóm có dấu `/` đặt qua
   `${authority_decide}` cho đúng một liên kết ứng viên. `candidateGroupIn` trong thân JSON nhận dấu `/`, không cần
-  `tenantId`. Task đã nhận chỉ hiện trong truy vấn theo nhóm khi có `ignoreAssignee`. Liên kết ứng viên còn sau khi
-  nhận.
+  `tenantId`. Phân trang bằng `start`, `size` và `sort: id` trả đúng `total`. Liên kết ứng viên còn sau khi nhận.
 
 ## Hệ quả
 
@@ -76,7 +78,10 @@ Chọn cách cuối.
 - **Đổi `parent_id` làm mồ côi bước đã giao lên.** Nhóm ghi lúc lập hồ sơ mang tên cha cũ: cha cũ mất quyền ngay, cha
   mới không nhận được. Hồ sơ đó cần người vận hành xử lý ở Flowable. `make smoke` kiểm điều này bằng cách đổi tạm cha
   của xã A.
-- **Bảng việc của người có vai trò thêm một truy vấn Flowable không lọc tenant**, giới hạn 200 task như truy vấn cũ.
+- **OTP chỉ nhập một lần mỗi phiên** ([ADR 0011](0011-approver-mfa.md)): token ghi `otp` suốt phiên, nên workflow-api
+  không đòi mã mới cho từng quyết định. Điều này giờ áp cho cả quyết định thay tenant con. Đây là giới hạn đã biết;
+  đòi xác thực lại cho từng quyết định là việc sau.
+- **Bảng việc của người có vai trò thêm hai truy vấn Flowable không lọc tenant.**
   CSDL lỗi thì người có task từ tenant con nhận 503 ở bảng việc. Người khác không bị ảnh hưởng.
 - **Hồ sơ thiếu hay âm biến ngưỡng tới tenant cha**, vì dòng ngưỡng coi như vượt (ADR 0028). Biến ngưỡng do người lập
   gửi thì người lập khai thấp là giữ hồ sơ ở tenant con; giới hạn này đã ghi ở ADR 0028.

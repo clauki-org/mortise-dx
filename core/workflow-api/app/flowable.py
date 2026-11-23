@@ -4,6 +4,7 @@
 # Gọi REST API của Flowable bằng tài khoản kỹ thuật. Chỉ module này biết đường dẫn và
 # định dạng của Flowable; phần còn lại làm việc với dict đơn giản.
 
+import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
@@ -14,6 +15,8 @@ from .config import settings
 from .decisions import decision_variables
 from .fields import step_fields
 from .policy import IDEMPOTENCY_VARIABLE, Denied
+
+log = logging.getLogger("workflow-api.flowable")
 
 _client = httpx.Client(
     base_url=f"{settings.flowable_url}/service",
@@ -80,29 +83,39 @@ def started_with(
     return data[0] if data else None
 
 
-def tasks(
-    tenant: str | None,
-    *,
-    groups: list[str] | None = None,
-    assignee: str | None = None,
-    any_assignee: bool = False,
-) -> list[dict]:
-    """Task đang chờ; tenant None là mọi tenant.
+# Một trang của truy vấn task, và số trang tối đa cho một lần đọc bảng việc. Chạm trần thì ghi cảnh báo thay
+# vì lặng lẽ bỏ task: người vận hành phải biết bảng việc của ai đang thiếu.
+PAGE_SIZE = 200
+MAX_PAGES = 10
 
-    Theo `groups` thì mặc định chỉ task chưa ai nhận; any_assignee thì cả task đã giao, vì Flowable bỏ task
-    đã giao khỏi truy vấn theo nhóm nếu không có ignoreAssignee.
-    """
-    query: dict[str, object] = {"includeProcessVariables": True, "size": 200}
+
+def tasks(tenant: str | None, *, groups: list[str] | None = None, assignee: str | None = None) -> list[dict]:
+    """Task đang chờ, đọc hết các trang; tenant None là mọi tenant. Theo `groups` thì chỉ task chưa nhận."""
+    # Sắp theo id để các trang không chồng hay sót nhau khi đọc lần lượt.
+    query: dict[str, object] = {"includeProcessVariables": True, "size": PAGE_SIZE, "sort": "id"}
     if tenant is not None:
         query["tenantId"] = tenant
     if groups is not None:
-        query["candidateGroupIn"] = groups
-        query["ignoreAssignee" if any_assignee else "unassigned"] = True
+        query |= {"candidateGroupIn": groups, "unassigned": True}
     if assignee is not None:
         query["assignee"] = assignee
-    response = _call("POST", "/query/tasks", json=query)
-    _ensure_ok(response, "truy vấn task")
-    return response.json()["data"]
+    found: list[dict] = []
+    for _ in range(MAX_PAGES):
+        response = _call("POST", "/query/tasks", json=query | {"start": len(found)})
+        _ensure_ok(response, "truy vấn task")
+        page = response.json()
+        found += page["data"]
+        if not page["data"] or len(found) >= page["total"]:
+            return found
+    log.warning(
+        "Truy vấn task (tenant %s, nhóm %s, người nhận %s) có %s task, chỉ đọc %s",
+        tenant or "mọi tenant",
+        groups,
+        assignee,
+        page["total"],
+        len(found),
+    )
+    return found
 
 
 def task(task_id: str) -> dict | None:

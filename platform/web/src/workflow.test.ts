@@ -29,6 +29,10 @@ describe("delegatedFrom", () => {
     expect(delegatedFrom(task("child"), ["parent"])).toBe("child");
   });
 
+  it.each([undefined, null, "", []])("không gắn nhãn khi không đọc được tenant của mình (%j)", (profileTenant) => {
+    expect(delegatedFrom(task("child"), profileTenant)).toBeUndefined();
+  });
+
   it("đọc được claim tenant dạng chuỗi đơn", () => {
     expect(delegatedFrom(task("parent"), "parent")).toBeUndefined();
   });

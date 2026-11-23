@@ -18,14 +18,15 @@ def tasks(caller: Caller) -> list[dict]:
     groups = parent_groups(caller)
     if not groups:
         return []
-    # Cả task đã giao: người của tenant cha nhận task rồi lần hoàn thành lỗi thì task nằm ở tên họ, và truy
-    # vấn theo tenant của họ không thấy nó. Task đã giao cho người khác thì không hiện.
-    found = [
+    found = [task for task in flowable.tasks(None, groups=groups) if _foreign_step(caller, task)]
+    # Task đã giao cho chính caller: nhận rồi mà lần hoàn thành lỗi thì task nằm ở tên họ, và truy vấn theo
+    # nhóm (chỉ task chưa ai nhận) không thấy nó. Truy vấn riêng, lọc người nhận ngay ở Flowable, để task đã
+    # giao cho người khác không chiếm chỗ trong các trang; nhóm thì kiểm từng task, vì truy vấn theo người
+    # nhận không lọc theo nhóm được.
+    found += [
         task
-        for task in flowable.tasks(None, groups=groups, any_assignee=True)
-        if task.get("tenantId") != caller.tenant
-        and task.get("assignee") in (None, caller.sub)
-        and _reads_authority_table(task)
+        for task in flowable.tasks(None, assignee=caller.sub)
+        if _foreign_step(caller, task) and flowable.candidate_groups(task["id"]) & set(groups)
     ]
     if not found:
         return []
@@ -33,6 +34,10 @@ def tasks(caller: Caller) -> list[dict]:
     # cũ không còn quyền với hồ sơ của nó.
     children = db.children(caller.tenant)
     return [task for task in found if task.get("tenantId") in children]
+
+
+def _foreign_step(caller: Caller, task: dict) -> bool:
+    return task.get("tenantId") != caller.tenant and _reads_authority_table(task)
 
 
 def _reads_authority_table(task: dict) -> bool:
