@@ -62,8 +62,9 @@ steps:
       variable: facilityId
   # Người có thẩm quyền theo bảng phân cấp của xã (authorities/facilities-review.yaml) ghi nhận quyết định. Một nút:
   # không có cổng nào sau bước này đọc biến của nút (bpmn/facilities-review.bpmn20.xml). Biến decision riêng, không
-  # dùng comment, để không ghi đè ý kiến của bước trình. required chỉ do giao diện ép: workflow-api không kiểm biểu mẫu,
-  # và decision gửi sẵn được từ các bước trước (README của gói, mục Giới hạn).
+  # dùng comment: comment là trường chung của bước duyệt và bước trình, bước nào khai nó cũng ghi được, nên dùng
+  # chung thì quyết định ghi đè ý kiến của bước trình. decision chỉ bước này gửi được (formProperty trong BPMN, ADR
+  # 0031); required chỉ do giao diện ép, vì workflow-api không kiểm biểu mẫu.
   decide:
     title: title
     form:

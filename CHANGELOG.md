@@ -236,6 +236,13 @@ từng đặt giá trị khác mặc định; `make env` tự thêm hai biến m
 
 ### Fixed
 
+- Nội dung của một bước chỉ do người làm bước đó ghi (ADR 0031): mỗi userTask khai trường nó ghi bằng
+  `flowable:formProperty`; workflow-api trả 400, nêu tên biến và bước, khi người lập gửi trường của bất kỳ bước nào
+  hay người hoàn thành một bước gửi trường của bước khác. Trước đây người lập, người duyệt hay người trình gửi sẵn
+  được `decision` của bước quyết định trong quy trình rà soát của gói `facilities-commune`. `make check-fast` kiểm
+  trường trong khai báo bước khớp formProperty, và biến iot-bridge hay nút danh mục gửi lúc khởi tạo không trùng trường
+  của bước; quy trình mẫu mới `core-handoff`. Bản cài cũ chạy lại `make seed` và
+  `make app-install APP=<gói>` để deploy BPMN mới.
 - Người lập hồ sơ không đặt sẵn được quyết định của người duyệt (ADR 0025): workflow-api trả 400 khi biến khởi tạo
   trùng tên dùng trong điều kiện rẽ nhánh sau một bước người làm của BPMN đã deploy, ví dụ `approved`. Trước đây
   người lập gửi `approved: true` lúc khởi tạo thì người duyệt hoàn thành mà không gửi `approved` vẫn thành đã duyệt.

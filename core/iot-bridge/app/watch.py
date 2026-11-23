@@ -110,6 +110,8 @@ class Watcher:
                     rule.hold_seconds,
                 )
             return None
+        # Đúng bằng rules.CASE_VARIABLES (test_watch.py kiểm): make check-fast đối chiếu danh sách đó với
+        # trường của bước.
         variables = {
             "title": f"{rule.title}: {reading.device}",
             "rule": rule.id,

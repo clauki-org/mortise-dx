@@ -71,3 +71,9 @@ Chọn cách cuối.
 - Mỗi lần khởi tạo tốn thêm một lời gọi tới Flowable để tìm phiên bản mới nhất; BPMN chỉ đọc một lần cho mỗi phiên
   bản. Quy trình được khởi tạo theo khóa như trước, nên phiên bản mới deploy đúng giữa lúc kiểm và lúc khởi tạo sẽ
   chạy mà chưa được kiểm.
+
+## Bổ sung 2026-11-23 (#154): trường của bước
+
+Hệ quả "chưa chặn giữa hai bước" được xử lý ở [ADR 0031](0031-step-fields.md): mỗi userTask khai trường nó ghi bằng
+`flowable:formProperty`, workflow-api từ chối người lập gửi trường của bất kỳ bước nào và người hoàn thành một bước gửi
+trường của bước khác. Biến quyết định mà khai báo bước gửi qua nút (như `approved`) là trường của bước đó.

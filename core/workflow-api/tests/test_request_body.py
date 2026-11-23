@@ -36,12 +36,21 @@ def sent(monkeypatch) -> list[dict]:
         calls.append(variables)
         return {"id": "p1"}
 
-    task = {"id": "t1", "tenantId": "xa-a", "assignee": None, "category": None, "variables": []}
+    task = {
+        "id": "t1",
+        "tenantId": "xa-a",
+        "assignee": None,
+        "category": None,
+        "processDefinitionId": "core-approval:1:a",
+        "taskDefinitionKey": "review",
+        "variables": [],
+    }
     monkeypatch.setattr(flowable, "task", lambda _id: task)
     monkeypatch.setattr(flowable, "candidate_groups", lambda _id: frozenset({"manager"}))
     monkeypatch.setattr(flowable, "claim_and_complete", complete)
     monkeypatch.setattr(flowable, "start", start)
     monkeypatch.setattr(flowable, "definition", lambda _key, _tenant: _definition({"approved"}))
+    monkeypatch.setattr(flowable, "definition_of", lambda _id: _definition({"approved"}))
     monkeypatch.setitem(app.dependency_overrides, caller_from_token, lambda: MANAGER_A)
     return calls
 

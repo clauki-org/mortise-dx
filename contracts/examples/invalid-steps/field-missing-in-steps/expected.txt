@@ -1,0 +1,4 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+# Lỗi scripts/check-workflow-steps.py phải in cho ví dụ sai cùng thư mục; scripts/contracts.sh so từng ký tự.
+contracts/examples/invalid-steps/field-missing-in-steps/process.bpmn20.xml: userTask 'review' khai formProperty 'approved' mà bước 'review' trong contracts/examples/invalid-steps/field-missing-in-steps/steps.yaml không có trong form hay variables của nút nào

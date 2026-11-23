@@ -20,7 +20,12 @@ quản trị xã cập nhật số lượng sau khi giao.
     <sequenceFlow id="toApprove" sourceRef="requested" targetRef="approve"/>
 
     <userTask id="approve" name="Duyệt đề nghị cấp vật tư" flowable:candidateGroups="manager"
-              flowable:category="four-eyes" flowable:dueDate="P3D"/>
+              flowable:category="four-eyes" flowable:dueDate="P3D">
+      <extensionElements>
+        <flowable:formProperty id="comment"/>
+        <flowable:formProperty id="approved"/>
+      </extensionElements>
+    </userTask>
     <sequenceFlow id="toDecision" sourceRef="approve" targetRef="decision"/>
 
     <!-- Nhánh mặc định là từ chối: không có biến approved = true thì không coi là đã duyệt. Người lập không đặt sẵn

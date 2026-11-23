@@ -43,7 +43,7 @@
           }
         },
         "form": {
-          "description": "JSON Schema của dữ liệu người xử lý nhập; giao diện vẽ thành biểu mẫu. Mỗi trường thành một biến của quy trình khi hoàn thành task, nên tên trường theo luật tên biến. Bỏ trống thì bước chỉ có nút.",
+          "description": "JSON Schema của dữ liệu người xử lý nhập; giao diện vẽ thành biểu mẫu. Mỗi trường thành một biến của quy trình khi hoàn thành task, nên tên trường theo luật tên biến. Mỗi trường phải được userTask cùng id khai bằng <flowable:formProperty id=\"...\"/> trong BPMN (ADR 0031): workflow-api từ chối người lập và người làm bước khác gửi nó. Bỏ trống thì bước chỉ có nút.",
           "type": "object",
           "required": ["type"],
           "properties": {
@@ -81,7 +81,7 @@
         "id": { "$ref": "#/$defs/slug" },
         "label": { "$ref": "#/$defs/text" },
         "variables": {
-          "description": "Biến gửi cho quy trình khi bấm nút, ví dụ để cổng rẽ nhánh chọn đường đi. Biến mà điều kiện rẽ nhánh sau bước đọc thì người lập không gửi được lúc khởi tạo (ADR 0025)",
+          "description": "Biến gửi cho quy trình khi bấm nút, ví dụ để cổng rẽ nhánh chọn đường đi. Mỗi biến là trường của bước, khai bằng <flowable:formProperty id=\"...\"/> như trường của biểu mẫu (ADR 0031); biến mà điều kiện rẽ nhánh sau bước đọc thì người lập không gửi được lúc khởi tạo (ADR 0025)",
           "type": "object",
           "propertyNames": { "$ref": "#/$defs/variable" }
         }

@@ -344,6 +344,31 @@ IFS=$'\t' read -r status _ < <(api POST "$user_a" /processes/core-approval/insta
   '{"variables":{"title":"Đặt sẵn quyết định","approved":true}}')
 check "Người lập không đặt sẵn được biến quyết định của bước duyệt" "$status" 400
 
+# Trường của bước (ADR 0031): mỗi userTask khai trường nó ghi bằng formProperty. Người lập không gửi được trường của
+# bước nào; người làm một bước không gửi được trường của bước khác. core-handoff có hai bước nối tiếp: `prepare`
+# (vai trò user) ghi `note`, `confirm` (manager) ghi `confirmed`.
+IFS=$'\t' read -r status body < <(api POST "$user_a" /processes/core-approval/instances \
+  '{"variables":{"title":"Đặt sẵn ý kiến","comment":"Đồng ý"}}')
+check "Người lập không gửi được trường của bước duyệt (comment)" \
+  "$status $(jq -r '.error | test("comment")' <<<"$body")" "400 true"
+IFS=$'\t' read -r _ body < <(api POST "$user_a" /processes/core-handoff/instances \
+  '{"variables":{"title":"Kiểm thử trường của bước"}}')
+instance=$(jq -r .id <<<"$body")
+IFS=$'\t' read -r status _ < <(api POST "$user_a" "/tasks/$(task_of "$user_a")/complete" \
+  '{"variables":{"note":"Đã chuẩn bị","confirmed":true}}')
+check "Người làm bước chuẩn bị không gửi được trường của bước xác nhận" "$status" 400
+IFS=$'\t' read -r status _ < <(api POST "$user_a" "/tasks/$(task_of "$user_a")/complete" \
+  '{"variables":{"note":"Đã chuẩn bị"}}')
+check "Người làm bước chuẩn bị gửi được trường của chính bước đó" "$status" 204
+IFS=$'\t' read -r status _ < <(api POST "$manager_a" "/tasks/$(task_of "$manager_a")/complete" \
+  '{"variables":{"confirmed":true,"note":"Sửa ghi chú"}}')
+check "Người xác nhận không sửa được ghi chú của bước chuẩn bị" "$status" 400
+IFS=$'\t' read -r status _ < <(api POST "$manager_a" "/tasks/$(task_of "$manager_a")/complete" \
+  '{"variables":{"confirmed":true}}')
+check "Người xác nhận hoàn thành bước của mình" "$status" 204
+IFS=$'\t' read -r _ body < <(api GET "$user_a" "/instances/$instance")
+check "Quy trình hai bước kết thúc" "$(jq -r .outcome <<<"$body")" "done"
+
 # Bấm gửi hai lần gần như cùng lúc với cùng Idempotency-Key: chỉ một quy trình được tạo.
 idempotency_key=$(openssl rand -hex 16)
 start_once() {

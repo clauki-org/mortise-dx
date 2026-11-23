@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Mortise DX contributors
+SPDX-License-Identifier: Apache-2.0
+
+Quy trình mẫu chỉ dùng để kiểm thử trường của bước (ADR 0031), không phải quy trình nghiệp vụ. Hai bước nối tiếp do
+hai vai trò làm: `prepare` ghi `note`, `confirm` ghi `confirmed`. Mỗi bước khai trường nó ghi bằng formProperty;
+workflow-api từ chối người lập gửi `note` hay `confirmed`, và người làm bước này gửi trường của bước kia. `make smoke`
+dựa vào quy trình này; khai báo bước ở core-handoff.yaml cùng thư mục.
+-->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="https://mortise-dx/workflow">
+  <process id="core-handoff" name="Chuẩn bị rồi xác nhận" isExecutable="true">
+    <startEvent id="submitted"/>
+    <sequenceFlow id="toPrepare" sourceRef="submitted" targetRef="prepare"/>
+    <userTask id="prepare" name="Chuẩn bị" flowable:candidateGroups="user">
+      <extensionElements>
+        <flowable:formProperty id="note"/>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="toConfirm" sourceRef="prepare" targetRef="confirm"/>
+    <userTask id="confirm" name="Xác nhận" flowable:candidateGroups="manager">
+      <extensionElements>
+        <flowable:formProperty id="confirmed"/>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="toDone" sourceRef="confirm" targetRef="done"/>
+    <endEvent id="done" name="Xong"/>
+  </process>
+</definitions>

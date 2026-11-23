@@ -11,7 +11,7 @@ import httpx
 
 from app.cases import CaseError, Cases
 from app.main import Bridge
-from app.rules import Rule, Sample
+from app.rules import CASE_VARIABLES, Rule, Sample
 from app.tenants import TenantCheck
 from app.watch import RuleCache, Watcher
 
@@ -78,6 +78,8 @@ def test_held_breach_opens_case_for_tenant_of_topic():
         "archive-01",
         160,
     )
+    # scripts/workflow_starts.py đọc CASE_VARIABLES thay cho chính các khóa này.
+    assert tuple(variables) == CASE_VARIABLES
 
 
 def test_latest_reading_counts_even_if_history_lags():

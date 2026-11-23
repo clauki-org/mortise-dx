@@ -68,8 +68,10 @@ def test_unreadable_bpmn_refuses_the_start(rest):
 def test_authority_steps_come_from_the_same_single_read(rest):
     rest["bpmn"] = BPMN.replace(
         b'<userTask id="t"/>',
-        b'<userTask id="t" xmlns:f="http://flowable.org/bpmn" f:candidateGroups="${authority_t}"/>',
+        b'<userTask id="t" xmlns:f="http://flowable.org/bpmn" f:candidateGroups="${authority_t}">'
+        b'<extensionElements><f:formProperty id="approved"/></extensionElements></userTask>',
     )
     assert flowable.definition("p", "xa-a").authorities == {"t"}
     assert flowable.definition("p", "xa-a").decisions == {"approved"}
+    assert flowable.definition("p", "xa-a").fields == {"t": {"approved"}}
     assert sum(path.endswith("/resourcedata") for path in rest["calls"]) == 1

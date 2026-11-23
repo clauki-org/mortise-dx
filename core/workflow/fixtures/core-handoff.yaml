@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Khai báo bước (contracts/workflow.schema.json) của quy trình mẫu core-handoff.bpmn20.xml cùng thư mục; `make seed`
+# nạp cùng quy trình, `make check-fast` kiểm theo schema, theo BPMN và trường của từng bước khớp formProperty.
+
+process: core-handoff
+steps:
+  prepare:
+    title: title
+    form:
+      type: object
+      required: [note]
+      properties:
+        note:
+          type: string
+          title: Ghi chú
+    actions:
+      - id: done
+        label: Chuyển xác nhận
+        variables: {}
+  confirm:
+    title: title
+    actions:
+      - id: confirm
+        label: Xác nhận
+        variables:
+          confirmed: true

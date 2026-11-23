@@ -8,6 +8,11 @@ import hashlib
 from dataclasses import dataclass
 from datetime import datetime
 
+# Biến watch.py gửi khi mở hồ sơ. Tên nào trùng trường của một bước trong quy trình của luật thì
+# workflow-api từ chối mở hồ sơ (ADR 0031) và cảnh báo chỉ còn là một dòng nhật ký;
+# scripts/workflow_starts.py nạp tệp này theo đường dẫn để make check-fast bắt trùng tên trước khi cài.
+CASE_VARIABLES = ("title", "rule", "ruleApp", "device", "measurement", "value", "threshold", "observedAt")
+
 
 @dataclass(frozen=True)
 class Rule:

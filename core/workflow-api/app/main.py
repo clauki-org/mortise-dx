@@ -24,6 +24,8 @@ from .policy import (
     check_idempotency_key,
     check_not_preset,
     check_person,
+    check_start_fields,
+    check_step_fields,
     check_variables,
 )
 from .schemas import ErrorBody, InstanceStatus, ProcessStarted, Task, VariablesBody
@@ -96,6 +98,7 @@ def start_process(
     check_variables(variables)
     definition = flowable.definition(key, caller.tenant)
     check_not_preset(variables, definition.decisions)
+    check_start_fields(variables, definition.fields)
     authorities = _authorities(key, caller.tenant, definition.authorities, variables)
     variables |= {"initiator": caller.sub, "initiatorName": caller.username, "tenant": caller.tenant}
     variables |= authorities
@@ -137,6 +140,10 @@ def complete_task(task_id: str, caller: CallerDep, body: VariablesIn = None) -> 
     if raw is None:
         raise Denied(404, "Không tìm thấy task.")
     check_can_complete(caller, _task_view(raw))
+    # Kiểm sau quyền: người của tenant khác hay vai trò khác nhận 404/403 như trước, không biết được bước
+    # nào có trường gì.
+    fields = flowable.definition_of(raw["processDefinitionId"]).fields
+    check_step_fields(variables, fields, raw["taskDefinitionKey"])
     flowable.claim_and_complete(task_id, caller.sub, variables)
     return Response(status_code=204)
 
