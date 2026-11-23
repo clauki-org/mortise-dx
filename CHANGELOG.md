@@ -17,6 +17,10 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   gói kèm Idempotency-Key hoặc thêm một dòng vào bảng của gói; `make check-fast` kiểm biểu mẫu với BPMN, khai báo
   bước và quyền Hasura của gói. Khai báo bước có `details` để người xử lý thấy giá trị người lập điền. Gói kho vật tư
   có mục "Lập đề nghị cấp vật tư" và "Thêm vật tư vào kho" (quản trị xã).
+- Quy trình rà soát của gói `facilities-commune` có thêm bước "Quyết định của người có thẩm quyền" (`decide`) sau
+  bước trình, với một nút "Ghi nhận quyết định". Vai trò của bước lấy từ bảng phân cấp của xã (ADR 0028, dòng mặc
+  định `manager` ở `authorities/facilities-review.yaml`); quản trị tỉnh đổi dòng thì hồ sơ lập sau tới vai trò mới,
+  và bước cần OTP. Bản cài cũ chạy lại `make app-install APP=facilities-commune`.
 - Bảng phân cấp thẩm quyền theo tenant (ADR 0028, `core.step_authorities`): bước ghi `candidateGroups` là
   `${authority_<bước>}` nhận vai trò do workflow-api chọn lúc khởi tạo, theo ngưỡng của một biến của hồ sơ; đổi dòng
   thì hồ sơ lập sau tới vai trò mới. Quản trị của tenant cha (`admin.tinh`) sửa vai trò và ngưỡng của tenant con qua

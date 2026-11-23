@@ -6,8 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 Hồ sơ rà soát diện tích trụ sở của xã (#58). Cán bộ lập hồ sơ với phần vượt tiêu chuẩn, định mức (biến excessM2,
 m²); người có vai trò manager trong cùng xã duyệt, người lập không tự duyệt được (category four-eyes, workflow-api
 chặn). Phần vượt từ ngưỡng trở xuống: duyệt xong là báo cáo để tiếp tục sử dụng. Vượt trên ngưỡng: duyệt xong thì
-công khai một thời hạn, hết hạn mới sang bước trình người có thẩm quyền. Bước sau khi trình (tỉnh duyệt, bảng phân
-cấp) thuộc #110, #111.
+công khai một thời hạn, hết hạn mới sang bước trình người có thẩm quyền, rồi tới bước quyết định của người có thẩm
+quyền. Vai trò của bước quyết định lấy từ bảng phân cấp của xã (authorities/facilities-review.yaml, ADR 0028):
+workflow-api đặt biến authority_decide lúc khởi tạo, nên đổi bảng thì hồ sơ lập sau tới vai trò mới. Tỉnh nhận và
+duyệt hồ sơ của xã thuộc #110.
 
 Ngưỡng và thời hạn là settings review_threshold_m2 và publication_period của app.yaml: bộ cài thay vào tệp này lúc
 deploy (ADR 0019), nên chúng nằm trong định nghĩa quy trình, người lập hay người duyệt không ghi đè được bằng biến.
@@ -64,7 +66,14 @@ lập, người duyệt đối chiếu với hồ sơ; lấy số ở phía máy
     <sequenceFlow id="toSubmit" sourceRef="publication" targetRef="submit"/>
 
     <userTask id="submit" name="Trình người có thẩm quyền" flowable:candidateGroups="manager"/>
-    <sequenceFlow id="toSubmitted" sourceRef="submit" targetRef="submitted"/>
-    <endEvent id="submitted" name="Đã trình"/>
+    <sequenceFlow id="toDecide" sourceRef="submit" targetRef="decide"/>
+
+    <!-- Bước quyết định chỉ ghi nhận quyết định, không có cổng rẽ nhánh phía sau: workflow-api cho người hoàn thành
+         một bước gửi mọi biến, nên người trình đặt sẵn được biến mà một cổng sau bước này đọc (ADR 0025, chưa chặn
+         giữa hai bước). Người lập không tự quyết định hồ sơ của mình (bốn mắt). -->
+    <userTask id="decide" name="Quyết định của người có thẩm quyền" flowable:candidateGroups="${authority_decide}"
+              flowable:category="four-eyes"/>
+    <sequenceFlow id="toDecided" sourceRef="decide" targetRef="decided"/>
+    <endEvent id="decided" name="Đã có quyết định"/>
   </process>
 </definitions>

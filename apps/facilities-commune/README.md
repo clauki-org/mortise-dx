@@ -22,6 +22,7 @@ assistant/           cấu hình trợ lý hỏi dữ liệu (diện tích của
                      contracts/assistant.schema.json
 bpmn/                quy trình BPMN của gói, deploy cho từng tenant khi cài
 workflows/           khai báo bước của từng quy trình theo contracts/workflow.schema.json
+authorities/         bảng phân cấp mặc định của bước quyết định theo contracts/authority.schema.json (ADR 0028)
 rules/               luật ngưỡng của số đo thiết bị theo contracts/threshold-rule.schema.json
 tests/smoke.sh       kiểm qua cổng: cách ly tenant, tenant lấy từ token, phân công, khóa ngoại ghép, RESTRICT,
                      nhật ký, phần vượt, tọa độ, tổng hợp cho tỉnh, trợ lý hỏi dữ liệu; mở việc kiểm tra kho khi độ ẩm vượt ngưỡng
@@ -111,11 +112,50 @@ sửa bởi NĐ 369/2026/NĐ-CP, mục trên), không tính riêng từng cơ s�
 
 - **Phần vượt từ ngưỡng trở xuống** (`review_report`): duyệt xong là kết thúc ở "báo cáo để tiếp tục sử dụng".
 - **Phần vượt trên ngưỡng** (`review_publish`): duyệt xong thì công khai trong thời hạn, không có bước nào cho người
-  dùng. Hết hạn thì sang bước `submit`, trình người có thẩm quyền kèm đơn vị đề nghị nhận.
+  dùng. Hết hạn thì `manager` của xã làm bước `submit`, trình người có thẩm quyền kèm đơn vị đề nghị nhận; rồi người
+  có thẩm quyền theo bảng phân cấp làm bước `decide`, ghi nhận quyết định, và hồ sơ kết thúc ở "đã có quyết định".
 - **Phần vượt thiếu hay âm:** đi nhánh công khai.
 - **Phần vượt không đọc được thành số:** không lập được hồ sơ, API quy trình trả 502.
 
 Nhánh được chọn ngay khi lập hồ sơ, trước bước duyệt: người duyệt gửi kèm biến khi duyệt cũng không đổi được nhánh.
+
+```
+lập hồ sơ ─┬─ vượt ≤ ngưỡng ─ review_report ─┬─ duyệt ─── báo cáo để tiếp tục sử dụng
+           │                                 └─ trả lại ─ trả lại
+           └─ vượt > ngưỡng, ── review_publish ─┬─ duyệt ─── công khai (hẹn giờ) ─ submit ─ decide ─ đã có quyết định
+              thiếu hay âm                      └─ trả lại ─ trả lại
+```
+
+Bước `decide` chỉ có một nút, "Ghi nhận quyết định", với nội dung quyết định ở trường `decision`. Sau bước này không
+có cổng rẽ nhánh: workflow-api cho người hoàn thành một bước gửi mọi biến, nên người duyệt hay người trình đặt sẵn
+được biến mà một cổng sau `decide` đọc ([ADR 0025](../../docs/adr/0025-decision-variables.md), chưa chặn giữa hai
+bước). Người lập không tự quyết định hồ sơ của mình (bốn mắt).
+
+### Bảng phân cấp của bước quyết định
+
+Vai trò làm bước `decide` không viết trong BPMN mà lấy từ bảng phân cấp của xã
+([ADR 0028](../../docs/adr/0028-step-authority-table.md)): BPMN ghi `candidateGroups="${authority_decide}"`,
+workflow-api chọn dòng lúc lập hồ sơ và đặt biến `authority_decide`. Dòng mặc định ở
+`authorities/facilities-review.yaml`, khai trong `authorities` của `app.yaml`:
+
+| Mã dòng | So biến | Ngưỡng | Vai trò | Phạm vi |
+|---|---|---|---|---|
+| `default` | | | `manager` | xã của hồ sơ |
+
+- **Ai sửa:** `tenant_admin` của tỉnh (tenant cha), qua GraphQL, chỉ cột `role` và `above` của dòng thuộc xã con. Quản
+  trị xã không sửa được bảng của chính xã mình. Cài lại gói chỉ thêm dòng chưa có, nên giữ dòng tỉnh đã sửa.
+- **Đổi một dòng thì hồ sơ lập sau đi theo dòng mới; hồ sơ đã lập giữ vai trò cũ**, kể cả khi dòng được đổi lại.
+- **Bước quyết định cần OTP với mọi vai trò.** `manager` luôn có OTP. Giao bước cho vai trò khác, ví dụ
+  `tenant_admin`, thì người vận hành gán vai trò `otp_required` của client `mortise-web` cho tài khoản nhận bước; bản
+  demo có `admin2.a`. Tài khoản cùng vai trò mà không có nó (`admin.a`) thấy việc nhưng bị từ chối khi hoàn thành.
+- **Chưa có dòng ngưỡng.** Mọi hồ sơ tới `decide` đã vượt trên ngưỡng công khai hoặc thiếu số liệu, nên một dòng
+  ngưỡng từ 300 m² trở xuống thay hẳn dòng gốc; mức cao hơn để chuyển hồ sơ lên cấp khác chưa đối chiếu được với văn
+  bản nào. Dòng chuyển hồ sơ lên tỉnh (`scope: parent`) chờ #110, khi người của tỉnh thấy được việc của xã.
+
+`tests/workflow.sh` kiểm: quản trị tỉnh (`admin.tinh`) đổi dòng của xã A sang `tenant_admin`, hồ sơ lập sau có bước
+`decide` ở `tenant_admin`, hồ sơ lập trước vẫn ở `manager`; `admin.a` không sửa được bảng và bị từ chối ở bước
+`decide` vì thiếu OTP; `admin2.a` và `manager.a` đăng nhập kèm OTP thì ghi nhận được quyết định. Bài đặt lại dòng về
+`manager` ngay sau khi lập hồ sơ thứ hai.
 
 Ngưỡng và thời hạn là `settings` trong `app.yaml` (ADR 0019): `review_threshold_m2: 300`, `publication_period: P30D`
 theo Điều 3a khoản 2, 3 NĐ 155/2025/NĐ-CP, bổ sung bởi Điều 3 NĐ 369/2026/NĐ-CP. Demo và CI ghi đè thời hạn khi cài:
@@ -126,11 +166,16 @@ theo Điều 3a khoản 2, 3 NĐ 155/2025/NĐ-CP, bổ sung bởi Điều 3 NĐ 
 - `excessM2` do trình duyệt đọc từ `area_summary` lúc bấm nút rồi gửi đi. Người gọi thẳng API vẫn gửi được số khác,
   nên người duyệt đối chiếu với hồ sơ. Quy trình chưa tự lấy phần vượt ở phía máy chủ; đó là việc sau.
 - Lập hai hồ sơ cho cùng một cơ sở không bị chặn. Bấm đúp trong cùng hộp xác nhận chỉ tạo một hồ sơ.
+- Khi bảng có dòng ngưỡng trên `excessM2`, người lập khai thấp là né được cấp có thẩm quyền cao hơn, vì
+  `excessM2` do người lập gửi (ADR 0028, giới hạn đã biết). Người có thẩm quyền ở cấp thấp phải đối chiếu với hồ sơ.
+- Với dòng mặc định, cùng một `manager` của xã làm được cả bước trình lẫn bước quyết định: bốn mắt chỉ loại người lập.
+- Mọi hồ sơ rà soát, kể cả nhánh báo cáo, cần xã có dòng trong bảng phân cấp: xã tạo sau khi cài gói nhận `409` khi
+  lập hồ sơ cho tới khi chạy lại `make app-install APP=facilities-commune`.
 
 ## Cài và gỡ
 
-Cần lõi đang chạy và đã `make seed`. Cài gói chạy migration, áp quyền Hasura, deploy quy trình cho mọi xã, nạp khai
-báo bước và menu:
+Cần lõi đang chạy và đã `make seed`. Cài gói chạy migration, áp quyền Hasura, nạp bảng phân cấp mặc định, deploy quy
+trình cho mọi xã, nạp khai báo bước và menu:
 
 ```bash
 make app-install APP=facilities-commune                  # P30D theo app.yaml: smoke không chờ hết hạn công khai
@@ -161,8 +206,8 @@ make simulate ARGS="--set xa-a/archive-01:humidity=78"   # giữ độ ẩm kho 
 
 ## Chưa có
 
-Bước sau khi trình (tỉnh duyệt, bảng phân cấp thẩm quyền: #110, #111); phần bù diện tích sử dụng chung theo Tiêu chuẩn quốc gia; diện tích sử dụng chung khi
-nhiều cơ quan chung một trụ sở (Điều 6 khoản 2 điểm a, sửa bởi NĐ 369).
+Tỉnh nhận và duyệt hồ sơ của xã (#110); phần bù diện tích sử dụng chung theo Tiêu chuẩn quốc gia; diện tích sử
+dụng chung khi nhiều cơ quan chung một trụ sở (Điều 6 khoản 2 điểm a, sửa bởi NĐ 369).
 
 ## Dữ liệu demo
 

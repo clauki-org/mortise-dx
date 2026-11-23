@@ -60,3 +60,26 @@ steps:
     record:
       menu: facilities
       variable: facilityId
+  # Người có thẩm quyền theo bảng phân cấp của xã (authorities/facilities-review.yaml) ghi nhận quyết định. Một nút:
+  # không có cổng nào sau bước này đọc biến của nút (bpmn/facilities-review.bpmn20.xml). Biến decision riêng, không
+  # dùng comment, để không ghi đè ý kiến của bước trình.
+  decide:
+    title: title
+    form:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          title: Quyết định xử lý phần vượt
+    ui:
+      decision:
+        ui:widget: textarea
+    actions:
+      - id: record
+        label: Ghi nhận quyết định
+        variables:
+          decided: true
+    record:
+      menu: facilities
+      variable: facilityId

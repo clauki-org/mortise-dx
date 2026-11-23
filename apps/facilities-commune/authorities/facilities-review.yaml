@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Dòng mặc định của bảng phân cấp (contracts/authority.schema.json, ADR 0028) cho bước quyết định `decide` của
+# bpmn/facilities-review.bpmn20.xml. Cài gói thì mọi tenant có các dòng này; quản trị của tỉnh (tenant cha) đổi vai
+# trò của dòng ở từng xã qua GraphQL, cài lại gói không ghi đè dòng đã đổi. tests/workflow.sh đổi dòng gốc của xã A
+# rồi kiểm hồ sơ lập sau tới vai trò mới.
+#
+# Chỉ có dòng gốc, vai trò manager như hai bước duyệt. Chưa có dòng ngưỡng: chưa đối chiếu văn bản nào đặt mức phần
+# vượt chuyển hồ sơ lên cấp khác, và mọi hồ sơ tới bước này đã vượt trên ngưỡng công khai (300 m²) hoặc thiếu số liệu,
+# nên dòng ngưỡng từ 300 trở xuống thay hẳn dòng gốc. Dòng ngưỡng chuyển hồ sơ lên tỉnh (scope parent) chờ #110: người
+# của tỉnh chưa thấy việc của xã, hồ sơ sẽ nằm lại không ai xử lý.
+
+process: facilities-review
+step: decide
+rows:
+  - rule: default
+    role: manager
