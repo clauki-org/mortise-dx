@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/dashboard.schema.json từ chối: limit vượt trần 200. Nếu lọt, một khối tải cả bảng về
+# trình duyệt.
+
+title: Tổng quan
+panels:
+  - id: children
+    title: Đơn vị con
+    description: View tổng hợp của đơn vị con.
+    graphql: { field: app_example_rollup, limit: 201 }
+    chart:
+      type: bar
+      x: { column: unit_name, label: Đơn vị }
+      y: [{ column: score, label: Điểm, color: teal }]

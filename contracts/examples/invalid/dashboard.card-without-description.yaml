@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/dashboard.schema.json từ chối: thẻ số không có cách tính. Nếu lọt, người xem thấy
+# một con số mà không đối chiếu được nó tính từ đâu.
+
+title: Tổng quan
+panels:
+  - id: totals
+    title: Tổng
+    description: View tổng của đơn vị.
+    graphql: { field: app_example_totals }
+    cards: [{ column: score, label: Điểm }]

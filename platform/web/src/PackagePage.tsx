@@ -16,6 +16,8 @@ import { Cases } from "./CasesPanel";
 import { Catalog } from "./Catalog";
 import type { CasesConfig } from "./cases";
 import type { CatalogConfig } from "./catalog";
+import { DashboardPanel } from "./DashboardPanel";
+import type { DashboardConfig } from "./dashboardConfig";
 import { NotFound } from "./Errors";
 import { FormPanel } from "./FormPanel";
 import type { FormConfig } from "./formConfig";
@@ -33,8 +35,8 @@ export function usePackageMenu() {
 }
 
 // `app` là gói của mục: thành phần cần nó khi dữ liệu nó đọc thuộc về gói (văn bản của trợ lý) hay khi trỏ tới mục
-// menu khác của cùng gói (biểu mẫu). `item` là mục: trợ lý hỏi dữ liệu gửi kèm để dịch vụ tự đọc danh sách bảng được
-// phép của mục, không nhận danh sách đó từ trình duyệt.
+// menu khác của cùng gói (biểu mẫu, bảng điều hành). `item` là mục: trợ lý hỏi dữ liệu gửi kèm để dịch vụ tự đọc
+// danh sách bảng được phép của mục, không nhận danh sách đó từ trình duyệt.
 type Render = (config: unknown, basePath: string, app: string, item: string) => ReactNode;
 
 // Tên thành phần là dữ liệu đọc từ CSDL nên tra bằng Map: tra trên đối tượng thường thì tên như "constructor" hay
@@ -45,6 +47,7 @@ const COMPONENTS = new Map<string, Render>([
   ["map", (config) => <MapPanel config={config as MapConfig} />],
   ["form", (config, _basePath, app) => <FormPanel config={config as FormConfig} app={app} />],
   ["cases", (config, basePath) => <Cases config={config as CasesConfig} basePath={basePath} />],
+  ["dashboard", (config, _basePath, app) => <DashboardPanel config={config as DashboardConfig} app={app} />],
   [
     "assistant",
     (config, _basePath, app, item) =>

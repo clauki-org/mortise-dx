@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/dashboard.schema.json từ chối: tên cột chứa dấu ngoặc. Nếu lọt, tên này ghép vào
+# câu GraphQL và đọc thêm trường khác.
+
+title: Tổng quan
+panels:
+  - id: totals
+    title: Tổng
+    description: View tổng của đơn vị.
+    graphql: { field: app_example_totals }
+    cards: [{ column: "score } secret {", label: Điểm, description: Tổng điểm. }]

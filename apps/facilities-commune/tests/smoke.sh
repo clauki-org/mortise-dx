@@ -311,9 +311,10 @@ check "Xóa cơ sở thì phân công của nó đi theo" "$(gql "$admin_a" "$le
 # của tenant khác.
 menu='{ platform_menu_items(where: {app: {_eq: "facilities-commune"}}, order_by: {position: asc}) {
   tenant_id item component config } }'
-check "Menu của gói: user.a thấy mục danh mục, bản đồ, hỏi dữ liệu và hồ sơ rà soát kèm cấu hình, chỉ của xã mình" \
+check "Menu của gói: user.a thấy mục danh mục, bản đồ, hỏi dữ liệu, hồ sơ rà soát và bảng điều hành kèm cấu hình, chỉ của xã mình" \
   "$(gql "$token_a" "$menu" | jq -c '[.data.platform_menu_items[] | [.tenant_id, .item, .component, .config.title]]')" \
-  '[["xa-a","facilities","catalog","Cơ sở nhà, đất"],["xa-a","map","map","Bản đồ trụ sở"],["xa-a","ask-data","assistant",null],["xa-a","reviews","cases","Hồ sơ rà soát đã lập"]]'
+  '[["xa-a","facilities","catalog","Cơ sở nhà, đất"],["xa-a","map","map","Bản đồ trụ sở"],["xa-a","ask-data","assistant",null],'\
+'["xa-a","reviews","cases","Hồ sơ rà soát đã lập"],["xa-a","dashboard","dashboard","Bảng điều hành cơ sở vật chất xã"]]'
 check "Menu của gói: user.b chỉ thấy mục của xã mình" \
   "$(gql "$token_b" "$menu" | jq -c '[.data.platform_menu_items[].tenant_id] | unique')" '["xa-b"]'
 
@@ -332,6 +333,9 @@ check "Tỉnh (user) không thấy phòng nào của xã" "$(gql "$leader" "$roo
 check "Xã không đọc được tổng hợp của tỉnh" "$(gql "$token_a" "$rollup" "{}" user | error_code)" validation-failed
 check "Xã không tự nhận vai trò rollup_reader khi token không có" \
   "$(gql "$token_a" "$rollup" "{}" rollup_reader | error_code)" access-denied
+
+check "Cán bộ (user) không đọc được facility_coverage, view chỉ dành cho lãnh đạo và quản trị xã" \
+  "$(gql "$token_a" '{ app_facilities_commune_facility_coverage { facility_count } }' | error_code)" validation-failed
 
 # Dữ liệu demo (`make seed-demo`, seed/demo.yaml): tổng diện tích thông thủy theo trạng thái cơ sở của từng xã đúng số
 # liệu của câu chuyện demo. Đọc bằng quản trị xã để thấy toàn xã, không phụ thuộc phân công. Chưa nạp thì bỏ qua, để
@@ -397,6 +401,24 @@ if ((loaded > 0)); then
       "\(.tenant_id) allowed=\(.allowed_m2 | tonumber + 0) in_use=\(.in_use_m2 | tonumber + 0)"
       + " surplus=\(.surplus_m2 | tonumber + 0) excess=\(.excess_m2 | tonumber + 0)"' | paste -sd ';')" \
     "$(for access in "$token_a" "$token_b" "$(token user.c)"; do summary "$access"; done | paste -sd ';')"
+  # View của bảng điều hành (ADR 0033): cùng số với area_summary và dữ liệu demo; mỗi xã có dòng cho mọi trạng thái,
+  # loại diện tích dù chưa có cơ sở nào; demo chỉ phân công người phụ trách, chưa phân công người duyệt.
+  status='{ app_facilities_commune_facility_status_counts(order_by: {status: asc}) {
+    status facility_count clear_area_m2 } }'
+  check "Bảng điều hành: số cơ sở và diện tích theo trạng thái của xã A, xã C" \
+    "$(for access in "$token_a" "$(token user.c)"; do gql "$access" "$status" |
+      jq -c '[.data.app_facilities_commune_facility_status_counts[] |
+        [.status, .facility_count, (.clear_area_m2 | tonumber + 0)]]'; done | paste -sd ' ')" \
+    '[["in_use",2,1000],["surplus",0,0]] [["in_use",1,460],["surplus",1,250]]'
+  check "Bảng điều hành: diện tích đang dùng và được phép theo loại của xã A" \
+    "$(gql "$token_a" '{ app_facilities_commune_area_by_type(order_by: {area_type: asc}) {
+      area_type in_use_m2 allowed_m2 } }' | jq -c '[.data.app_facilities_commune_area_by_type[] |
+        [.area_type, (.in_use_m2 | tonumber + 0), (.allowed_m2 | tonumber + 0)]]')" \
+    '[["shared",500,290],["specialized",0,0],["working",500,290]]'
+  coverage='{ app_facilities_commune_facility_coverage { facility_count without_custodian without_approver } }'
+  check "Bảng điều hành: manager.a thấy cơ sở của xã A đều có người phụ trách, chưa có người duyệt" \
+    "$(gql "$manager_a" "$coverage" "{}" manager | jq -c '.data.app_facilities_commune_facility_coverage')" \
+    '[{"facility_count":2,"without_custodian":0,"without_approver":2}]'
   # Bản đồ cần mọi cơ sở demo có tọa độ, kể cả cơ sở dôi dư; tỉnh thấy đúng các trụ sở đang dùng kèm phần vượt của xã,
   # không thấy cơ sở dôi dư; cán bộ thấy phần vượt của xã trên từng cơ sở mình phụ trách.
   unplaced='{ app_facilities_commune_facilities(where: {code: {_like: "TS-%"}, latitude: {_is_null: true}}) { code } }'

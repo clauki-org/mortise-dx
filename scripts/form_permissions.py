@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Đọc quyền Hasura của gói (hasura/*.yaml, cùng định dạng core/hasura/tables.yaml) cho
-# scripts/check-form-config.py: bảng theo trường gốc GraphQL, quyền của một vai trò, và cột mà quyền gắn với
-# tenant của token. Tách khỏi tệp kiểm để luật của biểu mẫu không lẫn với việc kiểm dạng tệp quyền.
+# scripts/check-form-config.py và scripts/check-dashboard-config.py: bảng theo trường gốc GraphQL, quyền
+# của một vai trò, và cột mà quyền gắn với tenant của token. Tách khỏi tệp kiểm để luật của biểu mẫu, bảng
+# điều hành không lẫn với việc kiểm dạng tệp quyền.
 
 import yaml
 

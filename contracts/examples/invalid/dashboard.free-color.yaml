@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/dashboard.schema.json từ chối: màu cột là mã màu tự do. Nếu lọt, màu không theo theme
+# và giá trị đi vào CSS.
+
+title: Tổng quan
+panels:
+  - id: children
+    title: Đơn vị con
+    description: View tổng hợp của đơn vị con.
+    graphql: { field: app_example_rollup }
+    chart:
+      type: bar
+      x: { column: unit_name, label: Đơn vị }
+      y: [{ column: score, label: Điểm, color: "#ff0000" }]

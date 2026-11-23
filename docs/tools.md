@@ -286,11 +286,15 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
     `sessionStorage`, làm mới bằng refresh token, không dùng iframe theo dõi phiên.
   - GraphQL tới Hasura qua `/v1/graphql` bằng urql, gửi bằng POST; Hasura lọc dữ liệu theo tenant trong token.
   - Menu gồm màn hình dùng chung cộng mục của các gói đã cài, đọc từ `platform_menu_items`; mục của gói mở ở
-    `/apps/<gói>/<mục>` và vẽ thành phần Tầng 2 mà mục khai (hiện có `catalog` và `map`) với cấu hình của gói. Mục
-    khai `roles` chỉ hiện với người có vai trò đó. Truy vấn chạy với vai trò `user`, trừ lớp bản đồ khai `role`: lớp
-    đó gửi `X-Hasura-Role` khi token có vai trò ấy ([ADR 0024](adr/0024-map-component.md)).
+    `/apps/<gói>/<mục>` và vẽ thành phần Tầng 2 mà mục khai (`catalog`, `map`, `form`, `dashboard`, `assistant`) với
+    cấu hình của gói. Mục khai `roles` chỉ hiện với người có vai trò đó. Truy vấn chạy với vai trò `user`; lớp bản đồ,
+    biểu mẫu và khối bảng điều hành khai `role` thì gửi `X-Hasura-Role` khi token có vai trò ấy
+    ([ADR 0024](adr/0024-map-component.md), [ADR 0030](adr/0030-form-component.md),
+    [ADR 0033](adr/0033-dashboard-component.md)).
   - Bản đồ vẽ bằng MapLibre GL JS 6.18.0 trên nền trơn, không tải tile từ máy chủ nào; mã của nó chỉ tải khi mở
     trang bản đồ, worker chạy từ tệp cùng origin nên CSP không mở `blob:`.
+  - Biểu đồ của bảng điều hành là thanh vẽ bằng CSS theo biến màu của Mantine, không thêm thư viện biểu đồ; mỗi biểu
+    đồ kèm bảng số liệu.
   - REST tới `/v1/workflow` bằng TanStack Query (bộ nhớ đệm, tự tải lại khi quay lại tab); điều hướng giữa các màn
     hình bằng React Router, nginx trả `index.html` cho mọi đường nên tải lại trang vẫn đúng màn hình.
   - nginx 1.30.6 phục vụ tệp tĩnh sau cổng tại `/`, trả `index.html` cho đường không phải tệp, gắn

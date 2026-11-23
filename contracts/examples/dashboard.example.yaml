@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ cấu hình bảng điều hành hợp lệ theo contracts/dashboard.schema.json; `make check-fast` kiểm tệp này với
+# schema và với một bảng quyền mẫu (scripts/check-dashboard-config.py). Khối đầu là thẻ số trên một view mỗi đơn vị
+# một dòng; khối sau là biểu đồ của đơn vị con, chỉ truy vấn khi token có vai trò rollup_reader. Gói thật đặt tệp
+# trong thư mục của gói (dashboards/).
+
+title: Tổng quan
+description: Số liệu của đơn vị, đọc bằng quyền của người xem.
+panels:
+  - id: totals
+    title: Tổng của đơn vị
+    description: View app_example_totals, mỗi đơn vị một dòng, tính trong migration của gói.
+    graphql: { field: app_example_totals }
+    cards:
+      - { column: item_count, label: Số đối tượng, format: integer, description: Đếm mọi dòng của bảng đối tượng. }
+      - { column: score, label: Điểm, unit: điểm, description: Tổng điểm của các đối tượng đang dùng. }
+    link: { menu: items, label: Xem danh mục đối tượng }
+  - id: children
+    title: Các đơn vị con
+    description: View app_example_rollup, mỗi đơn vị con một dòng, lấy nguyên số của app_example_totals.
+    role: rollup_reader
+    graphql: { field: app_example_rollup, order_by: [{ column: score, direction: desc }], limit: 20 }
+    chart:
+      type: bar
+      x: { column: unit_name, label: Đơn vị }
+      y:
+        - { column: score, label: Điểm, color: teal }
+        - { column: target, label: Chỉ tiêu, color: gray }
+      details:
+        - { column: basis, label: Căn cứ }

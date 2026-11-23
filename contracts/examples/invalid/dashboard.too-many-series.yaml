@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/dashboard.schema.json từ chối: năm cột số trong một biểu đồ. Nếu lọt, các thanh của
+# một nhóm khó đọc và bảng số liệu quá rộng.
+
+title: Tổng quan
+panels:
+  - id: children
+    title: Đơn vị con
+    description: View tổng hợp của đơn vị con.
+    graphql: { field: app_example_rollup }
+    chart:
+      type: bar
+      x: { column: unit_name, label: Đơn vị }
+      y:
+        - { column: a, label: A, color: teal }
+        - { column: b, label: B, color: blue }
+        - { column: c, label: C, color: red }
+        - { column: d, label: D, color: gray }
+        - { column: e, label: E, color: lime }

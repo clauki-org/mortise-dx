@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/dashboard.schema.json",
+  "title": "Cấu hình thành phần bảng điều hành (component: dashboard)",
+  "description": "Tệp cấu hình mà gói viết cho thành phần bảng điều hành. Mỗi khối đọc một nguồn và hiện thẻ số hoặc biểu đồ cột ngang kèm bảng số liệu. Mọi con số là cột do gói tính sẵn (thường là view trong migration của gói); thành phần không cộng, không đếm, không tính gì trên trình duyệt (ADR 0033). Quyền đọc không khai ở đây: Hasura lọc theo token của người xem.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "panels"],
+  "properties": {
+    "title": { "description": "Tiêu đề của trang", "$ref": "#/$defs/text" },
+    "description": { "description": "Đoạn giới thiệu dưới tiêu đề", "$ref": "#/$defs/text" },
+    "panels": {
+      "description": "Các khối theo thứ tự hiện",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/panel" }
+    }
+  },
+  "$defs": {
+    "panel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "description"],
+      "allOf": [
+        {
+          "description": "Đúng một nguồn",
+          "oneOf": [{ "required": ["graphql"] }, { "required": ["workflow"] }, { "required": ["context"] }]
+        },
+        { "description": "Đúng một cách hiện", "oneOf": [{ "required": ["cards"] }, { "required": ["chart"] }] }
+      ],
+      "properties": {
+        "id": { "description": "Tên ngắn của khối, không trùng với khối khác", "$ref": "#/$defs/slug" },
+        "title": { "$ref": "#/$defs/text" },
+        "description": {
+          "description": "Nguồn là gì và số được tính thế nào, viết cho người xem; hiện ngay dưới tiêu đề khối",
+          "$ref": "#/$defs/text"
+        },
+        "role": {
+          "description": "Vai trò Hasura gửi kèm truy vấn của khối (header X-Hasura-Role). Bỏ trống là user. Token của người xem không có vai trò này thì khối không được truy vấn và không hiện. Khai vai trò không cấp quyền gì: Hasura vẫn kiểm vai trò với token.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "graphql": { "$ref": "#/$defs/graphql" },
+        "workflow": {
+          "description": "Dành cho số hồ sơ đọc qua workflow-api. Chưa hỗ trợ: make check-fast từ chối, giao diện báo chưa hỗ trợ.",
+          "type": "object"
+        },
+        "context": {
+          "description": "Dành cho số đo thiết bị đọc qua context-api. Chưa hỗ trợ: make check-fast từ chối, giao diện báo chưa hỗ trợ.",
+          "type": "object"
+        },
+        "cards": {
+          "description": "Thẻ số, mỗi thẻ một cột của đúng một dòng mà nguồn trả",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/card" }
+        },
+        "chart": { "$ref": "#/$defs/chart" },
+        "link": {
+          "description": "Đường dẫn tới một mục menu khác của cùng gói, ví dụ danh mục chứa dữ liệu gốc",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["menu", "label"],
+          "properties": { "menu": { "$ref": "#/$defs/slug" }, "label": { "$ref": "#/$defs/text" } }
+        }
+      }
+    },
+    "graphql": {
+      "description": "Đọc một bảng hay view qua Hasura bằng token của người xem",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field"],
+      "properties": {
+        "field": {
+          "description": "Trường gốc GraphQL của bảng hay view trong Hasura: <lược đồ>_<bảng>",
+          "$ref": "#/$defs/identifier"
+        },
+        "where": {
+          "description": "Chỉ lấy dòng có một cột bằng một giá trị",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["field", "equals"],
+          "properties": { "field": { "$ref": "#/$defs/identifier" }, "equals": { "type": "string" } }
+        },
+        "order_by": {
+          "description": "Thứ tự dòng của biểu đồ. Bỏ trống là theo cột của trục x tăng dần.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["column"],
+            "properties": {
+              "column": { "$ref": "#/$defs/identifier" },
+              "direction": { "enum": ["asc", "desc"] }
+            }
+          }
+        },
+        "limit": {
+          "description": "Số dòng tối đa của biểu đồ. Bỏ trống là 50. Thẻ số luôn xin hai dòng để biết nguồn trả nhiều hơn một dòng.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        }
+      }
+    },
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["column", "label", "description"],
+      "properties": {
+        "column": { "$ref": "#/$defs/identifier" },
+        "label": { "$ref": "#/$defs/text" },
+        "unit": { "description": "Đơn vị viết sau số, ví dụ m²", "$ref": "#/$defs/text" },
+        "format": {
+          "description": "number: tối đa ba chữ số thập phân; integer: làm tròn tới hàng đơn vị. Bỏ trống là number.",
+          "enum": ["number", "integer"]
+        },
+        "description": { "description": "Cách tính của số này, hiện dưới số", "$ref": "#/$defs/text" }
+      }
+    },
+    "chart": {
+      "description": "Biểu đồ cột ngang, mỗi dòng của nguồn một nhóm cột; luôn kèm bảng số liệu",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "x", "y"],
+      "properties": {
+        "type": { "const": "bar" },
+        "x": {
+          "description": "Cột làm nhãn của mỗi nhóm cột",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["column", "label"],
+          "properties": {
+            "column": { "$ref": "#/$defs/identifier" },
+            "label": { "$ref": "#/$defs/text" },
+            "choices": {
+              "description": "Nhãn hiện thay cho giá trị mã",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["value", "label"],
+                "properties": { "value": { "type": "string" }, "label": { "$ref": "#/$defs/text" } }
+              }
+            }
+          }
+        },
+        "y": {
+          "description": "Các cột số, mỗi cột một thanh trong nhóm; chung một thang, nên cùng đơn vị",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["column", "label", "color"],
+            "properties": {
+              "column": { "$ref": "#/$defs/identifier" },
+              "label": { "$ref": "#/$defs/text" },
+              "color": { "$ref": "#/$defs/swatch" }
+            }
+          }
+        },
+        "details": {
+          "description": "Cột chỉ hiện trong bảng số liệu, không vẽ, ví dụ căn cứ hay trích dẫn. Không khai format thì hiện nguyên văn, để mã như 001 không bị đọc thành số.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["column", "label"],
+            "properties": {
+              "column": { "$ref": "#/$defs/identifier" },
+              "label": { "$ref": "#/$defs/text" },
+              "format": { "enum": ["number", "integer"] }
+            }
+          }
+        }
+      }
+    },
+    "swatch": {
+      "description": "Tên màu trong bảng màu của giao diện; không nhận mã màu tự do để màu đi theo theme của bản cài",
+      "enum": ["dark", "gray", "red", "pink", "grape", "violet", "indigo", "blue", "cyan", "teal", "green", "lime", "yellow", "orange"]
+    },
+    "identifier": {
+      "description": "Tên theo luật của GraphQL. Thành phần ghép tên này vào câu truy vấn, nên ký tự khác sẽ đổi nghĩa của câu.",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "text": {
+      "description": "Chữ hiển thị cho người dùng: có ít nhất một ký tự không phải khoảng trắng",
+      "type": "string",
+      "pattern": "\\S"
+    }
+  }
+}
