@@ -25,6 +25,8 @@ ProcessKey = Annotated[str, StringConstraints(pattern=r"^[A-Za-z_][A-Za-z0-9_.-]
 # Mọi lý do không thấy hồ sơ (không tồn tại, của tenant khác, của người khác) cùng một câu và cùng mã, để mã
 # hồ sơ đoán được không cho biết hồ sơ có tồn tại hay không.
 NOT_FOUND = "Không tìm thấy hồ sơ."
+# Số bước người làm gần nhất có nhóm ứng viên trên màn hình một hồ sơ; bước cũ hơn có `groups` rỗng.
+GROUP_LIMIT = 50
 
 
 @router.get("/v1/workflow/cases", response_model=CaseList, responses=error_responses(403, 502, 503))
@@ -70,9 +72,10 @@ def my_case(instance_id: str, caller: CallerDep) -> dict:
         raise Denied(404, NOT_FOUND)
     definition = flowable.definition_of(raw["processDefinitionId"])
     tasks = history.task_history(instance_id)
-    steps = timeline(
-        tasks, history.wait_history(instance_id), {task["id"]: history.groups_of(task) for task in tasks}
-    )
+    # Mỗi bước một lời gọi đọc nhóm; hồ sơ lặp một bước rất nhiều lần thì chỉ đọc nhóm của các bước gần nhất.
+    groups = {task["id"]: history.groups_of(task) for task in tasks[-GROUP_LIMIT:]}
+    deleted = raw.get("deleteReason") is not None
+    steps = timeline(tasks, history.wait_history(instance_id), groups, deleted=deleted)
     current = [
         {"step": s["step"], "name": s["name"], "due": s["due"]} for s in steps if s["status"] == "open"
     ]
@@ -95,5 +98,5 @@ def _current(
         for instance, found in nodes.items()
         if instance not in with_task and any(kind == "wait" for kind, _ in found.values())
     ]
-    executions = history.waiting(caller.tenant, caller.sub) if waiting else []
+    executions = history.waiting(waiting, caller.tenant) if waiting else []
     return current_of(tasks, executions, nodes)

@@ -15,7 +15,7 @@ from app.auth import caller_from_token
 from app.flowable import Definition
 from app.main import app
 from app.names import node_names
-from app.policy import Caller, visible_variables
+from app.policy import Caller, Denied, visible_variables
 
 USER_A = Caller(sub="u-a", username="user.a", tenant="xa-a", roles=frozenset({"user"}))
 SERVICE = Caller(sub="svc", username="svc", tenant="xa-a", roles=frozenset(), service=True)
@@ -33,6 +33,7 @@ INSTANCE = {
     "id": "p1",
     "processDefinitionId": "core-approval:1:d1",
     "processDefinitionKey": None,
+    "tenantId": "xa-a",
     "startTime": "2026-11-23T09:10:52.102Z",
     "endTime": "2026-11-23T09:10:52.328Z",
     "endActivityId": "approved",
@@ -94,7 +95,7 @@ def test_list_hides_step_fields_and_core_variables(client, sent):
     item = client.get("/v1/workflow/cases").json()["items"][0]
     assert item["variables"] == {"title": "Duyệt"}
     assert (item["outcome"], item["outcomeName"], item["current"]) == ("approved", "Đã duyệt", [])
-    assert "finished" not in sent[0][1]
+    assert "finished" not in sent[0][1] and "processDefinitionKeyIn" not in sent[0][1]
 
 
 def test_detail_checks_instance_tenant_and_initiator_in_one_query(client, sent):
@@ -172,6 +173,117 @@ def test_open_cases_take_current_steps_from_one_task_query(client, monkeypatch):
     assert items[0]["current"] == [
         {"step": "review", "name": "Duyệt yêu cầu", "due": "2026-11-26T09:02:36.996Z"}
     ]
+
+
+def test_open_case_without_task_asks_its_executions(client, monkeypatch):
+    waiting_definition = Definition(
+        frozenset(), frozenset(), {"a": frozenset({"comment"})}, {"a": ("task", "A"), "wait": ("wait", "Chờ")}
+    )
+    raws = [INSTANCE | {"id": "p1", "endTime": None, "endActivityId": None}]
+    monkeypatch.setattr(history, "cases", lambda *_: (1, raws))
+    monkeypatch.setattr(flowable, "definition_of", lambda _id: waiting_definition)
+    monkeypatch.setattr(flowable, "process_key", lambda _id: "probe")
+    monkeypatch.setattr(history, "open_tasks", lambda *_: [])
+    asked = []
+
+    def waiting(instances, tenant):
+        asked.append((instances, tenant))
+        return [{"processInstanceId": "p1", "activityId": "wait", "tenantId": "xa-a"}]
+
+    monkeypatch.setattr(history, "waiting", waiting)
+    items = client.get("/v1/workflow/cases?state=open").json()["items"]
+    assert asked == [(["p1"], "xa-a")]
+    assert items[0]["current"] == [{"step": "wait", "name": "Chờ", "due": None}]
+
+
+def fake_rows(monkeypatch, rows: list[dict], total: int | None = None) -> list[dict]:
+    """Flowable giả bỏ qua mọi khóa lọc: luôn trả `rows`."""
+    sent: list[dict] = []
+
+    def call(_method, _path, json=None, **_):
+        sent.append(json)
+        return httpx.Response(200, json={"data": rows, "total": len(rows) if total is None else total})
+
+    monkeypatch.setattr(flowable, "_call", call)
+    return sent
+
+
+def test_rows_are_filtered_again_when_flowable_ignores_a_filter(monkeypatch):
+    other = INSTANCE | {"variables": [{"name": "initiator", "value": "u-khac"}]}
+    fake_rows(monkeypatch, [other, INSTANCE | {"id": "p2", "tenantId": "xa-b"}])
+    assert history.case("p1", "xa-a", "u-a") is None
+    assert history.cases("xa-a", "u-a", [], None, 0, 20)[1] == []
+    fake_rows(monkeypatch, [{"processInstanceId": "khac"}, {"processInstanceId": "p1", "id": "t"}])
+    assert history.task_history("p1") == [{"processInstanceId": "p1", "id": "t"}]
+    waits = [
+        {"processInstanceId": "p1", "activityType": "intermediateCatchEvent"},
+        {"processInstanceId": "khac"},
+    ]
+    fake_rows(monkeypatch, waits)
+    assert history.wait_history("p1") == waits[:1]
+
+
+def test_waiting_asks_each_case_and_keeps_its_own_rows(monkeypatch):
+    rows = [
+        {"processInstanceId": "p1", "activityId": "wait", "tenantId": "xa-a"},
+        {"processInstanceId": "p1", "activityId": "wait", "tenantId": "xa-b"},
+        {"processInstanceId": "khac", "activityId": "wait", "tenantId": "xa-a"},
+    ]
+    sent = fake_rows(monkeypatch, rows)
+    assert history.waiting(["p1"], "xa-a") == rows[:1]
+    assert sent == [{"processInstanceId": "p1", "start": 0, "size": flowable.PAGE_SIZE}]
+
+
+def test_waiting_refuses_a_case_with_more_executions_than_one_page(monkeypatch):
+    fake_rows(monkeypatch, [{"processInstanceId": "p1", "tenantId": "xa-a"}], total=500)
+    with pytest.raises(Denied) as error:
+        history.waiting(["p1"], "xa-a")
+    assert error.value.status == 502 and "500" in error.value.reason
+
+
+def test_detail_reads_groups_of_the_latest_steps_only(client, monkeypatch):
+    monkeypatch.setattr(history, "case", lambda *_: INSTANCE)
+    monkeypatch.setattr(flowable, "definition_of", lambda _id: APPROVAL)
+    monkeypatch.setattr(flowable, "process_key", lambda _id: "core-approval")
+    tasks = [
+        {
+            "id": f"t{i:03}",
+            "taskDefinitionKey": "review",
+            "startTime": f"2026-11-23T09:{i // 60:02}:{i % 60:02}Z",
+        }
+        for i in range(60)
+    ]
+    monkeypatch.setattr(history, "task_history", lambda _id: tasks)
+    monkeypatch.setattr(history, "wait_history", lambda _id: [])
+    read = []
+    monkeypatch.setattr(history, "groups_of", lambda task: read.append(task["id"]) or frozenset({"manager"}))
+    steps = client.get("/v1/workflow/cases/p1").json()["steps"]
+    assert read == [f"t{i:03}" for i in range(10, 60)]
+    assert steps[0]["groups"] == [] and steps[-1]["groups"] == ["manager"]
+
+
+def test_wait_open_when_the_case_was_deleted_is_cancelled():
+    task = {
+        "id": "t1",
+        "taskDefinitionKey": "a",
+        "startTime": "2026-11-23T09:00:00.000Z",
+        "endTime": "2026-11-23T09:00:01.000Z",
+    }
+    wait = {
+        "activityId": "wait",
+        "startTime": "2026-11-23T09:00:01.000Z",
+        "endTime": "2026-11-23T09:05:00.000Z",
+    }
+    assert [s["status"] for s in cases.timeline([task], [wait], {}, deleted=True)] == ["done", "cancelled"]
+    assert [s["status"] for s in cases.timeline([task], [wait], {})] == ["done", "done"]
+    # Bước chờ đã qua, rồi hồ sơ bị xóa ở bước sau: bước chờ vẫn là đã xong.
+    later = task | {
+        "id": "t2",
+        "startTime": "2026-11-23T09:05:00.000Z",
+        "endTime": "2026-11-23T09:06:00.000Z",
+    }
+    statuses = [s["status"] for s in cases.timeline([task, later], [wait], {}, deleted=True)]
+    assert statuses == ["done", "done", "done"]
 
 
 def test_current_of_keeps_only_listed_cases_and_wait_nodes():

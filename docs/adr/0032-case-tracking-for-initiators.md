@@ -34,9 +34,12 @@ bộ nhớ, không chung với lõi:
 - `POST /query/historic-task-instances` theo `processInstanceId` có `taskDefinitionKey`, `name`, `dueDate`, `startTime`,
   `endTime`, `assignee`, `deleteReason`. Bước hoàn thành có `deleteReason` null; bước dừng vì sự kiện biên hết hạn hay
   vì hồ sơ bị xóa có `deleteReason`.
-- `POST /query/historic-activity-instances` lọc được theo `activityType`; bước chờ hẹn giờ (`intermediateCatchEvent`)
-  có tên và `endTime` null khi đang chờ. `POST /query/executions` lọc theo `processInstanceVariables` cho biết
-  `activityId` của nhánh đang chờ hẹn giờ; truy vấn này không sắp theo `id` được (400).
+- `POST /query/historic-activity-instances` lọc đúng theo `processInstanceId` (mã lạ trả 0, mã của một hồ sơ chỉ trả
+  dòng của hồ sơ đó) và theo `activityType`; bước chờ hẹn giờ (`intermediateCatchEvent`) có tên và `endTime` null khi
+  đang chờ. Dòng không có `deleteReason`: bước chờ đang mở lúc hồ sơ bị xóa trông như đã kết thúc bình thường.
+- `POST /query/executions` lọc đúng theo `processInstanceId` và cho biết `activityId` của nhánh đang chờ hẹn giờ;
+  `processInstanceIds` bị bỏ qua, và truy vấn không sắp theo `id` được (400), nên không có khóa sắp duy nhất để phân
+  trang qua nhiều hồ sơ.
 - `GET /history/historic-task-instances/{id}/identitylinks` trả nhóm ứng viên của bước đã xong ở khóa `groupId`
   (runtime dùng `group`).
 - Hồ sơ bị xóa có `endTime` nhưng `endActivityId` null.
@@ -50,11 +53,14 @@ bộ nhớ, không chung với lõi:
     trạng thái `open`, `done`, `cancelled`.
 - **Người lập** là biến `initiator` workflow-api đặt bằng `sub` của token lúc khởi tạo; người dùng không đặt được biến
   này. Không dùng `startUserId`: Flowable ghi tài khoản kỹ thuật ([ADR 0004](0004-workflow-access-control.md)).
+- **Không tin riêng khóa lọc của Flowable**: mọi dòng Flowable trả về được lọc lại ở workflow-api theo đúng điều kiện
+  đã gửi (tenant, `initiator`, mã hồ sơ), vì khóa Flowable không biết bị bỏ qua im lặng.
 - **Kiểm quyền trong một truy vấn**: mã hồ sơ, tenant của người gọi và `initiator` nằm chung một truy vấn lịch sử. Hồ
   sơ không có, của tenant khác hay của người khác đều nhận cùng `404` "Không tìm thấy hồ sơ.". Tài khoản dịch vụ nhận
   `403`. Tham số sai nhận `400` nêu tên tham số.
 - **Bước đang chờ của cả trang** lấy từ một truy vấn task theo người lập, không truy vấn theo từng hồ sơ. Chỉ khi một
-  hồ sơ còn mở không có task mà BPMN của nó có bước chờ thì hỏi thêm một truy vấn nhánh đang chạy.
+  hồ sơ còn mở không có task mà BPMN của nó có bước chờ thì hỏi nhánh đang chạy của riêng hồ sơ đó (tối đa số hồ sơ
+  của trang, 100); hồ sơ có nhiều nhánh hơn một trang thì trả `502` nêu rõ, không trả bước chờ thiếu.
 - **Biến người lập thấy** là mọi biến trừ biến lõi đặt (`initiator`, `initiatorName`, `tenant`, `idempotencyKey`,
   `authority_*`) và trừ mọi trường của mọi bước trong phiên bản BPMN của hồ sơ, kể cả khi hồ sơ đã kết thúc. BPMN có
   bước người làm mà không khai trường nào (deploy trước ADR 0031) thì không trả biến nào: không biết biến nào là nội
@@ -62,7 +68,10 @@ bộ nhớ, không chung với lõi:
 - **Tên bước chờ và kết quả** đọc từ BPMN đã deploy (userTask, intermediateCatchEvent, endEvent), cùng lần đọc với
   biến quyết định và trường của bước, nhớ theo mã định nghĩa.
 - **Người xử lý** chỉ hiện là nhóm ứng viên (vai trò, hay `<tenant cha>/<vai trò>` với bước của tenant cha) và việc
-  đã có người nhận chưa (`claimed`); không trả `sub` hay tên. Nhóm chỉ có ở màn hình một hồ sơ, mỗi bước một lời gọi.
+  đã có người nhận chưa (`claimed`); không trả `sub` hay tên. Nhóm chỉ có ở màn hình một hồ sơ, mỗi bước một lời gọi,
+  chỉ cho 50 bước người làm bắt đầu gần nhất; bước cũ hơn có `groups` rỗng.
+- **Bước chờ của hồ sơ bị xóa**: hồ sơ có `deleteReason` thì bước chờ không có bước nào bắt đầu từ lúc nó kết thúc trở
+  đi là `cancelled`.
 - **Thành phần Tầng 2 `cases`** (`contracts/cases.schema.json`): gói khai `title`, `processes`. Danh sách lọc theo trạng
   thái, màn hình một hồ sơ ở `/apps/<gói>/<mục>/<mã hồ sơ>` ([ADR 0023](0023-package-pages-in-the-web-shell.md)). Tên
   hồ sơ theo `title`, dòng thông tin theo `details` của khai báo bước. Biểu mẫu và nút của danh mục hiện "Xem hồ sơ
@@ -77,7 +86,8 @@ bộ nhớ, không chung với lõi:
 - **Biến không là trường của bước nào vẫn hiện cho người lập**, kể cả khi người làm bước sau gửi kèm nó lúc hoàn thành
   (ADR 0031 chỉ chặn trường của bước). Gói muốn giấu một biến người xử lý ghi thì khai nó làm trường của bước đó.
 - Mỗi lần mở danh sách tốn một truy vấn hồ sơ và một truy vấn task (đọc mọi task đang chờ của các hồ sơ còn mở của
-  người lập); màn hình một hồ sơ tốn thêm một lời gọi mỗi bước để đọc nhóm.
+  người lập), cộng một truy vấn cho mỗi hồ sơ của trang đang ở bước chờ; màn hình một hồ sơ tốn thêm tối đa 50 lời
+  gọi để đọc nhóm.
 - Người lập không rút hay sửa được hồ sơ; người khác (quản trị tenant, tenant cha) chưa có màn hình theo dõi hồ sơ
   của người khác. Đó là quyết định riêng nếu cần.
 - Hạn của bước chờ hẹn giờ không hiện; chỉ bước người làm có hạn.

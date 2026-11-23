@@ -54,8 +54,13 @@ def current_of(
     return found
 
 
-def timeline(tasks: list[dict], waits: list[dict], groups: Mapping[str, frozenset[str]]) -> list[dict]:
-    """Bước người làm (historic task) và bước chờ (historic activity) của một hồ sơ, theo lúc bắt đầu."""
+def timeline(
+    tasks: list[dict], waits: list[dict], groups: Mapping[str, frozenset[str]], *, deleted: bool = False
+) -> list[dict]:
+    """Bước người làm (historic task) và bước chờ (historic activity) của một hồ sơ, theo lúc bắt đầu.
+
+    `deleted`: hồ sơ bị xóa giữa chừng (có deleteReason).
+    """
     steps = [
         {
             "step": task["taskDefinitionKey"],
@@ -85,7 +90,15 @@ def timeline(tasks: list[dict], waits: list[dict], groups: Mapping[str, frozense
         for wait in waits
     ]
     # Flowable ghi mọi thời điểm cùng một dạng ISO 8601 UTC, nên so chuỗi là so thời gian.
-    return sorted(steps, key=lambda step: step["started"])
+    steps.sort(key=lambda step: step["started"])
+    # Lịch sử bước chờ không ghi deleteReason: bước chờ còn mở lúc hồ sơ bị xóa trông như đã xong. Không bước
+    # nào bắt đầu từ lúc nó kết thúc trở đi nghĩa là hồ sơ dừng ngay ở đó.
+    if deleted:
+        for step in steps:
+            later = any(other["started"] >= step["ended"] for other in steps if other is not step)
+            if step["kind"] == "wait" and step["status"] == "done" and not later:
+                step["status"] = "cancelled"
+    return steps
 
 
 def _status(row: dict) -> str:

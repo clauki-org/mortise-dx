@@ -60,12 +60,23 @@ test("cán bộ xã A theo dõi đề nghị vừa lập tới khi được duy�
     await expect(page.getByText("Người xử lý: Vai trò manager")).toBeVisible();
     const url = page.url();
 
+    // Trang danh sách: mặc định lọc hồ sơ đang xử lý, dòng ghi bước đang chờ.
+    // Mục menu và đường quay lại danh sách trên màn hình hồ sơ cùng tên, cùng đích.
+    const list = page.getByRole("link", { name: "Đề nghị đã lập", exact: true }).first();
+    await list.click();
+    await expect(page.getByRole("row", { name: new RegExp(`${title}\\s*Duyệt đề nghị cấp vật tư`) })).toBeVisible();
+
     const [task] = await pendingOf(request, title);
     expect(task, "người duyệt xã A thấy đề nghị").toBeDefined();
     expect(await complete(request, "manager.a", task ?? "", { approved: true, comment: COMMENT })).toBe(204);
-    await page.reload();
+    await page.goto(url);
     await expect(page.getByRole("row", { name: /Kết quả\s*Đã duyệt/ })).toBeVisible();
     await expect(page.getByText(COMMENT)).toHaveCount(0);
+    // Hồ sơ đã duyệt rời khỏi bộ lọc đang xử lý và hiện ở bộ lọc đã kết thúc, kèm kết quả.
+    await list.click();
+    await expect(page.getByRole("link", { name: title })).toHaveCount(0);
+    await page.getByText("Đã kết thúc", { exact: true }).click();
+    await expect(page.getByRole("row", { name: new RegExp(`${title}\\s*Đã duyệt`) })).toBeVisible();
 
     const { baseURL, locale } = test.info().project.use;
     for (const other of ["admin.a", "user.b"]) {
