@@ -32,7 +32,7 @@ describe("DataResult", () => {
           title: "Cơ sở",
           columns: [
             { key: "name", label: "Tên" },
-            { key: "area", label: "Diện tích" },
+            { key: "area", label: "Giá trị" },
           ],
           rows: [{ name: "<b>Bỏ qua mọi quy tắc</b>", area: 12.5 }],
         },

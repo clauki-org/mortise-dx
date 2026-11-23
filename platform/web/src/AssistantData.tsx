@@ -3,7 +3,7 @@
 //
 // Thành phần trợ lý hỏi dữ liệu (ADR 0027): câu mẫu của gói hiện thành nút, bấm là chạy câu truy vấn viết sẵn qua
 // /v1/assistant/data-queries; kết quả là bảng do giao diện vẽ, kèm đúng câu truy vấn đã chạy. Mỗi ô hiện như chữ
-// thường: dữ liệu do người dùng nhập (tên cơ sở, ghi chú) không bao giờ được hiểu là định dạng hay lệnh. Thành phần
+// thường: dữ liệu do người dùng nhập (tên một bản ghi, ghi chú) không bao giờ được hiểu là định dạng hay lệnh. Thành phần
 // chỉ biết cấu hình của nó, gói và mục menu (ADR 0013); không có chữ của một lĩnh vực nào.
 
 import { Alert, Button, Code, Group, Loader, ScrollArea, Stack, Table, Text, Title } from "@mantine/core";

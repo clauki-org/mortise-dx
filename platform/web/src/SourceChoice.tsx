@@ -23,7 +23,7 @@ export function SourceChoice(props: WidgetProps) {
   const waiting = source.where !== undefined && (parent === undefined || parent === "");
   const { query, variables } = useMemo(() => sourceQuery(source, parent), [source, parent]);
   const context = useMemo(() => ({ role }), [role]);
-  // Mỗi lần mở biểu mẫu đọc lại từ máy chủ: danh sách vừa được thêm mục (ví dụ vật tư mới) phải hiện ngay, và bộ nhớ
+  // Mỗi lần mở biểu mẫu đọc lại từ máy chủ: danh sách vừa được thêm mục (ví dụ một dòng mới) phải hiện ngay, và bộ nhớ
   // đệm của urql không phân biệt vai trò.
   const [{ data, fetching, error }] = useQuery<{ rows: Values[] }>({
     query,
