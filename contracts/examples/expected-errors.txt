@@ -60,6 +60,15 @@ map.limit-too-large.yaml	$.layers[0].limit	1001 is greater than the maximum of 1
 map.no-layers.yaml	$.layers	[] should be non-empty
 map.path-not-identifier.yaml	$.layers[0].latitude	'lat } secret { id' does not match '^[A-Za-z_][A-Za-z0-9_]*(\\\\.[A-Za-z_][A-Za-z0-9_]*)*$'
 map.role-not-name.yaml	$.layers[0].role	'Rollup Reader' does not match '^[a-z][a-z0-9_]*$'
+form.authority-prefix.yaml	$.fields[0].name	'authority_level' should not be valid under {'anyOf': [{'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}, {'pattern': '^authority_'}]}
+form.choices-on-string.yaml	$.fields[0]	False schema does not allow [{'value': 'a', 'label': 'A'}]
+form.choice-without-options.yaml	$.fields[0]	{'name': 'kind', 'label': 'Loại', 'type': 'choice'} is not valid under any of the given schemas
+form.empty-choice-value.yaml	$.fields[0].choices[0].value	'' should be non-empty
+form.min-on-string.yaml	$.fields[0]	False schema does not allow 1
+form.reserved-name.yaml	$.fields[0].name	'initiator' should not be valid under {'anyOf': [{'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}, {'pattern': '^authority_'}]}
+form.source-limit-too-large.yaml	$.fields[0].source.limit	501 is greater than the maximum of 500
+form.two-targets.yaml	$.submit	{'label': 'Gửi', 'process': 'core-approval', 'insert': 'app_x'} is valid under each of {'required': ['insert']}, {'required': ['process']}
+form.unknown-field-type.yaml	$.fields[0].type	'text' is not one of ['string', 'number', 'integer', 'boolean', 'date', 'choice']
 service-token-claims.has-tenant.json	$.tenant	['xa-a'] should not be valid under {}
 service-token-claims.user-role.json	$.realm_access.roles	['default-roles-mortise', 'user'] should not be valid under {'contains': {'const': 'user'}}
 threshold-rule.no-threshold.yaml	$	{'id': 'test-level-high', 'title': 'Thiếu ngưỡng', 'entityType': 'Device', 'measurement': 'testLevel', 'holdSeconds': 5, 'process': 'core-approval'} is not valid under any of the given schemas

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Menu của mọi gói đã cài trên trình duyệt: với mỗi mục menu mà cán bộ xã A thấy qua GraphQL, nhãn của mục có trên
-// menu, bấm vào thì mở đúng trang của mục, và trang danh mục hiện tiêu đề, cột theo cấu hình của gói, tải được dữ
-// liệu; có dòng thì mở chi tiết dòng đầu cùng các bảng con. Bài đọc mục và cấu hình từ platform_menu_items nên không
+// menu, bấm vào thì mở đúng trang của mục, trang biểu mẫu hiện tiêu đề theo cấu hình, và trang danh mục hiện tiêu
+// đề, cột theo cấu hình của gói, tải được dữ liệu; có dòng thì mở chi tiết dòng đầu cùng các bảng con. Bài đọc mục và cấu hình từ platform_menu_items nên không
 // biết gói nào hay từ ngữ của lĩnh vực nào: gói mới cài vào được kiểm mà không phải sửa bài. Bài không kiểm một gói
 // cụ thể có mục menu; việc đó thuộc smoke của từng gói. Cần ít nhất một gói có mục menu đã cài (`make app-install`).
 
@@ -45,7 +45,17 @@ test("mỗi mục menu của gói đã cài hiện trên menu và mở được 
       await page.getByRole("link", { name: entry.label, exact: true }).click();
       // Danh sách giữ tìm, lọc, trang trên chuỗi truy vấn, nên chỉ so phần đường dẫn.
       await expect(page).toHaveURL(new RegExp(`/apps/${entry.app}/${entry.item}(\\?.*)?$`));
-      // Giao diện hiện chỉ vẽ thành phần danh mục; mục của thành phần khác chỉ kiểm nhãn và đường dẫn ở trên.
+      // Mọi mục phải mở được thành phần của nó, không rơi vào thông báo giao diện chưa có thành phần.
+      await expect(page.getByText("Chưa mở được mục này")).toHaveCount(0);
+      // Biểu mẫu: tiêu đề theo cấu hình, ô nhập hoặc lời báo vai trò, không báo cấu hình sai.
+      if (entry.component === "form") {
+        await expect(
+          page.getByRole("heading", { level: 1, name: (entry.config as { title: string }).title }),
+        ).toBeVisible();
+        await expect(page.getByText("Cấu hình biểu mẫu sai")).toHaveCount(0);
+        return;
+      }
+      // Thành phần khác danh mục và biểu mẫu chỉ kiểm nhãn và đường dẫn ở trên.
       if (entry.component !== "catalog") return;
       const config = entry.config as CatalogConfig;
       await expect(page.getByRole("heading", { level: 1, name: config.title })).toBeVisible();

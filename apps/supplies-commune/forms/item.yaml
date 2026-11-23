@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Biểu mẫu thêm vật tư vào kho theo contracts/form.schema.json; app.yaml trỏ tới tệp này ở mục menu `item` (chỉ quản
+# trị xã) và `make check-fast` kiểm. Gửi thì thêm một dòng vào bảng items bằng vai trò tenant_admin; tenant_id do
+# Hasura đặt từ token (hasura/tables.yaml), không có trong biểu mẫu. Tên trường là tên cột.
+
+title: Thêm vật tư vào kho
+role: tenant_admin
+fields:
+  - name: store_code
+    label: Kho
+    type: choice
+    required: true
+    source: { table: app_supplies_commune_stores, value: code, label: name }
+  - { name: code, label: Mã vật tư, type: string, required: true, max_length: 50 }
+  - { name: name, label: Tên vật tư, type: string, required: true, max_length: 200 }
+  - { name: unit, label: Đơn vị tính, type: string, required: true, max_length: 30 }
+  - name: kind
+    label: Loại
+    type: choice
+    required: true
+    choices:
+      - { value: consumable, label: Vật tư tiêu hao }
+      - { value: equipment, label: Thiết bị }
+  - { name: quantity, label: Số lượng đang có, type: number, required: true, min: 0 }
+submit:
+  label: Thêm
+  insert: app_supplies_commune_items
+done:
+  message: Đã thêm vật tư vào kho.
+  menu: stores

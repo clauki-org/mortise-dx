@@ -20,3 +20,12 @@ menu:
     label: Kho vật tư
     component: catalog
     config: catalog/stores.yaml
+  - id: supply-request
+    label: Lập đề nghị cấp vật tư
+    component: form
+    config: forms/supply-request.yaml
+  - id: item
+    label: Thêm vật tư vào kho
+    component: form
+    config: forms/item.yaml
+    roles: [tenant_admin]

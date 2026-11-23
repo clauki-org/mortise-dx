@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/form.schema.json từ chối. Danh sách chọn có trần để không tải cả bảng về trình duyệt.
+
+title: x
+submit: { label: Gửi, process: core-approval }
+done: { message: Đã gửi }
+fields:
+  - { name: code, label: Mã, type: choice, source: { table: app_x, value: code, label: name, limit: 501 } }

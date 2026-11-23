@@ -53,6 +53,8 @@ export const startProcess = (
 export type StepConfig = {
   /** Biến chứa tên hồ sơ */
   title?: string;
+  /** Biến hiện chỉ đọc trong thông tin hồ sơ, theo thứ tự khai */
+  details?: { variable: string; label: string }[];
   form?: Record<string, unknown>;
   ui?: Record<string, unknown>;
   actions: { id: string; label: string; variables: Record<string, unknown> }[];

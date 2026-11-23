@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 Gói Tầng 3 thứ hai: mỗi xã là một tenant quản lý các kho của mình, vật tư và thiết bị trong từng kho, và đề nghị cấp
 vật tư cần người duyệt của xã. Gói chỉ gồm tệp khai báo, không có mã chạy
 ([ADR 0022](../../docs/adr/0022-declarative-packages.md)): `make check-fast` kiểm vì gói nằm trong `DECLARATIVE_APPS`
-của Makefile. Trang danh mục trên giao diện dựng từ cấu hình của gói
+của Makefile. Trang danh mục và hai biểu mẫu trên giao diện dựng từ cấu hình của gói
 ([ADR 0023](../../docs/adr/0023-package-pages-in-the-web-shell.md)).
 
 ## Bố cục
@@ -18,6 +18,7 @@ app.yaml             khai báo gói theo contracts/app.schema.json: lược đ�
 schema/migrations/   migration dbmate của gói; bảng theo dõi public.supplies_commune_schema_migrations (ADR 0005)
 hasura/tables.yaml   bảng đăng ký và quyền theo tenant, cùng định dạng với core/hasura/
 catalog/stores.yaml  cấu hình thành phần danh mục (kho → vật tư) theo contracts/catalog.schema.json
+forms/               biểu mẫu lập đề nghị và thêm vật tư theo contracts/form.schema.json
 bpmn/                quy trình đề nghị cấp vật tư, deploy cho từng tenant khi cài
 workflows/           khai báo bước của quy trình theo contracts/workflow.schema.json
 seed/demo.yaml       dữ liệu demo hư cấu theo contracts/seed.schema.json, nạp bằng bộ nạp chung
@@ -44,10 +45,14 @@ nhật ký thay đổi (`core.audit_attach`, ADR 0009).
 
 ## Đề nghị cấp vật tư
 
-Quy trình `supply-request`: cán bộ lập đề nghị qua API quy trình (`POST /v1/workflow/processes/supply-request/instances`)
-với các biến `title`, `storeCode`, `itemCode`, `quantity`, `reason`; người có vai trò `manager` của xã thấy việc
-"Duyệt đề nghị cấp vật tư" trên bảng việc, ghi ý kiến rồi duyệt hoặc từ chối. Người lập không tự duyệt được (bốn
-mắt). Giao diện chưa có màn hình lập đề nghị, nên đề nghị lập qua API.
+Quy trình `supply-request`: cán bộ mở mục menu "Lập đề nghị cấp vật tư" (biểu mẫu `forms/supply-request.yaml`), chọn
+kho rồi chọn vật tư trong kho đó, ghi số lượng và lý do rồi gửi. Biểu mẫu khởi tạo quy trình với các biến `title`,
+`storeCode`, `itemCode`, `quantity`, `reason`, như khi gọi thẳng `POST /v1/workflow/processes/supply-request/instances`.
+Người có vai trò `manager` của xã thấy việc "Duyệt đề nghị cấp vật tư" trên bảng việc kèm các giá trị đó (`details`
+trong `workflows/supply-request.yaml`), ghi ý kiến rồi duyệt hoặc từ chối. Người lập không tự duyệt được (bốn mắt).
+
+Quản trị xã (`tenant_admin`) thêm vật tư vào kho bằng mục menu "Thêm vật tư vào kho" (`forms/item.yaml`); mục này chỉ
+hiện với vai trò đó, `tenant_id` của dòng do Hasura đặt từ token.
 
 Gói không có mã nên duyệt xong không tự trừ số lượng trong kho; quản trị xã cập nhật số lượng sau khi giao.
 

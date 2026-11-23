@@ -73,6 +73,7 @@ esac
 "${checker[@]}" --schemafile contracts/workflow.schema.json contracts/examples/workflow.example.yaml
 "${checker[@]}" --schemafile contracts/catalog.schema.json contracts/examples/catalog.example.yaml
 "${checker[@]}" --schemafile contracts/map.schema.json contracts/examples/map.example.yaml
+"${checker[@]}" --schemafile contracts/form.schema.json contracts/examples/form.example.yaml
 "${checker[@]}" --schemafile contracts/assistant.schema.json contracts/examples/assistant.example.yaml \
   contracts/examples/assistant-data.example.yaml
 "${data_check[@]}" --owner core contracts/examples/assistant-data.example.yaml
@@ -116,7 +117,7 @@ for app in apps/*/; do
   "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}"
   # Cấu hình của thành phần có schema nằm ở đường dẫn do app.yaml khai, không theo tên thư mục cố định, nên phải
   # đọc app.yaml để biết tệp nào cần kiểm; dò theo tên thư mục sẽ bỏ sót tệp đặt ở chỗ khác.
-  for component in catalog map assistant; do
+  for component in catalog map assistant form; do
     mapfile -t configs < <("${yaml[@]}" -c '
 import sys, yaml
 app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
@@ -133,6 +134,10 @@ for item in app.get("menu", []):
       # Trợ lý dữ liệu chỉ hỏi bảng của chính gói, trong quyền đọc của vai trò user (ADR 0027).
       if [[ "$component" == assistant ]]; then
         "${data_check[@]}" --owner "${app%/}" "${configs[@]}"
+      fi
+      # Biểu mẫu chỉ gửi tới quy trình hay bảng của chính gói này (ADR 0030); tệp lấy theo app.yaml như ở trên.
+      if [[ "$component" == form ]]; then
+        "${yaml[@]}" scripts/check-form-config.py --app "${app}app.yaml"
       fi
     fi
   done
@@ -198,6 +203,7 @@ reject contracts/app.schema.json contracts/examples/invalid/app.*.yaml
 reject contracts/workflow.schema.json contracts/examples/invalid/workflow.*.yaml
 reject contracts/catalog.schema.json contracts/examples/invalid/catalog.*.yaml
 reject contracts/map.schema.json contracts/examples/invalid/map.*.yaml
+reject contracts/form.schema.json contracts/examples/invalid/form.*.yaml
 reject contracts/assistant.schema.json contracts/examples/invalid/assistant.*.yaml
 reject contracts/knowledge.schema.json contracts/examples/invalid/knowledge.*.yaml
 reject contracts/threshold-rule.schema.json contracts/examples/invalid/threshold-rule.*.yaml
@@ -209,14 +215,85 @@ reject contracts/device-message.schema.json contracts/examples/invalid/device-me
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
     token-claims.*.json | service-token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml | \
-    threshold-rule.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml | map.*.yaml) ;;
+    threshold-rule.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml | map.*.yaml | form.*.yaml) ;;
     *)
       echo "$file không được kiểm: tên phải theo mẫu <token-claims|service-token-claims|device-message>.<lỗi>.json hoặc" \
-        "<app|workflow|catalog|map|component|threshold-rule|assistant|knowledge|seed>.<lỗi>.yaml." >&2
+        "<app|workflow|catalog|map|form|component|threshold-rule|assistant|knowledge|seed>.<lỗi>.yaml." >&2
       exit 1
       ;;
   esac
 done
+# Luật của scripts/check-form-config.py cũng phải chặn được thật: biểu mẫu sai đọc từ stdin, đối chiếu với quy trình
+# mẫu core-approval, khai báo bước mẫu và một bảng mẫu (hay bảng trong biến tables nếu đặt); mỗi biểu mẫu phạm đúng
+# một luật và lỗi phải đúng từng ký tự.
+# Thiếu bước này, một luật bị nới (ví dụ quên biến quyết định) vẫn qua mọi biểu mẫu đúng của gói mà không ai biết.
+form_tables='- table: { schema: app_example, name: items }
+  insert_permissions:
+    - role: tenant_admin
+      permission: { columns: [code, name], check: {}, set: { tenant_id: X-Hasura-Tenant-Id } }'
+form_rejects() { # LỖI_MONG_ĐỢI, biểu mẫu ở stdin
+  local result
+  result=$("${yaml[@]}" scripts/check-form-config.py --app contracts/examples/app.example.yaml \
+    --bpmn core/workflow/fixtures/core-approval.bpmn20.xml --steps contracts/examples/workflow.example.yaml \
+    --hasura <(printf '%s\n' "${tables:-$form_tables}") --form /dev/stdin 2>&1) && result="không bị từ chối"
+  if [[ "$result" != "/dev/stdin: $1" ]]; then
+    echo "check-form-config.py phải báo đúng lỗi: $1" >&2
+    echo "Đang nhận: $result" >&2
+    exit 1
+  fi
+}
+form_rejects "trường 'approved' là biến quyết định của quy trình 'core-approval'; người lập không được đặt sẵn" <<'YAML'
+title: Yêu cầu
+fields: [{ name: title, label: Tên, type: string }, { name: approved, label: Duyệt, type: boolean }]
+submit: { label: Gửi, process: core-approval }
+done: { message: Đã gửi }
+YAML
+form_rejects "trường 'comment' trùng biến mà một bước của quy trình 'core-approval' ghi; giá trị người lập điền sẽ \
+hiện dưới nhãn của người xử lý, đổi tên trường" <<'YAML'
+title: Yêu cầu
+fields: [{ name: title, label: Tên, type: string }, { name: comment, label: Ý kiến, type: string }]
+submit: { label: Gửi, process: core-approval }
+done: { message: Đã gửi }
+YAML
+form_rejects "bước của quy trình 'core-approval' lấy tên hồ sơ từ biến 'title'; thêm trường 'title'" <<'YAML'
+title: Yêu cầu
+fields: [{ name: note, label: Ghi chú, type: string }]
+submit: { label: Gửi, process: core-approval }
+done: { message: Đã gửi }
+YAML
+form_rejects "cột 'tenant_id' do Hasura đặt từ token (set); bỏ trường này khỏi biểu mẫu" <<'YAML'
+title: Thêm
+role: tenant_admin
+fields: [{ name: code, label: Mã, type: string }, { name: tenant_id, label: Đơn vị, type: string }]
+submit: { label: Thêm, insert: app_example_items }
+done: { message: Đã thêm }
+YAML
+# Quyền ghi tenant_id trong columns thay vì set: check vẫn buộc đúng tenant, nhưng ô đó vô nghĩa với người dùng và
+# trái nguyên tắc trình duyệt không gửi tenant.
+tables='- table: { schema: app_example, name: items }
+  insert_permissions:
+    - role: tenant_admin
+      permission: { columns: [code, tenant_id], check: { tenant_id: { _eq: X-Hasura-Tenant-Id } } }' \
+  form_rejects "cột 'tenant_id' là cột tenant của 'app_example_items'; trình duyệt không gửi tenant: bỏ trường này \
+khỏi biểu mẫu và đặt cột bằng set: { tenant_id: X-Hasura-Tenant-Id } trong quyền thêm dòng của gói" <<'YAML'
+title: Thêm
+role: tenant_admin
+fields: [{ name: code, label: Mã, type: string }, { name: tenant_id, label: Đơn vị, type: string }]
+submit: { label: Thêm, insert: app_example_items }
+done: { message: Đã thêm }
+YAML
+# Tệp quyền sai dạng phải thành một dòng lỗi chỉ tệp và mục, không phải traceback của Python.
+result=$("${yaml[@]}" scripts/check-form-config.py --app contracts/examples/app.example.yaml \
+  --bpmn core/workflow/fixtures/core-approval.bpmn20.xml --steps contracts/examples/workflow.example.yaml \
+  --hasura <(printf '%s\n' '- table: { schema: app_example, name: items }' '  insert_permissions: [{ permission: {} }]') \
+  --form contracts/examples/form.example.yaml 2>&1) && result="không bị từ chối"
+if [[ "$result" != *": mục 1: một mục của insert_permissions thiếu role; sửa theo dạng của core/hasura/tables.yaml" ||
+  "$result" == *Traceback* ]]; then
+  echo "check-form-config.py phải báo tệp quyền sai dạng bằng một dòng lỗi. Đang nhận: $result" >&2
+  exit 1
+fi
+echo "ok -- 6 biểu mẫu và tệp quyền sai bị check-form-config.py từ chối đúng luật"
+
 # Chiều ngược: dòng của tệp đã xóa hay đổi tên nằm im trong expected-errors.txt mà không ai biết.
 while IFS=$'\t' read -r name _; do
   [[ -z "$name" || "$name" == \#* || -f "contracts/examples/invalid/$name" ]] && continue

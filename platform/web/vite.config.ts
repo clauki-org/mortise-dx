@@ -21,6 +21,8 @@ export default defineConfig({
     strictPort: true,
     proxy: { "/v1": gateway },
   },
-  // Kiểm thử đơn vị (Vitest) chỉ lấy tệp trong src/; e2e/ là của Playwright và cần một bản cài đang chạy.
-  test: { include: ["src/**/*.test.{ts,tsx}"] },
+  // Kiểm thử đơn vị (Vitest) chỉ lấy tệp trong src/; e2e/ là của Playwright và cần một bản cài đang chạy. rjsf được
+  // biến đổi như mã của giao diện để bí danh @rjsf/validator-ajv8 ở trên cũng áp khi kiểm thử dựng biểu mẫu; để Node
+  // nạp thẳng thì nó tìm gói thật và báo không có.
+  test: { include: ["src/**/*.test.{ts,tsx}"], server: { deps: { inline: [/@rjsf\//] } } },
 });

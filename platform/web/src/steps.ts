@@ -41,4 +41,33 @@ export function dueText(due: string, now: number): { text: string; overdue: bool
   return ms < 0 ? { text: `Quá hạn ${amount}`, overdue: true } : { text: `Còn ${amount}`, overdue: false };
 }
 
+const number = new Intl.NumberFormat("vi-VN");
+
+/** Chữ hiện cho giá trị của một biến: số viết kiểu Việt Nam, đúng sai thành Có, Không. */
+export function variableText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return number.format(value);
+  if (typeof value === "boolean") return value ? "Có" : "Không";
+  return JSON.stringify(value);
+}
+
+/**
+ * Dòng thông tin hồ sơ theo `details` của bước: [biến, nhãn, giá trị]. Khai báo đọc qua GraphQL không được kiểm lại
+ * lúc chạy, nên mục sai dạng bị bỏ thay vì làm hỏng màn hình; biến chưa có giá trị không hiện. Biến khai lại lần nữa
+ * chỉ hiện ở lần khai đầu: cùng một giá trị hiện hai lần không thêm gì, và tên biến là khóa của dòng trên màn hình.
+ */
+export function detailRows(task: Task, step: StepConfig | undefined): [string, string, string][] {
+  const details = Array.isArray(step?.details) ? step.details : [];
+  const seen = new Set<string>();
+  return details.flatMap((detail): [string, string, string][] => {
+    if (typeof detail?.variable !== "string" || typeof detail.label !== "string") return [];
+    if (seen.has(detail.variable)) return [];
+    seen.add(detail.variable);
+    const value = task.variables[detail.variable];
+    return value === undefined || value === null || value === ""
+      ? []
+      : [[detail.variable, detail.label, variableText(value)]];
+  });
+}
+
 export const dateTime = new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" });

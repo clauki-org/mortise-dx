@@ -49,7 +49,7 @@ biệt.
 | Menu dựng từ các gói đã cài; mục của gói mở thành phần danh mục (danh sách, tìm, lọc, chi tiết cha–con) theo cấu hình của gói, không có mã giao diện riêng của gói | Đã chạy | `make e2e` (trình duyệt: cán bộ xã A mở danh mục cơ sở từ menu, không thấy cơ sở của xã B; mọi mục menu của các gói đã cài mở được trang theo cấu hình), `make web-check` |
 | Trợ lý hỏi dữ liệu: câu mẫu của gói chạy câu GraphQL chỉ đọc qua guard (một thao tác query, chỉ bảng, cột gói khai, có limit, không introspection), bằng token người hỏi qua Hasura; kết quả là bảng kèm câu truy vấn đã chạy, mỗi câu có dòng nhật ký không kèm dòng dữ liệu; câu hỏi gõ tự do (mô hình viết câu) là kế hoạch | Đã chạy | `make test` (bảng ca của guard), `make check-fast` (câu mẫu qua guard), `make smoke`, `make e2e`, smoke gói xã (cách ly xã, lời chèn lệnh trong tên cơ sở) |
 | Thành phần bản đồ: lớp điểm theo cấu hình của gói trên nền trơn (không tải tile), tô màu theo giá trị, chú giải và danh sách điểm; lớp khai vai trò chỉ truy vấn khi token có vai trò đó | Đã chạy | `make web-check` |
-| Thành phần Tầng 2 khác (biểu mẫu nhập liệu) | Kế hoạch | |
+| Thành phần biểu mẫu nhập liệu: trường và danh sách chọn theo cấu hình của gói, khởi tạo quy trình (Idempotency-Key) hoặc thêm một dòng vào bảng của gói bằng token người dùng; `make check-fast` kiểm biểu mẫu với quy trình, khai báo bước và quyền Hasura của gói | Đã chạy | `make check-fast` (biểu mẫu sai bị từ chối), `make web-check`; `make e2e` (trình duyệt: cán bộ xã A lập đề nghị cấp vật tư, bấm đúp chỉ một hồ sơ, người duyệt xã A thấy kèm giá trị đã điền, xã B không thấy; quản trị xã A thêm vật tư, dòng thuộc xã A, xã B không thấy) |
 | Gói minh họa `apps/facilities-commune`: bảng cơ sở, tòa, phòng cách ly theo tenant, cán bộ chỉ thấy và sửa cơ sở được phân công (xã tự sửa phân công), có nhật ký; cài vào, gỡ ra bằng `make app-install`, `make app-uninstall`, kèm menu của gói; quy trình, khai báo bước và luật ngưỡng của gói nạp cùng lúc bằng bộ nạp chung với `make seed` | Đã chạy | CI: cài gói → smoke gói (gồm menu theo tenant) → `make seed`, `make smoke` khi gói đang cài → gỡ gói → `make smoke` |
 | Gói minh họa: dữ liệu demo ba xã của "Tỉnh Mẫu" (hư cấu), nạp qua cổng bằng `make seed-demo` | Đã chạy | CI: `make seed-demo`, smoke gói kiểm tổng diện tích từng xã |
 | Gói minh họa: diện tích được phép và phần vượt tiêu chuẩn, định mức của từng xã theo NĐ 155/2025 sửa bởi NĐ 369/2026, mức m² có trích dẫn | Đã chạy | CI: smoke gói kiểm kết quả ba xã |
@@ -58,7 +58,7 @@ biệt.
 | Gói minh họa: quy trình rà soát hồ sơ: cán bộ lập hồ sơ từ màn hình chi tiết của cơ sở trên web, bốn mắt, phần vượt trên ngưỡng thì công khai có hẹn giờ rồi trình người có thẩm quyền; ngưỡng và thời hạn là settings của gói | Đã chạy | CI: smoke gói chạy quy trình qua API (thời hạn công khai 20 giây); `make e2e` (trình duyệt: lập hồ sơ từ cơ sở, hồ sơ hiện trên bảng việc người duyệt cùng xã, không hiện ở xã khác) |
 | Gói minh họa: bản đồ trụ sở tô theo phần vượt của xã; tỉnh thấy trụ sở đang dùng của các xã con | Đã chạy | `make e2e` (trình duyệt: cán bộ xã A thấy trụ sở mình phụ trách, không thấy xã B; `leader.tinh` thấy trụ sở của hai xã) |
 | Gói minh họa: tỉnh duyệt bước được phân cấp | Kế hoạch | |
-| Gói thứ hai `apps/supplies-commune` (kho vật tư xã) chỉ gồm tệp khai báo, không có mã chạy: kho và vật tư cách ly theo tenant, cán bộ và lãnh đạo xã chỉ đọc, quản trị xã ghi, có nhật ký; danh mục kho → vật tư trên menu; đề nghị cấp vật tư tới người duyệt của xã, bốn mắt; dữ liệu demo nạp bằng bộ nạp chung; gỡ ra thì lõi và gói xã vẫn chạy | Đã chạy | `make check-fast` (gói không có tệp mã); CI: cài cùng gói xã → `make seed-demo` → smoke hai gói → `make e2e` → gỡ gói kho → `make smoke`, smoke gói xã |
+| Gói thứ hai `apps/supplies-commune` (kho vật tư xã) chỉ gồm tệp khai báo, không có mã chạy: kho và vật tư cách ly theo tenant, cán bộ và lãnh đạo xã chỉ đọc, quản trị xã ghi, có nhật ký; danh mục kho → vật tư trên menu; đề nghị cấp vật tư lập trên web tới người duyệt của xã, bốn mắt; quản trị xã thêm vật tư bằng biểu mẫu; dữ liệu demo nạp bằng bộ nạp chung; gỡ ra thì lõi và gói xã vẫn chạy | Đã chạy | `make check-fast` (gói không có tệp mã); CI: cài cùng gói xã → `make seed-demo` → smoke hai gói → `make e2e` → gỡ gói kho → `make smoke`, smoke gói xã |
 
 ## Chạy từ mã nguồn
 
@@ -70,7 +70,7 @@ riêng ClamAV dùng khoảng 1 GB. Phát triển giao diện cần thêm Node.js
 make up      # tạo .env với bí mật ngẫu nhiên, dựng lõi, chờ sẵn sàng
 make seed    # tài khoản demo cho 3 xã của "Tỉnh Mẫu" (hư cấu) và quyền dữ liệu
 make smoke   # kiểm tra đầu-cuối qua cổng
-make e2e     # kịch bản demo trên trình duyệt (cần Node và gói xã: make app-install APP=facilities-commune)
+make e2e     # kịch bản demo trên trình duyệt (cần Node và hai gói: make app-install APP=facilities-commune, APP=supplies-commune)
 ```
 
 | Địa chỉ | Dịch vụ |

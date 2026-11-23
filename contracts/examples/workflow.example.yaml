@@ -9,6 +9,9 @@ process: core-approval
 steps:
   review:
     title: title
+    details:
+      - { variable: amount, label: Số lượng }
+      - { variable: note, label: Ghi chú }
     form:
       type: object
       required: [comment]
