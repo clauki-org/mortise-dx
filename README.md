@@ -40,7 +40,8 @@ biệt.
 | Tệp qua cổng (`/v1/files`, SeaweedFS): tải lên, tải xuống theo tenant, giới hạn cỡ, quét mã độc trước khi lưu (ClamAV) | Đã chạy | `make smoke` (tệp thử EICAR), `make test` |
 | Đăng nhập hai bước (OTP) cho người có quyền duyệt; workflow-api từ chối duyệt khi token không có bước OTP | Đã chạy | `make smoke`, `make test`, `make e2e` |
 | Dữ liệu thiết bị: nhận số đo qua MQTT trong mạng riêng (mỗi thiết bị một tài khoản, chỉ gửi vào chủ đề của mình), giữ theo NGSI-LD (Scorpio), đọc trạng thái và lịch sử số đo qua `/v1/context` chỉ thấy thiết bị của đơn vị mình; bộ giả lập thiết bị (`make simulate`); số đo vượt ngưỡng liên tục đủ lâu thì tự mở hồ sơ trên bảng việc của đúng đơn vị theo luật khai báo (`contracts/threshold-rule.schema.json`), không mở trùng khi hồ sơ cũ còn mở | Đã chạy | `make smoke` (gồm bộ giả lập, luật mẫu), `make test` |
-| Cơ chế đăng nhập theo chính sách từng tenant, Passkey | Kế hoạch | |
+| Chính sách đăng nhập theo tenant: người vận hành bắt mọi tài khoản của một tenant nhập OTP (`make tenant-login`), tenant khác không đổi ([ADR 0040](docs/adr/0040-tenant-login-policy.md)) | Đã chạy | `make smoke` (tenant `tinh-khac`: thiếu mã bị từ chối, đổi về mặc định thì chỉ cần mật khẩu; xã A vẫn chỉ cần mật khẩu) |
+| Đăng nhập bằng Passkey | Kế hoạch | |
 | Phân quyền chi tiết theo vai trò và đơn vị | Kế hoạch | |
 | Nhật ký thay đổi: ai sửa gì, lúc nào, trước và sau; chuỗi băm phát hiện sửa lén, đối chiếu băm trong bản sao lưu | Đã chạy | `make smoke`, `make audit-verify` |
 | Kho lạnh cho nhật ký: xuất dòng cũ sang Parquet trên SeaweedFS có kiểm băm từng dòng rồi xóa khỏi CSDL trong cùng giao dịch, chuỗi băm nối qua phần đã xóa, truy vấn gộp bằng DuckDB; chạy theo lịch là kế hoạch | Đã chạy | `make smoke`, `make archive`, `make cold-verify`, `make cold-query` |
@@ -121,12 +122,13 @@ bản, quay về và khôi phục ở [deploy/README.md](deploy/README.md).
 Tài khoản demo: `user.a`, `manager.a`, `admin.a` (tenant `xa-a`), tương tự `.b` cho `xa-b` và `.c` cho `xa-c`, ba xã
 của "Tỉnh Mẫu", tỉnh hư cấu; ở tenant cha `tinh-mau` có `leader.tinh` (đọc tổng hợp của ba xã), `admin.tinh` (quản trị
 tỉnh, sửa bảng phân cấp thẩm quyền của các xã) và `manager.tinh` (người duyệt của tỉnh, làm các bước thuộc thẩm
-quyền của tỉnh trong hồ sơ của xã); tenant `tinh-khac` ("Tỉnh Khác", không có xã) có `manager.k`; mật khẩu là
-`DEMO_USER_PASSWORD` trong `.env`. `admin.*` có vai trò `tenant_admin` (quản trị xã); `admin2.a` cũng là quản trị xã
-A nhưng có thêm `otp_required`, nhận được bước mà workflow-api gán cho `tenant_admin` theo bảng phân cấp. Người
-duyệt (`manager.*`) và `admin2.a` nhập thêm mã OTP: `make otp` in mã hiện tại và khóa để nhập vào ứng dụng OTP trên
-điện thoại ([ADR 0011](docs/adr/0011-approver-mfa.md)). Thiết bị demo nằm trong `devices/simulator/devices.yaml`,
-mật khẩu MQTT `DEMO_DEVICE_PASSWORD`; `make simulate` gửi số đo giả cho chúng.
+quyền của tỉnh trong hồ sơ của xã); tenant `tinh-khac` ("Tỉnh Khác", không có xã) có `manager.k` và `user.k`; mật
+khẩu là `DEMO_USER_PASSWORD` trong `.env`. `admin.*` có vai trò `tenant_admin` (quản trị xã); `admin2.a` cũng là
+quản trị xã A nhưng có thêm `otp_required`, nhận được bước mà workflow-api gán cho `tenant_admin` theo bảng phân cấp.
+Người duyệt (`manager.*`), `admin2.a` và mọi tài khoản của `tinh-khac` (tenant có chính sách bắt buộc OTP, nên cả
+`user.k`) nhập thêm mã OTP: `make otp` in mã hiện tại và khóa để nhập vào ứng dụng OTP trên điện thoại
+([ADR 0011](docs/adr/0011-approver-mfa.md), [ADR 0040](docs/adr/0040-tenant-login-policy.md)). Thiết bị demo nằm
+trong `devices/simulator/devices.yaml`, mật khẩu MQTT `DEMO_DEVICE_PASSWORD`; `make simulate` gửi số đo giả cho chúng.
 Thiết bị khác cấp tài khoản bằng `make device-add TENANT=<tenant> DEVICE=<thiết bị>`. Mọi lệnh khác: `make help`.
 
 Mô hình ngôn ngữ của trợ lý hỏi văn bản chạy tại chỗ bằng Ollama, tách khỏi lõi trong profile `ai`: `make ai-up` chạy

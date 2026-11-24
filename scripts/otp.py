@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Mã OTP (TOTP, RFC 6238) cho tài khoản người duyệt demo, tính từ DEMO_OTP_SECRET trong .env mà `make seed`
-# gắn cho họ (ADR 0011). Chỉ dùng cho bản cài demo và kiểm thử; người dùng thật cài OTP trên điện thoại khi
-# đăng nhập lần đầu.
+# Mã OTP (TOTP, RFC 6238) cho các tài khoản demo phải nhập OTP, tính từ DEMO_OTP_SECRET trong .env
+# mà `make seed` gắn cho họ (ADR 0011, ADR 0040). Chỉ dùng cho bản cài demo và kiểm thử; người dùng
+# thật cài OTP trên điện thoại khi đăng nhập lần đầu.
 #   show         in mã hiện tại và khóa để nhập vào ứng dụng OTP trên điện thoại (make otp)
 #   next <tên>   in một mã chưa dùng cho tài khoản đó (smoke, e2e)
 # Keycloak không nhận lại mã đã dùng (otpPolicyCodeReusable false) và nhận mã của khung 30 giây trước, hiện
