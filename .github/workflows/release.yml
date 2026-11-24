@@ -153,6 +153,8 @@ jobs:
           (cd "$RUNNER_TEMP" && sha256sum "$archive" > SHA256SUMS)
           {
             scripts/release-notes.sh "$TAG"
+            printf '\nDanh sách thay đổi đầy đủ: [CHANGELOG.md](%s/%s/blob/%s/CHANGELOG.md).\n' \
+              "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$TAG"
             printf '\n### Mã nguồn\n\n'
             printf 'Gói mã nguồn của bản này là `%s`; kiểm bằng `sha256sum -c SHA256SUMS` trong thư mục chứa hai tệp.\n' \
               "$archive"

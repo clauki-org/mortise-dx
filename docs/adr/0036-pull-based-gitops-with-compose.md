@@ -46,7 +46,8 @@ mới dựng; `up --no-build` kéo được thì kéo, không thì báo lỗi; `
 ## Quyết định
 
 - **Tag và ghi chú.** Bản phát hành là tag `vX.Y.Z` trên một commit của main; ghi chú là mục `## [X.Y.Z]` của
-  `CHANGELOG.md` (`scripts/release-notes.sh`), thiếu mục thì không phát hành. `vX.Y.Z-rc.N` là bản thử: GitHub Release
+  `CHANGELOG.md` (`scripts/release-notes.sh`), thiếu mục thì không phát hành; mục có đoạn tóm tắt trước tiêu đề `###`
+  đầu tiên thì trang Release chỉ hiện đoạn đó kèm liên kết tới CHANGELOG của tag. `vX.Y.Z-rc.N` là bản thử: GitHub Release
   đánh dấu prerelease, ghi chú lấy mục `## [X.Y.Z]` nếu đã cắt, chưa thì lấy `## [Unreleased]`.
 - **CI phát hành** (`.github/workflows/release.yml`): kiểm commit nằm trên main và có ghi chú → chạy lại toàn bộ
   `ci.yml` → dựng image mọi dịch vụ có `build` trong compose.yaml (linux/amd64), đẩy lên

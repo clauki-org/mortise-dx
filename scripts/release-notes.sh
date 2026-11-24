@@ -6,6 +6,8 @@
 # kết so sánh ở cuối tệp. .github/workflows/release.yml dùng nó làm nội dung trang GitHub Release; thiếu mục hay mục
 # rỗng thì thoát lỗi để không phát hành bản không có danh sách thay đổi.
 # Bản thử (`vX.Y.Z-rc.N`) lấy mục `## [X.Y.Z]` nếu đã cắt, chưa có thì lấy `## [Unreleased]`.
+# Mục có đoạn tóm tắt trước tiêu đề `### ` đầu tiên thì chỉ in đoạn đó: danh sách đầy đủ của một bản lớn quá dài cho
+# trang Release, release.yml thêm liên kết tới CHANGELOG.md của tag.
 # Cách dùng: scripts/release-notes.sh v0.1.0 [CHANGELOG.md]
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -26,7 +28,7 @@ section() {
 }
 
 main() {
-  local version="${1:-}" changelog="${2:-CHANGELOG.md}" number notes
+  local version="${1:-}" changelog="${2:-CHANGELOG.md}" number notes summary
   [[ "$version" =~ ^v?([0-9]+\.[0-9]+\.[0-9]+)(-rc\.[0-9]+)?$ ]] || usage
   number="${BASH_REMATCH[1]}"
   [[ -f "$changelog" ]] || { echo "Không thấy $changelog" >&2; exit 1; }
@@ -38,6 +40,8 @@ main() {
     echo "CHANGELOG không có mục '## [$number]' hoặc mục rỗng: cắt mục từ Unreleased trước khi gắn tag $version." >&2
     exit 1
   fi
+  summary=$(printf '%s\n' "$notes" | awk '/^### /{exit} {print}' | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')
+  [[ -z "$summary" ]] || notes="$summary"
   printf '%s\n' "$notes"
 }
 
