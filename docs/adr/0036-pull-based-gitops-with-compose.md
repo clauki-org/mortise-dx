@@ -46,14 +46,15 @@ mới dựng; `up --no-build` kéo được thì kéo, không thì báo lỗi; `
 ## Quyết định
 
 - **Tag và ghi chú.** Bản phát hành là tag `vX.Y.Z` trên một commit của main; ghi chú là mục `## [X.Y.Z]` của
-  `CHANGELOG.md` (`scripts/release-notes.sh`), thiếu mục thì không phát hành. `vX.Y.Z-rc.N` là bản thử: GitHub Release
+  `CHANGELOG.md` (`scripts/release-notes.sh`), thiếu mục thì không phát hành; mục có đoạn tóm tắt trước tiêu đề `###`
+  đầu tiên thì trang Release chỉ hiện đoạn đó kèm liên kết tới CHANGELOG của tag. `vX.Y.Z-rc.N` là bản thử: GitHub Release
   đánh dấu prerelease, ghi chú lấy mục `## [X.Y.Z]` nếu đã cắt, chưa thì lấy `## [Unreleased]`.
 - **CI phát hành** (`.github/workflows/release.yml`): kiểm commit nằm trên main và có ghi chú → chạy lại toàn bộ
   `ci.yml` → dựng image mọi dịch vụ có `build` trong compose.yaml (linux/amd64), đẩy lên
   `ghcr.io/clauki-org/mortise-dx/<dịch vụ>:<tag>` bằng `GITHUB_TOKEN`, kèm nhãn OCI nguồn, phiên bản, commit → trên
   runner mới, không đăng nhập, với `MORTISE_NO_BUILD=1`, kéo đúng các image đó, `make up`, `make seed`, `make smoke`,
   `make heal-check`, kiểm mọi image tự viết mang nhãn revision của commit và có digest của registry → tạo GitHub
-  Release. Quyền mặc định chỉ đọc; chỉ job đẩy image có `packages: write`, chỉ job tạo Release có
+  Release, đính kèm gói mã nguồn `mortise-dx-<tag>.tar.gz` (`git archive`, định dạng mở) và `SHA256SUMS`. Quyền mặc định chỉ đọc; chỉ job đẩy image có `packages: write`, chỉ job tạo Release có
   `contents: write`.
 - **Tên image và cờ cấm dựng.** Tám dịch vụ tự viết có
   `image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/<dịch vụ>:${MORTISE_VERSION:-dev}` cạnh `build`. Máy phát triển

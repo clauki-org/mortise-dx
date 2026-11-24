@@ -12,6 +12,21 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ## [0.1.0] - 2026-11-25
 
+Bản phát hành đầu tiên: lõi Tầng 1, các thành phần dùng chung Tầng 2 và hai gói minh họa, chạy bằng Docker Compose.
+
+- **Lõi:** đăng nhập một lần (Keycloak) với OTP cho người duyệt; một cổng API (APISIX); API dữ liệu GraphQL
+  (Hasura) cách ly theo tenant; quy trình BPMN (Flowable sau workflow-api) có bốn mắt, bảng phân cấp thẩm quyền và
+  tenant cha duyệt bước được phân cấp; tệp có quét mã độc; dữ liệu thiết bị qua MQTT và NGSI-LD, số đo vượt ngưỡng
+  tự mở hồ sơ; nhật ký thay đổi có chuỗi băm và kho lạnh.
+- **Vận hành:** sao lưu, khôi phục và diễn tập trên máy trắng; dịch vụ tự dựng lại khi tiến trình thoát; giám sát
+  (Prometheus, Loki, Grafana) trong profile riêng; phát hành theo tag, máy chủ tự kéo bản mới.
+- **Thành phần dùng chung:** giao diện web với menu theo gói, danh mục, biểu mẫu, bảng việc, theo dõi hồ sơ, bản đồ,
+  bảng điều hành; trợ lý hỏi văn bản và hỏi dữ liệu (câu GraphQL chỉ đọc qua guard, mô hình tại chỗ hay qua API).
+- **Gói minh họa:** `facilities-commune` (cơ sở vật chất xã: diện tích theo định mức, rà soát, tổng hợp cho tỉnh) và
+  `supplies-commune` (kho vật tư xã, chỉ gồm tệp khai báo).
+
+Chạy từ mã nguồn: `make up && make seed && make smoke` (README). Máy chủ chạy image của bản này: `deploy/README.md`.
+
 ### Added
 
 - Giám sát trong profile `observability` (ADR 0037): `make obs-up` chạy Prometheus, Loki, Grafana Alloy, blackbox và
@@ -23,7 +38,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   apisix`.
 - Phát hành theo tag và triển khai kéo về (ADR 0036): tag `vX.Y.Z` trên main chạy lại toàn bộ CI, dựng image tám
   dịch vụ tự viết lên `ghcr.io/clauki-org/mortise-dx/<dịch vụ>:<tag>`, kéo lại không đăng nhập để dựng lõi, seed,
-  smoke, rồi tạo GitHub Release từ mục của bản trong CHANGELOG (`scripts/release-notes.sh`). Tám
+  smoke, rồi tạo GitHub Release từ mục của bản trong CHANGELOG (`scripts/release-notes.sh`), đính kèm gói mã nguồn
+  `mortise-dx-<tag>.tar.gz` và `SHA256SUMS`. Tám
   dịch vụ tự viết có `image` theo `MORTISE_IMAGE_PREFIX`, `MORTISE_VERSION`; máy phát triển dựng như trước với tên
   `mortise.invalid/<dịch vụ>:dev` (bản cài cũ dựng lại một lần ở `make up` kế tiếp, image cũ `mortise-<dịch vụ>` xóa
   được); `MORTISE_NO_BUILD=1` cấm dựng tại chỗ, mọi lệnh có thể dựng đi qua `scripts/compose.sh`. Máy chủ demo cài `deploy/pull-deploy.sh` với systemd timer: tự kéo Release mới, sao lưu, dựng, smoke lõi và
