@@ -6,8 +6,9 @@
 // chỉ gốc, mọi đường dẫn bên dưới địa chỉ gốc do thành phần tự đọc. Ở đây không có tên bảng, tên cột hay chữ của
 // một lĩnh vực nào.
 
-import { Alert, Stack, Title } from "@mantine/core";
+import { Alert, Group, Stack, Title } from "@mantine/core";
 import { useLocation, useSearchParams } from "react-router";
+import { CatalogExport } from "./CatalogExport";
 import { CatalogRecord } from "./CatalogRecord";
 import { CatalogTable } from "./CatalogTable";
 import { type CatalogConfig, configProblems, problemText, resolvePath } from "./catalog";
@@ -34,17 +35,17 @@ export function Catalog({ config, basePath }: Props) {
   // một khóa chứa dấu / sẽ bị hiểu thành hai đoạn đường dẫn.
   const segments = pathname.slice(basePath.length).split("/").filter(Boolean).map(decodeURIComponent);
   if (segments.length === 0) {
+    const state = readState(params);
     return (
       <Stack>
-        <Title order={1} size="h2">
-          {config.title}
-        </Title>
-        <CatalogTable
-          config={config}
-          path={basePath}
-          state={readState(params)}
-          onChange={(state) => setParams(writeState(state))}
-        />
+        {/* Nút xuất chỉ ở danh sách ngoài cùng; bảng đối tượng con trong màn hình chi tiết không xuất (ADR 0038). */}
+        <Group justify="space-between" align="flex-end">
+          <Title order={1} size="h2">
+            {config.title}
+          </Title>
+          <CatalogExport config={config} state={state} />
+        </Group>
+        <CatalogTable config={config} path={basePath} state={state} onChange={(next) => setParams(writeState(next))} />
       </Stack>
     );
   }

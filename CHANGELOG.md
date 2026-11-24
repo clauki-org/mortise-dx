@@ -10,6 +10,11 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ## [Unreleased]
 
+### Added
+
+- Danh sách của thành phần danh mục xuất được ra CSV, Excel và PDF: mọi dòng khớp tìm, lọc đang xem, bằng quyền
+  của người xuất, đầu tệp ghi nguồn, đơn vị, thời điểm và người xuất (ADR 0038).
+
 ## [0.1.0] - 2026-11-25
 
 Bản phát hành đầu tiên: lõi Tầng 1, các thành phần dùng chung Tầng 2 và hai gói minh họa, chạy bằng Docker Compose.

@@ -28,6 +28,9 @@ capabilities:
     qua API quy trình, với biến lấy từ khóa hay trường của dòng (ADR 0026). Hộp xác nhận hiện các giá trị sẽ gửi;
     trường còn trống thì không cho gửi. Bấm đúp hay gửi lại sau lỗi trong cùng hộp chỉ tạo một quy trình
     (Idempotency-Key).
+  - Nút "Xuất CSV" trên màn hình danh sách tải về tệp CSV gồm mọi dòng khớp tìm, lọc và thứ tự đang xem, đọc trong
+    một truy vấn bằng quyền của người xuất; đầu tệp ghi tên danh sách, nguồn, đơn vị, thời điểm và múi giờ, người
+    xuất, điều kiện và số dòng; ô bắt đầu bằng = + - @, tab hay CR được chặn công thức (ADR 0038).
   - Nơi gọi chỉ đưa cấu hình và địa chỉ gốc; thành phần không cần menu, bảng hay cấu hình nào khác của hệ thống.
 limits:
   - Không thêm, sửa hay xóa dòng; việc ghi duy nhất là khởi tạo quy trình bằng nút gói khai.
@@ -37,6 +40,8 @@ limits:
     mở cho một dòng. Nút hiện cho mọi người đọc được dòng; ai được khởi tạo do workflow-api quyết định.
   - Giá trị gửi cho quy trình do trình duyệt đọc từ dòng lúc bấm; quy trình không tự đọc lại từ CSDL.
   - Không hiện tổng số dòng và tổng số trang.
+  - Xuất CSV chỉ ở danh sách ngoài cùng, tối đa 5.000 dòng một tệp; bảng đối tượng con không xuất. Lần xuất không
+    được ghi nhật ký phía máy chủ.
   - Mỗi lúc chỉ sắp xếp theo một cột; thứ tự của chữ có dấu là thứ tự so sánh của CSDL.
   - Ô tìm không dò trường số, trường ngày và trường có choices.
   - Không có kiểu đúng/sai riêng; cột đúng/sai hiện và lọc được khi khai choices với giá trị "true" và "false".

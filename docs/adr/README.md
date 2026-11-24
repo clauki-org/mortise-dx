@@ -58,6 +58,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0035](0035-case-counts-and-device-readings-on-dashboards.md) | Số hồ sơ và số đo thiết bị trên bảng điều hành: workflow-api trả tổng Flowable đếm theo tenant, quy trình, bước, chỉ cho người có vai trò của một bước; việc đang chờ người xem đếm trên trình duyệt; số đo đọc qua context-api | Chấp nhận |
 | [0036](0036-pull-based-gitops-with-compose.md) | Phát hành theo tag: CI dựng image lên GHCR và tạo Release từ CHANGELOG; máy chủ demo tự kéo tag mới về chạy bằng Compose (image theo `MORTISE_IMAGE_PREFIX`, `MORTISE_VERSION`, `MORTISE_NO_BUILD=1` cấm dựng tại chỗ), smoke lỗi thì quay về tag trước, CSDL không tự khôi phục; Argo CD khi chuyển lên Kubernetes | Chấp nhận |
 | [0037](0037-observability-profile.md) | Giám sát trong profile `observability`: Prometheus, Loki, Grafana chỉ ở 127.0.0.1; log container đọc qua docker-socket-proxy chỉ cho đọc, trong mạng riêng với Alloy | Chấp nhận |
+| [0038](0038-catalog-csv-export.md) | Xuất danh sách của danh mục ra CSV ngay trong trình duyệt, bằng quyền của người xuất | Chấp nhận |
 
 ## Quyết định còn mở
 
