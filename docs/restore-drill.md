@@ -46,4 +46,4 @@ Thêm một dòng cho mỗi lần chạy đáng ghi, chép từ báo cáo của 
 
 | Ngày (UTC) | Nơi chạy | Bản | CPU / RAM | Docker | Cỡ sao lưu | Sao lưu (s) | Xóa (s) | Khôi phục (s) | Smoke (s) | Kết quả |
 |---|---|---|---|---|---|---|---|---|---|---|
-| chưa chạy | runner `ubuntu-latest` của GitHub Actions | | | | | | | | | chưa chạy |
+| 2026-11-24 14:23 | runner `ubuntu-latest` của GitHub Actions, CI của PR #174 | `1c23fba` | 4 / 15,6 GiB | 29.4.2 | 244K | 43 | 30 | 141 | 49 | Qua |
