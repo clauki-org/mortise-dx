@@ -6,7 +6,7 @@
 
 FROM ghcr.io/astral-sh/uv:0.11.21 AS uv
 
-FROM python:3.13-slim-trixie AS build
+FROM python:3.13.18-slim-trixie AS build
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 WORKDIR /srv
@@ -15,7 +15,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 RUN .venv/bin/python -c "import duckdb; c = duckdb.connect(config={'extension_directory': '/srv/duckdb-extensions'}); c.execute('INSTALL httpfs'); c.execute('INSTALL postgres')"
 COPY app ./app
 
-FROM python:3.13-slim-trixie
+FROM python:3.13.18-slim-trixie
 RUN useradd --system --uid 10001 mortise
 WORKDIR /srv
 COPY --from=build /srv /srv

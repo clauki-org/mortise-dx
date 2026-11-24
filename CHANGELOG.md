@@ -10,9 +10,18 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ## [Unreleased]
 
+### Added
+
 - Truy vết phân tán, mặc định tắt: `MORTISE_TRACING=on` cùng `make obs-up` cho xem trong Grafana từng chặng của một
   yêu cầu qua cổng tới dịch vụ tự viết, Flowable, Scorpio, CSDL (Jaeger, không lưu chuỗi truy vấn hay header;
   [ADR 0038](docs/adr/0038-distributed-tracing.md)).
+- `make deps-check`: kiểm image và thư viện được ghim đúng phiên bản, giấy phép nằm trong danh sách cho phép, báo bản
+  mới mà không tự nâng cấp; `make check-fast` chặn ghim hay giấy phép sai; workflow hằng tuần đăng báo cáo vào issue
+  theo dõi (đã cấu hình, chưa chạy) ([ADR 0039](docs/adr/0039-dependency-check-script.md)). Image Python của các
+  dịch vụ tự viết ghim `3.13.18`, công cụ kiểm chạy qua `uvx` ghim phiên bản.
+
+### Fixed
+
 - Cổng trả lỗi 429 (vượt giới hạn tần suất) của mọi API dưới `/v1` dạng JSON `{"error": "..."}` như lỗi 401,
   thay vì trang HTML; header `X-RateLimit-*` vẫn giữ.
 

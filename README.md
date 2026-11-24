@@ -30,6 +30,7 @@ biệt.
 | Năng lực | Trạng thái | Kiểm chứng |
 |---|---|---|
 | Giấy phép từng tệp, kiểm tra shell và YAML | Đã chạy | `make check-fast`, CI |
+| Kiểm phụ thuộc: image, thư viện, mô hình ghim đúng phiên bản; giấy phép thư viện Python và image theo danh sách cho phép và bảng [Thành phần đang chạy](#thành-phần-đang-chạy); báo bản mới, không tự nâng cấp ([ADR 0039](docs/adr/0039-dependency-check-script.md)) | Đã chạy ở máy; báo cáo hằng tuần vào issue theo dõi đã cấu hình, chưa chạy | `make check-fast` (ghim, giấy phép), `make deps-check` (thêm bản mới) |
 | Định danh / SSO (Keycloak, OIDC) | Đã chạy | `make smoke` |
 | Cổng API duy nhất (APISIX), chặn yêu cầu không token hoặc token giả | Đã chạy | `make smoke` |
 | Console quản trị không lộ qua cổng | Đã chạy | `make smoke` |
@@ -178,12 +179,12 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Broker NGSI-LD, dữ liệu thiết bị ([ADR 0012](docs/adr/0012-device-context-ngsi-ld.md)) | Scorpio (bản native) | 6.0.2 | BSD-3-Clause |
 | CSDL của Scorpio | PostgreSQL + PostGIS | 17 + 3.6 | PostgreSQL License / GPL-2.0 (tiến trình riêng) |
 | Nhận số đo thiết bị (MQTT) | Eclipse Mosquitto | 2.1.2 | EPL-2.0 / EDL-1.0 |
-| Lớp kiểm quyền quy trình (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, pg8000, OpenTelemetry | khóa trong `core/workflow-api/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
-| API tệp (tự viết) | Python 3.13, FastAPI, boto3, pg8000, PyJWT, OpenTelemetry | khóa trong `core/files-api/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
-| Lớp đọc dữ liệu thiết bị (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, OpenTelemetry | khóa trong `core/context-api/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
-| Cầu nối MQTT sang NGSI-LD (tự viết) | Python 3.13, paho-mqtt, HTTPX, pg8000 | khóa trong `core/iot-bridge/uv.lock` | EPL-2.0 / EDL-1.0 / BSD-3-Clause |
+| Lớp kiểm quyền quy trình (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, pg8000, OpenTelemetry | khóa trong `core/workflow-api/uv.lock` | Python-2.0.1 / MIT / BSD-3-Clause / Apache-2.0 / MIT-0 / MPL-2.0 (certifi) |
+| API tệp (tự viết) | Python 3.13, FastAPI, boto3, pg8000, PyJWT, OpenTelemetry | khóa trong `core/files-api/uv.lock` | Python-2.0.1 / MIT / BSD-3-Clause / Apache-2.0 / MIT-0 |
+| Lớp đọc dữ liệu thiết bị (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, OpenTelemetry | khóa trong `core/context-api/uv.lock` | Python-2.0.1 / MIT / BSD-3-Clause / Apache-2.0 / MIT-0 / MPL-2.0 (certifi) |
+| Cầu nối MQTT sang NGSI-LD (tự viết) | Python 3.13, paho-mqtt, HTTPX, pg8000 | khóa trong `core/iot-bridge/uv.lock` | Python-2.0.1 / EPL-2.0 / EDL-1.0 (paho-mqtt) / BSD-3-Clause / MIT / MIT-0 / Apache-2.0 / MPL-2.0 (certifi) |
 | Truy vấn kho lạnh ([ADR 0014](docs/adr/0014-cold-audit-archive.md)) | DuckDB | 2.0.0 | MIT |
-| Công cụ kho lạnh (tự viết) | Python 3.13, DuckDB, pg8000, boto3 | khóa trong `core/cold-archive/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
+| Công cụ kho lạnh (tự viết) | Python 3.13, DuckDB, pg8000, boto3 | khóa trong `core/cold-archive/uv.lock` | Python-2.0.1 / MIT / BSD-3-Clause / Apache-2.0 / MIT-0 |
 | Chạy mô hình ngôn ngữ tại chỗ, tùy chọn: profile `ai` ([ADR 0021](docs/adr/0021-document-assistant.md)) | Ollama | 0.40.16 | MIT |
 | Mô hình ngôn ngữ, tải khi `make ai-up` | Qwen3.5 4B | digest trọng số ghim trong `core/ollama/models.txt` | Apache-2.0 |
 | Lấy và lưu số liệu, tùy chọn: profile `observability` ([ADR 0037](docs/adr/0037-observability-profile.md)) | Prometheus | 3.16.0 | Apache-2.0 |
@@ -193,7 +194,7 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Hỏi sức khỏe dịch vụ, profile `observability` | Blackbox exporter | 0.29.1 | Apache-2.0 |
 | Lưu vết phân tán, profile `observability` ([ADR 0038](docs/adr/0038-distributed-tracing.md)) | Jaeger | 2.20.0 | Apache-2.0 |
 | Cho Alloy đọc Docker, chặn lệnh ghi, profile `observability` | docker-socket-proxy (Tecnativa) | 0.5.0 | Apache-2.0 (HAProxy bên trong: GPL-2.0-or-later) |
-| Trợ lý hỏi văn bản và dữ liệu (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, pg8000, OpenTelemetry | khóa trong `platform/services/assistant/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
+| Trợ lý hỏi văn bản và dữ liệu (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, pg8000, OpenTelemetry | khóa trong `platform/services/assistant/uv.lock` | Python-2.0.1 / MIT / BSD-3-Clause / Apache-2.0 / MIT-0 / MPL-2.0 (certifi) |
 | Phân tích câu GraphQL cho guard của trợ lý dữ liệu ([ADR 0027](docs/adr/0027-data-assistant-guarded-graphql.md)) | graphql-core | 3.3.2 | MIT |
 | Phục vụ giao diện | nginx | 1.30.6 | BSD-2-Clause |
 | Giao diện Tầng 2 (tự viết) | React, Mantine, oidc-client-ts, urql, React Router, TanStack Query, rjsf ([ADR 0006](docs/adr/0006-frontend-stack.md)) | khóa trong `platform/web/package-lock.json` | MIT / Apache-2.0 |
@@ -232,14 +233,14 @@ deploy/               máy chủ demo: script kéo tag phát hành mới, unit s
 scripts/              tạo .env, seed, smoke, tạo migration, cài và gỡ gói, sao lưu, khôi phục, diễn tập khôi phục,
                       kiểm tự phục hồi, ghi chú phát hành, hook pre-push
 docs/                 quyết định kiến trúc (adr/), API của lõi (api.md), công cụ (tools.md), diễn tập khôi phục
-.github/              CI, phát hành theo tag, mẫu issue và pull request
+.github/              CI, phát hành theo tag, kiểm phụ thuộc hằng tuần, mẫu issue và pull request
 ```
 
 ## Giấy phép
 
 Mã nguồn của dự án phát hành theo [Apache-2.0](LICENSE). Mỗi tệp có header SPDX; kiểm tra bằng `make check-fast`
 (công cụ [REUSE](https://reuse.software)). Thành phần bên thứ ba chạy dưới dạng container chính thức, không sửa mã,
-và giữ giấy phép riêng (bảng trên và ADR 0002).
+và giữ giấy phép riêng (bảng trên và ADR 0002); `make check-fast` đối chiếu bảng với image trong `compose.yaml`.
 
 ## Đóng góp
 
