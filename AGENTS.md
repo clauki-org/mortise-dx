@@ -119,7 +119,9 @@ Ranh giới bắt buộc:
   dòng), Lý do, Đã kiểm tra, và `Closes #<issue>`.
 - Một pull request, một thay đổi, một issue. Nhắm dưới khoảng 500 dòng thay đổi, không tính tệp sinh tự động, test và
   dữ liệu. Việc lớn tách theo tầng: core, app, dữ liệu, AI.
-- Thay đổi người dùng thấy được thì thêm một dòng vào `Unreleased` trong `CHANGELOG.md` ở cùng pull request.
+- Thay đổi người dùng thấy được thì thêm một mục 1–3 dòng vào `Unreleased` trong `CHANGELOG.md` ở cùng pull request:
+  làm gì, người dùng thấy gì, ADR nếu có; chi tiết để ở ADR hay tài liệu. Bước nâng cấp chỉ ghi khi thay đổi phá
+  tương thích với một bản đã phát hành.
 - Không bao giờ commit bí mật. Bí mật chỉ nằm trong `.env`, do `make env` sinh ra.
 - Quyết định thay đổi kiến trúc, phạm vi, thành phần hay quy ước đi kèm một bản ghi trong `docs/adr/` ở cùng pull
   request. Thêm thành phần bên thứ ba thì cập nhật bảng giấy phép, chỉ dùng giấy phép OSI.

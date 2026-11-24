@@ -29,309 +29,163 @@ Chạy từ mã nguồn: `make up && make seed && make smoke` (README). Máy ch�
 
 ### Added
 
-- Giám sát trong profile `observability` (ADR 0037): `make obs-up` chạy Prometheus, Loki, Grafana Alloy, blackbox và
-  Grafana chỉ ở `127.0.0.1:3000` (đòi đăng nhập `admin`, mật khẩu `GRAFANA_ADMIN_PASSWORD`), với dashboard "Mortise:
-  tổng quan": yêu cầu, lỗi 5xx và độ trễ p95 theo route của cổng, sức khỏe từng dịch vụ, đăng nhập lỗi và log của mọi
-  dịch vụ; `make obs-check` kiểm, `make obs-down` dừng mà giữ số liệu và log. APISIX bật plugin prometheus cho mọi
-  route (số liệu chỉ ở cổng nội bộ 9091), Keycloak bật số liệu ở cổng quản lý. `make down` và `make reset` gồm cả
-  profile này. Bản cài cũ chạy `make up` (thêm biến mới vào `.env`, dựng lại Keycloak) rồi `docker compose restart
-  apisix`.
-- Phát hành theo tag và triển khai kéo về (ADR 0036): tag `vX.Y.Z` trên main chạy lại toàn bộ CI, dựng image tám
-  dịch vụ tự viết lên `ghcr.io/clauki-org/mortise-dx/<dịch vụ>:<tag>`, kéo lại không đăng nhập để dựng lõi, seed,
-  smoke, rồi tạo GitHub Release từ mục của bản trong CHANGELOG (`scripts/release-notes.sh`), đính kèm gói mã nguồn
-  `mortise-dx-<tag>.tar.gz` và `SHA256SUMS`. Tám
-  dịch vụ tự viết có `image` theo `MORTISE_IMAGE_PREFIX`, `MORTISE_VERSION`; máy phát triển dựng như trước với tên
-  `mortise.invalid/<dịch vụ>:dev` (bản cài cũ dựng lại một lần ở `make up` kế tiếp, image cũ `mortise-<dịch vụ>` xóa
-  được); `MORTISE_NO_BUILD=1` cấm dựng tại chỗ, mọi lệnh có thể dựng đi qua `scripts/compose.sh`. Máy chủ demo cài `deploy/pull-deploy.sh` với systemd timer: tự kéo Release mới, sao lưu, dựng, smoke lõi và
-  gói, lỗi thì quay về tag trước; CSDL không tự khôi phục (`deploy/README.md`). `make heal-check SERVICE=<dịch vụ>`
-  kiểm dịch vụ có tiến trình chính thoát được Docker dựng lại và smoke vẫn qua. `make restore-drill CONFIRM=yes` diễn
-  tập khôi phục trên máy trắng, đo thời gian từng giai đoạn (`docs/restore-drill.md`); CI chạy nó thay cho vòng sao
-  lưu, khôi phục cũ trong job e2e.
-- Bảng điều hành đọc được số hồ sơ và số đo thiết bị (ADR 0035): API quy trình có thêm
-  `GET /v1/workflow/processes/{key}/counts` trả số hồ sơ còn mở, đã kết thúc, bước quá hạn và số đang chờ theo bước
-  trong tenant của người gọi, chỉ cho người có vai trò của một bước (trong BPMN hay bảng phân cấp), người khác nhận 404.
-  Nguồn `workflow` (`counts: tenant` hay `mine`, việc đang chờ chính người xem) và `context` (số đo mới nhất của thiết
-  bị) của thành phần bảng điều hành chạy thật, mục "Nguồn" ghi đường dẫn đã gửi; `make check-fast` kiểm quy trình
-  thuộc gói và tên giá trị. Gói `facilities-commune` có thêm khối hồ sơ rà soát, hồ sơ kiểm tra kho do luật ngưỡng mở
-  (lãnh đạo xã), việc đang chờ bạn và độ ẩm thiết bị. Bản cài cũ dựng lại image (`docker compose build workflow-api
-  web`), chạy `make up` và `make app-install APP=facilities-commune`.
-- Trợ lý hỏi dữ liệu nhận câu hỏi gõ tự do (ADR 0034, `POST /v1/assistant/data-questions`): mô hình (Ollama hay API theo
-  cấu hình) viết một câu GraphQL chỉ đọc từ mô tả bảng, cột của mục menu, không thấy dòng dữ liệu nào; câu qua cùng
-  guard với câu mẫu, bị từ chối thì mô hình viết lại một lần theo lý do của guard, rồi chạy qua Hasura bằng token người
-  hỏi. Giao diện có ô hỏi cạnh các câu mẫu, ghi mô hình đã viết câu và nơi chạy, kèm câu đã chạy hay bị từ chối. Phản
-  hồi hỏi dữ liệu có thêm `model`, `attempts`, `refused_by` (null với câu mẫu); nhật ký ghi mô hình và số lượt. Mỗi lời
-  gọi mô hình có một dòng log INFO (số token, lý do dừng, thời gian, không kèm nội dung), mức log đặt bằng
-  `ASSISTANT_LOG_LEVEL`. Bản cài cũ dựng lại image (`docker compose build assistant web`) rồi chạy `make up`.
-- Người lập theo dõi hồ sơ của mình trên web (ADR 0032): thành phần Tầng 2 `cases` (`contracts/cases.schema.json`,
-  mục menu `component: cases`) liệt kê hồ sơ người đăng nhập đã lập, bước đang chờ cùng vai trò hay đơn vị xử lý, các
-  bước đã qua và kết quả; không hiện ý kiến, quyết định hay danh tính người xử lý. API quy trình có thêm
-  `GET /v1/workflow/cases` và `GET /v1/workflow/cases/{id}`. Biểu mẫu và nút của danh mục có đường "Xem hồ sơ vừa
-  lập". Gói kho vật tư có mục "Đề nghị đã lập", gói xã có mục "Hồ sơ rà soát đã lập"; bản cài cũ dựng lại image
-  (`docker compose build workflow-api web`), chạy `make up` và cài lại hai gói.
-- Thành phần bảng điều hành Tầng 2 (ADR 0033, `contracts/dashboard.schema.json`, mục menu `component: dashboard`):
-  khối thẻ số hay biểu đồ cột ngang đọc một bảng, view của gói qua GraphQL bằng token người xem; mọi số là cột do gói
-  tính sẵn, mỗi số kèm cách tính, mỗi khối có mục "Nguồn" ghi câu truy vấn đã gửi, biểu đồ luôn kèm bảng số liệu;
-  `make check-fast` kiểm bảng, cột với quyền Hasura của gói. Gói `facilities-commune` có mục "Bảng điều hành": diện
-  tích của xã, số cơ sở theo trạng thái, diện tích theo loại, biên chế, cơ sở chưa được phân công (lãnh đạo xã) và,
-  với tỉnh, số của từng xã con; ba view mới trong migration của gói. Bản cài cũ chạy lại
-  `make app-install APP=facilities-commune` và dựng lại image `web`.
-- Thành phần biểu mẫu nhập liệu Tầng 2 (ADR 0030, `contracts/form.schema.json`, mục menu `component: form`): gói
-  khai trường, danh sách chọn cố định hay đọc từ bảng của gói (lọc theo trường trước), rồi khởi tạo quy trình của
-  gói kèm Idempotency-Key hoặc thêm một dòng vào bảng của gói; `make check-fast` kiểm biểu mẫu với BPMN, khai báo
-  bước và quyền Hasura của gói. Khai báo bước có `details` để người xử lý thấy giá trị người lập điền. Gói kho vật tư
-  có mục "Lập đề nghị cấp vật tư" và "Thêm vật tư vào kho" (quản trị xã).
-- Tenant cha hoàn thành bước thuộc thẩm quyền của mình trong hồ sơ tenant con (ADR 0029): khi hồ sơ khớp dòng
-  `scope: parent` của bảng phân cấp, lúc lập hồ sơ workflow-api gán bước cho nhóm `<tenant cha>/<vai trò>`, và người của
-  tenant cha có vai trò đó thấy task trên bảng việc (kèm mã tenant con) và hoàn thành được, luôn cần OTP. Các bước khác
-  của hồ sơ và trạng thái hồ sơ vẫn 404 với tenant cha; tenant cùng cha, tenant khác nhận 404. Task của API quy trình có
-  thêm trường `tenant`. Gói `facilities-commune` có dòng để bước `decide` thuộc thẩm quyền của tỉnh khi phần vượt trên
-  1000 m² (ngưỡng minh họa, quản trị tỉnh sửa được). Tenant demo mới `tinh-khac` với `manager.k`; bản cài cũ dựng lại
-  image (`docker compose build workflow-api web`), chạy `make up`, `make seed` và
-  `make app-install APP=facilities-commune`.
-- Quy trình rà soát của gói `facilities-commune` có thêm bước "Quyết định của người có thẩm quyền" (`decide`) sau
-  bước trình, với một nút "Ghi nhận quyết định". Vai trò của bước lấy từ bảng phân cấp của xã (ADR 0028, dòng mặc
-  định `manager` ở `authorities/facilities-review.yaml`); quản trị tỉnh đổi dòng thì hồ sơ lập sau tới vai trò mới,
-  và bước cần OTP. Bản cài cũ chạy lại `make app-install APP=facilities-commune`.
-- Bảng phân cấp thẩm quyền theo tenant (ADR 0028, `core.step_authorities`): bước ghi `candidateGroups` là
-  `${authority_<bước>}` nhận vai trò do workflow-api chọn lúc khởi tạo, theo ngưỡng của một biến của hồ sơ; đổi dòng
-  thì hồ sơ lập sau tới vai trò mới. Quản trị của tenant cha (`admin.tinh`) sửa vai trò và ngưỡng của tenant con qua
-  GraphQL; bước đọc bảng cần OTP với mọi vai trò; tiền tố `authority_` dành riêng cho lõi; gói khai dòng mặc định ở
-  `authorities` của app.yaml (`contracts/authority.schema.json`). Tài khoản demo mới `admin.tinh`, `manager.tinh`.
-  workflow-api đọc CSDL bằng vai trò chỉ đọc `workflow_api` (`WORKFLOW_DB_PASSWORD`): bản cài cũ chạy `make env`, dựng
-  lại workflow-api rồi `make up` và `make seed`.
-- Keycloak hỏi OTP người có vai trò `otp_required` của client `mortise-web` thay vì chỉ người có `manager`; `manager`
-  gộp vai trò này nên người duyệt vẫn như cũ (ADR 0011, bổ sung). Người vận hành gán `otp_required` cho tài khoản nhận
-  bước phân cấp mà không phải `manager`; tài khoản demo mới `admin2.a`. `make seed` sửa luồng trên realm đang chạy.
-- Trợ lý hỏi văn bản chọn nhà cung cấp mô hình qua cấu hình (bổ sung của ADR 0021): mặc định Ollama tại chỗ như trước;
-  `ASSISTANT_LLM_PROVIDER=openai-compatible` cùng `ASSISTANT_LLM_BASE_URL`, `ASSISTANT_LLM_MODEL`,
-  `ASSISTANT_LLM_API_KEY` gọi một API tương thích OpenAI, khai thiếu thì 503 chỉ biến cần sửa. Câu trả lời ghi mô
-  hình và nơi chạy (`model`), giao diện hiện "Trả lời bởi ..., chạy tại chỗ" hay "qua API <tên máy>"; nhật ký câu
-  hỏi thêm `model_provider`, `model_host`.
-- Trợ lý hỏi dữ liệu (ADR 0027): mục menu `assistant` có khối `data` khai bảng, cột, quan hệ một-một và câu mẫu của
-  gói; bấm câu mẫu là chạy câu GraphQL chỉ đọc qua `POST /v1/assistant/data-queries`, bằng token người hỏi, sau guard
-  trên cây cú pháp (một thao tác query, chỉ bảng, cột đã khai, có limit, không introspection, không biến, bí danh hay
-  fragment). Kết quả hiện thành bảng kèm câu truy vấn đã chạy; câu bị từ chối hiện lý do. `make check-fast` và bộ cài
-  gói kiểm cột nằm trong quyền đọc của `user` và câu mẫu qua guard. Nhật ký câu hỏi thêm `query`, `row_count`,
-  `attempts` (migration mới của `platform`, `make up` áp; `make seed` áp quyền đọc mới). `make seed` thêm mục mẫu
-  "Hỏi dữ liệu mẫu" (`/apps/core/ask-data-example`); gói xã có mục "Hỏi dữ liệu cơ sở" với câu mẫu về phần vượt
-  của xã và cơ sở được phân công.
-- Gói thứ hai `supplies-commune` (kho vật tư xã), chỉ gồm tệp khai báo: kho và vật tư theo xã trên menu "Kho vật tư",
-  đề nghị cấp vật tư cho người duyệt của xã, dữ liệu demo hư cấu nạp bằng `make seed-demo`. `make e2e` kiểm mọi mục
-  menu của các gói đã cài mở được trang theo cấu hình.
-- Lập hồ sơ từ một dòng danh mục (ADR 0026): cấu hình danh mục khai nút (`detail.actions`) khởi tạo quy trình của
-  cùng gói với biến lấy từ dòng đang xem, kèm hộp xác nhận và Idempotency-Key. Màn hình chi tiết hiện được cột qua
-  quan hệ một-một (`<quan hệ>.<cột>`). Gói cơ sở vật chất xã có nút "Lập hồ sơ rà soát" trên màn hình chi tiết của cơ
-  sở; hồ sơ hiện trên bảng việc của người duyệt cùng xã.
-- Bản đồ trụ sở trong gói `facilities-commune` (mục menu `map`, `map-layers/facilities.yaml`): cán bộ xã thấy trụ sở
-  mình phụ trách tô theo phần vượt của xã, cơ sở dôi dư màu xám; `leader.tinh` thấy trụ sở đang dùng của các xã con
-  qua view `facility_rollup`.
-- Thành phần bản đồ Tầng 2 (ADR 0024, `contracts/map.schema.json`): lớp điểm đọc qua GraphQL theo cấu hình của gói,
-  nền trơn không tải tile, tô màu theo giá trị qua các bậc, chú giải và danh sách điểm; lớp khai `role` chỉ truy vấn
-  khi token có vai trò đó và gửi kèm `X-Hasura-Role`. Mục menu `component: map` mở thành phần này.
-- Nhật ký câu hỏi của trợ lý (ADR 0021): mỗi câu hỏi một dòng ở `platform.assistant_questions`, có nhật ký thay
-  đổi; dịch vụ ghi bằng vai trò CSDL `assistant` chỉ được thêm dòng (`ASSISTANT_DB_PASSWORD`, bản cài cũ chạy
-  `make env` rồi `make up`); không ghi được thì không trả lời; `tenant_admin` đọc nhật ký của tenant mình.
-- Thành phần giao diện `assistant` (ADR 0021): mục menu của gói mở khung hỏi văn bản, câu trả lời hiện kèm từng câu
-  trích nguyên văn với tên văn bản và nhãn vị trí, từ chối hiện lý do, mô hình chưa bật thì hiện cách bật. `make seed`
-  thêm mục menu mẫu của lõi "Hỏi văn bản mẫu" (`/apps/core/ask-example`) trên hai văn bản mẫu hư cấu.
-- Trợ lý hỏi văn bản (ADR 0021): `POST /v1/assistant/questions` tìm đoạn qua GraphQL bằng token người hỏi, hỏi Qwen3.5
-  4B qua Ollama với JSON Schema, chỉ trả lời khi mọi câu trích có trong đoạn đã tìm và mọi con số có trong câu được
-  trích, không thì từ chối có lý do. Chưa bật Ollama (`make ai-up`) thì câu hỏi cần mô hình nhận 503 kèm cách bật.
-- Văn bản cho trợ lý hỏi văn bản (ADR 0021): bộ cài gói nạp các tệp ở mục `knowledge` của app.yaml vào
-  `platform.knowledge_documents` và `platform.knowledge_passages` cho mọi tenant, có nhật ký thay đổi, kiểm mã đoạn
-  trùng, `superseded_by` trỏ tới đoạn có thật và văn bản mà cấu hình trợ lý hỏi; gỡ gói thì xóa. Mỗi người chỉ đọc
-  được bản của tenant mình qua GraphQL. `make seed` nạp hai văn bản mẫu hư cấu của lõi.
+- Giám sát trong profile `observability` (ADR 0037): `make obs-up` chạy Prometheus, Loki, Alloy, blackbox và Grafana
+  chỉ ở `127.0.0.1:3000` (tài khoản `admin`, mật khẩu `GRAFANA_ADMIN_PASSWORD`) với dashboard "Mortise: tổng quan";
+  `make obs-check` kiểm, `make obs-down` dừng mà giữ số liệu và log. APISIX và Keycloak xuất số liệu ở cổng nội bộ.
+- Phát hành theo tag (ADR 0036): tag `vX.Y.Z` trên main chạy lại CI, đẩy image tám dịch vụ tự viết lên
+  `ghcr.io/clauki-org/mortise-dx/<dịch vụ>:<tag>`, kéo lại không đăng nhập để smoke, rồi tạo GitHub Release kèm gói
+  `mortise-dx-<tag>.tar.gz` và `SHA256SUMS`. `MORTISE_NO_BUILD=1` cấm dựng image tại chỗ.
+- Máy chủ demo tự kéo Release mới (`deploy/pull-deploy.sh`, systemd timer): sao lưu, dựng, smoke, lỗi thì quay về tag
+  trước; CSDL không tự khôi phục (`deploy/README.md`).
+- `make heal-check SERVICE=<dịch vụ>` kiểm dịch vụ có tiến trình chính thoát được Docker dựng lại; `make restore-drill
+  CONFIRM=yes` diễn tập khôi phục trên máy trắng và đo thời gian từng giai đoạn (`docs/restore-drill.md`).
+- Bảng điều hành đọc số hồ sơ và số đo thiết bị (ADR 0035): `GET /v1/workflow/processes/{key}/counts` đếm hồ sơ của
+  một quy trình trong tenant, chỉ cho người có vai trò của một bước; nguồn `workflow` và `context` của thành phần bảng
+  điều hành. Gói `facilities-commune` có khối hồ sơ rà soát, việc đang chờ và độ ẩm thiết bị.
+- Trợ lý hỏi dữ liệu nhận câu hỏi gõ tự do (ADR 0034, `POST /v1/assistant/data-questions`): mô hình viết câu GraphQL
+  chỉ đọc từ mô tả bảng, cột, không thấy dòng dữ liệu; câu qua cùng guard với câu mẫu, bị từ chối thì viết lại một
+  lần, rồi chạy bằng token người hỏi.
+- Thành phần theo dõi hồ sơ `cases` (ADR 0032, `GET /v1/workflow/cases`, `GET /v1/workflow/cases/{id}`): người lập
+  thấy hồ sơ mình đã lập, bước đang chờ, các bước đã qua và kết quả, không thấy ý kiến hay danh tính người xử lý.
+- Thành phần bảng điều hành (ADR 0033, `contracts/dashboard.schema.json`): thẻ số và biểu đồ cột ngang đọc cột do gói
+  tính sẵn qua GraphQL bằng token người xem, mỗi số kèm cách tính và câu truy vấn đã gửi, biểu đồ kèm bảng số liệu.
+  Gói `facilities-commune` có "Bảng điều hành" cho xã và tỉnh.
+- Thành phần biểu mẫu (ADR 0030, `contracts/form.schema.json`): gói khai trường và danh sách chọn, rồi khởi tạo quy
+  trình (Idempotency-Key) hay thêm một dòng vào bảng của gói; `make check-fast` kiểm biểu mẫu với BPMN và quyền Hasura
+  của gói.
+- Tenant cha hoàn thành bước thuộc thẩm quyền của mình trong hồ sơ tenant con (ADR 0029): với dòng `scope: parent` của
+  bảng phân cấp, workflow-api gán bước cho `<tenant cha>/<vai trò>`, luôn cần OTP; các bước khác vẫn 404 với tenant
+  cha. Tenant demo `tinh-khac` với `manager.k`.
+- Quy trình rà soát của `facilities-commune` có bước "Quyết định của người có thẩm quyền" (`decide`): vai trò lấy từ
+  bảng phân cấp của xã, cần OTP; phần vượt trên 1000 m² (ngưỡng minh họa) thì bước thuộc tỉnh.
+- Bảng phân cấp thẩm quyền theo tenant (ADR 0028, `core.step_authorities`): bước có `candidateGroups` là
+  `${authority_<bước>}` nhận vai trò do workflow-api chọn lúc khởi tạo theo ngưỡng của hồ sơ; quản trị tenant cha
+  (`admin.tinh`) sửa bảng của tenant con; gói khai dòng mặc định ở `authorities` của app.yaml.
+- Keycloak hỏi OTP người có vai trò `otp_required` của client `mortise-web`; `manager` gộp vai trò này (ADR 0011, bổ
+  sung). Tài khoản demo `admin2.a`.
+- Trợ lý chọn nhà cung cấp mô hình qua cấu hình (ADR 0021, bổ sung): mặc định Ollama tại chỗ,
+  `ASSISTANT_LLM_PROVIDER=openai-compatible` gọi một API tương thích OpenAI; câu trả lời và nhật ký ghi mô hình và nơi
+  chạy.
+- Trợ lý hỏi dữ liệu (ADR 0027, `POST /v1/assistant/data-queries`): câu mẫu của gói chạy câu GraphQL chỉ đọc bằng
+  token người hỏi sau guard trên cây cú pháp (một query, chỉ bảng, cột đã khai, có limit, không introspection); kết
+  quả là bảng kèm câu đã chạy, nhật ký ghi câu và số dòng.
+- Gói thứ hai `supplies-commune` (kho vật tư xã), chỉ gồm tệp khai báo: kho và vật tư theo xã, đề nghị cấp vật tư cho
+  người duyệt của xã, dữ liệu demo hư cấu nạp bằng `make seed-demo`.
+- Lập hồ sơ từ một dòng danh mục (ADR 0026): nút `detail.actions` khởi tạo quy trình của gói với biến lấy từ dòng đang
+  xem, kèm xác nhận và Idempotency-Key. Gói `facilities-commune` có nút "Lập hồ sơ rà soát".
+- Thành phần bản đồ (ADR 0024, `contracts/map.schema.json`): lớp điểm đọc qua GraphQL theo cấu hình của gói, nền trơn
+  không tải tile, tô màu theo bậc, chú giải và danh sách điểm. Gói `facilities-commune` có bản đồ trụ sở tô theo phần
+  vượt của xã.
+- Trợ lý hỏi văn bản (ADR 0021, `POST /v1/assistant/questions`): tìm đoạn bằng token người hỏi, hỏi Qwen3.5 4B qua
+  Ollama, chỉ trả lời khi mọi câu trích và con số có trong đoạn đã tìm, không thì từ chối có lý do. Giao diện hiện
+  từng câu trích kèm tên văn bản và vị trí.
+- Nhật ký câu hỏi của trợ lý (ADR 0021, `platform.assistant_questions`): dịch vụ chỉ được thêm dòng, không ghi được
+  thì không trả lời; `tenant_admin` đọc nhật ký của tenant mình.
+- Văn bản cho trợ lý (ADR 0021): bộ cài gói nạp mục `knowledge` của app.yaml vào `platform.knowledge_documents` và
+  `platform.knowledge_passages`, có nhật ký; mỗi người chỉ đọc bản của tenant mình.
 - Profile `ai` (ADR 0021): `make ai-up` chạy Ollama 0.40.16, tải Qwen3.5 4B và dừng nếu trọng số khác digest ghim
-  trong `core/ollama/models.txt`. Hợp đồng cho trợ lý hỏi văn bản: cấu hình thành phần
-  (`contracts/assistant.schema.json`) và văn bản của gói (`contracts/knowledge.schema.json`, mục `knowledge` trong
-  app.yaml).
-- Gói chỉ gồm tệp khai báo (ADR 0022): `make check-fast` kiểm gói trong `DECLARATIVE_APPS` của Makefile không có tệp
-  mã (`scripts/check-declarative.sh`); `make seed-demo` nạp `seed/demo.yaml` của gói không có bộ nạp riêng bằng bộ
-  nạp chung `scripts/app-seed.py`, theo `contracts/seed.schema.json`.
-- Quy trình rà soát của gói `facilities-commune`: bốn mắt; phần vượt trên ngưỡng thì công khai một thời hạn rồi
-  trình người có thẩm quyền, từ ngưỡng trở xuống thì báo cáo để tiếp tục sử dụng. Ngưỡng và thời hạn là `settings`
-  trong `app.yaml`, ghi đè khi cài bằng `make app-install SETTINGS=...` (ADR 0019).
-- Tọa độ cơ sở trong gói `facilities-commune` (ADR 0020): cột `latitude`, `longitude` (WGS 84) có kiểm miền giá
-  trị, quan hệ `summary` để mỗi cơ sở đọc phần vượt của xã mình, view `facility_rollup` cho `leader.tinh` thấy mã,
-  tên, vị trí trụ sở đang dùng của ba xã kèm phần vượt mà không đọc được bảng gốc. Dữ liệu demo có tọa độ hư cấu;
-  bản cài đã nạp demo chạy lại `make seed-demo` để nhận tọa độ.
-- `make archive` xóa đoạn nhật ký đã lưu trữ khỏi CSDL trong cùng giao dịch ghi nhận đoạn (`core.audit_purge`);
-  mọi đường xóa khác vẫn bị chặn. Chuỗi băm nối qua phần đã xóa: `make audit-verify` đối chiếu cả neo nằm trong
-  đoạn đã chuyển đi, `make cold-verify` tính lại chuỗi của mọi đoạn từ tệp.
-- Menu của giao diện dựng từ các gói đã cài (`platform_menu_items`); mục của gói mở thành phần danh mục theo
-  cấu hình của gói tại `/apps/<gói>/<mục>`. Cán bộ xã mở "Cơ sở nhà, đất" xem cơ sở, tòa, phòng mình được phân
-  công. `make e2e` cần gói `facilities-commune` đã cài.
-- Gói `facilities-commune` mở việc "Kiểm tra kho lưu trữ" cho người duyệt của xã khi độ ẩm kho vượt 75% liên tục 5
-  phút (ngưỡng minh họa, chưa theo văn bản nào): luật `rules/archive-humidity.yaml`, quy trình
-  `archive-inspection`. `/v1/context/temporal/entities/{id}` đọc lịch sử số đo theo NGSI-LD.
-- Luật ngưỡng (`contracts/threshold-rule.schema.json`): số đo của thiết bị vượt ngưỡng liên tục đủ lâu thì
-  iot-bridge mở quy trình cho tenant của thiết bị qua workflow-api, không mở thêm khi hồ sơ cũ còn mở. Gói khai luật
-  ở mục `rules` của app.yaml; bộ cài gói nạp vào `core.threshold_rules`; `make seed` nạp luật mẫu của lõi.
-- Tài khoản dịch vụ cho workflow-api (ADR 0017): client Keycloak `mortise-iot-bridge` (client credentials, secret
-  `IOT_BRIDGE_CLIENT_SECRET`, tạo bằng `make seed`) mở quy trình thay cho tenant ghi ở header `X-Mortise-Tenant`, chỉ
-  được khởi tạo; `Idempotency-Key` của dịch vụ chỉ khớp quy trình còn mở. Hợp đồng
-  `contracts/service-token-claims.schema.json`. Bản cài cũ chạy `make env`, `make up` rồi `make seed` để có secret,
-  cấu hình workflow-api và client.
-- Tenant cha (ADR 0016): cột `core.tenants.parent_id`, vai trò `rollup_reader` để tenant cha đọc tổng hợp của
-  tenant con qua view của gói; dữ liệu demo có tenant `tinh-mau` là cha của ba xã, tài khoản `leader.tinh` thấy
-  diện tích được phép, đang dùng và phần vượt của ba xã (view `area_rollup`) mà không đọc được cơ sở, tòa, phòng.
-- Phân công cán bộ theo cơ sở trong gói `facilities-commune` (ADR 0015): cán bộ chỉ thấy và sửa cơ sở mình được
-  phân công; `manager` đọc toàn xã; `tenant_admin` (tài khoản demo `admin.a`, `admin.b`, `admin.c`) tạo cơ sở và tự
-  sửa phân công qua GraphQL. `scripts/hasura-metadata.py` quản lý cả quan hệ Hasura.
-- Gói `facilities-commune` tính diện tích được phép và phần vượt tiêu chuẩn, định mức của từng xã theo NĐ 155/2025
-  sửa bởi NĐ 369/2026 (view `area_summary`), từ biên chế theo dòng phụ lục mức m² có trích dẫn và diện tích
-  chuyên dùng; dữ liệu demo có biên chế, xã A vượt 420 m².
-- `make app-install` nạp cả quy trình BPMN, khai báo bước và menu của gói cho mọi xã; menu đọc được qua GraphQL
-  (`platform_menu_items`) kèm nội dung cấu hình. `make app-uninstall` xóa chúng, kể cả hồ sơ đang chạy theo quy
-  trình của gói. Xã tạo sau khi cài gói thì chạy lại `make app-install`.
-- `make seed-demo`: dữ liệu demo hư cấu của ba xã cho gói `facilities-commune` (cơ sở, tòa, phòng), nạp qua cổng bằng
-  tài khoản của từng xã; chạy lại không tạo bản trùng.
-- Khung giao diện Tầng 2 tại `/` của cổng (`platform/web/`, React, Mantine): đăng nhập Authorization Code + PKCE
-  qua Keycloak, đăng xuất, tự làm mới token, đọc đơn vị của người dùng qua GraphQL. nginx phục vụ tệp tĩnh kèm
-  Content-Security-Policy; đường sai dưới `/v1` trả 404. `make web-check` (Biome, kiểu, build, giấy phép phụ thuộc)
-  chạy trong CI; `make seed` cho máy chủ phát triển giao diện (`localhost:5173`) đăng nhập được.
-- Giấy phép Apache-2.0 và header SPDX cho mọi tệp, kiểm bằng `make check-fast`; hook pre-push qua `make hooks`;
-  CI chạy đúng lệnh này với mọi pull request.
-- Quy tắc làm việc (`AGENTS.md`), hướng dẫn đóng góp, quy tắc ứng xử, chính sách bảo mật, mẫu issue và pull
-  request.
-- ADR 0001 về quy ước dự án, ADR 0002 về chọn thành phần lõi và giấy phép, ADR 0003 về bố cục ba tầng.
-- Lõi Tầng 1 chạy bằng Docker Compose: PostgreSQL + pgvector, Keycloak, APISIX (standalone), Hasura CE, SeaweedFS.
+  trong `core/ollama/models.txt`.
+- Gói chỉ gồm tệp khai báo (ADR 0022): `make check-fast` kiểm gói trong `DECLARATIVE_APPS` không có tệp mã; `make
+  seed-demo` nạp `seed/demo.yaml` bằng bộ nạp chung.
+- Quy trình rà soát của `facilities-commune`: bốn mắt; phần vượt trên ngưỡng thì công khai một thời hạn rồi trình
+  người có thẩm quyền. Ngưỡng và thời hạn là `settings` của gói, ghi đè bằng `make app-install SETTINGS=...` (ADR
+  0019).
+- Tọa độ cơ sở trong `facilities-commune` (ADR 0020): cột `latitude`, `longitude` (WGS 84) có kiểm miền giá trị; view
+  `facility_rollup` cho `leader.tinh` thấy trụ sở đang dùng của các xã kèm phần vượt mà không đọc bảng gốc.
+- `make archive` xóa đoạn nhật ký đã lưu trữ khỏi CSDL trong cùng giao dịch ghi nhận đoạn; chuỗi băm nối qua phần đã
+  xóa, `make audit-verify` và `make cold-verify` kiểm cả phần đó.
+- Menu của giao diện dựng từ các gói đã cài; mục của gói mở thành phần danh mục theo cấu hình tại `/apps/<gói>/<mục>`.
+- Gói `facilities-commune` mở việc "Kiểm tra kho lưu trữ" khi độ ẩm kho vượt 75% liên tục 5 phút (ngưỡng minh họa);
+  `/v1/context/temporal/entities/{id}` đọc lịch sử số đo.
+- Luật ngưỡng (`contracts/threshold-rule.schema.json`): số đo vượt ngưỡng liên tục đủ lâu thì iot-bridge mở quy trình
+  cho tenant của thiết bị, không mở thêm khi hồ sơ cũ còn mở; gói khai luật ở mục `rules` của app.yaml.
+- Tài khoản dịch vụ cho workflow-api (ADR 0017): client `mortise-iot-bridge` (client credentials) chỉ được khởi tạo
+  quy trình thay cho tenant ghi ở `X-Mortise-Tenant` (`contracts/service-token-claims.schema.json`).
+- Tenant cha (ADR 0016): `core.tenants.parent_id` và vai trò `rollup_reader`; `leader.tinh` của `tinh-mau` thấy diện
+  tích tổng hợp của ba xã (view `area_rollup`) mà không đọc được cơ sở, tòa, phòng.
+- Phân công cán bộ theo cơ sở trong `facilities-commune` (ADR 0015): cán bộ chỉ thấy và sửa cơ sở được phân công,
+  `manager` đọc toàn xã, `tenant_admin` tạo cơ sở và sửa phân công.
+- Gói `facilities-commune` tính diện tích được phép và phần vượt tiêu chuẩn, định mức của từng xã theo NĐ 155/2025 sửa
+  bởi NĐ 369/2026 (view `area_summary`), mức m² có trích dẫn.
+- `make app-install` nạp cả quy trình BPMN, khai báo bước và menu của gói cho mọi xã; `make app-uninstall` xóa chúng,
+  kể cả hồ sơ đang chạy.
+- `make seed-demo`: dữ liệu demo hư cấu của ba xã cho `facilities-commune`, nạp qua cổng bằng tài khoản từng xã, chạy
+  lại không tạo bản trùng.
+- Khung giao diện Tầng 2 tại `/` (`platform/web/`, React, Mantine): đăng nhập Authorization Code + PKCE qua Keycloak,
+  tự làm mới token; nginx phục vụ kèm Content-Security-Policy; `make web-check`.
+- Trang "Việc của tôi": việc đang chờ người đăng nhập, gần hạn đứng đầu, lọc theo hạn, hiện tên hồ sơ, người gửi và
+  hạn. Màn hình xử lý một việc hiện thông tin hồ sơ, biểu mẫu và nút quyết định theo khai báo của bước.
+- Thành phần danh mục (ADR 0013, `contracts/catalog.schema.json`): danh sách có tìm, lọc, sắp xếp, phân trang và chi
+  tiết có đối tượng con nhiều cấp theo cấu hình của gói; gói `facilities-commune` khai danh mục cơ sở → tòa → phòng.
+- Khai báo bước của quy trình (`contracts/workflow.schema.json`, bảng `platform.workflow_steps`): biểu mẫu, nút quyết
+  định và hồ sơ liên quan của từng bước; `make check-fast` kiểm mọi userTask có khai báo.
+- Task của API quy trình có `process`, `step`, `due`; khởi tạo quy trình nhận `Idempotency-Key`, gửi lặp không tạo quy
+  trình thứ hai.
+- Gói Tầng 3 đầu tiên `apps/facilities-commune`: bảng cơ sở → tòa → phòng theo tenant, có nhật ký; `make app-install`,
+  `make app-uninstall CONFIRM=yes`, `make app-status`, `make app-smoke`. Gỡ gói thì lõi vẫn qua smoke.
+- Hợp đồng API giữa các tầng trong `contracts/` (ADR 0008): JSON Schema cho claim token và `app.yaml`, OpenAPI của
+  workflow-api; `make check-fast` báo lỗi khi lệch, `make smoke` kiểm token thật.
+- Lược đồ CSDL của lõi quản lý bằng migration dbmate: `make up` áp migration chưa chạy; `make migrate-new`, `make
+  migrate-status`.
+- Đăng nhập hai bước cho người duyệt (ADR 0011): vai trò `manager` nhập mã OTP, token có claim `amr`, workflow-api từ
+  chối duyệt khi token không có bước OTP; `make otp` cho tài khoản demo.
+- Nhật ký thay đổi `core.audit_log` (ADR 0009): ai sửa gì, lúc nào, trước và sau; chuỗi băm phát hiện sửa lén, `make
+  audit-verify` chỉ ra chỗ bị sửa, `make restore` đối chiếu băm cuối trong bản sao lưu.
+- Kho lạnh cho nhật ký (ADR 0014): `make archive BEFORE=<ngày>` xuất dòng cũ sang Parquet trên SeaweedFS có kiểm băm
+  từng dòng; `make cold-query SQL=…` truy vấn gộp bằng DuckDB.
+- API tệp `/v1/files` (files-api trước SeaweedFS): tải lên, xem, tải xuống theo tenant; giới hạn cỡ, băm SHA-256,
+  thông tin tệp trong `core.files`.
+- Quét mã độc tệp tải lên bằng ClamAV trước khi lưu (ADR 0010): tệp nhiễm trả 422 kèm tên mẫu nhận diện và không được
+  lưu; chưa quét được thì 503.
+- Dữ liệu thiết bị theo NGSI-LD (ADR 0012): Scorpio với CSDL PostGIS riêng, đọc qua `/v1/context` (context-api) chỉ
+  thấy thiết bị của đơn vị mình.
+- Nhận số đo qua MQTT (ADR 0012): Mosquitto trong mạng riêng `ot`, mỗi thiết bị một tài khoản chỉ gửi vào chủ đề của
+  mình (`make device-add`, `make device-remove`); `iot-bridge` ghi vào Scorpio theo tenant của chủ đề.
+- Bộ giả lập thiết bị demo (`devices/simulator`, `make simulate`): gửi nhiệt độ, độ ẩm, có người, điện năng qua MQTT;
+  `--set` ép một số đo để thử vượt ngưỡng.
+- `make e2e`: kịch bản demo trên trình duyệt thật qua cổng (Playwright).
+- `make backup` và `make restore`: sao lưu PostgreSQL (gồm CSDL của Scorpio), SeaweedFS và `.env` kèm checksum; khôi
+  phục ghi đè có xác nhận.
+- Workflow BPMN tại `/v1/workflow/*` (ADR 0004): Flowable đứng sau `workflow-api`, cách ly tenant, chỉ vai trò ứng
+  viên được hoàn thành task, quy tắc bốn mắt; `make test` chạy kiểm thử đơn vị.
+- Lõi Tầng 1 chạy bằng Docker Compose: PostgreSQL + pgvector, Keycloak, APISIX (standalone), Hasura CE, SeaweedFS;
+  `make up` chờ tới khi cổng đã nạp xong tuyến đường.
 - Cổng APISIX chặn yêu cầu không token hoặc token giả, chặn console quản trị Keycloak, giới hạn tần suất API theo
-  token (không theo IP, để người dùng sau cùng một NAT hay tunnel không chặn lẫn nhau).
-- Hai tenant demo cách ly dữ liệu bằng claim `tenant` và quyền Hasura theo dòng.
-- `make up`, `make seed`, `make smoke` (kiểm tra đầu-cuối); CI dựng lõi trên máy trắng và chạy smoke.
-  `make env` tự thêm biến mới từ `.env.example` vào `.env` đã có.
-- Tài liệu API của lõi (`docs/api.md`) kèm ví dụ và ý nghĩa mã lỗi.
-- Workflow BPMN tại `/v1/workflow/*`: Flowable đứng sau `workflow-api`, cách ly tenant, chỉ vai trò ứng viên được
-  hoàn thành task, quy tắc bốn mắt; quy trình mẫu `core-approval` deploy theo tenant bằng `make seed`. `make test`
-  chạy kiểm thử đơn vị; ADR 0004 về lớp kiểm soát quyền trước Flowable.
-- Tài liệu công cụ sử dụng (`docs/tools.md`): vai trò, cấu hình và cách xem của từng thành phần lõi và công cụ
-  phát triển.
-- `make backup` và `make restore`: sao lưu PostgreSQL (mọi CSDL và vai trò), SeaweedFS và `.env` kèm checksum;
-  khôi phục ghi đè có xác nhận. CI kiểm cả vòng sao lưu, xóa sạch, khôi phục.
-- `make up` chờ tới khi cổng APISIX đã nạp xong tuyến đường (healthcheck), không chỉ tới khi container chạy.
-- CI bỏ qua bước dựng lõi khi pull request chỉ đổi tài liệu, chỉ chạy vòng sao lưu và khôi phục khi đổi phần nó
-  phụ thuộc; push lên `main` luôn chạy đủ. Tên job và bước bằng tiếng Anh.
-- Lược đồ CSDL của lõi quản lý bằng migration dbmate: `make up` áp migration chưa chạy, bản cài đã có dữ liệu nâng
-  cấp không cần `make reset`; `make migrate-new`, `make migrate-status`. Tenant demo chuyển sang `make seed`.
-- Hợp đồng API giữa các tầng trong `contracts/`: JSON Schema cho claim token và `app.yaml`, OpenAPI của
-  workflow-api có schema phản hồi và lỗi; `make check-fast` báo lỗi khi lệch, `make smoke` kiểm token thật.
-  Ví dụ sai trong `contracts/examples/invalid/` phải bị từ chối, mỗi tệp phạm đúng một luật.
-- Task của API quy trình có thêm `process`, `step` và `due` để giao diện biết việc đang ở bước nào và hạn khi
-  nào; khởi tạo quy trình nhận header `Idempotency-Key`, gửi lặp không tạo quy trình thứ hai.
-- Định dạng khai báo bước của quy trình (`contracts/workflow.schema.json`): biểu mẫu, nút quyết định và hồ sơ
-  liên quan của từng bước người làm; `make check-fast` kiểm mọi userTask trong BPMN của gói đều có khai báo.
-- Gói Tầng 3 đầu tiên `apps/facilities-commune`: bảng cơ sở → tòa → phòng với khóa ngoại ghép kèm tenant, quyền
-  Hasura theo tenant, nhật ký thay đổi, migration và bảng theo dõi riêng của gói; `make app-install`,
-  `make app-uninstall` (bắt `CONFIRM=yes` vì xóa dữ liệu của gói), `make app-status`, `make app-smoke` đọc `app.yaml`
-  để cài và gỡ gói trên lõi đang chạy; tệp quyền của gói chỉ được khai bảng trong lược đồ của gói. Gói đã cài thì
-  `make seed` áp lại quyền và `make smoke` kiểm lệch như bảng của lõi. CI cài gói, chạy smoke của gói, seed và smoke
-  khi gói đang cài, gỡ gói rồi kiểm lõi vẫn qua.
-- Bảng `platform.workflow_steps` (Tầng 2, lịch sử migration riêng): khai báo bước của quy trình theo tenant, đọc
-  qua GraphQL; `make seed` nạp khai báo của quy trình mẫu.
-- Định dạng cấu hình của thành phần danh mục (`contracts/catalog.schema.json`, ADR 0013): bảng đọc, trường, cột
-  của danh sách, ô tìm, ô lọc, thứ tự, cỡ trang và đối tượng con; `make check-fast` kiểm cấu hình danh mục của
-  mọi gói trong `apps/`.
-- Thành phần danh mục của giao diện (`platform/web/src/Catalog.tsx`): danh sách có tìm, lọc, sắp xếp, phân trang và
-  màn hình chi tiết có bảng đối tượng con nhiều cấp, tất cả theo cấu hình của gói; việc làm được và giới hạn ghi ở
-  `contracts/catalog.component.yaml`. Chưa có trang nào gọi thành phần. `make web-check` chạy thêm kiểm thử đơn vị
-  (Vitest).
-- Gói `apps/facilities-commune` khai cấu hình danh mục cơ sở → tòa → phòng (`catalog/facilities.yaml`, mục `menu`
-  `facilities` trong `app.yaml`); chưa hiện trên giao diện cho tới khi có lệnh cài gói đầy đủ.
-- Giao diện có menu bên trái và trang "Việc của tôi": các việc đang chờ người đăng nhập, việc gần hạn đứng đầu,
-  lọc quá hạn, còn hạn hoặc không đặt hạn.
-- Bảng việc hiện tên hồ sơ (trường `title` mới của khai báo bước), người gửi, hạn dạng "còn 3 ngày", "quá hạn 1
-  ngày", và số việc của từng bộ lọc; trang đăng nhập và khung trang có nền và khung tách phần.
-- Màn hình xử lý một việc: thông tin hồ sơ, biểu mẫu và các nút quyết định theo khai báo của bước; lỗi như quy tắc
-  bốn mắt hiện đúng lý do. Mở đường dẫn tới một việc khi chưa đăng nhập thì đăng nhập xong quay lại đúng việc đó.
-- API tệp `/v1/files` (files-api trước SeaweedFS): tải lên, xem thông tin, tải xuống theo tenant; giới hạn cỡ,
-  băm SHA-256, thông tin tệp trong `core.files`. Thêm biến `FILES_DB_PASSWORD` (`make env` tự thêm); vai trò CSDL
-  của dịch vụ được tạo mỗi lần `make up`, nên bản cài đã có dữ liệu nâng cấp không cần `make reset`.
-- Quét mã độc tệp tải lên bằng ClamAV trước khi lưu (ADR 0010): tệp nhiễm trả 422 kèm tên mẫu nhận diện và không
-  được lưu; chưa quét được thì 503. Tệp đã quét có trạng thái `clean`. Lỗi tham số của `/v1/files` giờ trả
-  `{"error": "..."}` như mọi lỗi khác, thay cho `{"detail": [...]}`. Lõi cần thêm khoảng 1 GB RAM.
-- `make e2e`: kịch bản demo chạy trên trình duyệt thật qua cổng (Playwright): duyệt hồ sơ trên web, quy tắc bốn mắt,
-  người duyệt của đơn vị khác không thấy, không duyệt được; CI chạy trong job end-to-end và giữ ảnh chụp, dấu vết
-  khi hỏng. Thêm tài khoản demo `manager.b` (người duyệt của tenant `xa-b`).
-- Nhật ký thay đổi `core.audit_log` (ADR 0009): ghi ai sửa gì, lúc nào, trước và sau trên tệp, đơn vị, khai báo
-  bước; chuỗi băm phát hiện sửa lén; `make audit-verify` chỉ ra chỗ bị sửa; `make backup` ghi băm cuối, `make restore`
-  đối chiếu lại.
-- Đăng nhập hai bước cho người duyệt (ADR 0011): vai trò `manager` nhập thêm mã OTP khi đăng nhập, lần đầu thì cài
-  ứng dụng OTP qua mã QR; token có claim `amr`; workflow-api từ chối duyệt khi token không có bước OTP. Thêm biến
-  `DEMO_OTP_SECRET` (`make env` tự thêm) và `make otp` cho tài khoản demo. Bản cài đã dựng cần `make reset` để nạp
-  lại realm.
-- Kho lạnh cho nhật ký thay đổi (ADR 0014): `make archive BEFORE=<ngày>` xuất dòng cũ sang Parquet trên SeaweedFS,
-  chỉ ghi nhận đoạn khi băm tính lại từ tệp khớp từng dòng; `make cold-query SQL=…` truy vấn gộp kho lạnh và CSDL
-  bằng DuckDB. SeaweedFS chạy với `-volume.max=100` để có bucket thứ hai.
-- Dữ liệu thiết bị theo chuẩn NGSI-LD (ADR 0012): Scorpio với CSDL PostGIS riêng, đọc qua cổng tại `/v1/context`
-  (context-api) chỉ thấy thiết bị của đơn vị mình, chỉ đọc. `make backup` và `make restore` gồm CSDL của Scorpio.
-  Thêm biến `SCORPIO_DB_PASSWORD`, `SCORPIO_PORT` (`make env` tự thêm).
-- Nhận số đo thiết bị qua MQTT (ADR 0012): Mosquitto trong mạng riêng `ot`, mỗi thiết bị một tài khoản chỉ gửi vào
-  chủ đề của mình (`make device-add`, `make device-remove`), cầu nối `iot-bridge` ghi vào Scorpio theo tenant của chủ
-  đề và chỉ cho tenant có thật; định dạng tin trong `contracts/device-message.schema.json`. `make seed` cấp tài khoản
-  cho thiết bị demo. Thêm biến `MQTT_BRIDGE_PASSWORD`, `IOT_BRIDGE_DB_PASSWORD`, `DEMO_DEVICE_PASSWORD`.
-- Bộ giả lập thiết bị demo (`devices/simulator`, `make simulate`): gửi nhiệt độ, độ ẩm, có người, điện năng qua MQTT
-  bằng tài khoản của từng thiết bị; `--set` ép một số đo để thử vượt ngưỡng. `make smoke` chạy một lượt.
+  token (không theo IP, để người dùng sau cùng một NAT không chặn lẫn nhau).
+- Tenant demo cách ly dữ liệu bằng claim `tenant` và quyền Hasura theo dòng.
+- `make up`, `make seed`, `make smoke` (kiểm tra đầu-cuối); `make env` tự thêm biến mới từ `.env.example` vào `.env`
+  đã có.
+- Tài liệu API của lõi (`docs/api.md`) và tài liệu công cụ (`docs/tools.md`).
+- Giấy phép Apache-2.0 và header SPDX cho mọi tệp, kiểm bằng `make check-fast`; hook pre-push qua `make hooks`.
+- Quy tắc làm việc (`AGENTS.md`), hướng dẫn đóng góp, quy tắc ứng xử, chính sách bảo mật, mẫu issue và pull request;
+  ADR 0001–0003 về quy ước, thành phần lõi và bố cục ba tầng.
 
 ### Changed
 
-- Tenant demo đổi từ `xuong-a`, `xuong-b` sang ba xã của "Tỉnh Mẫu" (tỉnh hư cấu): `xa-a`, `xa-b`, `xa-c`, thêm tài
-  khoản `user.c`, `manager.c`. Bản cài đã dựng cần `make reset` để nạp lại realm.
-- Quyền dữ liệu của Hasura khai báo trong repo (`core/hasura/`, `platform/schema/hasura/`) thay cho lệnh gọi API
-  trong seed. `make seed` ghi đè quyền đã bị sửa sai, `make smoke` báo lỗi khi Hasura lệch khỏi tệp,
-  `make check-fast` báo lỗi khi một quyền không lọc theo tenant.
-- Cổng chỉ mở các đường đăng nhập OIDC của realm `mortise`; console quản trị, realm `master`, trang tài khoản và
-  các endpoint không dùng của Keycloak trả 403. Smoke kiểm các đường bị chặn và một lần đăng nhập PKCE đi trọn qua
-  cổng. ADR 0007 ghi trang đăng nhập là bề mặt giao diện duy nhất của lõi.
-- Client giao diện `mortise-web` chỉ còn Authorization Code + PKCE, không nhận mật khẩu trực tiếp; redirect URI và
-  web origin theo `MORTISE_PUBLIC_URL`. Smoke và ví dụ lấy token bằng lệnh dùng client `mortise-test` do `make seed`
-  tạo. Bản cài đã dựng cần `make reset` để nạp lại realm.
-- Định danh kỹ thuật đổi từ `dxos` sang `mortise` cho khớp tên sản phẩm: realm Keycloak `mortise`, client
-  `mortise-web`, CSDL `mortise`, project compose `mortise`, biến `MORTISE_PUBLIC_URL` và `MORTISE_BIND` (thay
-  `DXOS_PUBLIC_URL`, `DXOS_BIND`). **Không tương thích với bản cài cũ**, xem hướng dẫn nâng cấp bên dưới.
-- Quy trình mẫu của lõi chuyển từ `core/workflow/processes/` sang `core/workflow/fixtures/` và ghi rõ chỉ dùng để
-  kiểm thử lõi; quy trình nghiệp vụ nằm trong gói ở `apps/`.
-
-#### Nâng cấp bản cài đã dựng trước khi đổi tên
-
-Tên CSDL, realm và project compose đều đổi, nên dữ liệu cũ không tự chuyển sang. Bản sao lưu làm trước khi đổi tên
-vẫn nạp được, nhưng tạo lại CSDL và realm tên cũ mà bản cài mới không dùng tới, nên hệ thống sẽ không chạy.
-
-```bash
-docker compose -p dxos down -v   # xóa container và dữ liệu của project cũ
-make up seed smoke               # dựng lại với tên mới
-```
-
-Trong `.env` đã có, đổi tên `DXOS_PUBLIC_URL` thành `MORTISE_PUBLIC_URL` và `DXOS_BIND` thành `MORTISE_BIND` nếu
-từng đặt giá trị khác mặc định; `make env` tự thêm hai biến mới với giá trị mặc định.
+- Tenant demo là ba xã của "Tỉnh Mẫu" (hư cấu): `xa-a`, `xa-b`, `xa-c`, thay cho `xuong-a`, `xuong-b`.
+- Quyền dữ liệu của Hasura khai báo trong repo (`core/hasura/`, `platform/schema/hasura/`): `make seed` ghi đè quyền
+  bị sửa sai, `make smoke` báo lệch, `make check-fast` báo quyền không lọc theo tenant.
+- Cổng chỉ mở các đường đăng nhập OIDC của realm `mortise`; console quản trị, realm `master` và trang tài khoản của
+  Keycloak trả 403 (ADR 0007).
+- Client giao diện `mortise-web` chỉ còn Authorization Code + PKCE, không nhận mật khẩu trực tiếp; kiểm thử dùng
+  client `mortise-test`.
+- Định danh kỹ thuật đổi từ `dxos` sang `mortise`: realm, client, CSDL, project compose, biến `MORTISE_PUBLIC_URL` và
+  `MORTISE_BIND`.
+- Quy trình mẫu của lõi chuyển sang `core/workflow/fixtures/`, chỉ dùng để kiểm thử lõi.
 
 ### Fixed
 
-- Nội dung của một bước chỉ do người làm bước đó ghi (ADR 0031): mỗi userTask khai trường nó ghi bằng
-  `flowable:formProperty`; workflow-api trả 400, nêu tên biến và bước, khi người lập gửi trường của bất kỳ bước nào
-  hay người hoàn thành một bước gửi trường của bước khác. Trước đây người lập, người duyệt hay người trình gửi sẵn
-  được `decision` của bước quyết định trong quy trình rà soát của gói `facilities-commune`. `make check-fast` kiểm
-  trường trong khai báo bước khớp formProperty, và biến iot-bridge hay nút danh mục gửi lúc khởi tạo không trùng trường
-  của bước; quy trình mẫu mới `core-handoff`. Bản cài cũ chạy lại `make seed` và
-  `make app-install APP=<gói>` để deploy BPMN mới.
-- Người lập hồ sơ không đặt sẵn được quyết định của người duyệt (ADR 0025): workflow-api trả 400 khi biến khởi tạo
-  trùng tên dùng trong điều kiện rẽ nhánh sau một bước người làm của BPMN đã deploy, ví dụ `approved`. Trước đây
-  người lập gửi `approved: true` lúc khởi tạo thì người duyệt hoàn thành mà không gửi `approved` vẫn thành đã duyệt.
-  Quy trình rà soát của gói `facilities-commune` bỏ listener xóa `approved` vì lõi đã chặn.
-- `make backup` dừng các dịch vụ ghi dữ liệu (cổng, files-api, iot-bridge…) trong lúc sao lưu rồi bật lại; trước đây
-  tệp tải lên giữa lúc dump CSDL và lúc chép kho tệp thành đối tượng không có dòng `core.files`. `make restore` kiểm
-  `core.files` khớp kho tệp sau khi khôi phục (`make files-verify`) và báo lỗi nếu lệch: bản sao lưu cũ có đối tượng
-  mồ côi vẫn được nạp đủ, nhưng lệnh thoát mã lỗi kèm danh sách đối tượng lệch.
-- `make restore` dừng cả files-api trong lúc nạp dữ liệu; trước đây nó vẫn chạy và có thể ghi tệp xen vào dữ liệu đang
-  bị ghi đè.
-- Cổng trả lỗi `401` của `/v1/graphql` và `/v1/workflow/*` dạng JSON `{"error": "..."}` như hợp đồng ghi, thay vì
-  trang HTML. Ví dụ sai trong `contracts/examples/invalid/` phải bị từ chối đúng luật mà tệp được viết ra để thử;
-  `scripts/contracts.sh` báo lỗi khi gõ sai tham số.
-- API quy trình trả 422 khi thân request có khóa ngoài `variables`, thay vì bỏ qua khóa đó. Trước đây gửi
-  `{"approved": true}` thiếu lớp `variables` vẫn hoàn thành task, nhưng quy trình không nhận được biến và rẽ sang
-  nhánh mặc định. Lỗi 422 có dạng `{"error": "..."}` như các lỗi khác của API.
-- Flowable không còn tự deploy các quy trình minh họa của ảnh `flowable-rest`; smoke kiểm không có quy trình nào
-  ngoài các tenant. Bản cài đã dựng vẫn giữ các quy trình đó trong CSDL, smoke báo lỗi cho tới khi `make reset`.
+- Nội dung của một bước chỉ do người làm bước đó ghi (ADR 0031): workflow-api trả 400 khi người lập hay người làm bước
+  khác gửi trường của một bước; trước đây người lập gửi sẵn được `decision` của bước quyết định.
+- Người lập không đặt sẵn được quyết định của người duyệt (ADR 0025): workflow-api trả 400 khi biến khởi tạo trùng
+  biến dùng trong điều kiện rẽ nhánh sau một bước người làm, ví dụ `approved`.
+- `make backup` dừng các dịch vụ ghi dữ liệu trong lúc sao lưu; trước đây tệp tải lên giữa chừng thành đối tượng không
+  có dòng `core.files`. `make restore` kiểm `core.files` khớp kho tệp (`make files-verify`).
+- `make restore` dừng cả files-api trong lúc nạp dữ liệu, để không có tệp ghi xen vào dữ liệu đang bị ghi đè.
+- Cổng trả lỗi 401 của `/v1/graphql` và `/v1/workflow/*` dạng JSON `{"error": "..."}` như hợp đồng, thay vì trang
+  HTML.
+- API quy trình trả 422 khi thân request có khóa ngoài `variables`, thay vì bỏ qua khóa đó và rẽ sang nhánh mặc định.
+- Flowable không còn tự deploy các quy trình minh họa của image `flowable-rest`.
 
 [Unreleased]: https://github.com/clauki-org/mortise-dx/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/clauki-org/mortise-dx/releases/tag/v0.1.0
