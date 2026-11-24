@@ -23,7 +23,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   apisix`.
 - Phát hành theo tag và triển khai kéo về (ADR 0036): tag `vX.Y.Z` trên main chạy lại toàn bộ CI, dựng image tám
   dịch vụ tự viết lên `ghcr.io/clauki-org/mortise-dx/<dịch vụ>:<tag>`, kéo lại không đăng nhập để dựng lõi, seed,
-  smoke, rồi tạo GitHub Release từ mục của bản trong CHANGELOG (`scripts/release-notes.sh`). Tám
+  smoke, rồi tạo GitHub Release từ mục của bản trong CHANGELOG (`scripts/release-notes.sh`), đính kèm gói mã nguồn
+  `mortise-dx-<tag>.tar.gz` và `SHA256SUMS`. Tám
   dịch vụ tự viết có `image` theo `MORTISE_IMAGE_PREFIX`, `MORTISE_VERSION`; máy phát triển dựng như trước với tên
   `mortise.invalid/<dịch vụ>:dev` (bản cài cũ dựng lại một lần ở `make up` kế tiếp, image cũ `mortise-<dịch vụ>` xóa
   được); `MORTISE_NO_BUILD=1` cấm dựng tại chỗ, mọi lệnh có thể dựng đi qua `scripts/compose.sh`. Máy chủ demo cài `deploy/pull-deploy.sh` với systemd timer: tự kéo Release mới, sao lưu, dựng, smoke lõi và

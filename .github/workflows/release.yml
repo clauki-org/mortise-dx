@@ -141,13 +141,23 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      # Gói mã nguồn chính thức ở định dạng mở (tar.gz) kèm mã băm SHA-256, dựng một lần từ commit của tag. Tệp zip
+      # GitHub tự sinh cho mọi tag không gỡ được, nên ghi chú phát hành nêu rõ đâu là gói của bản.
       - name: Create the release from the CHANGELOG section
         env:
           TAG: ${{ github.ref_name }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          scripts/release-notes.sh "$TAG" > "$RUNNER_TEMP/notes.md"
+          archive="mortise-dx-$TAG.tar.gz"
+          git archive --format=tar.gz --prefix="mortise-dx-$TAG/" -o "$RUNNER_TEMP/$archive" HEAD
+          (cd "$RUNNER_TEMP" && sha256sum "$archive" > SHA256SUMS)
+          {
+            scripts/release-notes.sh "$TAG"
+            printf '\n### Mã nguồn\n\n'
+            printf 'Gói mã nguồn của bản này là `%s`; kiểm bằng `sha256sum -c SHA256SUMS` trong thư mục chứa hai tệp.\n' \
+              "$archive"
+          } > "$RUNNER_TEMP/notes.md"
           prerelease=()
           if [[ "$TAG" == *-rc.* ]]; then prerelease=(--prerelease); fi
           gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" \
-            "${prerelease[@]}"
+            "${prerelease[@]}" "$RUNNER_TEMP/$archive" "$RUNNER_TEMP/SHA256SUMS"
