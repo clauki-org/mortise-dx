@@ -32,7 +32,9 @@ built_services() {
 require_images() {
   local service image
   for service in "$@"; do
-    image=$(docker compose --profile '*' config --images "$service")
+    # Không dùng `config --images DỊCH_VỤ`: lệnh đó in cả image của các dịch vụ trong depends_on.
+    image=$(docker compose --profile '*' config --format json |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["services"][sys.argv[1]]["image"])' "$service")
     docker image inspect "$image" >/dev/null 2>&1 || docker compose --profile '*' pull --quiet "$service" || true
     if ! docker image inspect "$image" >/dev/null 2>&1; then
       echo "Không có image $image và không kéo được. MORTISE_NO_BUILD=1 nên không dựng tại chỗ;" \
