@@ -88,6 +88,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
     khóa công khai (JWKS) của Keycloak; không token hoặc token giả thì trả 401.
   - Giới hạn tần suất theo token: 600 yêu cầu mỗi phút cho API dữ liệu, 300 cho API quy trình. Đếm theo token, không
     theo IP, để nhiều người sau cùng một NAT không chặn lẫn nhau.
+  - Plugin `prometheus` bật cho mọi route (`global_rules`): đếm yêu cầu theo route và mã trả về, đo độ trễ; số liệu
+    chỉ đọc được ở cổng 9091 trong mạng nội bộ, cổng 9080 không trả ([ADR 0037](adr/0037-observability-profile.md)).
 - **Cấu hình:** `core/apisix/config.yaml` (chế độ chạy), `core/apisix/apisix.yaml` (tuyến đường). Sửa xong chạy
   `docker compose restart apisix`.
 - **Xem:** `make smoke` kiểm các hành vi trên qua cổng; log bằng `docker compose logs apisix`.
@@ -277,6 +279,53 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Xem:** `make test` (mô hình giả, bảng ca của guard); `make smoke` kiểm cả khi Ollama tắt và khi đang chạy, và
   kiểm guard trên mục mẫu `/apps/core/ask-data-example`.
 
+## Giám sát (profile `observability`, tùy chọn)
+
+Không chạy cùng `make up`. `make obs-up` dựng, `make obs-check` kiểm, `make obs-down` dừng mà giữ số liệu và log; lý
+do và rủi ro ở [ADR 0037](adr/0037-observability-profile.md). Cấu hình nằm trong `core/observability/`. Chỉ Grafana
+mở cổng, và chỉ ở `127.0.0.1`.
+
+### Grafana: trang xem số liệu và log
+
+- **Làm gì:** vẽ biểu đồ từ Prometheus, tìm log trong Loki, trên một trang.
+- **Trong dự án:** dashboard "Mortise: tổng quan" (uid `mortise-overview`, thư mục Mortise): yêu cầu mỗi giây theo
+  route và mã trả về, lỗi 5xx theo route, độ trễ p95 theo route ở cổng, đích của Prometheus và sức khỏe từng dịch vụ,
+  số lần đăng nhập lỗi (sự kiện `LOGIN_ERROR` của Keycloak trong log), bảng log lọc theo biến `service`. Tắt truy cập
+  ẩn danh, tự đăng ký, gửi thống kê và hỏi bản mới.
+- **Cấu hình:** dịch vụ `grafana` trong `compose.yaml`; nguồn dữ liệu (uid `prometheus`, `loki`) và nơi nạp dashboard ở
+  `core/observability/grafana/provisioning/`, dashboard ở `core/observability/grafana/dashboards/`. Sửa trên giao diện
+  không lưu được: sửa tệp JSON rồi `docker compose restart grafana`.
+- **Xem:** `http://127.0.0.1:3000` (`GRAFANA_PORT`), tài khoản `admin`, mật khẩu `GRAFANA_ADMIN_PASSWORD`. Mật khẩu chỉ
+  áp dụng khi volume `grafanadata` còn trống; đổi trong `.env` sau đó không đổi mật khẩu đã lưu.
+
+### Prometheus: số liệu
+
+- **Làm gì:** cứ 15 giây hỏi các đích lấy số liệu một lần, lưu thành chuỗi theo thời gian.
+- **Trong dự án:** đích là APISIX (cổng 9091), Keycloak (cổng quản lý 9000, `/auth/metrics`, bật bằng
+  `KC_METRICS_ENABLED`), chính Prometheus, Loki, Alloy và blackbox. Hasura CE, Flowable và dịch vụ tự viết không có số
+  liệu riêng; sức khỏe của chúng hỏi qua blackbox. Giữ số liệu 15 ngày, điểm xuất phát chưa đo dung lượng.
+- **Cấu hình:** `core/observability/prometheus.yml`; số liệu trong volume `prometheusdata`. Không mở cổng ra máy chủ.
+- **Xem:** Grafana, mục Explore, nguồn Prometheus.
+
+### Blackbox exporter: sức khỏe dịch vụ
+
+- **Làm gì:** hỏi một URL thay cho Prometheus, trả `probe_success` là 1 hay 0.
+- **Trong dự án:** hỏi `/healthz` của workflow-api, files-api, context-api, assistant và Hasura, `/auth/health/ready`
+  của Keycloak, trạng thái cụm của SeaweedFS, danh sách kiểu của Scorpio, trang `/` của web. Không hỏi Flowable vì
+  endpoint sức khỏe của nó đòi mật khẩu quản trị.
+- **Cấu hình:** `core/observability/blackbox.yml` (cách hỏi), danh sách URL ở job `probe-*` của `prometheus.yml`.
+
+### Loki và Grafana Alloy: log của mọi dịch vụ
+
+- **Làm gì:** Alloy đọc log container rồi đẩy vào Loki; Loki lưu log, đánh nhãn để tìm theo dịch vụ và thời gian.
+- **Trong dự án:** Alloy chỉ lấy container có nhãn `com.docker.compose.project=mortise`; nhãn `service` là tên dịch vụ
+  compose. Alloy không gắn socket Docker mà hỏi qua docker-socket-proxy (image của Tecnativa): proxy chỉ cho đọc
+  container và mạng, chặn mọi lệnh ghi, nằm trong mạng `docker-api` riêng với Alloy. Đọc thông tin container vẫn thấy
+  biến môi trường, gồm bí mật của lõi (ADR 0037). Loki giữ log 7 ngày vì log chứa địa chỉ IP, mã và tên người dùng.
+- **Cấu hình:** `core/observability/alloy/config.alloy`, `core/observability/loki.yaml`; log trong volume `lokidata`,
+  vị trí đã đọc của Alloy trong `alloydata`. Docker rootless hay socket ở chỗ khác: đặt `DOCKER_SOCK` trong `.env`.
+- **Xem:** Grafana, bảng log của dashboard hay mục Explore với nguồn Loki, ví dụ `{service="workflow-api"}`.
+
 ## Giao diện Tầng 2
 
 ### Khung giao diện (`platform/web/`, tự viết)
@@ -334,4 +383,4 @@ hưởng tới mã Apache-2.0 của dự án. Những công cụ chạy qua `uvx
 | Vitest | Kiểm thử đơn vị mã giao diện không cần trình duyệt; bài kiểm là tệp `*.test.ts` trong `platform/web/src/` | `make web-check` | MIT |
 | license-checker-rseidelsohn | Kiểm giấy phép phụ thuộc của giao diện theo danh sách cho phép trong `Makefile` | `make web-check` | BSD-3-Clause |
 | curl, jq, openssl | Gọi API trong seed và smoke, đọc JSON, sinh bí mật ngẫu nhiên | `scripts/` | curl / MIT / Apache-2.0 |
-| GitHub Actions | CI: `make check-fast` và `make test` với mọi thay đổi; `make web-check` khi đổi `platform/web/`; dựng lõi trên máy trắng, `make smoke` và `make e2e` khi pull request đổi thứ ngoài tài liệu; vòng sao lưu và khôi phục khi đổi phần nó phụ thuộc; push lên `main` chạy đủ | `.github/workflows/ci.yml` | dịch vụ của GitHub |
+| GitHub Actions | CI: `make check-fast` và `make test` với mọi thay đổi; `make web-check` khi đổi `platform/web/`; dựng lõi trên máy trắng, `make smoke` và `make e2e` khi pull request đổi thứ ngoài tài liệu; giám sát (`make obs-up`, `make obs-check`) trong cùng job; vòng sao lưu và khôi phục khi đổi phần nó phụ thuộc; push lên `main` chạy đủ | `.github/workflows/ci.yml` | dịch vụ của GitHub |

@@ -11,7 +11,8 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e audit-verify backup-under-load files-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up
+  check-fast web-check e2e audit-verify backup-under-load files-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up \
+  obs-up obs-down obs-check
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -22,11 +23,13 @@ env: ## Tạo .env với bí mật ngẫu nhiên (chỉ khi chưa có)
 up: env ## Dựng lõi, áp migration chưa chạy, chờ tới khi mọi dịch vụ sẵn sàng
 	docker compose up -d --wait
 
-down: ## Dừng lõi, giữ dữ liệu
-	docker compose down
+# `down` không có profile bỏ sót container và volume của profile chưa bật, nên nêu `observability` để dừng và xóa
+# cả phần giám sát. Không nêu `ai`: xóa volume `ollama` thì lần sau phải tải lại mô hình.
+down: ## Dừng lõi và giám sát, giữ dữ liệu
+	docker compose --profile observability down
 
-reset: ## Dừng lõi và XÓA toàn bộ dữ liệu
-	docker compose down -v
+reset: ## Dừng lõi và giám sát, XÓA toàn bộ dữ liệu (trừ mô hình của profile ai)
+	docker compose --profile observability down -v
 
 ps: ## Trạng thái các dịch vụ
 	docker compose ps
@@ -66,6 +69,18 @@ simulate: ## Chạy bộ giả lập thiết bị demo, gửi số đo mỗi 5 g
 
 ai-up: env ## Chạy Ollama (profile ai), tải mô hình ghim trong core/ollama/models.txt và kiểm digest; lần đầu cần mạng
 	@scripts/ai.sh
+
+# Dịch vụ của profile `observability` (ADR 0037); obs-down chỉ gỡ chúng, lõi vẫn chạy.
+OBS_SERVICES := grafana prometheus loki alloy docker-socket-proxy blackbox
+
+obs-up: env ## Chạy giám sát (profile observability): Prometheus, Grafana (chỉ 127.0.0.1), Loki, Alloy; dựng cả lõi nếu chưa chạy
+	docker compose --profile observability up -d --wait
+
+obs-check: ## Kiểm giám sát: Grafana, dashboard, đích của Prometheus, sức khỏe dịch vụ, log trong Loki
+	@scripts/obs-check.sh
+
+obs-down: ## Dừng giám sát, giữ số liệu và log; lõi vẫn chạy
+	docker compose --profile observability rm --stop --force $(OBS_SERVICES)
 
 device-add: ## Cấp tài khoản MQTT cho thiết bị, in mật khẩu: make device-add TENANT=<tenant> DEVICE=<thiết bị>
 	@scripts/device.sh add "$(TENANT)" "$(DEVICE)"

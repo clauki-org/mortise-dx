@@ -15,3 +15,12 @@ deployment:
 
 nginx_config:
   error_log_level: warn
+
+# Plugin prometheus (bật cho mọi route ở global_rules trong apisix.yaml) xuất số liệu ở một cổng riêng 9091, không qua
+# cổng 9080 của người dùng. Mặc định cổng này chỉ nghe 127.0.0.1 trong container, Prometheus ở container khác không
+# lấy được; nghe mọi địa chỉ trong mạng nội bộ của compose, còn compose.yaml không mở 9091 ra máy chủ (ADR 0037).
+plugin_attr:
+  prometheus:
+    export_addr:
+      ip: 0.0.0.0
+      port: 9091

@@ -45,6 +45,7 @@ biệt.
 | Kho lạnh cho nhật ký: xuất dòng cũ sang Parquet trên SeaweedFS có kiểm băm từng dòng rồi xóa khỏi CSDL trong cùng giao dịch, chuỗi băm nối qua phần đã xóa, truy vấn gộp bằng DuckDB; chạy theo lịch là kế hoạch | Đã chạy | `make smoke`, `make archive`, `make cold-verify`, `make cold-query` |
 | Chỉ số trỏ về bản ghi nguồn, chỉ số chất lượng dữ liệu | Kế hoạch | |
 | Sao lưu và khôi phục toàn bộ lõi | Đã chạy | CI: sao lưu → xóa → khôi phục → `make smoke` |
+| Giám sát cho người vận hành (profile `observability`, [ADR 0037](docs/adr/0037-observability-profile.md)): Grafana chỉ ở 127.0.0.1, đòi đăng nhập, có dashboard số yêu cầu, lỗi 5xx, độ trễ p95 theo route của cổng, sức khỏe từng dịch vụ, đăng nhập lỗi và log của mọi dịch vụ (Prometheus, Loki, Alloy) | Đã chạy | CI: `make obs-up`, `make obs-check` (mọi đích của Prometheus lấy được, mọi dịch vụ trả lời blackbox, có số liệu cổng và log trong Loki, cổng 9080 không trả số liệu) |
 | Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy | `make smoke` (cổng, CSP, luồng PKCE), `make web-check`, `make e2e` |
 | Bảng việc: danh sách việc đang chờ người đăng nhập theo hạn; màn hình xử lý với biểu mẫu và nút theo khai báo của bước | Đã chạy | `make e2e` (trình duyệt: duyệt, bốn mắt, cách ly đơn vị), `make web-check` |
 | Menu dựng từ các gói đã cài; mục của gói mở thành phần danh mục (danh sách, tìm, lọc, chi tiết cha–con) theo cấu hình của gói, không có mã giao diện riêng của gói | Đã chạy | `make e2e` (trình duyệt: cán bộ xã A mở danh mục cơ sở từ menu, không thấy cơ sở của xã B; mọi mục menu của các gói đã cài mở được trang theo cấu hình), `make web-check` |
@@ -92,8 +93,9 @@ make e2e     # kịch bản demo trên trình duyệt (cần Node và hai gói: 
 | `http://127.0.0.1:8082/console` | Quản trị Hasura (chỉ máy chủ) |
 | `http://127.0.0.1:8083/flowable-rest/docs` | REST API của Flowable (chỉ máy chủ) |
 | `http://127.0.0.1:9090/ngsi-ld/v1/...` | API NGSI-LD của Scorpio, không xác thực (chỉ máy chủ) |
+| `http://127.0.0.1:3000` | Grafana: số liệu, log, sức khỏe dịch vụ (chỉ máy chủ, sau `make obs-up`) |
 
-Trang quản trị Keycloak, Hasura và Flowable là công cụ kỹ thuật cho người vận hành, chỉ mở trong máy chủ; lõi không có giao
+Trang quản trị Keycloak, Hasura, Flowable và Grafana là công cụ kỹ thuật cho người vận hành, chỉ mở trong máy chủ; lõi không có giao
 diện cho người dùng nghiệp vụ. Cách gọi API kèm ví dụ và ý nghĩa mã lỗi: [docs/api.md](docs/api.md).
 
 Sao lưu và khôi phục (đã kiểm: sao lưu trong lúc đang tải tệp lên, xóa sạch lõi, dựng lại, khôi phục, `core.files`
@@ -124,6 +126,11 @@ Ollama, tải mô hình đã ghim (lần đầu cần mạng) và dừng nếu t
 nhận 503 kèm cách bật. Muốn gọi một API tương thích OpenAI thay cho Ollama, khai
 `ASSISTANT_LLM_PROVIDER=openai-compatible` cùng `ASSISTANT_LLM_BASE_URL`, `ASSISTANT_LLM_MODEL`, `ASSISTANT_LLM_API_KEY`
 trong `.env` rồi chạy `make up`; câu hỏi và các câu đã tìm khi đó rời máy chủ (bổ sung của ADR 0021).
+
+Giám sát cũng tách khỏi lõi, trong profile `observability`: `make obs-up` chạy Prometheus, Loki, Alloy và Grafana ở
+`http://127.0.0.1:3000` (tài khoản `admin`, mật khẩu `GRAFANA_ADMIN_PASSWORD` trong `.env`), `make obs-check` kiểm
+chúng, `make obs-down` dừng mà giữ số liệu và log ([ADR 0037](docs/adr/0037-observability-profile.md)). RAM mà
+profile này cần chưa được đo.
 
 ## Kiến trúc
 
@@ -170,6 +177,12 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Công cụ kho lạnh (tự viết) | Python 3.13, DuckDB, pg8000, boto3 | khóa trong `core/cold-archive/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
 | Chạy mô hình ngôn ngữ tại chỗ, tùy chọn: profile `ai` ([ADR 0021](docs/adr/0021-document-assistant.md)) | Ollama | 0.40.16 | MIT |
 | Mô hình ngôn ngữ, tải khi `make ai-up` | Qwen3.5 4B | digest trọng số ghim trong `core/ollama/models.txt` | Apache-2.0 |
+| Lấy và lưu số liệu, tùy chọn: profile `observability` ([ADR 0037](docs/adr/0037-observability-profile.md)) | Prometheus | 3.16.0 | Apache-2.0 |
+| Trang xem số liệu và log, profile `observability` | Grafana | 13.3.1 | AGPL-3.0 (image chính thức, không sửa, tiến trình riêng) |
+| Lưu log, profile `observability` | Grafana Loki | 3.7.10 | AGPL-3.0 (image chính thức, không sửa, tiến trình riêng) |
+| Thu log container, profile `observability` | Grafana Alloy | 1.22.0 | Apache-2.0 |
+| Hỏi sức khỏe dịch vụ, profile `observability` | Blackbox exporter | 0.29.1 | Apache-2.0 |
+| Cho Alloy đọc Docker, chặn lệnh ghi, profile `observability` | docker-socket-proxy (Tecnativa) | 0.5.0 | Apache-2.0 (HAProxy bên trong: GPL-2.0-or-later) |
 | Trợ lý hỏi văn bản và dữ liệu (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, pg8000 | khóa trong `platform/services/assistant/uv.lock` | MIT / BSD-3-Clause |
 | Phân tích câu GraphQL cho guard của trợ lý dữ liệu ([ADR 0027](docs/adr/0027-data-assistant-guarded-graphql.md)) | graphql-core | 3.3.2 | MIT |
 | Phục vụ giao diện | nginx | 1.30.6 | BSD-2-Clause |
@@ -195,6 +208,7 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   mosquitto/          cấu hình Mosquitto
   cold-archive/       xuất nhật ký cũ sang kho lạnh, truy vấn bằng DuckDB (Python, lệnh của người vận hành)
   ollama/             mô hình Ollama tải về, ghim theo digest trọng số
+  observability/      cấu hình giám sát: Prometheus, Loki, Alloy, blackbox, nguồn dữ liệu và dashboard Grafana
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
 platform/             Tầng 2
   web/                khung giao diện (React, Vite), phục vụ bằng nginx sau cổng

@@ -56,6 +56,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0033](0033-dashboard-component.md) | Thành phần bảng điều hành: mọi số là cột do gói tính sẵn trong view, không tính trên trình duyệt; mỗi số kèm cách tính, mỗi khối kèm câu truy vấn đã gửi; biểu đồ cột ngang luôn kèm bảng số liệu; check-fast kiểm theo quyền của gói | Chấp nhận |
 | [0034](0034-model-written-guarded-graphql.md) | Câu hỏi dữ liệu gõ tự do: mô hình viết đúng một câu GraphQL chỉ đọc từ mô tả bảng, cột của mục menu, không thấy dòng dữ liệu; câu qua cùng guard, sửa tối đa một lần theo lý do của guard trong một hạn chung; chạy bằng token người hỏi | Chấp nhận |
 | [0035](0035-case-counts-and-device-readings-on-dashboards.md) | Số hồ sơ và số đo thiết bị trên bảng điều hành: workflow-api trả tổng Flowable đếm theo tenant, quy trình, bước, chỉ cho người có vai trò của một bước; việc đang chờ người xem đếm trên trình duyệt; số đo đọc qua context-api | Chấp nhận |
+| [0037](0037-observability-profile.md) | Giám sát trong profile `observability`: Prometheus, Loki, Grafana chỉ ở 127.0.0.1; log container đọc qua docker-socket-proxy chỉ cho đọc, trong mạng riêng với Alloy | Chấp nhận |
 
 ## Quyết định còn mở
 

@@ -88,7 +88,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Ba lượt trên main ngày 2026-11-23 mất 17–18 phút (thời gian job trên GitHub Actions); bước giám sát tải thêm 6
+    # image và chờ số liệu.
+    timeout-minutes: 30
     env:
       RESTORE_CYCLE: ${{ needs.changes.outputs.backup }}
     steps:
@@ -101,6 +103,10 @@ jobs:
         run: make seed
       - name: Smoke test through the gateway
         run: make smoke
+      # Profile observability (ADR 0037): Prometheus lấy được mọi đích, Loki nhận log, Grafana chỉ ở 127.0.0.1. Gỡ ngay
+      # sau đó để các bước sau chạy trên lõi như trước.
+      - name: Observability profile
+        run: make obs-up && make obs-check && make obs-down
       # Hai gói Tầng 3 cài vào, kiểm, gỡ ra; lõi và gói còn lại phải vẫn qua smoke sau khi gỡ (ADR 0005). Thời hạn
       # công khai ngắn để smoke của gói xã chờ được hết hạn (ADR 0019). seed-demo nạp mọi gói có dữ liệu demo nên
       # chạy sau khi cả hai gói đã cài; gói kho chỉ gồm tệp khai báo (ADR 0022).
@@ -160,7 +166,7 @@ jobs:
         run: make smoke
       - name: Service logs
         if: failure()
-        run: docker compose logs --tail=200
+        run: docker compose --profile observability logs --tail=200
       - name: Remove containers and data
         if: always()
         run: make reset

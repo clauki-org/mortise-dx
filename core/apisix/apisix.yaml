@@ -63,6 +63,13 @@ plugin_configs:
             Content-Type: application/json
         body: "{\"error\":\"Thiếu hoặc sai access token; đăng nhập lại để lấy token mới.\"}\n"
 
+# Đếm yêu cầu, mã trả về và độ trễ của mọi route cho Prometheus (profile `observability`, ADR 0037). Số liệu chỉ đọc
+# được ở cổng 9091 trong mạng nội bộ (config.yaml); cổng 9080 không có route nào trả số liệu.
+global_rules:
+  - id: metrics
+    plugins:
+      prometheus: {}
+
 routes:
   # Chỉ mở các đường OIDC mà ứng dụng và trình duyệt cần của realm mortise (ADR 0007): cấu hình, đăng nhập, token,
   # đăng xuất, khóa công khai, thông tin người dùng, thu hồi token, các bước của form đăng nhập (gồm nhập OTP) và tài
