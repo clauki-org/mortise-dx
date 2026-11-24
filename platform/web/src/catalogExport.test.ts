@@ -11,6 +11,7 @@ import {
   cellOf,
   csvCell,
   describeConditions,
+  exportTable,
   exportVariables,
   fileName,
   LIMIT,
@@ -19,6 +20,7 @@ import {
   readAll,
   TooManyRows,
 } from "./catalogExport";
+import { pdfDocument, sheetData } from "./catalogExportOffice";
 import { emptyState, listVariables } from "./catalogQuery";
 
 const config: CatalogConfig = {
@@ -70,19 +72,19 @@ describe("csvCell", () => {
 
 describe("cellOf", () => {
   it("số giữ dạng máy đọc được, kể cả số Hasura trả dạng chuỗi", () => {
-    expect(cellOf(field("size"), 1234.5)).toBe("1234.5");
-    expect(cellOf(field("size"), "1000.00")).toBe("1000.00");
-    expect(cellOf(field("size"), -3)).toBe("-3");
+    expect(cellOf(field("size"), 1234.5)).toEqual({ kind: "number", value: "1234.5" });
+    expect(cellOf(field("size"), "1000.00")).toEqual({ kind: "number", value: "1000.00" });
+    expect(cellOf(field("size"), -3)).toEqual({ kind: "number", value: "-3" });
   });
 
-  it("giá trị không phải số trong trường số là chữ và bị chặn công thức", () => {
-    expect(cellOf(field("size"), "=1+1")).toBe("'=1+1");
-    expect(cellOf(field("size"), Number.NaN)).toBe("NaN");
+  it("giá trị không phải số trong trường số là chữ", () => {
+    expect(cellOf(field("size"), "=1+1")).toEqual({ kind: "text", value: "=1+1" });
+    expect(cellOf(field("size"), Number.NaN)).toEqual({ kind: "text", value: "NaN" });
   });
 
-  it("trường có choices hiện chữ như trên màn hình; ô trống là rỗng", () => {
-    expect(cellOf(field("state"), "open")).toBe("Đang dùng");
-    expect(cellOf(field("name"), null)).toBe("");
+  it("trường có choices hiện chữ như trên màn hình; ô trống là chữ rỗng", () => {
+    expect(cellOf(field("state"), "open")).toEqual({ kind: "text", value: "Đang dùng" });
+    expect(cellOf(field("name"), null)).toEqual({ kind: "text", value: "" });
   });
 });
 
@@ -100,13 +102,13 @@ describe("describeConditions", () => {
   });
 });
 
-describe("buildCsv", () => {
+describe("exportTable và CSV", () => {
   const exportedAt = new Date("2026-11-24T08:00:00Z");
   const rows: Row[] = [
     { id: "1", code: "A1", name: "Trụ sở, tòa chính", size: "1000.5", state: "open" },
     { id: "2", code: "=cmd", name: "Kho", size: 20, state: "closed" },
   ];
-  const csv = buildCsv(
+  const table = exportTable(
     config,
     {
       title: config.title,
@@ -119,6 +121,7 @@ describe("buildCsv", () => {
     },
     rows,
   );
+  const csv = buildCsv(table);
   const lines = csv.split("\r\n");
 
   it("mở đầu bằng BOM, phần đầu ghi nguồn, thời điểm, người xuất và số dòng", () => {
@@ -183,7 +186,7 @@ describe("exportVariables", () => {
 describe("ngày giờ địa phương", () => {
   it("tên tệp bỏ dấu tiêu đề và mang ngày theo giờ của máy, không theo UTC", () => {
     const time = new Date(2026, 10, 24, 1, 30);
-    expect(fileName("Cơ sở nhà, đất", time)).toBe("co-so-nha-dat-2026-11-24.csv");
+    expect(fileName("Cơ sở nhà, đất", time, "xlsx")).toBe("co-so-nha-dat-2026-11-24.xlsx");
     expect(localDate(time)).toBe("2026-11-24");
   });
 
@@ -192,5 +195,71 @@ describe("ngày giờ địa phương", () => {
     const text = localTimestamp(time);
     expect(text).toMatch(/^2026-11-24T21:40:05[+-]\d{2}:\d{2}$/);
     expect(new Date(text).getTime()).toBe(time.getTime());
+  });
+});
+
+describe("Excel và PDF", () => {
+  const table = exportTable(
+    config,
+    {
+      title: config.title,
+      source: config.source,
+      tenant: "xa-a",
+      user: "user.a",
+      exportedAt: new Date(2026, 10, 24, 9, 0),
+      timeZone: "Asia/Ho_Chi_Minh",
+      conditions: "Sắp xếp theo Mã tăng dần",
+    },
+    [
+      { id: "1", code: "A1", name: "=HYPERLINK(1)", size: "1000.5", state: "open" },
+      { id: "2", code: "A2", name: "Kho", size: null, state: "closed" },
+    ],
+  );
+
+  it("Excel: phần đầu, dòng trống, tiêu đề cột, rồi dòng; số là số, chữ khai rõ kiểu chữ kể cả khi bắt đầu bằng =", () => {
+    const sheet = sheetData(table);
+    expect(sheet[0]).toEqual([
+      { value: "Danh sách", type: String, fontWeight: "bold" },
+      { value: "Danh mục ví dụ", type: String },
+    ]);
+    expect(sheet[table.meta.length]).toEqual([]);
+    expect(sheet[table.meta.length + 1]?.map((cell) => (cell as { value: unknown }).value)).toEqual([
+      "Mã",
+      "Tên",
+      "Cỡ",
+      "Tình trạng",
+    ]);
+    expect(sheet[table.meta.length + 2]).toEqual([
+      { value: "A1", type: String },
+      { value: "=HYPERLINK(1)", type: String },
+      { value: 1000.5, type: Number },
+      { value: "Đang dùng", type: String },
+    ]);
+    expect(sheet).toHaveLength(table.meta.length + 4);
+  });
+
+  it("PDF: bảng dữ liệu có đủ dòng, tiêu đề lặp lại mỗi trang, số căn phải, phần đầu đủ các cặp", () => {
+    const document = pdfDocument(table);
+    expect(document.info.title).toBe("Danh mục ví dụ");
+    expect(document.pageOrientation).toBe("portrait");
+    const [, meta, data] = document.content as [
+      unknown,
+      { table: { body: { text: string }[][] } },
+      { table: { headerRows: number; body: { text: string; alignment?: string }[][] } },
+    ];
+    expect(meta.table.body.map(([label, value]) => [label?.text, value?.text])).toEqual(table.meta);
+    expect(data.table.headerRows).toBe(1);
+    expect(data.table.body.map((row) => row.map((cell) => cell.text))).toEqual([
+      ["Mã", "Tên", "Cỡ", "Tình trạng"],
+      ["A1", "=HYPERLINK(1)", "1000.5", "Đang dùng"],
+      ["A2", "Kho", "", "Ngừng"],
+    ]);
+    expect(data.table.body[1]?.[2]?.alignment).toBe("right");
+    expect(document.footer(2, 5).text).toBe("Trang 2/5");
+  });
+
+  it("bảng nhiều hơn bốn cột thì in ngang", () => {
+    const wide = { ...table, columns: [...table.columns, "Thêm"] };
+    expect(pdfDocument(wide).pageOrientation).toBe("landscape");
   });
 });

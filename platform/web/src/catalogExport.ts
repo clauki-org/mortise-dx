@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Xuất danh sách của thành phần danh mục ra tệp CSV (ADR 0038): đọc mọi dòng khớp tìm, lọc và thứ tự đang xem bằng
-// chính câu truy vấn của bảng (catalogQuery.ts), rồi dựng tệp. Không có React ở đây để kiểm thử được bằng hàm thuần;
-// nút và việc tải tệp ở CatalogExport.tsx.
+// Xuất danh sách của thành phần danh mục (ADR 0038): đọc mọi dòng khớp tìm, lọc và thứ tự đang xem bằng chính câu
+// truy vấn của bảng (catalogQuery.ts), dựng một bảng chung (phần đầu, cột, ô đã phân kiểu) rồi ghi ra CSV ở đây; Excel
+// và PDF ở catalogExportOffice.ts. Không có React ở đây để kiểm thử được bằng hàm thuần; nút ở CatalogExport.tsx.
 
 import { type CatalogNode, display, type Field, fieldOf, type Row } from "./catalog";
 import { type ListState, listVariables, sortOf } from "./catalogQuery";
@@ -48,13 +48,16 @@ export function csvCell(text: string): string {
 const isNumber = (value: unknown) =>
   (typeof value === "number" && Number.isFinite(value)) || (typeof value === "string" && PLAIN_NUMBER.test(value));
 
+/** Một ô đã phân kiểu: số giữ nguyên dạng máy đọc được, mọi thứ khác là chữ như trên màn hình. */
+export type Cell = { kind: "number"; value: string } | { kind: "text"; value: string };
+
 /**
  * Giá trị của một trường trong tệp: chữ của choices và ngày giờ như trên màn hình (giờ của máy người xuất, múi giờ
- * ghi ở đầu tệp); số giữ dạng máy đọc được, không có dấu ngăn hàng nghìn, để bảng tính cộng trừ được.
+ * ghi ở đầu tệp); số không có dấu ngăn hàng nghìn, để bảng tính cộng trừ được.
  */
-export function cellOf(field: Field, value: unknown): string {
-  if (field.type === "number" && !field.choices && isNumber(value)) return csvCell(String(value));
-  return csvCell(display(field, value));
+export function cellOf(field: Field, value: unknown): Cell {
+  if (field.type === "number" && !field.choices && isNumber(value)) return { kind: "number", value: String(value) };
+  return { kind: "text", value: display(field, value) };
 }
 
 /**
@@ -100,34 +103,50 @@ export function localTimestamp(time: Date): string {
   return `${localDate(time)}T${pad(time.getHours())}:${pad(time.getMinutes())}:${pad(time.getSeconds())}${zone}`;
 }
 
+/** Bảng chung cho mọi định dạng: các cặp nhãn–giá trị của phần đầu, tiêu đề cột, rồi các dòng ô. */
+export type ExportTable = { meta: [string, string][]; columns: string[]; rows: Cell[][] };
+
+/**
+ * Phần đầu ghi tên danh sách, nguồn, đơn vị, thời điểm, múi giờ, người xuất, điều kiện và số dòng; cột là các trường
+ * trong list.columns theo nhãn, đúng thứ tự trên màn hình.
+ */
+export function exportTable(config: CatalogNode, info: ExportInfo, rows: Row[]): ExportTable {
+  const fields = config.list.columns.map((name) => fieldOf(config, name)).filter((field) => field !== undefined);
+  return {
+    meta: [
+      ["Danh sách", info.title],
+      ["Nguồn", info.source],
+      ["Đơn vị", info.tenant],
+      ["Thời điểm xuất", localTimestamp(info.exportedAt)],
+      ["Múi giờ", info.timeZone],
+      ["Người xuất", info.user],
+      ["Điều kiện", info.conditions],
+      ["Số dòng", String(rows.length)],
+    ],
+    columns: fields.map((field) => field.label),
+    rows: rows.map((row) => fields.map((field) => cellOf(field, row[field.name]))),
+  };
+}
+
 const BOM = "\uFEFF";
 
 /**
- * Nội dung tệp: BOM UTF-8 để bảng tính nhận đúng chữ có dấu; tám dòng đầu ghi tên danh sách, nguồn, đơn vị, thời
- * điểm, múi giờ, người xuất, điều kiện và số dòng; một dòng trống; rồi bảng với tiêu đề cột theo nhãn. Xuống dòng
- * CRLF theo RFC 4180.
+ * CSV: BOM UTF-8 để bảng tính nhận đúng chữ có dấu; phần đầu, một dòng trống, rồi bảng. Xuống dòng CRLF theo RFC
+ * 4180. Ô chữ đi qua csvCell để chặn công thức; ô số ghi nguyên.
  */
-export function buildCsv(config: CatalogNode, info: ExportInfo, rows: Row[]): string {
-  const columns = config.list.columns.map((name) => fieldOf(config, name)).filter((field) => field !== undefined);
-  const header = [
-    ["Danh sách", info.title],
-    ["Nguồn", info.source],
-    ["Đơn vị", info.tenant],
-    ["Thời điểm xuất", localTimestamp(info.exportedAt)],
-    ["Múi giờ", info.timeZone],
-    ["Người xuất", info.user],
-    ["Điều kiện", info.conditions],
-    ["Số dòng", String(rows.length)],
-  ].map((pair) => pair.map((text) => csvCell(text)).join(","));
-  const table = [
-    columns.map((field) => csvCell(field.label)).join(","),
-    ...rows.map((row) => columns.map((field) => cellOf(field, row[field.name])).join(",")),
+export function buildCsv(table: ExportTable): string {
+  const header = table.meta.map((pair) => pair.map((text) => csvCell(text)).join(","));
+  const lines = [
+    table.columns.map((text) => csvCell(text)).join(","),
+    ...table.rows.map((row) =>
+      row.map((cell) => (cell.kind === "number" ? cell.value : csvCell(cell.value))).join(","),
+    ),
   ];
-  return `${BOM}${[...header, "", ...table].join("\r\n")}\r\n`;
+  return `${BOM}${[...header, "", ...lines].join("\r\n")}\r\n`;
 }
 
-/** Tên tệp: tiêu đề bỏ dấu, chỉ còn chữ, số và gạch nối, kèm ngày xuất theo giờ địa phương. */
-export function fileName(title: string, exportedAt: Date): string {
+/** Tên tệp: tiêu đề bỏ dấu, chỉ còn chữ, số và gạch nối, kèm ngày xuất theo giờ địa phương và phần mở rộng. */
+export function fileName(title: string, exportedAt: Date, extension: string): string {
   const slug = title
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
@@ -136,5 +155,5 @@ export function fileName(title: string, exportedAt: Date): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return `${slug || "danh-sach"}-${localDate(exportedAt)}.csv`;
+  return `${slug || "danh-sach"}-${localDate(exportedAt)}.${extension}`;
 }

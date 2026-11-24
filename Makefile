@@ -172,11 +172,12 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	$(if $(DECLARATIVE_APPS),@scripts/check-declarative.sh $(DECLARATIVE_APPS))
 
 # Giấy phép phụ thuộc của giao diện (ADR 0006). Thư viện đóng gói vào tệp giao diện gửi tới người dùng chỉ được mang
-# giấy phép dễ dãi. Công cụ chỉ chạy lúc phát triển và build, không đóng gói vào sản phẩm, được thêm: BlueOak-1.0.0
-# (OSI, dễ dãi; nhóm gói của npm), MPL-2.0 (OSI; lightningcss mà Vite dùng để xử lý CSS) và CC0-1.0, CC-BY-3.0 (dữ
-# liệu danh sách giấy phép SPDX mà chính công cụ kiểm giấy phép đọc).
-WEB_LICENSES_SHIPPED := MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD
-WEB_LICENSES_TOOLING := $(WEB_LICENSES_SHIPPED);BlueOak-1.0.0;MPL-2.0;CC0-1.0;CC-BY-3.0
+# giấy phép dễ dãi được OSI duyệt; BlueOak-1.0.0 (OSI duyệt 19/01/2024) có vì sax, thư viện pdfmake dùng để đọc SVG
+# khi xuất PDF (ADR 0038). Công cụ chỉ chạy lúc phát triển và build, không đóng gói vào sản phẩm, được thêm: MPL-2.0
+# (OSI; lightningcss mà Vite dùng để xử lý CSS) và CC0-1.0, CC-BY-3.0 (dữ liệu danh sách giấy phép SPDX mà chính công
+# cụ kiểm giấy phép đọc).
+WEB_LICENSES_SHIPPED := MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;BlueOak-1.0.0
+WEB_LICENSES_TOOLING := $(WEB_LICENSES_SHIPPED);MPL-2.0;CC0-1.0;CC-BY-3.0
 
 # Bài kiểm chỉ nhận mật khẩu demo và địa chỉ cổng, không nhận các bí mật khác của .env. Trình duyệt Chromium do
 # Playwright tải đúng phiên bản nó cần; đã có thì bước cài chỉ kiểm rồi bỏ qua.

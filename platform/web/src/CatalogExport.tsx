@@ -1,17 +1,40 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Nút "Xuất CSV" trên màn hình danh sách của thành phần danh mục (ADR 0038). Đọc qua client GraphQL của trang, tức
-// bằng token của người đang đăng nhập: tệp chỉ chứa dòng Hasura cho người đó đọc, như trên màn hình. Dựng tệp và tải
-// về ngay trong trình duyệt, không qua dịch vụ nào khác. Cách dựng tệp ở catalogExport.ts.
+// Nút "Xuất" trên màn hình danh sách của thành phần danh mục (ADR 0038): chọn CSV, Excel hay PDF. Đọc qua client
+// GraphQL của trang, tức bằng token của người đang đăng nhập: tệp chỉ chứa dòng Hasura cho người đó đọc, như trên màn
+// hình. Dựng tệp và tải về ngay trong trình duyệt, không qua dịch vụ nào khác. Bảng xuất ở catalogExport.ts; Excel
+// và PDF ở catalogExportOffice.ts.
 
-import { Alert, Button } from "@mantine/core";
+import { Alert, Button, Menu } from "@mantine/core";
 import { useState } from "react";
 import { useClient } from "urql";
 import type { CatalogConfig, Row } from "./catalog";
-import { buildCsv, describeConditions, exportVariables, fileName, readAll, TooManyRows } from "./catalogExport";
+import {
+  buildCsv,
+  describeConditions,
+  type ExportTable,
+  exportTable,
+  exportVariables,
+  fileName,
+  readAll,
+  TooManyRows,
+} from "./catalogExport";
+import { pdfBlob, xlsxBlob } from "./catalogExportOffice";
 import { type ListState, rowsQuery } from "./catalogQuery";
 import { useSession } from "./session";
+
+type Format = { label: string; extension: string; write: (table: ExportTable) => Promise<Blob> };
+
+const FORMATS: Format[] = [
+  {
+    label: "CSV",
+    extension: "csv",
+    write: async (table) => new Blob([buildCsv(table)], { type: "text/csv;charset=utf-8" }),
+  },
+  { label: "Excel (.xlsx)", extension: "xlsx", write: xlsxBlob },
+  { label: "PDF", extension: "pdf", write: pdfBlob },
+];
 
 export function CatalogExport({ config, state }: { config: CatalogConfig; state: ListState }) {
   const client = useClient();
@@ -19,7 +42,7 @@ export function CatalogExport({ config, state }: { config: CatalogConfig; state:
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
-  const run = async () => {
+  const run = async (format: Format) => {
     setBusy(true);
     setProblem(null);
     try {
@@ -33,7 +56,7 @@ export function CatalogExport({ config, state }: { config: CatalogConfig; state:
         return result.data.rows;
       });
       const exportedAt = new Date();
-      const csv = buildCsv(
+      const table = exportTable(
         config,
         {
           title: config.title,
@@ -46,9 +69,9 @@ export function CatalogExport({ config, state }: { config: CatalogConfig; state:
         },
         rows,
       );
-      download(csv, fileName(config.title, exportedAt));
+      download(await format.write(table), fileName(config.title, exportedAt, format.extension));
     } catch (error) {
-      // Đọc lỗi thì không tải tệp nào: một tệp thiếu dòng trông vẫn như tệp đủ.
+      // Đọc hay dựng tệp lỗi thì không tải tệp nào: một tệp thiếu dòng trông vẫn như tệp đủ.
       if (error instanceof TooManyRows) setProblem(error.message);
       else {
         const reason = error instanceof Error ? error.message : String(error);
@@ -61,9 +84,20 @@ export function CatalogExport({ config, state }: { config: CatalogConfig; state:
 
   return (
     <>
-      <Button variant="default" onClick={run} loading={busy}>
-        Xuất CSV
-      </Button>
+      <Menu position="bottom-end">
+        <Menu.Target>
+          <Button variant="default" loading={busy}>
+            Xuất
+          </Button>
+        </Menu.Target>
+        <Menu.Dropdown>
+          {FORMATS.map((format) => (
+            <Menu.Item key={format.extension} onClick={() => run(format)}>
+              {format.label}
+            </Menu.Item>
+          ))}
+        </Menu.Dropdown>
+      </Menu>
       {problem && (
         <Alert color="red" title="Không xuất được tệp" withCloseButton onClose={() => setProblem(null)}>
           {problem}
@@ -79,8 +113,8 @@ function tenantOf(profile: Record<string, unknown>): string {
   return Array.isArray(tenant) && typeof tenant[0] === "string" ? tenant[0] : "";
 }
 
-function download(text: string, name: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+function download(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = name;

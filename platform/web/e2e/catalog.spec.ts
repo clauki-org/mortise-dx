@@ -7,7 +7,8 @@
 // cho gói. Cần gói đã cài (`make app-install APP=facilities-commune`); bài tự tạo và tự dọn dữ liệu nên không cần
 // `make seed-demo`.
 
-import { type APIRequestContext, expect, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { readSheet } from "read-excel-file/node";
 import { graphql, signIn, subOf, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
@@ -123,6 +124,18 @@ test("cán bộ xã A mở danh mục cơ sở từ menu của gói, chỉ thấ
   }
 });
 
+/** Bấm "Xuất", chọn một định dạng, trả tên tệp gợi ý và nội dung tệp tải về. */
+async function exportAs(page: Page, format: string): Promise<{ name: string; content: Buffer }> {
+  await page.getByRole("button", { name: "Xuất", exact: true }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("menuitem", { name: format }).click(),
+  ]);
+  const chunks: Buffer[] = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk as Buffer);
+  return { name: download.suggestedFilename(), content: Buffer.concat(chunks) };
+}
+
 /** Đọc CSV theo RFC 4180 (nháy kép bọc ô, "" là một dấu nháy, CRLF giữa các dòng) thành các dòng ô. */
 function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
@@ -152,7 +165,7 @@ function parseCsv(text: string): string[][] {
   return rows;
 }
 
-test("cán bộ xã A xuất danh mục cơ sở ra CSV: mọi dòng đang lọc, khớp màn hình và API, chặn công thức", async ({
+test("cán bộ xã A xuất danh mục cơ sở ra CSV, Excel và PDF: mọi dòng đang lọc, khớp màn hình và API", async ({
   page,
   request,
 }) => {
@@ -194,15 +207,9 @@ test("cán bộ xã A xuất danh mục cơ sở ra CSV: mọi dòng đang lọc
       .locator("table tbody tr")
       .evaluateAll((rows) => rows.map((row) => [...row.querySelectorAll("td")].map((cell) => cell.textContent ?? "")));
 
-    const [download] = await Promise.all([
-      page.waitForEvent("download"),
-      page.getByRole("button", { name: "Xuất CSV" }).click(),
-    ]);
-    expect(download.suggestedFilename()).toMatch(/^co-so-nha-dat-\d{4}-\d{2}-\d{2}\.csv$/);
-    const stream = await download.createReadStream();
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) chunks.push(chunk as Buffer);
-    const raw = Buffer.concat(chunks).toString("utf8");
+    const csv = await exportAs(page, "CSV");
+    expect(csv.name).toMatch(/^co-so-nha-dat-\d{4}-\d{2}-\d{2}\.csv$/);
+    const raw = csv.content.toString("utf8");
     expect(raw.startsWith("\uFEFF"), "tệp bắt đầu bằng BOM UTF-8").toBe(true);
     const lines = parseCsv(raw.slice(1));
     const blank = lines.findIndex((line) => line.length === 1 && line[0] === "");
@@ -231,6 +238,25 @@ test("cán bộ xã A xuất danh mục cơ sở ra CSV: mọi dòng đang lọc
     const shown = screen.map((cells) => cells.map((cell) => (/^[=+\-@]/.test(cell) ? `'${cell}` : cell)));
     expect(data.slice(0, 20)).toEqual(shown);
     expect(data.some((line) => line[1]?.startsWith("'=Trụ sở kiểm thử, "))).toBe(true);
+
+    // Excel: cùng phần đầu và cùng các dòng với CSV; ô chữ là chữ nên tên bắt đầu bằng "=" giữ nguyên, không thêm '.
+    const xlsx = await exportAs(page, "Excel (.xlsx)");
+    expect(xlsx.name).toMatch(/^co-so-nha-dat-\d{4}-\d{2}-\d{2}\.xlsx$/);
+    const sheet = (await readSheet(xlsx.content)).map((row) => row.map((cell) => (cell === null ? "" : String(cell))));
+    const sheetBlank = sheet.findIndex((row) => row.every((cell) => cell === ""));
+    expect(new Map(sheet.slice(0, sheetBlank).map(([key = "", value = ""]) => [key, value])).get("Số dòng")).toBe(
+      String(count),
+    );
+    const [sheetColumns, ...sheetData] = sheet.slice(sheetBlank + 1);
+    expect(sheetColumns).toEqual(columns);
+    expect(sheetData).toEqual(data.map((line) => line.map((cell) => cell.replace(/^'(?=[=+\-@])/, ""))));
+
+    // PDF: tệp tải về là PDF; dựng được nghĩa là thư viện chạy được dưới CSP của bản cài (script-src 'self').
+    const pdf = await exportAs(page, "PDF");
+    expect(pdf.name).toMatch(/^co-so-nha-dat-\d{4}-\d{2}-\d{2}\.pdf$/);
+    expect(pdf.content.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    expect(pdf.content.length).toBeGreaterThan(10_000);
+    await expect(page.getByText("Không xuất được tệp")).toHaveCount(0);
     passed = true;
   } finally {
     const problems = await cleanUp(request, created);
