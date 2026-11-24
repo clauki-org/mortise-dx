@@ -12,6 +12,13 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Giám sát trong profile `observability` (ADR 0037): `make obs-up` chạy Prometheus, Loki, Grafana Alloy, blackbox và
+  Grafana chỉ ở `127.0.0.1:3000` (đòi đăng nhập `admin`, mật khẩu `GRAFANA_ADMIN_PASSWORD`), với dashboard "Mortise:
+  tổng quan": yêu cầu, lỗi 5xx và độ trễ p95 theo route của cổng, sức khỏe từng dịch vụ, đăng nhập lỗi và log của mọi
+  dịch vụ; `make obs-check` kiểm, `make obs-down` dừng mà giữ số liệu và log. APISIX bật plugin prometheus cho mọi
+  route (số liệu chỉ ở cổng nội bộ 9091), Keycloak bật số liệu ở cổng quản lý. `make down` và `make reset` gồm cả
+  profile này. Bản cài cũ chạy `make up` (thêm biến mới vào `.env`, dựng lại Keycloak) rồi `docker compose restart
+  apisix`.
 - Bảng điều hành đọc được số hồ sơ và số đo thiết bị (ADR 0035): API quy trình có thêm
   `GET /v1/workflow/processes/{key}/counts` trả số hồ sơ còn mở, đã kết thúc, bước quá hạn và số đang chờ theo bước
   trong tenant của người gọi, chỉ cho người có vai trò của một bước (trong BPMN hay bảng phân cấp), người khác nhận 404.

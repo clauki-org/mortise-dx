@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cách blackbox hỏi endpoint sức khỏe của dịch vụ cho Prometheus (job probe-* trong prometheus.yml, ADR 0037). Chỉ
+# hỏi trong mạng nội bộ của compose, chỉ GET, không gửi bí mật nào.
+
+modules:
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      # Docker chỉ trả địa chỉ IPv4 cho tên dịch vụ; mặc định blackbox thử IPv6 trước.
+      preferred_ip_protocol: ip4
+  http_json:
+    prober: http
+    timeout: 5s
+    http:
+      preferred_ip_protocol: ip4
+      headers:
+        Accept: application/json

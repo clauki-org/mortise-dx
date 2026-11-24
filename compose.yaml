@@ -45,6 +45,9 @@ services:
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_PROXY_HEADERS: xforwarded
       KC_HEALTH_ENABLED: "true"
+      # Số liệu ở cổng quản lý 9000 (/auth/metrics), chỉ trong mạng nội bộ; Prometheus của profile `observability` đọc
+      # (ADR 0037). Cổng 9000 không mở ra máy chủ hay qua APISIX.
+      KC_METRICS_ENABLED: "true"
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?run make env}
       # Keycloak thay ${MORTISE_PUBLIC_URL} trong tệp realm khi import: redirect URI và web origin của client
@@ -606,9 +609,133 @@ services:
       seaweedfs:
         condition: service_healthy
 
+  # Profile `observability` (ADR 0037): số liệu, log và sức khỏe của lõi trên một trang Grafana cho người vận hành.
+  # Chỉ chạy khi gọi `make obs-up`; lõi chạy đủ khi không có nó. Chỉ Grafana mở cổng, và chỉ ở 127.0.0.1.
+  grafana:
+    image: grafana/grafana:13.3.1
+    profiles: [observability]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      # Chỉ áp dụng khi volume `grafanadata` còn trống; đổi trong .env sau đó không đổi mật khẩu đã lưu.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?run make env}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # Không gửi thống kê, không hỏi bản mới hay tin tức từ grafana.com.
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    volumes:
+      - ./core/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./core/observability/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  prometheus:
+    # Đích lấy số liệu ở core/observability/prometheus.yml. Không mở cổng ra máy chủ; xem qua Grafana.
+    image: prom/prometheus:v3.16.0
+    profiles: [observability]
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # Thời gian giữ số liệu là điểm xuất phát, chưa đo dung lượng đĩa.
+      - --storage.tsdb.retention.time=15d
+    volumes:
+      - ./core/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheusdata:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/-/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  loki:
+    # Kho log, một tiến trình, lưu trên volume (core/observability/loki.yaml). Image không có shell hay công cụ HTTP
+    # nên không có healthcheck; `make obs-check` chờ Loki trả log.
+    image: grafana/loki:3.7.10
+    profiles: [observability]
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./core/observability/loki.yaml:/etc/loki/loki.yaml:ro
+      - lokidata:/loki
+
+  alloy:
+    # Thu log container của dự án qua docker-socket-proxy, đẩy vào Loki (core/observability/alloy/config.alloy).
+    # Nghe 0.0.0.0 để Prometheus lấy số liệu của chính Alloy; cổng không mở ra máy chủ.
+    image: grafana/alloy:v1.22.0
+    profiles: [observability]
+    restart: unless-stopped
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --disable-reporting
+    volumes:
+      - ./core/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      # Vị trí đã đọc trong log của từng container; mất thì Alloy đọc lại và gửi trùng.
+      - alloydata:/var/lib/alloy/data
+    networks: [default, docker-api]
+    depends_on:
+      docker-socket-proxy:
+        condition: service_healthy
+      loki:
+        condition: service_started
+
+  docker-socket-proxy:
+    # Chỉ cho Alloy đọc danh sách, thông tin, log của container và danh sách mạng; mọi lệnh ghi (POST) và API khác bị
+    # chặn. Đọc thông tin container vẫn thấy biến môi trường, gồm bí mật của lõi, nên proxy chỉ nằm trong mạng
+    # `docker-api` riêng với Alloy (ADR 0037). Docker rootless hay socket ở chỗ khác: đặt DOCKER_SOCK trong .env.
+    image: tecnativa/docker-socket-proxy:v0.5.0
+    profiles: [observability]
+    restart: unless-stopped
+    environment:
+      CONTAINERS: "1"
+      NETWORKS: "1"
+      POST: "0"
+    volumes:
+      - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    networks: [docker-api]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2375/_ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  blackbox:
+    # Hỏi endpoint sức khỏe của dịch vụ không có số liệu riêng (core/observability/blackbox.yml); Prometheus gọi nó.
+    image: prom/blackbox-exporter:v0.29.1
+    profiles: [observability]
+    restart: unless-stopped
+    command: ["--config.file=/etc/blackbox_exporter/config.yml"]
+    volumes:
+      - ./core/observability/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9115/-/healthy"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
 networks:
   # Mạng của thiết bị: không có đường ra internet, và các dịch vụ khác của lõi không nằm trong đó.
   ot:
+    internal: true
+  # Mạng giữa Alloy và docker-socket-proxy: không ra internet, dịch vụ khác của lõi không gọi được proxy.
+  docker-api:
     internal: true
 volumes:
   pgdata:
@@ -616,3 +743,7 @@ volumes:
   scorpiodata:
   seaweed:
   ollama:
+  grafanadata:
+  prometheusdata:
+  lokidata:
+  alloydata:

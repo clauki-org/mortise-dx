@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Prometheus của profile `observability` (ADR 0037): lấy số liệu của cổng APISIX, Keycloak và chính các thành phần
+# giám sát; sức khỏe các dịch vụ còn lại hỏi qua blackbox (blackbox.yml) vì chúng không có endpoint số liệu. Mọi đích
+# là tên dịch vụ trong mạng nội bộ của compose; không đích nào mở cổng ra máy chủ. Nhãn `service` trùng tên dịch vụ
+# compose, như nhãn của log trong Loki (alloy/config.alloy), để dashboard lọc cả hai bằng cùng một tên.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Plugin prometheus của APISIX, cổng riêng 9091 (core/apisix/config.yaml); cổng 9080 không trả số liệu.
+  - job_name: apisix
+    metrics_path: /apisix/prometheus/metrics
+    static_configs:
+      - targets: ["apisix:9091"]
+        labels: {service: apisix}
+
+  # Cổng quản lý 9000 của Keycloak, cùng tiền tố /auth với cổng chính; cần KC_METRICS_ENABLED trong compose.yaml.
+  - job_name: keycloak
+    metrics_path: /auth/metrics
+    static_configs:
+      - targets: ["keycloak:9000"]
+        labels: {service: keycloak}
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels: {service: prometheus}
+
+  - job_name: loki
+    static_configs:
+      - targets: ["loki:3100"]
+        labels: {service: loki}
+
+  - job_name: alloy
+    static_configs:
+      - targets: ["alloy:12345"]
+        labels: {service: alloy}
+
+  - job_name: blackbox
+    static_configs:
+      - targets: ["blackbox:9115"]
+        labels: {service: blackbox}
+
+  # Hỏi endpoint sức khỏe của từng dịch vụ qua blackbox; kết quả là probe_success (1 hay 0) theo nhãn `service`.
+  # Flowable không có ở đây: endpoint sức khỏe của nó đòi mật khẩu quản trị, mà blackbox không giữ bí mật nào; lỗi của
+  # Flowable hiện qua mã 5xx của route workflow ở cổng.
+  - job_name: probe-http
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: ["http://workflow-api:8000/healthz"]
+        labels: {service: workflow-api}
+      - targets: ["http://files-api:8000/healthz"]
+        labels: {service: files-api}
+      - targets: ["http://context-api:8000/healthz"]
+        labels: {service: context-api}
+      - targets: ["http://assistant:8000/healthz"]
+        labels: {service: assistant}
+      - targets: ["http://hasura:8080/healthz"]
+        labels: {service: hasura}
+      - targets: ["http://keycloak:9000/auth/health/ready"]
+        labels: {service: keycloak}
+      - targets: ["http://seaweedfs:9333/cluster/status"]
+        labels: {service: seaweedfs}
+      - targets: ["http://web:8080/"]
+        labels: {service: web}
+    relabel_configs: &probe_relabel
+      # Đích ghi trong static_configs là URL cần hỏi; Prometheus gửi nó cho blackbox làm tham số `target`.
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  # Scorpio trả danh sách kiểu theo NGSI-LD; hỏi kèm Accept JSON như healthcheck của nó trong compose.yaml.
+  - job_name: probe-json
+    metrics_path: /probe
+    params:
+      module: [http_json]
+    static_configs:
+      - targets: ["http://scorpio:9090/ngsi-ld/v1/types"]
+        labels: {service: scorpio}
+    relabel_configs: *probe_relabel

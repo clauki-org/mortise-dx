@@ -1,0 +1,48 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Loki của profile `observability` (ADR 0037): một tiến trình, lưu trên volume `lokidata`. Alloy đẩy log container vào
+# đây, Grafana đọc ra. Không mở cổng ra máy chủ; chỉ dịch vụ trong mạng nội bộ của compose gọi được, nên không bật
+# xác thực nhiều tenant của Loki (auth_enabled).
+
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  log_level: warn
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: "2026-11-01"
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+# Log chứa địa chỉ IP và mã người dùng (log truy cập của cổng, sự kiện đăng nhập của Keycloak), nên chỉ giữ ngắn.
+# Bảy ngày là điểm xuất phát, chưa đo dung lượng đĩa; compactor xóa phần quá hạn.
+limits_config:
+  retention_period: 168h
+
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  delete_request_store: filesystem
+
+# Không gửi thống kê sử dụng ra ngoài.
+analytics:
+  reporting_enabled: false

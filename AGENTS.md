@@ -39,7 +39,8 @@ core/                 TẦNG 1: lõi không giao diện, không chứa nghiệp 
   cold-archive/       công cụ tự viết: xuất nhật ký cũ sang kho lạnh (Parquet), truy vấn bằng DuckDB (Python, uv)
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
   ollama/             mô hình Ollama (profile `ai`) ghim theo digest trọng số
-  observability/      kế hoạch
+  observability/      cấu hình giám sát (profile `observability`): Prometheus, Loki, Alloy, blackbox, nguồn dữ
+                      liệu và dashboard của Grafana
 platform/             TẦNG 2: thành phần dùng chung, không chứa từ nghiệp vụ
   web/                khung giao diện: đăng nhập, menu, thương hiệu theo bản cài, nạp thành phần và gói
   components/<tên>/   kế hoạch: mã của một thành phần khi tách khỏi web/; schema cấu hình ở contracts/ (ADR 0013)

@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Grafana nạp dashboard từ tệp JSON trong core/observability/grafana/dashboards/ (gắn vào /etc/grafana/dashboards).
+# Sửa trên giao diện không lưu được: dashboard là khai báo trong repo, sửa tệp rồi khởi động lại Grafana.
+
+apiVersion: 1
+
+providers:
+  - name: mortise
+    folder: Mortise
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/dashboards

@@ -1,0 +1,45 @@
+// SPDX-FileCopyrightText: 2026 Mortise DX contributors
+// SPDX-License-Identifier: Apache-2.0
+//
+// Grafana Alloy thu log của container trong dự án compose `mortise` rồi đẩy vào Loki (ADR 0037). Alloy không gắn
+// socket Docker: nó hỏi docker-socket-proxy, proxy chỉ cho đọc danh sách, thông tin và log của container và mạng.
+// Máy chủ còn chạy container khác ngoài dự án, nên lọc theo nhãn dự án mà compose gắn; đổi `name:` trong compose.yaml
+// thì đổi giá trị lọc ở đây.
+
+discovery.docker "mortise" {
+  host = "tcp://docker-socket-proxy:2375"
+
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=mortise"]
+  }
+}
+
+// Nhãn `service` là tên dịch vụ compose, trùng nhãn `service` của số liệu trong Prometheus (prometheus.yml).
+discovery.relabel "mortise" {
+  targets = discovery.docker.mortise.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "mortise" {
+  host          = "tcp://docker-socket-proxy:2375"
+  targets       = discovery.docker.mortise.targets
+  relabel_rules = discovery.relabel.mortise.rules
+  forward_to    = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
