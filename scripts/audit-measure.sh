@@ -17,7 +17,7 @@ set +a
 pairs="${1:?Cách dùng: scripts/audit-measure.sh <số cặp sửa>, ví dụ 2000}"
 base="${MORTISE_PUBLIC_URL:-http://localhost:9080}"
 sql() { docker compose exec -T postgres psql -qAtX -v ON_ERROR_STOP=1 -U postgres -d mortise -c "$1"; }
-cold() { docker compose --profile tools run --rm --build --quiet-pull cold-archive "$@" 2>/dev/null; }
+cold() { scripts/compose.sh run tools cold-archive "$@" 2>/dev/null; }
 token() {
   curl -fsS "$base/auth/realms/mortise/protocol/openid-connect/token" -d grant_type=password -d client_id=mortise-test \
     -d username=user.a -d "password=$DEMO_USER_PASSWORD" | jq -r .access_token

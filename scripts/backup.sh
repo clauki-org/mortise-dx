@@ -45,7 +45,7 @@ for service in "${writers[@]}"; do
   if grep -qx "$service" <<<"$running"; then stopped+=("$service"); fi
 done
 restart() {
-  [[ ${#stopped[@]} -eq 0 ]] || docker compose up -d --wait --no-recreate "${stopped[@]}" >/dev/null ||
+  [[ ${#stopped[@]} -eq 0 ]] || scripts/compose.sh up -d --wait --no-recreate "${stopped[@]}" >/dev/null ||
     echo "Không bật lại được ${stopped[*]}; chạy 'make up' để dựng lại lõi." >&2
 }
 trap restart EXIT

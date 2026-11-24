@@ -367,12 +367,12 @@ hưởng tới mã Apache-2.0 của dự án. Những công cụ chạy qua `uvx
 
 | Công cụ | Dùng để | Gọi qua | Giấy phép |
 |---|---|---|---|
-| Docker Engine, Docker Compose v2 | Chạy các dịch vụ lõi bằng image chính thức | `make up`, `make down`, `make reset` | Apache-2.0 |
+| Docker Engine, Docker Compose v2 | Chạy các dịch vụ lõi bằng image chính thức; lệnh `up`, `run` có thể dựng image tự viết đi qua `scripts/compose.sh` (máy chủ demo đặt `MORTISE_NO_BUILD=1` để không bao giờ dựng tại chỗ) | `make up`, `make down`, `make reset` | Apache-2.0 |
 | GNU Make | Lối vào chung cho mọi lệnh | `make help` | GPL-3.0-or-later |
 | uv | Quản lý Python và thư viện của workflow-api, files-api; chạy công cụ không cần cài | `make test`, `make check-fast` | MIT / Apache-2.0 |
 | REUSE | Kiểm mọi tệp có header bản quyền và giấy phép | `make lint` | GPL-3.0-or-later |
 | dbmate | Áp migration lược đồ CSDL (chạy như dịch vụ một lần trong compose) | `make up`, `make migrate-status` | MIT |
-| ShellCheck | Bắt lỗi trong script shell | `make check-fast` | GPL-3.0 |
+| ShellCheck | Bắt lỗi trong script shell, gồm `deploy/*.sh` | `make check-fast` | GPL-3.0 |
 | yamllint | Kiểm cú pháp và định dạng YAML | `make check-fast` | GPL-3.0 |
 | Ruff | Kiểm lỗi và định dạng mã Python | `make check-fast` | MIT |
 | check-jsonschema | Kiểm hợp đồng trong `contracts/` và token thật theo JSON Schema | `make check-fast`, `make smoke` | Apache-2.0 |
@@ -383,4 +383,6 @@ hưởng tới mã Apache-2.0 của dự án. Những công cụ chạy qua `uvx
 | Vitest | Kiểm thử đơn vị mã giao diện không cần trình duyệt; bài kiểm là tệp `*.test.ts` trong `platform/web/src/` | `make web-check` | MIT |
 | license-checker-rseidelsohn | Kiểm giấy phép phụ thuộc của giao diện theo danh sách cho phép trong `Makefile` | `make web-check` | BSD-3-Clause |
 | curl, jq, openssl | Gọi API trong seed và smoke, đọc JSON, sinh bí mật ngẫu nhiên | `scripts/` | curl / MIT / Apache-2.0 |
-| GitHub Actions | CI: `make check-fast` và `make test` với mọi thay đổi; `make web-check` khi đổi `platform/web/`; dựng lõi trên máy trắng, `make smoke` và `make e2e` khi pull request đổi thứ ngoài tài liệu; giám sát (`make obs-up`, `make obs-check`) trong cùng job; vòng sao lưu và khôi phục khi đổi phần nó phụ thuộc; push lên `main` chạy đủ | `.github/workflows/ci.yml` | dịch vụ của GitHub |
+| GitHub Actions | CI: `make check-fast` và `make test` với mọi thay đổi; `make web-check` khi đổi `platform/web/`; dựng lõi trên máy trắng, `make smoke`, `make heal-check` và `make e2e` khi pull request đổi thứ ngoài tài liệu; `make restore-drill` trên một máy trắng khác khi đổi phần sao lưu, khôi phục phụ thuộc; push lên `main` chạy đủ. Tag `v*`: chạy lại toàn bộ CI, dựng và đẩy image, kéo lại không đăng nhập để smoke, tạo GitHub Release ([ADR 0036](adr/0036-pull-based-gitops-with-compose.md)) | `.github/workflows/ci.yml`, `.github/workflows/release.yml` | dịch vụ của GitHub |
+| GitHub Container Registry (GHCR) | Giữ image của tám dịch vụ tự viết theo từng tag phát hành, `ghcr.io/clauki-org/mortise-dx/<dịch vụ>:<tag>`; CI đẩy bằng `GITHUB_TOKEN`, máy chủ kéo không đăng nhập (gói phải ở chế độ Public) | `release.yml`, `MORTISE_IMAGE_PREFIX` trong `compose.yaml` | dịch vụ của GitHub |
+| systemd timer | Trên máy chủ demo, chạy `deploy/pull-deploy.sh` 5 phút sau khi khởi động rồi 15 phút một lần; log xem bằng `journalctl -u mortise-deploy.service` | `deploy/systemd/` ([deploy/README.md](../deploy/README.md)) | LGPL-2.1-or-later |

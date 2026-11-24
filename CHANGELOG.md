@@ -10,6 +10,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-25
+
 ### Added
 
 - Giám sát trong profile `observability` (ADR 0037): `make obs-up` chạy Prometheus, Loki, Grafana Alloy, blackbox và
@@ -19,6 +21,16 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   route (số liệu chỉ ở cổng nội bộ 9091), Keycloak bật số liệu ở cổng quản lý. `make down` và `make reset` gồm cả
   profile này. Bản cài cũ chạy `make up` (thêm biến mới vào `.env`, dựng lại Keycloak) rồi `docker compose restart
   apisix`.
+- Phát hành theo tag và triển khai kéo về (ADR 0036): tag `vX.Y.Z` trên main chạy lại toàn bộ CI, dựng image tám
+  dịch vụ tự viết lên `ghcr.io/clauki-org/mortise-dx/<dịch vụ>:<tag>`, kéo lại không đăng nhập để dựng lõi, seed,
+  smoke, rồi tạo GitHub Release từ mục của bản trong CHANGELOG (`scripts/release-notes.sh`). Tám
+  dịch vụ tự viết có `image` theo `MORTISE_IMAGE_PREFIX`, `MORTISE_VERSION`; máy phát triển dựng như trước với tên
+  `mortise.invalid/<dịch vụ>:dev` (bản cài cũ dựng lại một lần ở `make up` kế tiếp, image cũ `mortise-<dịch vụ>` xóa
+  được); `MORTISE_NO_BUILD=1` cấm dựng tại chỗ, mọi lệnh có thể dựng đi qua `scripts/compose.sh`. Máy chủ demo cài `deploy/pull-deploy.sh` với systemd timer: tự kéo Release mới, sao lưu, dựng, smoke lõi và
+  gói, lỗi thì quay về tag trước; CSDL không tự khôi phục (`deploy/README.md`). `make heal-check SERVICE=<dịch vụ>`
+  kiểm dịch vụ có tiến trình chính thoát được Docker dựng lại và smoke vẫn qua. `make restore-drill CONFIRM=yes` diễn
+  tập khôi phục trên máy trắng, đo thời gian từng giai đoạn (`docs/restore-drill.md`); CI chạy nó thay cho vòng sao
+  lưu, khôi phục cũ trong job e2e.
 - Bảng điều hành đọc được số hồ sơ và số đo thiết bị (ADR 0035): API quy trình có thêm
   `GET /v1/workflow/processes/{key}/counts` trả số hồ sơ còn mở, đã kết thúc, bước quá hạn và số đang chờ theo bước
   trong tenant của người gọi, chỉ cho người có vai trò của một bước (trong BPMN hay bảng phân cấp), người khác nhận 404.
@@ -304,3 +316,6 @@ từng đặt giá trị khác mặc định; `make env` tự thêm hai biến m
   nhánh mặc định. Lỗi 422 có dạng `{"error": "..."}` như các lỗi khác của API.
 - Flowable không còn tự deploy các quy trình minh họa của ảnh `flowable-rest`; smoke kiểm không có quy trình nào
   ngoài các tenant. Bản cài đã dựng vẫn giữ các quy trình đó trong CSDL, smoke báo lỗi cho tới khi `make reset`.
+
+[Unreleased]: https://github.com/clauki-org/mortise-dx/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/clauki-org/mortise-dx/releases/tag/v0.1.0
