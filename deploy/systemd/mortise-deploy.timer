@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Hẹn giờ cho mortise-deploy.service: 5 phút sau khi máy khởi động, rồi 15 phút sau mỗi lần chạy; RandomizedDelaySec
+# rải lời gọi API GitHub khi nhiều máy chủ cùng hẹn. Lần bị lỡ khi máy tắt được bù bằng OnBootSec, không cần
+# Persistent= (systemd chỉ áp dụng nó cho OnCalendar=).
+
+[Unit]
+Description=Mortise DX: kiểm bản phát hành mới định kỳ
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+RandomizedDelaySec=2min
+
+[Install]
+WantedBy=timers.target

@@ -44,7 +44,10 @@ biệt.
 | Nhật ký thay đổi: ai sửa gì, lúc nào, trước và sau; chuỗi băm phát hiện sửa lén, đối chiếu băm trong bản sao lưu | Đã chạy | `make smoke`, `make audit-verify` |
 | Kho lạnh cho nhật ký: xuất dòng cũ sang Parquet trên SeaweedFS có kiểm băm từng dòng rồi xóa khỏi CSDL trong cùng giao dịch, chuỗi băm nối qua phần đã xóa, truy vấn gộp bằng DuckDB; chạy theo lịch là kế hoạch | Đã chạy | `make smoke`, `make archive`, `make cold-verify`, `make cold-query` |
 | Chỉ số trỏ về bản ghi nguồn, chỉ số chất lượng dữ liệu | Kế hoạch | |
-| Sao lưu và khôi phục toàn bộ lõi | Đã chạy | CI: sao lưu → xóa → khôi phục → `make smoke` |
+| Sao lưu và khôi phục toàn bộ lõi; diễn tập khôi phục trên máy trắng có đo thời gian từng giai đoạn ([docs/restore-drill.md](docs/restore-drill.md)) | Đã chạy | CI: `make restore-drill` (sao lưu trong lúc tải tệp lên → xóa cả volume, image, bộ đệm build → khôi phục không dựng lõi trước → `make smoke`) |
+| Tự phục hồi: tiến trình chính của một dịch vụ thoát thì Docker dựng lại container (`restart: unless-stopped`); container còn chạy mà unhealthy, hay bị dừng bằng tay, thì không | Đã chạy | CI: `make heal-check SERVICE=workflow-api` (RestartCount tăng đúng 1, khỏe lại, `make smoke`) |
+| Phát hành theo tag: CI kiểm, dựng image lên GitHub Container Registry, kéo lại không đăng nhập để smoke, tạo GitHub Release từ mục CHANGELOG ([ADR 0036](docs/adr/0036-pull-based-gitops-with-compose.md)) | Chưa chạy với tag thật | `.github/workflows/release.yml`; `scripts/release-notes.sh` |
+| Máy chủ demo tự kéo tag phát hành mới về (systemd timer), dựng, smoke, lỗi thì quay về tag trước; CSDL không tự khôi phục ([deploy/README.md](deploy/README.md)) | Chưa cài trên máy chủ | `deploy/pull-deploy.sh` đã thử trên bản sao với tag giả: bản tốt, bản smoke lỗi, bản chưa có image |
 | Giám sát cho người vận hành (profile `observability`, [ADR 0037](docs/adr/0037-observability-profile.md)): Grafana chỉ ở 127.0.0.1, đòi đăng nhập, có dashboard số yêu cầu, lỗi 5xx, độ trễ p95 theo route của cổng, sức khỏe từng dịch vụ, đăng nhập lỗi và log của mọi dịch vụ (Prometheus, Loki, Alloy) | Đã chạy | CI: `make obs-up`, `make obs-check` (mọi đích của Prometheus lấy được, mọi dịch vụ trả lời blackbox, có số liệu cổng và log trong Loki, cổng 9080 không trả số liệu) |
 | Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy | `make smoke` (cổng, CSP, luồng PKCE), `make web-check`, `make e2e` |
 | Bảng việc: danh sách việc đang chờ người đăng nhập theo hạn; màn hình xử lý với biểu mẫu và nút theo khai báo của bước | Đã chạy | `make e2e` (trình duyệt: duyệt, bốn mắt, cách ly đơn vị), `make web-check` |
@@ -107,7 +110,11 @@ make restore FROM=<thư mục sao lưu> CONFIRM=yes   # GHI ĐÈ dữ liệu hi�
 ```
 
 Trong lúc sao lưu, các dịch vụ ghi dữ liệu dừng, kể cả cổng: người dùng và thiết bị không gọi được lõi cho tới khi sao
-lưu xong. Nhờ vậy CSDL, CSDL của Scorpio và kho tệp trong bản sao lưu cùng một thời điểm.
+lưu xong. Nhờ vậy CSDL, CSDL của Scorpio và kho tệp trong bản sao lưu cùng một thời điểm. Diễn tập khôi phục trên máy
+trắng và kết quả đo: [docs/restore-drill.md](docs/restore-drill.md).
+
+Bản phát hành là một tag `vX.Y.Z`; máy chủ demo chạy image CI đã dựng cho tag đó và tự kéo bản mới về: cài đặt, ghim
+bản, quay về và khôi phục ở [deploy/README.md](deploy/README.md).
 
 Tài khoản demo: `user.a`, `manager.a`, `admin.a` (tenant `xa-a`), tương tự `.b` cho `xa-b` và `.c` cho `xa-c`, ba xã
 của "Tỉnh Mẫu", tỉnh hư cấu; ở tenant cha `tinh-mau` có `leader.tinh` (đọc tổng hợp của ba xã), `admin.tinh` (quản trị
@@ -218,9 +225,11 @@ platform/             Tầng 2
 apps/facilities-commune/  Tầng 3: gói cơ sở vật chất xã (app.yaml, migration, quyền Hasura, smoke của gói)
 apps/supplies-commune/    Tầng 3: gói kho vật tư xã, chỉ gồm tệp khai báo (ADR 0022)
 devices/simulator/    bộ giả lập và danh sách thiết bị demo (Python)
-scripts/              tạo .env, seed, smoke, tạo migration, cài và gỡ gói, sao lưu, khôi phục, hook pre-push
-docs/                 quyết định kiến trúc (adr/), API của lõi (api.md), công cụ (tools.md)
-.github/              CI, mẫu issue và pull request
+deploy/               máy chủ demo: script kéo tag phát hành mới, unit systemd, hướng dẫn
+scripts/              tạo .env, seed, smoke, tạo migration, cài và gỡ gói, sao lưu, khôi phục, diễn tập khôi phục,
+                      kiểm tự phục hồi, ghi chú phát hành, hook pre-push
+docs/                 quyết định kiến trúc (adr/), API của lõi (api.md), công cụ (tools.md), diễn tập khôi phục
+.github/              CI, phát hành theo tag, mẫu issue và pull request
 ```
 
 ## Giấy phép

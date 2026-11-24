@@ -3,6 +3,12 @@
 #
 # Tầng 1 – lõi headless của DX-OS. Chỉ APISIX mở ra ngoài (cổng 9080);
 # các cổng còn lại chỉ bind 127.0.0.1 để quản trị khi phát triển.
+#
+# Dịch vụ tự viết có cả `build` và `image` (ADR 0036). Máy phát triển dựng từ mã nguồn, image mang tên
+# `mortise.invalid/<dịch vụ>:dev`: miền `.invalid` không bao giờ phân giải được, nên lần Compose thử kéo trước khi dựng
+# không thể lấy nhầm image của ai khác trên Docker Hub. Máy chủ demo đặt MORTISE_IMAGE_PREFIX, MORTISE_VERSION và
+# MORTISE_NO_BUILD=1 trong .env để chạy đúng image CI đã đẩy lên GHCR cho tag; `up`, `run` của chúng đi qua
+# scripts/compose.sh.
 
 name: mortise
 
@@ -194,6 +200,7 @@ services:
   workflow-api:
     # Lớp kiểm soát quyền trước Flowable: tenant, vai trò, quy tắc bốn mắt; vai trò của bước theo bảng phân cấp.
     build: core/workflow-api
+    image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/workflow-api:${MORTISE_VERSION:-dev}
     restart: unless-stopped
     environment:
       KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/certs
@@ -229,6 +236,7 @@ services:
   files-api:
     # Đường vào tệp của lõi (/v1/files): gán tenant từ token, giới hạn cỡ, lưu nội dung vào SeaweedFS.
     build: core/files-api
+    image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/files-api:${MORTISE_VERSION:-dev}
     restart: unless-stopped
     environment:
       KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/certs
@@ -271,6 +279,7 @@ services:
   web:
     # Tầng 2: giao diện dựng sẵn thành tệp tĩnh, chỉ vào được qua cổng tại `/` (ADR 0006). Không mở cổng ra máy chủ.
     build: platform/web
+    image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/web:${MORTISE_VERSION:-dev}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
@@ -418,6 +427,7 @@ services:
   context-api:
     # Đường đọc dữ liệu thiết bị của lõi (/v1/context): kiểm token, gắn tenant từ token, chỉ đọc.
     build: core/context-api
+    image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/context-api:${MORTISE_VERSION:-dev}
     restart: unless-stopped
     environment:
       KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/certs
@@ -464,6 +474,7 @@ services:
     # xét luật ngưỡng và mở hồ sơ qua workflow-api.
     # Nằm ở cả hai mạng: nhận tin trong `ot`, ghi vào Scorpio và đọc CSDL trong mạng mặc định.
     build: core/iot-bridge
+    image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/iot-bridge:${MORTISE_VERSION:-dev}
     restart: unless-stopped
     environment:
       MQTT_HOST: mosquitto
@@ -500,6 +511,7 @@ services:
     # Bộ giả lập thiết bị demo (devices/simulator, ADR 0012): đăng nhập Mosquitto bằng tài khoản của từng thiết
     # bị như thiết bị thật. Chỉ chạy khi gọi: `make simulate` (lặp) hoặc trong `make smoke` (một lượt).
     build: devices/simulator
+    image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/simulator:${MORTISE_VERSION:-dev}
     profiles: [simulator]
     environment:
       DEMO_DEVICE_PASSWORD: ${DEMO_DEVICE_PASSWORD:?run make env}
@@ -533,6 +545,7 @@ services:
     # định gọi Ollama trong mạng nội bộ; chạy cùng lõi; Ollama ở profile `ai` (`make ai-up`), chưa bật thì dịch vụ trả
     # 503 kèm cách bật cho câu hỏi cần mô hình.
     build: platform/services/assistant
+    image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/assistant:${MORTISE_VERSION:-dev}
     restart: unless-stopped
     environment:
       KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/certs
@@ -593,6 +606,7 @@ services:
     # vấn bằng DuckDB. Chỉ chạy khi gọi (`make archive`, `make cold-query`); không có route qua cổng vì tệp chứa
     # giá trị trước và sau của mọi tenant. Dùng tài khoản postgres như `make backup`.
     build: core/cold-archive
+    image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/cold-archive:${MORTISE_VERSION:-dev}
     profiles: [tools]
     environment:
       COLD_DB_HOST: postgres

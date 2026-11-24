@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e audit-verify backup-under-load files-verify hooks app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up \
+  check-fast web-check e2e audit-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up \
   obs-up obs-down obs-check
 
 help: ## Liệt kê các lệnh
@@ -21,7 +21,7 @@ env: ## Tạo .env với bí mật ngẫu nhiên (chỉ khi chưa có)
 	@scripts/make-env.sh
 
 up: env ## Dựng lõi, áp migration chưa chạy, chờ tới khi mọi dịch vụ sẵn sàng
-	docker compose up -d --wait
+	scripts/compose.sh up -d --wait
 
 # `down` không có profile bỏ sót container và volume của profile chưa bật, nên nêu `observability` để dừng và xóa
 # cả phần giám sát. Không nêu `ai`: xóa volume `ollama` thì lần sau phải tải lại mô hình.
@@ -46,6 +46,9 @@ otp: ## In mã OTP hiện tại của tài khoản người duyệt demo và kh�
 smoke: ## Kiểm tra đầu-cuối qua cổng (cần lõi đang chạy và đã seed)
 	@scripts/smoke.sh
 
+heal-check: ## Làm tiến trình chính của một dịch vụ thoát, kiểm nó tự lên lại rồi smoke: make heal-check [SERVICE=workflow-api]
+	@scripts/heal-check.sh "$(or $(SERVICE),workflow-api)"
+
 migrate-new: ## Tạo tệp migration mới cho lõi: make migrate-new NAME=<ten_ngan>
 	@scripts/migration-new.sh "$(NAME)"
 
@@ -65,7 +68,7 @@ files-verify: ## Kiểm mỗi dòng core.files có đúng một đối tượng 
 	@scripts/files-verify.sh
 
 simulate: ## Chạy bộ giả lập thiết bị demo, gửi số đo mỗi 5 giây; thêm ARGS="--set xa-a/archive-01:humidity=78"
-	docker compose --profile simulator run --rm --build simulator $(ARGS)
+	scripts/compose.sh run simulator simulator $(ARGS)
 
 ai-up: env ## Chạy Ollama (profile ai), tải mô hình ghim trong core/ollama/models.txt và kiểm digest; lần đầu cần mạng
 	@scripts/ai.sh
@@ -74,7 +77,7 @@ ai-up: env ## Chạy Ollama (profile ai), tải mô hình ghim trong core/ollama
 OBS_SERVICES := grafana prometheus loki alloy docker-socket-proxy blackbox
 
 obs-up: env ## Chạy giám sát (profile observability): Prometheus, Grafana (chỉ 127.0.0.1), Loki, Alloy; dựng cả lõi nếu chưa chạy
-	docker compose --profile observability up -d --wait
+	COMPOSE_PROFILES=observability scripts/compose.sh up -d --wait
 
 obs-check: ## Kiểm giám sát: Grafana, dashboard, đích của Prometheus, sức khỏe dịch vụ, log trong Loki
 	@scripts/obs-check.sh
@@ -89,12 +92,12 @@ device-remove: ## Thu hồi tài khoản MQTT của thiết bị: make device-re
 	@scripts/device.sh remove "$(TENANT)" "$(DEVICE)"
 archive: ## Xuất nhật ký thay đổi cũ sang kho lạnh: make archive BEFORE=<ngày, ví dụ 2026-11-01>
 	@test -n "$(BEFORE)" || { echo "Cách dùng: make archive BEFORE=2026-11-01" >&2; exit 1; }
-	@docker compose --profile tools run --rm --build cold-archive archive --before "$(BEFORE)"
+	@scripts/compose.sh run tools cold-archive archive --before "$(BEFORE)"
 cold-verify: ## Tính lại chuỗi băm của mọi đoạn nhật ký trong kho lạnh từ tệp; thêm ANCHOR=<id>:<băm> để đối chiếu neo
-	@docker compose --profile tools run --rm --build cold-archive verify $(if $(ANCHOR),--anchor "$(ANCHOR)")
+	@scripts/compose.sh run tools cold-archive verify $(if $(ANCHOR),--anchor "$(ANCHOR)")
 cold-query: ## Truy vấn nhật ký gộp kho lạnh và CSDL bằng DuckDB: make cold-query SQL="SELECT count(*) FROM audit_all"
 	@test -n "$(SQL)" || { echo 'Cách dùng: make cold-query SQL="SELECT count(*) FROM audit_all"' >&2; exit 1; }
-	@docker compose --profile tools run --rm --build cold-archive query "$(SQL)"
+	@scripts/compose.sh run tools cold-archive query "$(SQL)"
 
 # Gói có bộ nạp riêng (seed/load.py) thì chạy nó; gói chỉ có seed/demo.yaml thì nạp bằng bộ nạp chung
 # scripts/app-seed.py (ADR 0022). APP=<gói> nạp riêng một gói, khi các gói khác có dữ liệu demo chưa được cài.
@@ -126,6 +129,9 @@ app-smoke: ## Kiểm tra qua cổng của một gói đã cài: make app-smoke A
 restore: ## Khôi phục từ bản sao lưu, GHI ĐÈ dữ liệu: make restore FROM=<thư mục> CONFIRM=yes
 	@scripts/restore.sh "$(FROM)"
 
+restore-drill: ## Diễn tập khôi phục trên máy trắng, đo thời gian; XÓA dữ liệu, image và bộ đệm build: make restore-drill CONFIRM=yes [FROM=<thư mục>]
+	@CONFIRM="$(CONFIRM)" scripts/restore-drill.sh "$(FROM)"
+
 lint: ## Kiểm tra giấy phép từng tệp (REUSE)
 	uvx reuse lint
 
@@ -149,10 +155,12 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	@test -f .env || cp .env.example .env.check-fast
 	@if [ -f .env.check-fast ]; then docker compose --env-file .env.check-fast config -q; rm -f .env.check-fast; \
 	  else docker compose config -q; fi
+	@# Dịch vụ tự viết mang image phát hành đúng tên, và không lệnh nào dựng image ngoài scripts/compose.sh (ADR 0036).
+	@python3 scripts/check-compose-images.py || { docker compose version >&2; exit 1; }
 	uvx --from shellcheck-py shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh \
-	  core/mosquitto/start.sh \
+	  core/mosquitto/start.sh deploy/*.sh \
 	  apps/*/tests/*.sh
-	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps .github
+	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps deploy .github
 	uvx ruff check --no-cache core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive \
 	  platform/services/assistant devices/simulator
 	uvx ruff format --no-cache --check core/workflow-api core/files-api core/context-api core/iot-bridge \

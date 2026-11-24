@@ -37,7 +37,7 @@ problems=$(psql -F ': ' -c "SELECT id, problem FROM core.audit_verify($id, $hash
 # là khớp; đối chiếu neo đó qua tệp của đoạn (cold-archive verify), xong thì bỏ dòng đó khỏi danh sách vấn đề.
 cold_note='neo nằm trong đoạn đã lưu trữ'
 if grep -q "$cold_note" <<<"$problems"; then
-  if ! docker compose --profile tools run --rm --build --quiet-pull cold-archive verify --anchor "$anchor"; then
+  if ! scripts/compose.sh run tools cold-archive verify --anchor "$anchor"; then
     echo "Neo $anchor không khớp kho lạnh." >&2
     exit 1
   fi

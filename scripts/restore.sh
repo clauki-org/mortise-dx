@@ -89,7 +89,7 @@ docker compose run --rm --no-deps -T --entrypoint sh seaweedfs -c \
   'find /data -mindepth 1 -delete && tar xzf - -C /data' <"$src/seaweed.tar.gz"
 
 echo "Dựng lại lõi…"
-docker compose up -d --wait
+scripts/compose.sh up -d --wait
 # Nhật ký thay đổi khôi phục phải nguyên vẹn và khớp băm cuối ghi lúc sao lưu.
 if grep -q '^audit_head=' "$src/MANIFEST"; then
   scripts/audit-verify.sh "$src"
@@ -97,7 +97,7 @@ fi
 # Dòng nhật ký đã chuyển sang kho lạnh chỉ còn trong tệp (ADR 0014): tính lại chuỗi của mọi đoạn từ tệp đã khôi phục.
 segments=$(docker compose exec -T postgres psql -qAtX -U postgres -d mortise -c 'SELECT count(*) FROM core.audit_segments')
 if [[ "$segments" != 0 ]]; then
-  docker compose --profile tools run --rm --build --quiet-pull cold-archive verify || {
+  scripts/compose.sh run tools cold-archive verify || {
     echo "Kho lạnh của nhật ký không khớp core.audit_segments trong bản sao lưu này." >&2
     exit 1
   }

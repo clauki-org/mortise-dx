@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Một lần kéo và triển khai bản phát hành mới (deploy/pull-deploy.sh), do mortise-deploy.timer gọi. Chạy bằng tài
+# khoản sở hữu thư mục clone và thuộc nhóm docker; cách cài ở deploy/README.md. Mã thoát 75 (chưa kéo được image, mạng
+# lỗi) không tính là lỗi: lần hẹn sau thử lại.
+
+[Unit]
+Description=Mortise DX: kéo bản phát hành mới và triển khai
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=mortise
+Group=mortise
+EnvironmentFile=/etc/mortise/deploy.env
+# /var/lib/mortise-deploy: tag đang chạy, tag trước, tag lỗi, bản sao lưu cuối; chỉ tài khoản chạy dịch vụ đọc được vì
+# worktree tạm ở đây chứa bản sao .env.
+StateDirectory=mortise-deploy
+StateDirectoryMode=0700
+ExecStart=/bin/bash ${MORTISE_DIR}/deploy/pull-deploy.sh
+SuccessExitStatus=75
+# Dựng lại lõi, seed và smoke mất vài phút; lần kéo image đầu tiên có thể lâu hơn.
+TimeoutStartSec=1h

@@ -3,6 +3,7 @@
 
 .env
 .env.before-restore
+.env.before-drill
 *.log
 .DS_Store
 .idea/

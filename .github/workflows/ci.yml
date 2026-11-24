@@ -4,7 +4,8 @@
 # Chạy với mọi pull request và mọi push lên main. Các bước kiểm tra chỉ gọi Makefile,
 # nên kết quả ở máy và trên CI giống nhau. Job e2e dựng lõi trên máy trắng, đúng như
 # người dùng dựng từ mã nguồn; nó mất vài phút nên chỉ chạy khi pull request đổi thứ
-# ảnh hưởng tới lõi. Push lên main luôn chạy đủ.
+# ảnh hưởng tới lõi. Push lên main luôn chạy đủ. Diễn tập khôi phục chạy song song với e2e trên một máy trắng khác.
+# release.yml gọi lại workflow này (workflow_call) làm cổng kiểm cho mỗi tag phát hành; khi đó mọi job chạy đủ.
 
 name: ci
 
@@ -12,6 +13,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_call:
 
 # Workflow chỉ đọc repo; không bước nào push hay đổi cấu hình được.
 permissions:
@@ -72,7 +74,7 @@ jobs:
           files=$(git diff --name-only "origin/$BASE_REF...HEAD")
           printf '%s\n' "$files"
           docs='(\.md$|^docs/|^LICENSES?|^\.github/ISSUE_TEMPLATE/|^\.editorconfig$|^REUSE\.toml$)'
-          backup='(^compose\.yaml$|^core/postgres/|^platform/schema/|^scripts/(backup|restore|writers|files-verify|backup-under-load)\.sh$'
+          backup='(^compose\.yaml$|^core/postgres/|^platform/schema/|^scripts/(backup|restore|writers|files-verify|backup-under-load|restore-drill)\.sh$'
           backup="$backup"'|^Makefile$|^\.env\.example$|^\.github/workflows/)'
           core=false; restore=false
           if printf '%s\n' "$files" | grep -Evq "$docs"; then core=true; fi
@@ -91,8 +93,6 @@ jobs:
     # Ba lượt trên main ngày 2026-11-23 mất 17–18 phút (thời gian job trên GitHub Actions); bước giám sát tải thêm 6
     # image và chờ số liệu.
     timeout-minutes: 30
-    env:
-      RESTORE_CYCLE: ${{ needs.changes.outputs.backup }}
     steps:
       - uses: actions/checkout@v4
       # smoke kiểm token thật theo contracts/ bằng check-jsonschema qua uvx.
@@ -107,6 +107,9 @@ jobs:
       # sau đó để các bước sau chạy trên lõi như trước.
       - name: Observability profile
         run: make obs-up && make obs-check && make obs-down
+      # Tiến trình chính của workflow-api thoát, Docker phải tự dựng lại đúng một lần và smoke vẫn qua.
+      - name: A service whose process exits comes back by itself
+        run: make heal-check SERVICE=workflow-api
       # Hai gói Tầng 3 cài vào, kiểm, gỡ ra; lõi và gói còn lại phải vẫn qua smoke sau khi gỡ (ADR 0005). Thời hạn
       # công khai ngắn để smoke của gói xã chờ được hết hạn (ADR 0019). seed-demo nạp mọi gói có dữ liệu demo nên
       # chạy sau khi cả hai gói đã cài; gói kho chỉ gồm tệp khai báo (ADR 0022).
@@ -143,27 +146,36 @@ jobs:
             platform/web/test-results
           retention-days: 7
       # Gỡ sau e2e: bài trên trình duyệt (platform/web/e2e/) cần gói đang cài. Gỡ gói kho trước: lõi và gói xã phải
-      # còn qua smoke. Sau đó gỡ gói xã, lõi vẫn qua; vòng sao lưu bên dưới chạy trên lõi không có gói như trước.
+      # còn qua smoke. Sau đó gỡ gói xã, lõi vẫn qua.
       - name: Uninstall the supplies package, the core and the commune package still pass
         run: make app-uninstall APP=supplies-commune CONFIRM=yes && make smoke && make app-smoke APP=facilities-commune
       - name: Uninstall the commune package, the core still passes
         run: make app-uninstall APP=facilities-commune CONFIRM=yes && make smoke
-      # Vòng khôi phục: sao lưu, xóa sạch, dựng lõi trắng, khôi phục, rồi smoke lại.
-      # Sao lưu trong khi tải tệp lên liên tục; restore phía dưới kiểm core.files khớp kho tệp (#104).
-      - name: Back up while files are being uploaded
-        if: env.RESTORE_CYCLE == 'true'
-        run: make backup-under-load
+      - name: Service logs
+        if: failure()
+        run: docker compose logs --tail=200
+      - name: Remove containers and data
+        if: always()
+        run: make reset
+
+  # Diễn tập khôi phục (docs/restore-drill.md): sao lưu trong lúc tải tệp lên, xóa sạch cả image và bộ đệm build, khôi
+  # phục mà không dựng lõi trước, smoke; thời gian từng giai đoạn ghi vào tóm tắt của lần chạy. Bản sao lưu chứa .env
+  # nên không bao giờ được tải lên làm artifact.
+  restore-drill:
+    name: Restore drill on a clean machine
+    needs: changes
+    if: needs.changes.outputs.backup == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Start, seed and smoke the core
+        run: make up && make seed && make smoke
+      - name: Back up, wipe, restore, smoke
+        run: make restore-drill CONFIRM=yes
         env:
           BACKUP_DIR: ${{ runner.temp }}/backups
-      - name: Wipe and start a clean core
-        if: env.RESTORE_CYCLE == 'true'
-        run: make reset && make up
-      - name: Restore
-        if: env.RESTORE_CYCLE == 'true'
-        run: make restore FROM="$(ls -d "$RUNNER_TEMP"/backups/*/ | head -1)" CONFIRM=yes
-      - name: Smoke test after restore
-        if: env.RESTORE_CYCLE == 'true'
-        run: make smoke
       - name: Service logs
         if: failure()
         run: docker compose --profile observability logs --tail=200

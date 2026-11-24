@@ -902,7 +902,7 @@ check "Đóng hồ sơ xong không còn việc nào của luật mẫu" "$(rule_
 # Kho lạnh (ADR 0014): xuất mọi dòng nhật ký tới lúc này sang Parquet; công cụ chỉ ghi nhận đoạn khi băm tính lại
 # từ tệp khớp từng dòng, rồi xóa các dòng đó khỏi CSDL trong cùng giao dịch (#97). Sau đó chuỗi băm vẫn phải nối
 # qua đoạn đã xóa, ở CSDL (audit-verify) lẫn ở kho lạnh (cold verify), và mọi đường xóa khác vẫn bị chặn.
-cold() { docker compose --profile tools run --rm --build --quiet-pull cold-archive "$@" 2>/dev/null; }
+cold() { scripts/compose.sh run tools cold-archive "$@" 2>/dev/null; }
 # Dòng sẽ được chuyển đi, làm neo như băm cuối ghi trong một bản sao lưu cũ.
 cold_anchor=$(sql -c "SELECT id || ':' || encode(hash, 'hex') FROM core.audit_log
   WHERE id > coalesce((SELECT max(last_id) FROM core.audit_segments), 0) ORDER BY id LIMIT 1")
@@ -949,7 +949,7 @@ check "Chủ bảng không ghi nhận được đoạn giả" "$(as_owner "INSER
 # thiết bị xa-a tới được /v1/context của user.a. Mã riêng, khác số đo bài MQTT ở trên đã ghi, để bài này chỉ
 # qua khi chính bộ giả lập gửi.
 sim_marker="$((RANDOM % 900 + 1000)).25"
-if docker compose --profile simulator run --rm --quiet-pull simulator --once \
+if scripts/compose.sh run simulator simulator --once \
   --set xa-a/meter-01:energy="$sim_marker" >/dev/null 2>&1; then
   status=chạy
 else

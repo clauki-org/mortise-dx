@@ -1,0 +1,153 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Phát hành theo tag (ADR 0036). Gắn tag `vX.Y.Z` lên một commit của main thì: lấy ghi chú từ mục `## [X.Y.Z]` của
+# CHANGELOG → chạy đủ CI (ci.yml) → dựng image của mọi dịch vụ có build trong compose.yaml, đẩy lên GitHub Container
+# Registry với tag đúng bằng tag git → trên máy trắng, không đăng nhập, kéo đúng các image đó về, dựng lõi, seed, smoke,
+# kiểm tự phục hồi → tạo GitHub Release. Máy chủ demo (deploy/pull-deploy.sh) chỉ thấy bản đã có Release, nên chỉ kéo
+# image đã qua bước kiểm này. Tag `vX.Y.Z-rc.N` là bản thử: Release đánh dấu prerelease, máy chủ không tự kéo.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+# Mặc định chỉ đọc; job đẩy image và job tạo Release xin thêm đúng quyền mình cần.
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  notes:
+    name: Release notes and image list
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.services.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Chỉ phát hành mã đã vào main qua pull request và CI, không phát hành từ một nhánh lẻ.
+      - name: The tagged commit is on main
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "::error::Tag $GITHUB_REF_NAME trỏ tới commit không nằm trên main."; exit 1; }
+      - name: Notes from CHANGELOG
+        env:
+          TAG: ${{ github.ref_name }}
+        run: scripts/release-notes.sh "$TAG"
+      # Danh sách lấy từ compose.yaml, nên dịch vụ tự viết mới tự có image mà không phải sửa workflow này.
+      - id: services
+        name: Services built from source
+        run: |
+          cp .env.example .env
+          services=$(docker compose --profile '*' config --format json | python3 -c 'import json, sys
+          print(json.dumps([n for n, s in json.load(sys.stdin)["services"].items() if "build" in s]))')
+          echo "services=$services" >> "$GITHUB_OUTPUT"
+
+  gates:
+    name: CI
+    needs: notes
+    uses: ./.github/workflows/ci.yml
+
+  images:
+    name: Image ${{ matrix.service }}
+    needs: [notes, gates]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: ${{ fromJSON(needs.notes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+      # Thư mục dựng và tên image đọc từ chính compose.yaml với MORTISE_IMAGE_PREFIX, MORTISE_VERSION của bản, nên
+      # image đẩy lên đúng là image máy chủ sẽ kéo về.
+      - name: Build and push
+        env:
+          SERVICE: ${{ matrix.service }}
+          MORTISE_VERSION: ${{ github.ref_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp .env.example .env
+          export MORTISE_IMAGE_PREFIX="ghcr.io/${GITHUB_REPOSITORY,,}"
+          read -r image context dockerfile < <(docker compose --profile '*' config --format json | python3 -c '
+          import json, os, sys
+          service = json.load(sys.stdin)["services"][os.environ["SERVICE"]]
+          print(service["image"], service["build"]["context"], service["build"].get("dockerfile", "Dockerfile"))')
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker build --platform linux/amd64 -f "$context/$dockerfile" -t "$image" \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.version=$MORTISE_VERSION" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.licenses=Apache-2.0" \
+            "$context"
+          docker push "$image"
+
+  verify:
+    name: Released images on a clean machine
+    needs: [notes, images]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Như máy chủ demo: image tự viết lấy từ GHCR theo tag, MORTISE_NO_BUILD=1 để mọi lệnh từ chối dựng tại chỗ.
+    env:
+      MORTISE_VERSION: ${{ github.ref_name }}
+      MORTISE_NO_BUILD: "1"
+      SERVICES: ${{ needs.notes.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Image prefix
+        run: echo "MORTISE_IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      # Máy chủ kéo image không đăng nhập, nên bước này cũng vậy: gói image còn riêng tư thì dừng ở đây.
+      - name: Pull the released images without logging in
+        run: |
+          docker logout ghcr.io || true
+          make env
+          scripts/compose.sh pull || {
+            echo "::error::Không kéo được image khi không đăng nhập. Gói mới đẩy lần đầu trên GHCR có thể còn" \
+              "riêng tư: đặt từng gói thành Public trong Package settings rồi chạy lại job này."; exit 1; }
+      - name: Start the core from the released images
+        run: make up
+      - name: Seed and smoke
+        run: make seed && make smoke
+      - name: A service whose process exits comes back by itself
+        run: make heal-check SERVICE=workflow-api
+      # Image dựng tại chỗ không có nhãn revision của CI và không có digest của registry; cả hai phải khớp bản đã đẩy.
+      - name: No image was built on this machine
+        run: |
+          for service in $(python3 -c 'import json, os; print(" ".join(json.loads(os.environ["SERVICES"])))'); do
+            image="$MORTISE_IMAGE_PREFIX/$service:$MORTISE_VERSION"
+            read -r revision digests < <(docker image inspect \
+              -f '{{index .Config.Labels "org.opencontainers.image.revision"}} {{len .RepoDigests}}' "$image")
+            if [[ "$revision" != "$GITHUB_SHA" || "$digests" == 0 ]]; then
+              echo "::error::$image không phải image CI đã đẩy (revision $revision, $digests digest)."; exit 1
+            fi
+          done
+      - name: Service logs
+        if: failure()
+        run: docker compose logs --tail=200
+
+  release:
+    name: GitHub Release
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create the release from the CHANGELOG section
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          scripts/release-notes.sh "$TAG" > "$RUNNER_TEMP/notes.md"
+          prerelease=()
+          if [[ "$TAG" == *-rc.* ]]; then prerelease=(--prerelease); fi
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" \
+            "${prerelease[@]}"
