@@ -50,7 +50,8 @@ migration đã merge vào `main`; muốn đổi thì viết migration mới ([AD
   `git log` không phải mở issue mới hiểu.
 - Không trailer AI (xem AGENTS.md mục 4).
 - Một pull request, một thay đổi. Nhắm dưới khoảng 500 dòng thay đổi, không tính tệp sinh tự động, test và dữ liệu.
-- Người dùng thấy được thay đổi thì thêm một dòng vào `Unreleased` trong `CHANGELOG.md`.
+- Người dùng thấy được thay đổi thì thêm một mục 1–3 dòng vào `Unreleased` trong `CHANGELOG.md` (quy tắc ở
+  [AGENTS.md](AGENTS.md#4-git-nhánh-pull-request)).
 - CI phải xanh và có một thành viên khác duyệt. Repo chỉ cho phép squash merge; nhánh tự xóa sau khi merge.
 
 ## Quyết định
