@@ -11,6 +11,7 @@ import logging
 from collections.abc import Callable
 
 import pg8000.native
+from opentelemetry import trace
 from pg8000.exceptions import DatabaseError, InterfaceError
 
 from .authority import Row
@@ -18,6 +19,10 @@ from .config import settings
 from .policy import Denied
 
 log = logging.getLogger("workflow-api.db")
+# pg8000.native không có instrumentation của OpenTelemetry: span tự viết quanh mỗi lần đọc để vết thấy thời
+# gian ở CSDL (ADR 0038). Chỉ ghi loại câu, không ghi câu SQL hay tham số (tenant, quy trình). Tắt truy
+# vết thì span không làm gì.
+_tracer = trace.get_tracer(__name__)
 
 ROWS = """
 SELECT step, rule, variable, above::float8, role, scope FROM core.step_authorities
@@ -62,6 +67,12 @@ def children(tenant: str) -> frozenset[str]:
     return frozenset(row[0] for row in rows)
 
 
+@_tracer.start_as_current_span(
+    "postgres SELECT",
+    kind=trace.SpanKind.CLIENT,
+    attributes={"db.system.name": "postgresql", "db.operation.name": "SELECT"},
+    record_exception=False,
+)
 def _read[T](query: Callable[[pg8000.native.Connection], T], what: str) -> T:
     try:
         connection = pg8000.native.Connection(

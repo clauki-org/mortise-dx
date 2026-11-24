@@ -49,6 +49,7 @@ biệt.
 | Phát hành theo tag: CI kiểm, dựng image lên GitHub Container Registry, kéo lại không đăng nhập để smoke, tạo GitHub Release từ mục CHANGELOG kèm gói mã nguồn tar.gz và `SHA256SUMS` ([ADR 0036](docs/adr/0036-pull-based-gitops-with-compose.md)) | Đã chạy: [`v0.1.0`](https://github.com/clauki-org/mortise-dx/releases/tag/v0.1.0) | `.github/workflows/release.yml` trên tag `v0.1.0`: CI, e2e, diễn tập khôi phục, kéo image về máy trắng không đăng nhập, `make smoke`, `make heal-check` |
 | Máy chủ demo tự kéo tag phát hành mới về (systemd timer), dựng, smoke, lỗi thì quay về tag trước; CSDL không tự khôi phục ([deploy/README.md](deploy/README.md)) | Chưa cài trên máy chủ | `deploy/pull-deploy.sh` đã thử trên bản sao với tag giả: bản tốt, bản smoke lỗi, bản chưa có image |
 | Giám sát cho người vận hành (profile `observability`, [ADR 0037](docs/adr/0037-observability-profile.md)): Grafana chỉ ở 127.0.0.1, đòi đăng nhập, có dashboard số yêu cầu, lỗi 5xx, độ trễ p95 theo route của cổng, sức khỏe từng dịch vụ, đăng nhập lỗi và log của mọi dịch vụ (Prometheus, Loki, Alloy) | Đã chạy | CI: `make obs-up`, `make obs-check` (mọi đích của Prometheus lấy được, mọi dịch vụ trả lời blackbox, có số liệu cổng và log trong Loki, cổng 9080 không trả số liệu) |
+| Truy vết phân tán, mặc định tắt (`MORTISE_TRACING=on` trong `.env`, [ADR 0038](docs/adr/0038-distributed-tracing.md)): một yêu cầu qua cổng tới dịch vụ tự viết rồi Flowable, Scorpio, CSDL hiện đủ các chặng trong Grafana (OpenTelemetry, Jaeger trong profile `observability`); chuỗi truy vấn, user-agent, địa chỉ người gọi bị bỏ trước khi lưu, header không được ghi; log của cổng mang mã vết | Đã chạy | CI: `make obs-check` khi bật truy vết (vết của `GET /v1/workflow/tasks` có cổng → workflow-api → Flowable, không chứa token, chuỗi truy vấn, tên người dùng; log của cổng trong Loki mang mã vết), `make smoke` khi bật |
 | Khung giao diện Tầng 2: đăng nhập Authorization Code + PKCE, gọi API bằng token, header bảo mật | Đã chạy | `make smoke` (cổng, CSP, luồng PKCE), `make web-check`, `make e2e` |
 | Bảng việc: danh sách việc đang chờ người đăng nhập theo hạn; màn hình xử lý với biểu mẫu và nút theo khai báo của bước | Đã chạy | `make e2e` (trình duyệt: duyệt, bốn mắt, cách ly đơn vị), `make web-check` |
 | Menu dựng từ các gói đã cài; mục của gói mở thành phần danh mục (danh sách, tìm, lọc, chi tiết cha–con) theo cấu hình của gói, không có mã giao diện riêng của gói | Đã chạy | `make e2e` (trình duyệt: cán bộ xã A mở danh mục cơ sở từ menu, không thấy cơ sở của xã B; mọi mục menu của các gói đã cài mở được trang theo cấu hình), `make web-check` |
@@ -137,7 +138,8 @@ trong `.env` rồi chạy `make up`; câu hỏi và các câu đã tìm khi đó
 Giám sát cũng tách khỏi lõi, trong profile `observability`: `make obs-up` chạy Prometheus, Loki, Alloy và Grafana ở
 `http://127.0.0.1:3000` (tài khoản `admin`, mật khẩu `GRAFANA_ADMIN_PASSWORD` trong `.env`), `make obs-check` kiểm
 chúng, `make obs-down` dừng mà giữ số liệu và log ([ADR 0037](docs/adr/0037-observability-profile.md)). RAM mà
-profile này cần chưa được đo.
+profile này cần chưa được đo. Truy vết phân tán mặc định tắt: đặt `MORTISE_TRACING=on` trong `.env`, chạy `make up` và
+`make obs-up`, rồi xem vết trong Grafana, mục Explore, nguồn Jaeger ([ADR 0038](docs/adr/0038-distributed-tracing.md)).
 
 ## Kiến trúc
 
@@ -176,9 +178,9 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Broker NGSI-LD, dữ liệu thiết bị ([ADR 0012](docs/adr/0012-device-context-ngsi-ld.md)) | Scorpio (bản native) | 6.0.2 | BSD-3-Clause |
 | CSDL của Scorpio | PostgreSQL + PostGIS | 17 + 3.6 | PostgreSQL License / GPL-2.0 (tiến trình riêng) |
 | Nhận số đo thiết bị (MQTT) | Eclipse Mosquitto | 2.1.2 | EPL-2.0 / EDL-1.0 |
-| Lớp kiểm quyền quy trình (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, pg8000 | khóa trong `core/workflow-api/uv.lock` | MIT / BSD-3-Clause |
-| API tệp (tự viết) | Python 3.13, FastAPI, boto3, pg8000, PyJWT | khóa trong `core/files-api/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
-| Lớp đọc dữ liệu thiết bị (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT | khóa trong `core/context-api/uv.lock` | MIT / BSD-3-Clause |
+| Lớp kiểm quyền quy trình (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, pg8000, OpenTelemetry | khóa trong `core/workflow-api/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
+| API tệp (tự viết) | Python 3.13, FastAPI, boto3, pg8000, PyJWT, OpenTelemetry | khóa trong `core/files-api/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
+| Lớp đọc dữ liệu thiết bị (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, OpenTelemetry | khóa trong `core/context-api/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
 | Cầu nối MQTT sang NGSI-LD (tự viết) | Python 3.13, paho-mqtt, HTTPX, pg8000 | khóa trong `core/iot-bridge/uv.lock` | EPL-2.0 / EDL-1.0 / BSD-3-Clause |
 | Truy vấn kho lạnh ([ADR 0014](docs/adr/0014-cold-audit-archive.md)) | DuckDB | 2.0.0 | MIT |
 | Công cụ kho lạnh (tự viết) | Python 3.13, DuckDB, pg8000, boto3 | khóa trong `core/cold-archive/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
@@ -189,8 +191,9 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Lưu log, profile `observability` | Grafana Loki | 3.7.10 | AGPL-3.0 (image chính thức, không sửa, tiến trình riêng) |
 | Thu log container, profile `observability` | Grafana Alloy | 1.22.0 | Apache-2.0 |
 | Hỏi sức khỏe dịch vụ, profile `observability` | Blackbox exporter | 0.29.1 | Apache-2.0 |
+| Lưu vết phân tán, profile `observability` ([ADR 0038](docs/adr/0038-distributed-tracing.md)) | Jaeger | 2.20.0 | Apache-2.0 |
 | Cho Alloy đọc Docker, chặn lệnh ghi, profile `observability` | docker-socket-proxy (Tecnativa) | 0.5.0 | Apache-2.0 (HAProxy bên trong: GPL-2.0-or-later) |
-| Trợ lý hỏi văn bản và dữ liệu (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, pg8000 | khóa trong `platform/services/assistant/uv.lock` | MIT / BSD-3-Clause |
+| Trợ lý hỏi văn bản và dữ liệu (tự viết) | Python 3.13, FastAPI, HTTPX, PyJWT, pg8000, OpenTelemetry | khóa trong `platform/services/assistant/uv.lock` | MIT / BSD-3-Clause / Apache-2.0 |
 | Phân tích câu GraphQL cho guard của trợ lý dữ liệu ([ADR 0027](docs/adr/0027-data-assistant-guarded-graphql.md)) | graphql-core | 3.3.2 | MIT |
 | Phục vụ giao diện | nginx | 1.30.6 | BSD-2-Clause |
 | Giao diện Tầng 2 (tự viết) | React, Mantine, oidc-client-ts, urql, React Router, TanStack Query, rjsf ([ADR 0006](docs/adr/0006-frontend-stack.md)) | khóa trong `platform/web/package-lock.json` | MIT / Apache-2.0 |
@@ -215,7 +218,7 @@ core/                 Tầng 1: cấu hình lõi và dịch vụ tự viết c�
   mosquitto/          cấu hình Mosquitto
   cold-archive/       xuất nhật ký cũ sang kho lạnh, truy vấn bằng DuckDB (Python, lệnh của người vận hành)
   ollama/             mô hình Ollama tải về, ghim theo digest trọng số
-  observability/      cấu hình giám sát: Prometheus, Loki, Alloy, blackbox, nguồn dữ liệu và dashboard Grafana
+  observability/      cấu hình giám sát: Prometheus, Loki, Alloy, blackbox, Jaeger, nguồn dữ liệu và dashboard Grafana
   workflow/fixtures/  quy trình mẫu chỉ dùng để kiểm thử lõi
 platform/             Tầng 2
   web/                khung giao diện (React, Vite), phục vụ bằng nginx sau cổng

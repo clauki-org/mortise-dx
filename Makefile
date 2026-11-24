@@ -74,7 +74,7 @@ ai-up: env ## Chạy Ollama (profile ai), tải mô hình ghim trong core/ollama
 	@scripts/ai.sh
 
 # Dịch vụ của profile `observability` (ADR 0037); obs-down chỉ gỡ chúng, lõi vẫn chạy.
-OBS_SERVICES := grafana prometheus loki alloy docker-socket-proxy blackbox
+OBS_SERVICES := grafana prometheus loki alloy docker-socket-proxy blackbox jaeger
 
 obs-up: env ## Chạy giám sát (profile observability): Prometheus, Grafana (chỉ 127.0.0.1), Loki, Alloy; dựng cả lõi nếu chưa chạy
 	COMPOSE_PROFILES=observability scripts/compose.sh up -d --wait

@@ -1,0 +1,88 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Jaeger v2 (profile `observability`, ADR 0038): nhận vết qua OTLP HTTP từ APISIX và các dịch vụ tự viết, bỏ thuộc
+# tính có thể chứa dữ liệu cá nhân rồi mới lưu vào Badger trên volume `jaegerdata`. Grafana đọc vết qua API truy vấn
+# ở cổng 16686 trong mạng nội bộ; compose.yaml không mở cổng nào ra máy chủ.
+
+service:
+  extensions: [jaeger_storage, jaeger_query, healthcheckv2]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [attributes/privacy, batch]
+      exporters: [jaeger_storage_exporter]
+  telemetry:
+    logs:
+      level: warn
+
+extensions:
+  # Chỉ healthcheck của compose hỏi, trong container.
+  healthcheckv2:
+    use_v2: true
+    http:
+      endpoint: 127.0.0.1:13133
+
+  jaeger_query:
+    storage:
+      traces: local
+    # Mặc định Jaeger v2 tự ghi vết của chính API truy vấn; tắt để kho chỉ có vết của lõi.
+    enable_tracing: false
+    http:
+      endpoint: 0.0.0.0:16686
+    grpc:
+      endpoint: 127.0.0.1:16685
+
+  jaeger_storage:
+    backends:
+      local:
+        badger:
+          # Image chạy bằng uid 10001 và chỉ /tmp ghi được; volume `jaegerdata` gắn ở /tmp (compose.yaml) nên vết còn
+          # sau khi dựng lại container.
+          ephemeral: false
+          directories:
+            keys: /tmp/badger/keys
+            values: /tmp/badger/values
+          # Giữ 7 ngày như log trong Loki (ADR 0037); là điểm xuất phát, chưa đo dung lượng đĩa.
+          ttl:
+            spans: 168h
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Bộ này chỉ có processor `attributes` (không có `transform` hay `redaction`), nên không sửa được giá trị: thuộc
+  # tính mang chuỗi truy vấn của URL thì xóa, phần trước dấu `?` của URL đầy đủ được tách sang khóa mới trước khi
+  # xóa. Chuỗi truy vấn có thể chứa mã đăng nhập hay id người dùng (ví dụ assignee khi workflow-api hỏi Flowable);
+  # địa chỉ IP và user-agent của người gọi là dữ liệu cá nhân. Header không bao giờ được ghi vào vết (ADR 0038).
+  attributes/privacy:
+    actions:
+      - key: url.full
+        pattern: ^(?P<url_without_query>[^?#]*)
+        action: extract
+      - key: http.url
+        pattern: ^(?P<url_without_query>[^?#]*)
+        action: extract
+      - {key: url.full, action: delete}
+      - {key: http.url, action: delete}
+      - {key: url.query, action: delete}
+      # APISIX ghi đường kèm chuỗi truy vấn ở http.target; đường không kèm truy vấn đã có ở url.path.
+      - {key: http.target, action: delete}
+      - {key: user_agent.original, action: delete}
+      - {key: http.user_agent, action: delete}
+      - {key: client.address, action: delete}
+      - {key: client.port, action: delete}
+      - {key: http.client_ip, action: delete}
+      - {key: net.peer.ip, action: delete}
+      - {key: net.sock.peer.addr, action: delete}
+      - {key: network.peer.address, action: delete}
+      - {key: network.peer.port, action: delete}
+
+  batch: {}
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: local

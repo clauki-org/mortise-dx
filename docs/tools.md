@@ -292,9 +292,9 @@ mở cổng, và chỉ ở `127.0.0.1`.
   route và mã trả về, lỗi 5xx theo route, độ trễ p95 theo route ở cổng, đích của Prometheus và sức khỏe từng dịch vụ,
   số lần đăng nhập lỗi (sự kiện `LOGIN_ERROR` của Keycloak trong log), bảng log lọc theo biến `service`. Tắt truy cập
   ẩn danh, tự đăng ký, gửi thống kê và hỏi bản mới.
-- **Cấu hình:** dịch vụ `grafana` trong `compose.yaml`; nguồn dữ liệu (uid `prometheus`, `loki`) và nơi nạp dashboard ở
-  `core/observability/grafana/provisioning/`, dashboard ở `core/observability/grafana/dashboards/`. Sửa trên giao diện
-  không lưu được: sửa tệp JSON rồi `docker compose restart grafana`.
+- **Cấu hình:** dịch vụ `grafana` trong `compose.yaml`; nguồn dữ liệu (uid `prometheus`, `loki`, `jaeger`) và nơi nạp
+  dashboard ở `core/observability/grafana/provisioning/`, dashboard ở `core/observability/grafana/dashboards/`. Sửa trên
+  giao diện không lưu được: sửa tệp JSON rồi `docker compose restart grafana`.
 - **Xem:** `http://127.0.0.1:3000` (`GRAFANA_PORT`), tài khoản `admin`, mật khẩu `GRAFANA_ADMIN_PASSWORD`. Mật khẩu chỉ
   áp dụng khi volume `grafanadata` còn trống; đổi trong `.env` sau đó không đổi mật khẩu đã lưu.
 
@@ -325,6 +325,21 @@ mở cổng, và chỉ ở `127.0.0.1`.
 - **Cấu hình:** `core/observability/alloy/config.alloy`, `core/observability/loki.yaml`; log trong volume `lokidata`,
   vị trí đã đọc của Alloy trong `alloydata`. Docker rootless hay socket ở chỗ khác: đặt `DOCKER_SOCK` trong `.env`.
 - **Xem:** Grafana, bảng log của dashboard hay mục Explore với nguồn Loki, ví dụ `{service="workflow-api"}`.
+
+### Jaeger và OpenTelemetry: vết của một yêu cầu
+
+- **Làm gì:** mỗi chặng của một yêu cầu (cổng, dịch vụ, lời gọi ra ngoài) thành một span có thời điểm và thời gian;
+  các span chung một mã vết. OpenTelemetry tạo span, Jaeger nhận qua OTLP, lọc rồi lưu.
+- **Trong dự án:** mặc định tắt; `MORTISE_TRACING=on` trong `.env` rồi `make up` thì plugin `opentelemetry` của APISIX
+  ghi mọi yêu cầu tới API dưới /v1, và workflow-api, files-api, context-api, assistant chạy dưới
+  `opentelemetry-instrument` (span của FastAPI, HTTPX và quanh CSDL). Jaeger bỏ chuỗi truy vấn, user-agent, địa chỉ người
+  gọi trước khi lưu, giữ 7 ngày. Log của cổng và dịch vụ mang `trace_id=` để Grafana nối log với vết. Lý do và phạm vi:
+  [ADR 0038](adr/0038-distributed-tracing.md).
+- **Cấu hình:** `core/observability/jaeger.yaml` (nhận, lọc, lưu Badger trong volume `jaegerdata`); plugin và nơi gửi
+  vết ở `core/apisix/apisix.yaml`; biến `OTEL_*` chung của dịch vụ ở `x-tracing` trong `compose.yaml`. Không mở cổng ra
+  máy chủ.
+- **Xem:** Grafana, mục Explore, nguồn Jaeger: tìm theo dịch vụ và thời gian hay dán mã vết; từ một span bấm sang các
+  dòng log chứa mã vết trong Loki, từ dòng log có `trace_id=` bấm "Xem vết".
 
 ## Giao diện Tầng 2
 

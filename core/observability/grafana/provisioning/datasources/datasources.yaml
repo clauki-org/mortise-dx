@@ -20,3 +20,27 @@ datasources:
     access: proxy
     url: http://loki:3100
     editable: false
+    jsonData:
+      # Dòng log của cổng và dịch vụ tự viết có `trace_id=<32 ký tự hex>` (ADR 0038): bấm để mở vết trong Jaeger. `$$`
+      # để Grafana không coi `${__value.raw}` là biến môi trường khi nạp tệp.
+      derivedFields:
+        - name: trace_id
+          matcherRegex: trace_id=([0-9a-f]{32})
+          datasourceUid: jaeger
+          url: $${__value.raw}
+          urlDisplayLabel: Xem vết
+  # Vết phân tán (ADR 0038). Từ một span mở các dòng log chứa mã vết trong Loki. Nguồn Jaeger tách service.name khỏi
+  # thẻ của span, nên cách lọc theo thẻ của Grafana không ra nhãn `service`; tìm mã vết trong log của mọi dịch vụ.
+  - name: Jaeger
+    uid: jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: false
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: -1m
+        spanEndTimeShift: 1m
+        customQuery: true
+        query: '{service=~".+"} |= "$${__span.traceId}"'

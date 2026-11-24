@@ -21,4 +21,6 @@ COPY --from=build /srv /srv
 ENV PATH="/srv/.venv/bin:$PATH"
 USER mortise
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+# MORTISE_TRACING=on (compose.yaml, ADR 0038): chạy dưới opentelemetry-instrument để ghi vết; giá trị khác chạy uvicorn
+# như cũ, không ghi vết. `exec` giữ uvicorn là tiến trình chính để Docker dựng lại khi nó thoát.
+CMD ["sh", "-c", "if [ \"$MORTISE_TRACING\" = on ]; then set -- opentelemetry-instrument; fi; exec \"$@\" uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log"]
