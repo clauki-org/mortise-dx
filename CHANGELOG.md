@@ -13,6 +13,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Truy vết phân tán, mặc định tắt: `MORTISE_TRACING=on` cùng `make obs-up` cho xem trong Grafana từng chặng của một
   yêu cầu qua cổng tới dịch vụ tự viết, Flowable, Scorpio, CSDL (Jaeger, không lưu chuỗi truy vấn hay header;
   [ADR 0038](docs/adr/0038-distributed-tracing.md)).
+- Cổng trả lỗi 429 (vượt giới hạn tần suất) của mọi API dưới `/v1` dạng JSON `{"error": "..."}` như lỗi 401,
+  thay vì trang HTML; header `X-RateLimit-*` vẫn giữ.
 
 ## [0.1.0] - 2026-11-25
 
