@@ -12,6 +12,25 @@
 
 name: mortise
 
+# Biến truy vết chung của dịch vụ FastAPI tự viết (ADR 0038). MORTISE_TRACING=on thì Dockerfile chạy dịch vụ dưới
+# opentelemetry-instrument, các biến OTEL_* dưới đây mới có tác dụng; off thì không gói OpenTelemetry nào được nạp.
+x-tracing: &tracing
+  MORTISE_TRACING: ${MORTISE_TRACING:-off}
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+  # Giây. Jaeger chưa chạy thì mỗi lô vết bỏ sau vài giây, trong luồng nền, không chặn yêu cầu.
+  OTEL_EXPORTER_OTLP_TIMEOUT: "3"
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
+  # Tên thuộc tính HTTP theo bản ổn định (url.path, url.query riêng), để Jaeger bỏ đúng chuỗi truy vấn.
+  OTEL_SEMCONV_STABILITY_OPT_IN: http
+  OTEL_PYTHON_FASTAPI_EXCLUDED_URLS: healthz
+  # Dòng log mang trace_id để Grafana nối log trong Loki sang vết. Mức WARNING như khi tắt; không gửi log qua OTLP.
+  OTEL_PYTHON_LOG_CORRELATION: "true"
+  OTEL_PYTHON_LOG_FORMAT: "%(levelname)s %(name)s: %(message)s trace_id=%(otelTraceID)s"
+  OTEL_PYTHON_LOG_LEVEL: warning
+  OTEL_PYTHON_LOG_AUTO_INSTRUMENTATION: "false"
+
 services:
   postgres:
     image: pgvector/pgvector:0.8.7-pg17-trixie
@@ -203,6 +222,8 @@ services:
     image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/workflow-api:${MORTISE_VERSION:-dev}
     restart: unless-stopped
     environment:
+      <<: *tracing
+      OTEL_SERVICE_NAME: workflow-api
       KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/certs
       KEYCLOAK_ISSUER: ${MORTISE_PUBLIC_URL:-http://localhost:9080}/auth/realms/mortise
       FLOWABLE_URL: http://flowable:8080/flowable-rest
@@ -239,6 +260,8 @@ services:
     image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/files-api:${MORTISE_VERSION:-dev}
     restart: unless-stopped
     environment:
+      <<: *tracing
+      OTEL_SERVICE_NAME: files-api
       KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/certs
       KEYCLOAK_ISSUER: ${MORTISE_PUBLIC_URL:-http://localhost:9080}/auth/realms/mortise
       FILES_DB_HOST: postgres
@@ -290,6 +313,9 @@ services:
   apisix:
     image: apache/apisix:3.19.0-debian
     restart: unless-stopped
+    environment:
+      # Bộ lấy mẫu của plugin opentelemetry (apisix.yaml): MORTISE_TRACING chỉ nhận on hoặc off (ADR 0038).
+      APISIX_TRACE_SAMPLER: always_${MORTISE_TRACING:-off}
     volumes:
       - ./core/apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro
       - ./core/apisix/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
@@ -430,6 +456,8 @@ services:
     image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/context-api:${MORTISE_VERSION:-dev}
     restart: unless-stopped
     environment:
+      <<: *tracing
+      OTEL_SERVICE_NAME: context-api
       KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/certs
       KEYCLOAK_ISSUER: ${MORTISE_PUBLIC_URL:-http://localhost:9080}/auth/realms/mortise
       SCORPIO_URL: http://scorpio:9090
@@ -548,6 +576,8 @@ services:
     image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/assistant:${MORTISE_VERSION:-dev}
     restart: unless-stopped
     environment:
+      <<: *tracing
+      OTEL_SERVICE_NAME: assistant
       KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/mortise/protocol/openid-connect/certs
       KEYCLOAK_ISSUER: ${MORTISE_PUBLIC_URL:-http://localhost:9080}/auth/realms/mortise
       ASSISTANT_GRAPHQL_URL: http://apisix:9080/v1/graphql
@@ -651,6 +681,8 @@ services:
         condition: service_healthy
       loki:
         condition: service_started
+      jaeger:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
       interval: 5s
@@ -686,6 +718,23 @@ services:
     volumes:
       - ./core/observability/loki.yaml:/etc/loki/loki.yaml:ro
       - lokidata:/loki
+
+  jaeger:
+    # Lưu vết phân tán (ADR 0038), cấu hình ở core/observability/jaeger.yaml. APISIX và dịch vụ tự viết gửi vết tới cổng
+    # OTLP 4318 khi MORTISE_TRACING=on; Grafana đọc ở cổng 16686. Không mở cổng nào ra máy chủ.
+    image: jaegertracing/jaeger:2.20.0
+    profiles: [observability]
+    restart: unless-stopped
+    command: ["--config", "/etc/jaeger/jaeger.yaml"]
+    volumes:
+      - ./core/observability/jaeger.yaml:/etc/jaeger/jaeger.yaml:ro
+      # Gắn ở /tmp: thư mục duy nhất của image mà uid 10001 ghi được, volume mới nhận quyền của nó.
+      - jaegerdata:/tmp
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:13133/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   alloy:
     # Thu log container của dự án qua docker-socket-proxy, đẩy vào Loki (core/observability/alloy/config.alloy).
@@ -761,3 +810,4 @@ volumes:
   prometheusdata:
   lokidata:
   alloydata:
+  jaegerdata:

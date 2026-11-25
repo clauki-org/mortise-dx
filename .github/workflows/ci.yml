@@ -103,10 +103,16 @@ jobs:
         run: make seed
       - name: Smoke test through the gateway
         run: make smoke
-      # Profile observability (ADR 0037): Prometheus lấy được mọi đích, Loki nhận log, Grafana chỉ ở 127.0.0.1. Gỡ ngay
-      # sau đó để các bước sau chạy trên lõi như trước.
-      - name: Observability profile
-        run: make obs-up && make obs-check && make obs-down
+      # Profile observability (ADR 0037): Prometheus lấy được mọi đích, Loki nhận log, Grafana chỉ ở 127.0.0.1. Bật truy
+      # vết cho riêng bước này (ADR 0038; biến ở môi trường thắng .env): obs-check kiểm vết đủ chặng và sạch, smoke chạy
+      # lại khi truy vết bật. Cuối bước gỡ profile và dựng lại lõi với truy vết tắt để các bước sau chạy như trước.
+      - name: Observability profile with tracing on
+        run: |
+          MORTISE_TRACING=on make obs-up
+          make obs-check
+          make smoke
+          make obs-down
+          make up
       # Tiến trình chính của workflow-api thoát, Docker phải tự dựng lại đúng một lần và smoke vẫn qua.
       - name: A service whose process exits comes back by itself
         run: make heal-check SERVICE=workflow-api

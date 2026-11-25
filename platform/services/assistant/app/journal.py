@@ -10,6 +10,7 @@ import json
 import logging
 
 import pg8000.native
+from opentelemetry import trace
 from pg8000.exceptions import DatabaseError, InterfaceError
 
 from .config import settings
@@ -18,6 +19,9 @@ from .retrieval import Caller
 from .schemas import Answer, DataAnswer, DataQuery, DataQuestion, Question
 
 log = logging.getLogger("assistant.journal")
+# pg8000.native không có instrumentation của OpenTelemetry: span tự viết quanh lần ghi nhật ký (ADR 0038),
+# không ghi câu SQL hay tham số (câu hỏi, người hỏi). Tắt truy vết thì span không làm gì.
+_tracer = trace.get_tracer(__name__)
 
 INSERT = """
 INSERT INTO platform.assistant_questions
@@ -143,6 +147,12 @@ def record_data_question(
     _write(caller, params)
 
 
+@_tracer.start_as_current_span(
+    "postgres INSERT",
+    kind=trace.SpanKind.CLIENT,
+    attributes={"db.system.name": "postgresql", "db.operation.name": "INSERT"},
+    record_exception=False,
+)
 def _write(caller: Caller, params: dict) -> None:
     try:
         connection = _connect()

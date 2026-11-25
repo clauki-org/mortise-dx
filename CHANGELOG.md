@@ -10,6 +10,10 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ## [Unreleased]
 
+- Truy vết phân tán, mặc định tắt: `MORTISE_TRACING=on` cùng `make obs-up` cho xem trong Grafana từng chặng của một
+  yêu cầu qua cổng tới dịch vụ tự viết, Flowable, Scorpio, CSDL (Jaeger, không lưu chuỗi truy vấn hay header;
+  [ADR 0038](docs/adr/0038-distributed-tracing.md)).
+
 ## [0.1.0] - 2026-11-25
 
 Bản phát hành đầu tiên: lõi Tầng 1, các thành phần dùng chung Tầng 2 và hai gói minh họa, chạy bằng Docker Compose.
