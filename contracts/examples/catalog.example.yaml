@@ -49,6 +49,13 @@ detail:
         itemId: id
         title: name
         quantity: quantity
+  # Giấy tờ đính kèm của danh mục đang xem (contracts/documents.schema.json, ADR 0041).
+  documents:
+    title: Giấy tờ đính kèm
+    source: app_example_item_documents
+    via: item_id
+    file: file_id
+    upload: { note: note }
   children:
     - id: parts
       label: Thành phần

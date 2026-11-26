@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bản mô tả thành phần tài liệu đính kèm theo contracts/component.schema.json; `make check-fast` kiểm tệp này. Mã của
+# thành phần ở platform/web/src/ (CatalogDocuments.tsx, documents.ts, uploadFile và downloadFile trong api.ts); luật
+# cấu hình theo gói ở scripts/check-documents-config.py. Đổi hành vi của thành phần thì sửa tệp này trong cùng pull
+# request (ADR 0041).
+
+component: documents
+summary: Phần tài liệu đính kèm trên màn hình chi tiết của danh mục, khai ở detail.documents; tệp tải lên, tải xuống qua API tệp của lõi, việc tệp thuộc dòng nào là một dòng trong bảng nối của gói.
+config_schema: documents.schema.json
+example: examples/documents.example.yaml
+capabilities:
+  - Danh sách tệp của dòng đang xem, đọc từ bảng nối của gói qua GraphQL; tên, cỡ, kiểu tệp đọc từ /v1/files/{id}, kèm các cột khai trong fields, theo thứ tự sort, nhiều nhất limit tệp.
+  - Tải xuống bằng token của người xem; tên tệp khi lưu là tên lúc tải lên.
+  - Có upload thì có ô chọn tệp, ô ghi chú (upload.note) và nút đính kèm; tệp tải lên /v1/files rồi thêm một dòng vào bảng nối với vai trò upload.role.
+  - Tệp bị từ chối (chứa mã độc, vượt giới hạn quét, quá cỡ, dịch vụ quét chưa sẵn sàng) hiện lý do bằng tiếng Việt kèm cách xử lý, và không có dòng nối nào được thêm.
+  - Hiện ở mọi cấp cha–con của danh mục; nơi gọi chỉ đưa cấu hình và khóa của dòng đang xem.
+limits:
+  - Không có mục menu riêng (ADR 0041 chọn đặt tài liệu trong màn hình chi tiết danh mục), nên app.yaml không nhận
+    component documents; chỉ dùng trong detail.documents của danh mục. Chưa gắn tệp trực tiếp vào hồ sơ quy trình.
+  - Không xóa, không sửa, không thay tệp đã đính kèm, không xem trước trong trang; chỉ tải xuống.
+  - Ai thấy dòng nối do quyền đọc của bảng nối quyết định; ai có mã tệp và cùng đơn vị thì tải được tệp đó qua /v1/files, vì API tệp không biết tệp thuộc dòng nào của gói.
+  - Ô đính kèm hiện cho mọi người đọc được dòng có vai trò upload.role; người không được thêm dòng nối thì tệp đã lưu ở /v1/files nhưng không gắn vào đâu, và lời báo nói rõ điều đó.
+  - Thêm dòng nối hỏng sau khi tệp đã lưu (mất mạng, quyền) cũng để lại tệp không gắn vào đâu; API tệp không có lệnh xóa.
+  - Mỗi tệp tốn một lần gọi /v1/files/{id} khi mở dòng; cổng giới hạn số lần gọi mỗi phút theo token.
+  - Cấu hình không cấp và không giới hạn quyền; giới hạn cỡ tệp do API tệp quyết định, giao diện không biết trước.

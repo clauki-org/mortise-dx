@@ -15,7 +15,7 @@ app.missing-id.yaml	$	'id' is a required property
 app.path-escapes-package.yaml	$.menu[0].config	'../../core/keycloak/realm.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
 app.path-is-url.yaml	$.menu[0].config	'http://no-such-host.invalid/items.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
 app.settings-unsafe-value.yaml	$.settings.approval_limit	'1000 || true' is not valid under any of the given schemas
-app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'documents', 'dashboard', 'rules', 'assistant', 'cases']
+app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'dashboard', 'rules', 'assistant', 'cases']
 app.unknown-field.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
 app.version-leading-zero.yaml	$.version	'01.0.0' does not match '^(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)$'
 assistant.blank-intro.yaml	$.intro	'   ' does not match '\\\\S'
@@ -36,6 +36,7 @@ catalog.blank-field-label.yaml	$.fields[0].label	'   ' does not match '\\\\S'
 catalog.child-id-not-slug.yaml	$.detail.children[0].id	'No Such/Child' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
 catalog.child-missing-id.yaml	$.detail.children[0]	'id' is a required property
 catalog.child-missing-via.yaml	$.detail.children[0]	'via' is a required property
+catalog.documents-column-not-identifier.yaml	$.detail.documents.via	'item_id } x {' does not match '^[A-Za-z_][A-Za-z0-9_]*$'
 catalog.duplicate-column.yaml	$.list.columns	['name', 'name'] has non-unique elements
 catalog.empty-choices.yaml	$.fields[0].choices	[] should be non-empty
 catalog.field-path-too-deep.yaml	$.fields[1].name	'category.group.name' does not match '^[A-Za-z_][A-Za-z0-9_]*(\\\\.[A-Za-z_][A-Za-z0-9_]*)?$'
@@ -52,6 +53,9 @@ component.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key
 device-message.reserved-name.json	$.measurements	'type' should not be valid under {'enum': ['id', 'type', 'scope', 'location', 'observationSpace', 'operationSpace', 'createdAt', 'modifiedAt', 'deletedAt', 'observedAt']}
 device-message.tenant-in-body.json	$	Additional properties are not allowed ('tenant' was unexpected)
 device-message.text-value.json	$.measurements.humidity	'71' is not of type 'number', 'boolean'
+documents.limit-too-large.yaml	$.limit	500 is greater than the maximum of 50
+documents.missing-file.yaml	$	'file' is a required property
+documents.upload-unknown-key.yaml	$.upload	Additional properties are not allowed ('notes' was unexpected)
 seed.missing-key.yaml	$['xa-a'].tables[0]	'key' is a required property
 seed.tenant-id-in-row.yaml	$['xa-a'].tables[0].rows[0]	'tenant_id' should not be valid under {'const': 'tenant_id'}
 knowledge.blank-text.yaml	$.passages[0].text	'   ' does not match '\\\\S'

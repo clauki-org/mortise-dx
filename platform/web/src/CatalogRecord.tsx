@@ -2,15 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Màn hình chi tiết của thành phần danh mục: mọi trường của một dòng theo thứ tự gói khai, bảng của từng loại đối
-// tượng con (detail.children), nút khởi tạo quy trình (detail.actions) và đường về các đối tượng cha. Catalog.tsx
-// mở màn hình này sau khi đã kiểm cấu hình và đọc đường dẫn thành các chặng từ đối tượng ngoài cùng tới dòng đang
-// xem.
+// tượng con (detail.children), nút khởi tạo quy trình (detail.actions), tài liệu đính kèm (detail.documents) và
+// đường về các đối tượng cha. Catalog.tsx mở màn hình này sau khi đã kiểm cấu hình và đọc đường dẫn thành các chặng
+// từ đối tượng ngoài cùng tới dòng đang xem.
 
 import { Alert, Anchor, Breadcrumbs, Loader, Paper, Stack, Table, Title } from "@mantine/core";
 import { useState } from "react";
 import { Link } from "react-router";
 import { useQuery } from "urql";
 import { CatalogActions } from "./CatalogActions";
+import { CatalogDocuments } from "./CatalogDocuments";
 import { CatalogTable } from "./CatalogTable";
 import {
   type CatalogConfig,
@@ -118,6 +119,7 @@ export function CatalogRecord({ config, basePath, steps }: Props) {
           </Table.Tbody>
         </Table>
       </Paper>
+      {node.detail?.documents && <CatalogDocuments config={node.detail.documents} recordKey={row[keyOf(node)]} />}
       {(node.detail?.children ?? []).map((child) => (
         <Children key={child.id} child={child} path={`${here}/${child.id}`} parentKey={row[keyOf(node)]} />
       ))}

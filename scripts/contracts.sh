@@ -14,6 +14,10 @@ cd "$(dirname "$0")/.."
 
 mode="${1:-check}"
 checker=(uvx --from check-jsonschema==0.29.4 check-jsonschema)
+# Schema danh mục trỏ tới documents.schema.json bằng tên tệp. Không có --base-uri, check-jsonschema ghép tên đó với
+# địa chỉ trong $id và đi tải từ mạng (404); với nó, tên tệp trỏ về contracts/ trong repo. Đường dẫn có khoảng trắng
+# phải mã hóa thành %20 để còn là URI.
+base_uri() { printf -- '--base-uri=file://%s/%s' "${PWD// /%20}" "$1"; }
 yaml=(uv run --quiet --no-project --with pyyaml==6.0.3 python)
 steps=("${yaml[@]}" scripts/check-workflow-steps.py)
 # Câu mẫu của trợ lý dữ liệu phải qua đúng guard và đúng bản graphql-core mà dịch vụ chạy, nên đọc số phiên bản từ
@@ -49,7 +53,7 @@ case "$mode" in
       exit 2
     fi
     # Không dùng -q: lỗi schema là thứ người gọi cần đọc.
-    exec "${checker[@]}" --schemafile "contracts/$2.schema.json" "$3"
+    exec "${checker[@]}" "$(base_uri "contracts/$2.schema.json")" --schemafile "contracts/$2.schema.json" "$3"
     ;;
   assistant-data)
     if [[ -z "${2:-}" || ! -f "${3:-}" ]]; then
@@ -74,7 +78,9 @@ esac
 "${checker[@]}" --schemafile contracts/workflow.schema.json contracts/examples/workflow.example.yaml \
   core/workflow/fixtures/*.yaml
 "${checker[@]}" --schemafile contracts/authority.schema.json contracts/examples/authority.example.yaml
-"${checker[@]}" --schemafile contracts/catalog.schema.json contracts/examples/catalog.example.yaml
+"${checker[@]}" "$(base_uri contracts/catalog.schema.json)" --schemafile contracts/catalog.schema.json \
+  contracts/examples/catalog.example.yaml
+"${checker[@]}" --schemafile contracts/documents.schema.json contracts/examples/documents.example.yaml
 "${checker[@]}" --schemafile contracts/map.schema.json contracts/examples/map.example.yaml
 "${checker[@]}" --schemafile contracts/form.schema.json contracts/examples/form.example.yaml
 "${checker[@]}" --schemafile contracts/cases.schema.json contracts/examples/cases.example.yaml
@@ -133,10 +139,13 @@ for item in app.get("menu", []):
         print(sys.argv[1] + item["config"])
 ' "$app" "$component")
     if ((${#configs[@]})); then
-      "${checker[@]}" --schemafile "contracts/$component.schema.json" "${configs[@]}"
+      "${checker[@]}" "$(base_uri "contracts/$component.schema.json")" --schemafile "contracts/$component.schema.json" \
+        "${configs[@]}"
       # Nút của danh mục chỉ mở quy trình của chính gói này (ADR 0026), nên đối chiếu với BPMN của gói.
       if [[ "$component" == catalog ]]; then
         "${yaml[@]}" scripts/check-catalog-actions.py --bpmn "$app"**/*.bpmn20.xml --catalog "${configs[@]}"
+        # Phần tài liệu đính kèm đọc và ghi bảng nối của chính gói, trong quyền Hasura của gói (ADR 0041).
+        "${yaml[@]}" scripts/check-documents-config.py --app "${app}app.yaml"
       fi
       # Trợ lý dữ liệu chỉ hỏi bảng của chính gói, trong quyền đọc của vai trò user (ADR 0027).
       if [[ "$component" == assistant ]]; then
@@ -224,7 +233,7 @@ reject() {
       echo "$file chưa có dòng lỗi mong đợi trong $expected." >&2
       exit 1
     fi
-    result=$("${checker[@]}" --output-format json --schemafile "$schema" "$file" |
+    result=$("${checker[@]}" "$(base_uri "$schema")" --output-format json --schemafile "$schema" "$file" |
       jq -r 'if (.parse_errors // []) != [] then "hỏng cú pháp"
         elif (.errors | length) != 1 then "\(.errors | length) lỗi"
         else .errors[0] | [.path, .message] | @tsv end') || true
@@ -241,6 +250,7 @@ reject contracts/service-token-claims.schema.json contracts/examples/invalid/ser
 reject contracts/app.schema.json contracts/examples/invalid/app.*.yaml
 reject contracts/workflow.schema.json contracts/examples/invalid/workflow.*.yaml
 reject contracts/catalog.schema.json contracts/examples/invalid/catalog.*.yaml
+reject contracts/documents.schema.json contracts/examples/invalid/documents.*.yaml
 reject contracts/map.schema.json contracts/examples/invalid/map.*.yaml
 reject contracts/form.schema.json contracts/examples/invalid/form.*.yaml
 reject contracts/cases.schema.json contracts/examples/invalid/cases.*.yaml
@@ -256,12 +266,13 @@ reject contracts/device-message.schema.json contracts/examples/invalid/device-me
 # mà chưa từng bị kiểm, nên phải báo lỗi thay vì bỏ qua.
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
-    token-claims.*.json | service-token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | component.*.yaml | \
+    token-claims.*.json | service-token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | \
+    documents.*.yaml | component.*.yaml | \
     threshold-rule.*.yaml | authority.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml | map.*.yaml | form.*.yaml | \
     cases.*.yaml | dashboard.*.yaml) ;;
     *)
       echo "$file không được kiểm: tên phải theo mẫu <token-claims|service-token-claims|device-message>.<lỗi>.json hoặc" \
-        "<app|workflow|catalog|map|form|cases|dashboard|component|threshold-rule|authority|assistant|knowledge|seed>.<lỗi>.yaml." >&2
+        "<app|workflow|catalog|documents|map|form|cases|dashboard|component|threshold-rule|authority|assistant|knowledge|seed>.<lỗi>.yaml." >&2
       exit 1
       ;;
   esac
@@ -336,6 +347,54 @@ if [[ "$result" != *": mục 1: một mục của insert_permissions thiếu rol
   exit 1
 fi
 echo "ok -- 6 biểu mẫu và tệp quyền sai bị check-form-config.py từ chối đúng luật"
+# Luật của scripts/check-documents-config.py, như của biểu mẫu ở trên: danh mục mẫu của hợp đồng phải qua với bảng quyền
+# mẫu dưới đây, và mỗi danh mục sai đọc từ stdin phạm đúng một luật, lỗi đúng từng ký tự.
+documents_tables='- table: { schema: app_example, name: item_documents }
+  select_permissions:
+    - role: user
+      permission: { columns: [item_id, file_id, note], filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } } }
+  insert_permissions:
+    - role: user
+      permission:
+        columns: [item_id, file_id, note]
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        set: { tenant_id: X-Hasura-Tenant-Id, created_by: X-Hasura-User-Id }'
+documents_check() { # TỆP_DANH_MỤC
+  "${yaml[@]}" scripts/check-documents-config.py --app contracts/examples/app.example.yaml \
+    --hasura <(printf '%s\n' "$documents_tables") --catalog "$1" 2>&1
+}
+documents_check contracts/examples/catalog.example.yaml
+documents_rejects() { # LỖI_MONG_ĐỢI, phần tài liệu ở stdin (lồng vào một danh mục tối thiểu)
+  local result
+  result=$(documents_check <(printf '%s\n' 'title: Danh mục' 'source: app_example_items' \
+    'fields: [{ name: name, label: Tên }]' 'list: { columns: [name] }' 'detail:' '  documents:' && sed 's/^/    /')) &&
+    result="không bị từ chối"
+  if [[ "$result" != *": phần tài liệu: $1" ]]; then
+    echo "check-documents-config.py phải báo đúng lỗi: $1" >&2
+    echo "Đang nhận: $result" >&2
+    exit 1
+  fi
+}
+documents_rejects "bảng nối 'app_example_files' không có trong quyền Hasura của gói" <<'YAML'
+{ title: Giấy tờ, source: app_example_files, via: item_id, file: file_id }
+YAML
+documents_rejects "vai trò 'user' không đọc được cột 'created_at' của 'app_example_item_documents'" <<'YAML'
+title: Giấy tờ
+source: app_example_item_documents
+via: item_id
+file: file_id
+fields: [{ name: created_at, label: Ngày, type: datetime }]
+YAML
+documents_rejects "vai trò 'tenant_admin' không thêm được dòng vào 'app_example_item_documents'; sửa upload.role hoặc \
+quyền của gói" <<'YAML'
+{ title: Giấy tờ, source: app_example_item_documents, via: item_id, file: file_id, upload: { role: tenant_admin } }
+YAML
+# Cột tenant làm cột nối: dòng nối luôn mang tenant của người gửi, không phải khóa của dòng đang xem.
+documents_rejects "cột 'tenant_id' gắn với tenant của token, không dùng làm via, file hay note" <<'YAML'
+{ title: Giấy tờ, source: app_example_item_documents, via: item_id, file: file_id, upload: { note: tenant_id } }
+YAML
+echo "ok -- 4 phần tài liệu sai bị check-documents-config.py từ chối đúng luật"
+
 # Luật của scripts/check-cases-config.py cũng phải chặn được thật: trang theo dõi hồ sơ liệt kê quy trình không có
 # trong BPMN của gói (ở đây chỉ có core-approval).
 result=$("${yaml[@]}" scripts/check-cases-config.py --bpmn core/workflow/fixtures/core-approval.bpmn20.xml \

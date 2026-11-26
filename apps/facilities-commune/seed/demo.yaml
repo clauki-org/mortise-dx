@@ -3,7 +3,8 @@
 #
 # Dữ liệu demo HƯ CẤU của ba xã thuộc "Tỉnh Mẫu" (#58): tên, địa chỉ, diện tích đều đặt ra để minh họa, không lấy
 # từ cơ quan nào. `make seed-demo` nạp tệp này qua cổng bằng tài khoản quản trị của từng xã (`admin`, vai trò
-# tenant_admin), rồi phân công cán bộ: mỗi tài khoản trong `custodians` phụ trách cơ sở đó (load.py).
+# tenant_admin), rồi phân công: mỗi tài khoản trong `custodians` phụ trách cơ sở đó, mỗi tài khoản trong `approvers`
+# là người duyệt của cơ sở, thấy cơ sở và giấy tờ đính kèm trên danh mục (ADR 0015, ADR 0041) (load.py).
 # Tổng diện tích thông thủy của cơ sở đang dùng: xã A 1.000 m², xã B 730 m², xã C 460 m²; xã C còn một cơ sở dôi dư
 # 250 m². Biên chế hư cấu, chỉ dùng hai dòng của phụ lục NĐ 369/2026/NĐ-CP có ghi thẳng chức danh (STT 9: chuyên
 # viên chính, 20 m²; STT 10: chuyên viên, 15 m²), để không phải xếp chức danh lãnh đạo xã vào bậc nào. Kết quả
@@ -24,6 +25,8 @@ xa-a:
       status: in_use
       location: { latitude: 0.021500, longitude: 0.012300 }
       custodians: [user.a]
+      # Người duyệt xã A mở được trụ sở và giấy tờ của nó: danh mục đọc bằng vai trò user, chỉ thấy cơ sở có phân công.
+      approvers: [manager.a]
       buildings:
         - code: NLV
           name: Nhà làm việc

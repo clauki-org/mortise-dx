@@ -21,6 +21,15 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   dịch vụ tự viết ghim `3.13.18`, công cụ kiểm chạy qua `uvx` ghim phiên bản.
 - Chính sách đăng nhập theo tenant: `make tenant-login TENANT=<tenant> POLICY=otp|default` bắt mọi tài khoản của một
   tenant nhập OTP hoặc bỏ yêu cầu đó; tenant demo `tinh-khac` bắt buộc OTP, có thêm `user.k` (ADR 0040).
+- Giấy tờ đính kèm trên màn hình chi tiết của danh mục: xem, tải về, đính kèm tệp qua API tệp của lõi; tệp nhiễm mã độc
+  bị từ chối bằng lời báo tiếng Việt. Gói cơ sở vật chất xã đính kèm giấy tờ vào cơ sở
+  ([ADR 0041](docs/adr/0041-documents-on-catalog-records.md)).
+
+### Removed
+
+- `component: documents` không còn là giá trị của mục menu trong `app.yaml`: tài liệu đính kèm là một phần của màn
+  hình chi tiết danh mục, không có trang menu riêng (ADR 0041). Nâng cấp: gói đã khai mục menu `component: documents`
+  chuyển cấu hình đó vào `detail.documents` của cấu hình danh mục.
 
 ### Fixed
 

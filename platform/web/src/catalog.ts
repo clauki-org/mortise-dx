@@ -6,6 +6,8 @@
 // ở catalogQuery.ts; phần hiển thị ở Catalog.tsx, CatalogRecord.tsx và CatalogTable.tsx. Không có React ở đây để
 // kiểm thử được bằng hàm thuần.
 
+import { type DocumentsConfig, documentsProblems } from "./documents";
+
 export type Field = {
   /** Tên cột, hoặc <quan hệ>.<cột> để đọc qua quan hệ một-một; loại sau chỉ hiện ở màn hình chi tiết */
   name: string;
@@ -26,7 +28,7 @@ export type CatalogNode = {
     sort?: Sort;
     page_size?: number;
   };
-  detail?: { title?: string; children?: Child[]; actions?: Action[] };
+  detail?: { title?: string; children?: Child[]; actions?: Action[]; documents?: DocumentsConfig };
 };
 
 /** Nút khởi tạo quy trình cho dòng đang xem: tên biến của quy trình -> khóa hoặc trường của dòng (ADR 0026). */
@@ -105,7 +107,8 @@ function nodeProblems(config: CatalogNode): string[] {
       problems.push(`list.search dùng trường "${name}" không phải kiểu text`);
     }
   }
-  return [...problems, ...actionProblems(config, names)];
+  const documents = config.detail?.documents;
+  return [...problems, ...actionProblems(config, names), ...(documents ? documentsProblems(documents) : [])];
 }
 
 /** Nút trỏ tới trường chưa khai thì biến của quy trình nhận giá trị trống; báo ngay thay vì đợi người dùng bấm. */

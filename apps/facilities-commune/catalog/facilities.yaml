@@ -41,6 +41,20 @@ detail:
         title: name
         facilityId: id
         excessM2: summary.excess_m2
+  # Giấy tờ đính kèm cơ sở (ADR 0041): bảng nối facility_documents ở hasura/tables.yaml. Ai thấy cơ sở thì thấy giấy
+  # tờ của nó; nút đính kèm hiện cho mọi người thấy cơ sở, nhưng chỉ cán bộ phụ trách (custodian) gắn được tệp.
+  documents:
+    title: Giấy tờ đính kèm
+    source: app_facilities_commune_facility_documents
+    via: facility_id
+    file: file_id
+    fields:
+      - { name: note, label: Ghi chú }
+      - { name: created_at, label: Ngày đính kèm, type: datetime }
+    sort: { field: created_at, direction: desc }
+    upload:
+      label: Đính kèm tệp
+      note: note
   children:
     - id: buildings
       label: Tòa nhà
