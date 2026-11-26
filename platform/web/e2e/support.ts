@@ -14,7 +14,7 @@ const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
 const isApprover = (username: string) => username.startsWith("manager.");
 
 /** Mã OTP chưa dùng: Keycloak từ chối mã đã dùng, nên scripts/otp.py nhớ mã đã cấp và chờ khung mới khi cần. */
-function otp(username: string): string {
+export function otp(username: string): string {
   return execFileSync("uv", ["run", "--quiet", "--no-project", "python", "scripts/otp.py", "next", username], {
     cwd: repoRoot,
     encoding: "utf8",

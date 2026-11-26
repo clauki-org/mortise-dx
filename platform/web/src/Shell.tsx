@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Khung trang khi đã đăng nhập: thanh trên (đơn vị, người dùng, đăng xuất), menu bên trái và vùng nội dung do route
-// hiện tại vẽ. Trên màn hình hẹp, menu thu vào nút mở menu.
+// Khung trang khi đã đăng nhập: thanh trên (đơn vị, người dùng, thêm Passkey khi đơn vị cho phép, đăng xuất), menu
+// bên trái và vùng nội dung do route hiện tại vẽ. Trên màn hình hẹp, menu thu vào nút mở menu.
 
 import { AppShell, Burger, Button, Group, NavLink, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
@@ -10,6 +10,7 @@ import { Link, Outlet, useLocation } from "react-router";
 import { userManager } from "./auth";
 import { itemPath } from "./menu";
 import { usePackageMenu } from "./PackagePage";
+import { addPasskey, canAddPasskey } from "./passkey";
 import { useSession } from "./session";
 import { TenantInfo } from "./TenantInfo";
 
@@ -22,7 +23,7 @@ const signOut = () => userManager.signoutRedirect();
 export function Shell() {
   const { user } = useSession();
   const [opened, { toggle, close }] = useDisclosure();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const packages = usePackageMenu();
   const items = [...MENU, ...packages.items.map((entry) => ({ to: itemPath(entry), label: entry.label }))];
 
@@ -53,6 +54,12 @@ export function Shell() {
               <TenantInfo />
               <Text size="sm">{user.profile.preferred_username}</Text>
             </Group>
+            {/* Luôn hiện cả trên màn hình hẹp: Passkey thường là vân tay hay khuôn mặt trên điện thoại. */}
+            {canAddPasskey(user.access_token) && (
+              <Button variant="subtle" onClick={() => addPasskey(`${pathname}${search}`)}>
+                Thêm Passkey
+              </Button>
+            )}
             <Button variant="subtle" onClick={signOut}>
               Đăng xuất
             </Button>

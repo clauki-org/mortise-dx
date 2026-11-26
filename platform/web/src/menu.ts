@@ -5,6 +5,8 @@
 // vấn, cách lọc theo vai trò trong token và địa chỉ của từng mục. Phần hiển thị ở Shell.tsx và PackagePage.tsx.
 // Không có React ở đây để kiểm thử được bằng hàm thuần, và không có tên gói hay chữ của một lĩnh vực nào.
 
+import { claimsOf, strings } from "./token";
+
 /** Một mục menu của gói. `config` là nội dung tệp cấu hình của thành phần, đã được `make check-fast` kiểm. */
 export type MenuItem = {
   app: string;
@@ -23,15 +25,8 @@ export const MENU_QUERY =
 
 /** Vai trò realm trong access token; token không đọc được thì coi như không có vai trò nào. */
 export function rolesOf(accessToken: string | undefined): string[] {
-  const payload = accessToken?.split(".")[1];
-  if (!payload) return [];
-  try {
-    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    const roles = JSON.parse(json)?.realm_access?.roles;
-    return Array.isArray(roles) ? roles.filter((role): role is string => typeof role === "string") : [];
-  } catch {
-    return [];
-  }
+  const access = claimsOf(accessToken).realm_access as { roles?: unknown } | undefined;
+  return strings(access?.roles);
 }
 
 /**

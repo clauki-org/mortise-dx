@@ -34,7 +34,7 @@ Token mang các claim lõi dùng để phân quyền (hợp đồng: [`contracts
 | `sub` | Mã người dùng |
 | `tenant` | Đơn vị (tenant) của người dùng, đúng một giá trị |
 | `realm_access.roles` | Vai trò, ví dụ `user`, `manager` |
-| `amr` | Cách đã đăng nhập: `pwd` (mật khẩu), `otp` (mã OTP) |
+| `amr` | Cách đã đăng nhập: `pwd` (mật khẩu), `hwk` (Passkey, [ADR 0042](adr/0042-passkey-login.md)), `otp` (mã OTP) |
 
 ## Dữ liệu: `POST /v1/graphql`
 

@@ -62,6 +62,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0039](0039-dependency-check-script.md) | Ghim phiên bản và giấy phép phụ thuộc kiểm bằng script trong repo, chạy trong `make check-fast`; bản mới chỉ báo, mỗi tuần đăng báo cáo vào issue theo dõi; chính sách ở `scripts/deps-policy.toml` | Chấp nhận |
 | [0040](0040-tenant-login-policy.md) | Chính sách đăng nhập theo tenant: gán vai trò `otp_required` cho group của tenant, không đổi luồng; người vận hành đặt bằng `make tenant-login` | Chấp nhận |
 | [0041](0041-documents-on-catalog-records.md) | Tài liệu đính kèm là phần `detail.documents` của màn hình chi tiết danh mục: bảng nối của gói quyết định ai thấy tệp nào, tệp tải lên, tải xuống qua `/v1/files`; tải xuống theo tenant và mã tệp, không theo bản ghi; check-fast kiểm theo quyền của gói | Chấp nhận |
+| [0042](0042-passkey-login.md) | Đăng nhập bằng Passkey theo tenant: bước WebAuthn riêng ngang ô mật khẩu ghi amr `hwk`, từ chối khi thiếu vai trò `passkey_allowed` gán cho group của tenant; Passkey thay mật khẩu, không thay OTP | Chấp nhận |
 
 ## Quyết định còn mở
 
