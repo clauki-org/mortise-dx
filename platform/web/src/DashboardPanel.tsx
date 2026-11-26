@@ -9,7 +9,7 @@
 import { Alert, Anchor, Loader, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { type ReactNode, useMemo } from "react";
 import { Link } from "react-router";
-import { useQuery } from "urql";
+import { type CombinedError, useQuery } from "urql";
 import { RestBody } from "./DashboardRest";
 import { CardsView, ChartView, MethodDetails } from "./DashboardView";
 import {
@@ -27,9 +27,26 @@ import {
 } from "./dashboardConfig";
 import { findItem, itemPath, rolesOf } from "./menu";
 import { usePackageMenu } from "./PackagePage";
+import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 
 type GraphqlPanel = Panel & { graphql: GraphqlSource };
+
+/** Lỗi do cấu hình của gói (bảng, cột ngoài quyền) nói rõ cho người quản trị; lỗi khác dùng khung báo lỗi chung. */
+function PanelError({ panel, error }: { panel: Panel; error: CombinedError }) {
+  const title = `Không đọc được số liệu của khối "${panel.title}"`;
+  const config = queryErrorText(
+    panel,
+    error.graphQLErrors.map((item) => String(item.extensions?.code ?? "")),
+    error.graphQLErrors[0]?.message ?? error.message,
+  );
+  if (config === null) return <ErrorNotice title={title} error={error} />;
+  return (
+    <Alert color="red" title={title}>
+      {config}
+    </Alert>
+  );
+}
 
 function GraphqlBody({ panel, link }: { panel: GraphqlPanel; link: ReactNode }) {
   const request = useMemo(() => panelQuery(panel), [panel]);
@@ -45,15 +62,7 @@ function GraphqlBody({ panel, link }: { panel: GraphqlPanel; link: ReactNode }) 
   const shown = panel.chart ? rows.slice(0, limitOf(panel)) : rows;
   return (
     <>
-      {error && (
-        <Alert color="red" title={`Không đọc được số liệu của khối "${panel.title}"`}>
-          {queryErrorText(
-            panel,
-            error.graphQLErrors.map((item) => String(item.extensions?.code ?? "")),
-            error.graphQLErrors[0]?.message ?? error.message,
-          )}
-        </Alert>
-      )}
+      {error && <PanelError panel={panel} error={error} />}
       {fetching && !data && <Loader size="sm" aria-label={`Đang tải ${panel.title}`} />}
       {data && panel.cards && <CardsView cards={panel.cards} rows={shown} large={panel.primary} />}
       {data && panel.chart && <ChartView chart={panel.chart} rows={shown} title={panel.title} />}

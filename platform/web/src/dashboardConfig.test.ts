@@ -229,8 +229,6 @@ describe("queryErrorText", () => {
   });
 
   it("lỗi khác bảo tải lại trang", () => {
-    expect(queryErrorText(children, [], "Failed to fetch")).toBe(
-      "Failed to fetch. Tải lại trang; nếu vẫn lỗi, báo người quản trị.",
-    );
+    expect(queryErrorText(children, [], "Failed to fetch")).toBeNull();
   });
 });
