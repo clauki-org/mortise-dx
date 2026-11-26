@@ -27,8 +27,10 @@ async function virtualAuthenticator(page: Page): Promise<CDPSession> {
 }
 
 /** Trang đăng ký Passkey của Keycloak: bấm đăng ký, nhận tên gợi ý cho Passkey ở hộp hỏi tên. */
+// Keycloak hỏi tên thiết bị và từ chối tên trùng với Passkey đã có; chạy lại bài trên cùng bản cài thì tên mặc định đã
+// có từ lần trước, nên mỗi lần đăng ký đặt một tên riêng.
 async function registerPasskey(page: Page) {
-  page.once("dialog", (dialog) => dialog.accept());
+  page.once("dialog", (dialog) => dialog.accept(`e2e-${Date.now()}`));
   await page.locator("#registerWebAuthn").click();
 }
 
