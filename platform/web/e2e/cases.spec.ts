@@ -8,7 +8,7 @@
 // dọn dữ liệu.
 
 import { type APIRequestContext, expect, test } from "@playwright/test";
-import { complete, graphql, signIn, token, uniqueTitle } from "./support.ts";
+import { complete, graphql, openMenuItem, signIn, token, uniqueTitle } from "./support.ts";
 
 const PREFIX = "app_supplies_commune";
 const COMMENT = "Ý kiến riêng của người duyệt";
@@ -43,7 +43,7 @@ test("cán bộ xã A theo dõi đề nghị vừa lập tới khi được duy�
     );
     await page.goto("/");
     await signIn(page, "user.a");
-    await page.getByRole("link", { name: "Lập đề nghị cấp vật tư", exact: true }).click();
+    await openMenuItem(page, "Lập đề nghị cấp vật tư");
     await page.getByRole("combobox", { name: "Kho" }).click();
     await page.getByRole("option", { name: code }).click();
     await page.getByRole("combobox", { name: "Vật tư" }).click();
@@ -62,8 +62,7 @@ test("cán bộ xã A theo dõi đề nghị vừa lập tới khi được duy�
 
     // Trang danh sách: mặc định lọc hồ sơ đang xử lý, dòng ghi bước đang chờ.
     // Mục menu và đường quay lại danh sách trên màn hình hồ sơ cùng tên, cùng đích.
-    const list = page.getByRole("link", { name: "Đề nghị đã lập", exact: true }).first();
-    await list.click();
+    await openMenuItem(page, "Đề nghị đã lập");
     await expect(page.getByRole("row", { name: new RegExp(`${title}\\s*Duyệt đề nghị cấp vật tư`) })).toBeVisible();
 
     const [task] = await pendingOf(request, title);
@@ -73,7 +72,7 @@ test("cán bộ xã A theo dõi đề nghị vừa lập tới khi được duy�
     await expect(page.getByRole("row", { name: /Kết quả\s*Đã duyệt/ })).toBeVisible();
     await expect(page.getByText(COMMENT)).toHaveCount(0);
     // Hồ sơ đã duyệt rời khỏi bộ lọc đang xử lý và hiện ở bộ lọc đã kết thúc, kèm kết quả.
-    await list.click();
+    await openMenuItem(page, "Đề nghị đã lập");
     await expect(page.getByRole("link", { name: title })).toHaveCount(0);
     await page.getByText("Đã kết thúc", { exact: true }).click();
     await expect(page.getByRole("row", { name: new RegExp(`${title}\\s*Đã duyệt`) })).toBeVisible();

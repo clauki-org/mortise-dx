@@ -178,18 +178,22 @@ def load_steps(files: list[str]) -> None:
 MENU_SQL = """
 BEGIN;
 CREATE TEMP TABLE item ON COMMIT DROP AS SELECT * FROM jsonb_to_recordset(:'items'::jsonb)
-    AS x(item text, position integer, label text, component text, config jsonb, roles text[]);
+    AS x(item text, position integer, label text, component text, config jsonb, roles text[], icon text);
 DELETE FROM platform.menu_items m WHERE m.app = :'app' AND m.item NOT IN (SELECT item FROM item);
-INSERT INTO platform.menu_items (tenant_id, app, item, position, label, component, config, roles)
-SELECT t.id, :'app', i.item, i.position, i.label, i.component, i.config, i.roles
+INSERT INTO platform.menu_items
+    (tenant_id, app, app_name, item, position, label, component, config, roles, icon)
+SELECT t.id, :'app', :'app_name', i.item, i.position, i.label, i.component, i.config, i.roles, i.icon
 FROM core.tenants t, item i
 ON CONFLICT (tenant_id, app, item) DO UPDATE
-    SET position = EXCLUDED.position, label = EXCLUDED.label,
-    component = EXCLUDED.component, config = EXCLUDED.config, roles = EXCLUDED.roles, updated_at = now()
-    WHERE (platform.menu_items.position, platform.menu_items.label, platform.menu_items.component,
-           platform.menu_items.config, platform.menu_items.roles)
+    SET app_name = EXCLUDED.app_name, position = EXCLUDED.position, label = EXCLUDED.label,
+    component = EXCLUDED.component, config = EXCLUDED.config, roles = EXCLUDED.roles, icon = EXCLUDED.icon,
+    updated_at = now()
+    WHERE (platform.menu_items.app_name, platform.menu_items.position, platform.menu_items.label,
+           platform.menu_items.component, platform.menu_items.config, platform.menu_items.roles,
+           platform.menu_items.icon)
         IS DISTINCT FROM
-        (EXCLUDED.position, EXCLUDED.label, EXCLUDED.component, EXCLUDED.config, EXCLUDED.roles);
+        (EXCLUDED.app_name, EXCLUDED.position, EXCLUDED.label, EXCLUDED.component, EXCLUDED.config,
+         EXCLUDED.roles, EXCLUDED.icon);
 COMMIT;
 """
 
@@ -203,10 +207,12 @@ def load_menu(directory: str, app: dict) -> None:
             "component": entry["component"],
             "config": load_yaml(os.path.join(directory, entry["config"])),
             "roles": entry.get("roles") or None,
+            "icon": entry.get("icon"),
         }
         for position, entry in enumerate(app.get("menu", []))
     ]
-    psql(MENU_SQL, app=app["id"], items=json.dumps(items))
+    # Tên hiển thị của gói là tên nhóm của các mục trên menu (ADR 0044); trình duyệt không đọc được app.yaml.
+    psql(MENU_SQL, app=app["id"], app_name=app["name"], items=json.dumps(items))
     print(f"postgres: {len(items)} mục menu của {app['id']}")
 
 
@@ -305,7 +311,8 @@ def check_menu_entry(owner: str, entry: dict) -> None:
     kiểm cho mục menu của gói: mục này không nằm trong app.yaml nào, nên không bước kiểm nào khác thấy nó."""
     with open(os.path.join(REPO, "contracts", "app.schema.json"), encoding="utf-8") as file:
         schema = json.load(file)
-    components = schema["properties"]["menu"]["items"]["properties"]["component"]["enum"]
+    properties = schema["properties"]["menu"]["items"]["properties"]
+    components = properties["component"]["enum"]
     component = entry["component"]
     problems = []
     if not re.search(schema["$defs"]["slug"]["pattern"], entry["id"]):
@@ -314,6 +321,8 @@ def check_menu_entry(owner: str, entry: dict) -> None:
         problems.append("label trống")
     if component not in components:
         problems.append(f"component {component!r} không có trong contracts/app.schema.json")
+    if "icon" in entry and entry["icon"] not in properties["icon"]["enum"]:
+        problems.append(f"icon {entry['icon']!r} không có trong contracts/app.schema.json")
     elif not os.path.isfile(os.path.join(REPO, "contracts", f"{component}.schema.json")):
         # Không có schema thì không kiểm được cấu hình, và giao diện thành nơi đầu tiên báo cấu hình sai.
         problems.append(f"component {component} chưa có contracts/{component}.schema.json")
@@ -414,13 +423,17 @@ def main() -> int:
     if args.command == "menu":
         # Mục menu của lõi không có app.yaml; tệp có đúng dạng mục `menu` để dùng chung bộ nạp với gói. Bộ nạp
         # xóa mục không có trong danh sách, nên mọi mục của chủ sở hữu phải nạp trong một lần gọi.
-        entries = (load_yaml(args.file) or {}).get("menu") or []
+        declared = load_yaml(args.file) or {}
+        entries = declared.get("menu") or []
         ids = [entry["id"] for entry in entries]
         if not entries or len(ids) != len(set(ids)):
             raise SystemExit(f"{args.file}: cần ít nhất một mục menu và id không trùng ({', '.join(ids)}).")
+        # Không có app.yaml nên tên nhóm trên menu đến từ `name` của chính tệp này, như `name` của gói.
+        if not str(declared.get("name") or "").strip():
+            raise SystemExit(f"{args.file}: cần `name`, là tên nhóm của các mục này trên menu.")
         for entry in entries:
             check_menu_entry(args.owner, entry)
-        load_menu(".", {"id": args.owner, "menu": entries})
+        load_menu(".", {"id": args.owner, "name": declared["name"], "menu": entries})
         return 0
     app, bpmn, steps = package(args.directory)
     if args.command == "install":

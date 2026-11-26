@@ -9,7 +9,7 @@
 // (`make app-install APP=supplies-commune`); bài tự tạo và tự dọn dữ liệu.
 
 import { type APIRequestContext, expect, type Page, type Request, test } from "@playwright/test";
-import { complete, graphql, signIn, token, uniqueTitle } from "./support.ts";
+import { complete, graphql, openMenuItem, signIn, token, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
 const PREFIX = "app_supplies_commune";
@@ -87,7 +87,7 @@ test("cán bộ xã A lập đề nghị trên web; người duyệt xã A thấ
 
     await page.goto("/");
     await signIn(page, "user.a");
-    await page.getByRole("link", { name: "Lập đề nghị cấp vật tư", exact: true }).click();
+    await openMenuItem(page, "Lập đề nghị cấp vật tư");
     await expect(page.getByRole("heading", { level: 1, name: "Lập đề nghị cấp vật tư" })).toBeVisible();
 
     const store = page.getByRole("combobox", { name: "Kho" });
@@ -204,7 +204,7 @@ test("mất phản hồi khi gửi đề nghị: gửi lại nguyên dữ liệu
 
     await page.goto("/");
     await signIn(page, "user.a");
-    await page.getByRole("link", { name: "Lập đề nghị cấp vật tư", exact: true }).click();
+    await openMenuItem(page, "Lập đề nghị cấp vật tư");
     const send = page.getByRole("button", { name: "Gửi" });
 
     await fillRequest(page, storeName, itemName, titles.same);
@@ -258,7 +258,7 @@ test("quản trị xã A thêm vật tư bằng biểu mẫu; dòng thuộc xã 
     await addStore(request, code, storeName);
     await page.goto("/");
     await signIn(page, "admin.a");
-    await page.getByRole("link", { name: "Thêm vật tư vào kho", exact: true }).click();
+    await openMenuItem(page, "Thêm vật tư vào kho");
     await expect(page.getByRole("heading", { level: 1, name: "Thêm vật tư vào kho" })).toBeVisible();
 
     await page.getByRole("combobox", { name: "Kho" }).click();

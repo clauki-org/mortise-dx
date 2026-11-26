@@ -366,6 +366,9 @@ mở cổng, và chỉ ở `127.0.0.1`.
     `role` đã khai hoặc `user` khi bỏ trống, để Hasura dùng đúng vai trò mà `make check-fast` đã kiểm; token không có
     vai trò đó thì biểu mẫu không hiện, khối không được truy vấn ([ADR 0030](adr/0030-form-component.md),
     [ADR 0033](adr/0033-dashboard-component.md)).
+  - Menu chia nhóm theo gói, tên nhóm là `name` của gói; mỗi mục có biểu tượng theo ý nghĩa `icon` khai trong
+    `app.yaml`, hình lấy từ Tabler Icons (`@tabler/icons-react` 3.51.0, MIT), nhập tĩnh từng hình nên bản build chỉ
+    chứa các hình đã dùng ([ADR 0044](adr/0044-menu-groups-and-icons.md)). Dưới cỡ `sm` menu thu vào nút mở menu.
   - Bản đồ vẽ bằng MapLibre GL JS 6.18.0 trên nền trơn, không tải tile từ máy chủ nào; mã của nó chỉ tải khi mở
     trang bản đồ, worker chạy từ tệp cùng origin nên CSP không mở `blob:`.
   - Biểu đồ của bảng điều hành là thanh vẽ bằng CSS theo biến màu của Mantine, không thêm thư viện biểu đồ; mỗi biểu

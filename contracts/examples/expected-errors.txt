@@ -17,6 +17,7 @@ app.path-is-url.yaml	$.menu[0].config	'http://no-such-host.invalid/items.yaml' d
 app.settings-unsafe-value.yaml	$.settings.approval_limit	'1000 || true' is not valid under any of the given schemas
 app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'dashboard', 'rules', 'assistant', 'cases']
 app.unknown-field.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
+app.unknown-icon.yaml	$.menu[0].icon	'no-such-icon' is not one of ['list', 'form', 'map', 'chart', 'chat', 'inbox', 'document', 'folder', 'settings']
 app.version-leading-zero.yaml	$.version	'01.0.0' does not match '^(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)$'
 assistant.blank-intro.yaml	$.intro	'   ' does not match '\\\\S'
 assistant.document-not-slug.yaml	$.documents[0]	'knowledge/example-rules.yaml' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'

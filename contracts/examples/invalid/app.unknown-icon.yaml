@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: `icon` không phải một ý nghĩa trong danh mục (ADR 0044).
+# Nếu lọt, giao diện không có hình cho mục này và gói tưởng đã khai biểu tượng. Tên cố ý không giống ý nghĩa thật
+# nào, để ngày danh mục thêm ý nghĩa mới ví dụ này vẫn sai.
+
+id: example
+name: Example package
+version: 0.1.0
+database:
+  schema: app_example
+  migrations: schema/migrations
+menu:
+  - id: items
+    label: Danh mục
+    component: catalog
+    config: catalog/items.yaml
+    icon: no-such-icon

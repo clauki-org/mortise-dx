@@ -8,7 +8,7 @@
 // (`make app-install APP=facilities-commune`); bài tự tạo và tự dọn cơ sở thử, tệp vẫn còn ở core.files.
 
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
-import { graphql, signIn, subOf, token, uniqueTitle } from "./support.ts";
+import { graphql, openMenuItem, signIn, subOf, token, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
 const PREFIX = "app_facilities_commune";
@@ -26,7 +26,7 @@ function cspViolations(page: Page): string[] {
 async function openFacility(page: Page, username: string, code: string, name: string) {
   await page.goto("/");
   await signIn(page, username);
-  await page.getByRole("link", { name: "Cơ sở nhà, đất" }).click();
+  await openMenuItem(page, "Cơ sở nhà, đất");
   await page.getByRole("textbox", { name: "Tìm" }).fill(code);
   await page.getByRole("button", { name: "Tìm" }).click();
   await page.getByRole("link", { name: code }).click();

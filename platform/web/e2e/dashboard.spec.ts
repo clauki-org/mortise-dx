@@ -12,7 +12,7 @@
 // tự dọn dữ liệu nên không cần `make seed-demo`.
 
 import { type APIRequestContext, type Browser, expect, type Page, type TestInfo, test } from "@playwright/test";
-import { graphql, signIn, token, uniqueTitle } from "./support.ts";
+import { graphql, openMenuItem, signIn, token, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
 const PREFIX = "app_facilities_commune";
@@ -66,7 +66,7 @@ async function open(browser: Browser, testInfo: TestInfo, username: string) {
   const seen = watch(page);
   await page.goto("/");
   await signIn(page, username);
-  await page.getByRole("link", { name: MENU, exact: true }).click();
+  await openMenuItem(page, MENU);
   await expect(page.getByRole("heading", { level: 1, name: TITLE })).toBeVisible();
   return { context, page, seen };
 }

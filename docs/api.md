@@ -54,13 +54,15 @@ Khai báo bước của quy trình (`contracts/workflow.schema.json`) nằm ở 
 báo của gói từ `apps/<gói>/workflows/*.yaml`, cùng BPMN mà `app.yaml` khai ở `workflows`.
 
 Menu của các gói đã cài nằm ở `platform_menu_items`, một dòng mỗi mục của `menu` trong `app.yaml`: `app` là gói,
-`item` là id của mục, `position` là thứ tự gói khai, `config` là nội dung tệp cấu hình của thành phần (không phải
-đường dẫn), `roles` là vai trò thấy mục (`null` là mọi người).
+`app_name` là tên hiển thị của gói (`name`, tên nhóm trên menu; `null` với dòng nạp trước khi có cột này), `item` là
+id của mục, `position` là thứ tự gói khai, `config` là nội dung tệp cấu hình của thành phần (không phải đường dẫn),
+`roles` là vai trò thấy mục (`null` là mọi người), `icon` là ý nghĩa biểu tượng của mục (`null` là không khai,
+[ADR 0044](adr/0044-menu-groups-and-icons.md)).
 
 ```bash
 curl -fsS -X POST http://localhost:9080/v1/graphql \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"query":"{ platform_menu_items(order_by: {position: asc}) { app item label component config roles } }"}'
+  -d '{"query":"{ platform_menu_items(order_by: {position: asc}) { app app_name item label component config roles icon } }"}'
 ```
 
 ```bash
