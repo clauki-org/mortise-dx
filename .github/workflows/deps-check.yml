@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Kiểm phụ thuộc đầy đủ mỗi tuần (ADR 0039): ghim phiên bản, giấy phép, bản mới của image, thư viện Python, web và
+# mô hình, rồi đăng báo cáo thành một comment trong issue theo dõi. Phần ghim và giấy phép đã chạy với mọi thay đổi
+# trong `make check-fast` (ci.yml); ở đây chạy lại để báo cáo đủ ba phần. Không bước nào sửa repo hay nâng cấp gì.
+
+name: deps-check
+
+on:
+  schedule:
+    # Thứ Hai 01:00 UTC, tức 08:00 giờ Việt Nam.
+    - cron: "0 1 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deps-check
+  cancel-in-progress: false
+
+jobs:
+  report:
+    name: Pins, licenses and new versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Quyền ở mức job thay toàn bộ quyền mặc định ở trên, nên ghi lại cả contents: read. issues: write chỉ để thêm
+    # comment vào issue theo dõi.
+    permissions:
+      contents: read
+      issues: write
+    env:
+      TRACKING_ISSUE: 172
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      # npm outdated đọc package.json và package-lock.json, không cần cài node_modules.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.13.1
+      - name: Check pins, licenses and new versions
+        id: check
+        continue-on-error: true
+        run: make deps-check REPORT="$RUNNER_TEMP/deps-report.md"
+      # Đăng cả khi ghim hay giấy phép lỗi: người xem cần biết lỗi gì. Không có báo cáo thì không đăng comment rỗng.
+      - name: Comment on the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          report="$RUNNER_TEMP/deps-report.md"
+          test -s "$report" || { echo "Không có báo cáo; xem log của bước kiểm." >&2; exit 1; }
+          gh issue comment "$TRACKING_ISSUE" --repo "$GITHUB_REPOSITORY" --body-file "$report"
+      - name: Fail when pins or licenses fail
+        if: steps.check.outcome == 'failure'
+        run: exit 1

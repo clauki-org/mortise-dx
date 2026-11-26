@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e audit-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up \
+  check-fast deps-check web-check e2e audit-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up \
   obs-up obs-down obs-check
 
 help: ## Liệt kê các lệnh
@@ -133,7 +133,7 @@ restore-drill: ## Diễn tập khôi phục trên máy trắng, đo thời gian;
 	@CONFIRM="$(CONFIRM)" scripts/restore-drill.sh "$(FROM)"
 
 lint: ## Kiểm tra giấy phép từng tệp (REUSE)
-	uvx reuse lint
+	uvx reuse==6.3.0 lint
 
 test: ## Kiểm thử đơn vị các dịch vụ tự viết của lõi và bộ giả lập thiết bị
 	@for dir in core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive \
@@ -150,26 +150,33 @@ contracts: ## Xuất lại OpenAPI của workflow-api, files-api, context-api v�
 # Gói có mã riêng (ví dụ bộ nạp seed/load.py) không nằm trong danh sách này.
 DECLARATIVE_APPS := supplies-commune
 
-# shellcheck, yamllint và ruff chạy qua uvx để không phải cài sẵn; chỉ cần uv.
-check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp đồng API; không cần dựng lõi
+# shellcheck, yamllint và ruff chạy qua uvx để không phải cài sẵn, chỉ cần uv; phiên bản ghim để kết quả không đổi
+# khi công cụ ra bản mới (make deps-check kiểm).
+check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp đồng API, ghim và giấy phép phụ thuộc; không cần dựng lõi
 	@test -f .env || cp .env.example .env.check-fast
 	@if [ -f .env.check-fast ]; then docker compose --env-file .env.check-fast config -q; rm -f .env.check-fast; \
 	  else docker compose config -q; fi
 	@# Dịch vụ tự viết mang image phát hành đúng tên, và không lệnh nào dựng image ngoài scripts/compose.sh (ADR 0036).
 	@python3 scripts/check-compose-images.py || { docker compose version >&2; exit 1; }
-	uvx --from shellcheck-py shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh \
+	uvx --from shellcheck-py==0.11.0.1 shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh \
 	  core/mosquitto/start.sh deploy/*.sh \
 	  apps/*/tests/*.sh
-	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps deploy .github
-	uvx ruff check --no-cache core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive \
+	uvx yamllint==1.38.0 -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps deploy .github
+	uvx ruff==0.17.6 check --no-cache core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive \
 	  platform/services/assistant devices/simulator
-	uvx ruff format --no-cache --check core/workflow-api core/files-api core/context-api core/iot-bridge \
+	uvx ruff==0.17.6 format --no-cache --check core/workflow-api core/files-api core/context-api core/iot-bridge \
 	  core/cold-archive platform/services/assistant devices/simulator
-	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts apps
-	uvx ruff format --no-cache --check --config core/workflow-api/pyproject.toml scripts apps
+	uvx ruff==0.17.6 check --no-cache --config core/workflow-api/pyproject.toml scripts apps
+	uvx ruff==0.17.6 format --no-cache --check --config core/workflow-api/pyproject.toml scripts apps
 	@scripts/contracts.sh check
 	uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py lint
 	$(if $(DECLARATIVE_APPS),@scripts/check-declarative.sh $(DECLARATIVE_APPS))
+	@# Ghim phiên bản và giấy phép phụ thuộc, không hỏi registry (ADR 0039); để cuối để các bước trên vẫn báo kết quả.
+	@python3 scripts/deps-check.py --offline
+
+# Bản đầy đủ thêm phần bản mới (cần mạng); workflow deps-check.yml chạy hằng tuần và đăng báo cáo vào issue theo dõi.
+deps-check: ## Ghim phiên bản, giấy phép và bản mới của image, thư viện, mô hình (bản mới chỉ báo, không tự nâng cấp); REPORT=<tệp> ghi báo cáo
+	@python3 scripts/deps-check.py $(if $(REPORT),--report "$(REPORT)")
 
 # Giấy phép phụ thuộc của giao diện (ADR 0006). Thư viện đóng gói vào tệp giao diện gửi tới người dùng chỉ được mang
 # giấy phép dễ dãi. Công cụ chỉ chạy lúc phát triển và build, không đóng gói vào sản phẩm, được thêm: BlueOak-1.0.0
