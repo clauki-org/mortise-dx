@@ -402,7 +402,7 @@ hưởng tới mã Apache-2.0 của dự án. Những công cụ chạy qua `uvx
 | check-jsonschema | Kiểm hợp đồng trong `contracts/` và token thật theo JSON Schema | `make check-fast`, `make smoke` | Apache-2.0 |
 | pytest | Kiểm thử đơn vị workflow-api và files-api | `make test` | MIT |
 | Playwright | Kiểm thử giao diện trên trình duyệt thật qua cổng; bài kiểm ở `platform/web/e2e/` | `make e2e` | Apache-2.0 |
-| axe-core cho Playwright (`@axe-core/playwright`) | Báo lỗi trợ năng của từng trang trong bài chụp giao diện `e2e/visual.spec.ts`, ghi thành tệp JSON kèm ảnh trong kết quả của Playwright; chỉ báo cáo, không làm bài hỏng | `make e2e` | MPL-2.0 |
+| axe-core cho Playwright (`@axe-core/playwright`) | Báo lỗi trợ năng của từng trang trong bài chụp giao diện `e2e/visual.spec.ts`, ghi thành tệp JSON kèm ảnh trong kết quả của Playwright; lỗi mức critical, serious theo WCAG 2.1 A, AA làm bài hỏng, mức khác chỉ ghi trong báo cáo | `make e2e` | MPL-2.0 |
 | Node.js, npm | Build và kiểm giao diện; Node chỉ có trong image build, không có khi chạy | `make web-check`, `npm run dev` | MIT / Artistic-2.0 |
 | Biome | Kiểm lỗi và định dạng mã giao diện | `make web-check` | MIT OR Apache-2.0 |
 | Vitest | Kiểm thử đơn vị mã giao diện không cần trình duyệt; bài kiểm là tệp `*.test.ts` trong `platform/web/src/` | `make web-check` | MIT |
