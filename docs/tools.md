@@ -70,7 +70,10 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
     (mật khẩu và mã OTP) qua luồng `browser-mfa` và `direct-grant-mfa`; token ghi cách đăng nhập trong claim `amr`
     ([ADR 0011](adr/0011-approver-mfa.md)). `make tenant-login TENANT=<tenant> POLICY=otp` gán vai trò đó cho group
     của tenant, nên mọi tài khoản của tenant phải nhập OTP; `POLICY=default` bỏ đi
-    ([ADR 0040](adr/0040-tenant-login-policy.md)).
+    ([ADR 0040](adr/0040-tenant-login-policy.md)). `POLICY=passkey` (gỡ bằng `no-passkey`) gán vai trò
+    `passkey_allowed` cho group của tenant: người của tenant thêm Passkey bằng nút "Thêm Passkey" trên giao diện và
+    đăng nhập bằng nó thay mật khẩu (amr `hwk`), vẫn nhập OTP nếu có `otp_required`; Passkey của tenant khác bị từ chối
+    ([ADR 0042](adr/0042-passkey-login.md)).
 - **Cấu hình:** `core/keycloak/realm-mortise.json`, được nạp khi Keycloak khởi động lần đầu. Tài khoản demo, khóa OTP
   của người duyệt demo (`DEMO_OTP_SECRET`) và client `mortise-test` do `scripts/seed.sh` tạo, không nằm trong tệp
   realm. `make otp` in mã OTP hiện tại của người duyệt demo.

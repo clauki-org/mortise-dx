@@ -14,6 +14,10 @@
   "otpPolicyPeriod": 30,
   "otpPolicyLookAheadWindow": 1,
   "otpPolicyCodeReusable": false,
+  "webAuthnPolicyPasswordlessRpEntityName": "Mortise DX",
+  "webAuthnPolicyPasswordlessResidentKey": "required",
+  "webAuthnPolicyPasswordlessUserVerificationRequirement": "required",
+  "webAuthnPolicyPasswordlessPasskeysEnabled": false,
   "browserFlow": "browser-mfa",
   "directGrantFlow": "direct-grant-mfa",
   "authenticationFlows": [
@@ -30,16 +34,52 @@
     },
     {
       "alias": "browser-mfa forms",
-      "description": "Mật khẩu, rồi OTP nếu là người duyệt",
+      "description": "Mật khẩu hay Passkey, chặn Passkey của tenant chưa cho phép, rồi OTP nếu có otp_required (ADR 0042)",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "flowAlias": "browser-mfa first factor", "requirement": "REQUIRED", "priority": 10, "authenticatorFlow": true },
+        { "flowAlias": "browser-mfa passkey policy", "requirement": "CONDITIONAL", "priority": 15, "authenticatorFlow": true },
+        { "flowAlias": "browser-mfa approver otp", "requirement": "CONDITIONAL", "priority": 20, "authenticatorFlow": true }
+      ]
+    },
+    {
+      "alias": "browser-mfa first factor",
+      "description": "Yếu tố đầu: mật khẩu (amr pwd) hay Passkey không cần tên đăng nhập (amr hwk), chọn qua Try Another Way",
       "providerId": "basic-flow",
       "topLevel": false,
       "builtIn": false,
       "authenticationExecutions": [
         {
-          "authenticator": "auth-username-password-form", "requirement": "REQUIRED", "priority": 10,
+          "authenticator": "auth-username-password-form", "requirement": "ALTERNATIVE", "priority": 10,
           "authenticatorFlow": false, "authenticatorConfig": "amr-pwd"
         },
-        { "flowAlias": "browser-mfa approver otp", "requirement": "CONDITIONAL", "priority": 20, "authenticatorFlow": true }
+        {
+          "authenticator": "webauthn-authenticator-passwordless", "requirement": "ALTERNATIVE", "priority": 20,
+          "authenticatorFlow": false, "authenticatorConfig": "amr-hwk"
+        }
+      ]
+    },
+    {
+      "alias": "browser-mfa passkey policy",
+      "description": "Từ chối khi vừa đăng nhập bằng Passkey mà không có vai trò passkey_allowed (tenant chưa bật Passkey)",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-credential", "requirement": "REQUIRED", "priority": 10,
+          "authenticatorFlow": false, "authenticatorConfig": "passkey-used"
+        },
+        {
+          "authenticator": "conditional-user-role", "requirement": "REQUIRED", "priority": 20,
+          "authenticatorFlow": false, "authenticatorConfig": "passkey-not-allowed"
+        },
+        {
+          "authenticator": "deny-access-authenticator", "requirement": "REQUIRED", "priority": 30,
+          "authenticatorFlow": false, "authenticatorConfig": "passkey-denied"
+        }
       ]
     },
     {
@@ -95,7 +135,14 @@
   "authenticatorConfig": [
     { "alias": "approver-role", "config": { "condUserRole": "mortise-web.otp_required", "negate": "false" } },
     { "alias": "amr-pwd", "config": { "default.reference.value": "pwd", "default.reference.maxAge": "36000" } },
-    { "alias": "amr-otp", "config": { "default.reference.value": "otp", "default.reference.maxAge": "36000" } }
+    { "alias": "amr-otp", "config": { "default.reference.value": "otp", "default.reference.maxAge": "36000" } },
+    { "alias": "amr-hwk", "config": { "default.reference.value": "hwk", "default.reference.maxAge": "36000" } },
+    { "alias": "passkey-used", "config": { "credentials": "webauthn-passwordless", "included": "true" } },
+    { "alias": "passkey-not-allowed", "config": { "condUserRole": "mortise-web.passkey_allowed", "negate": "true" } },
+    {
+      "alias": "passkey-denied",
+      "config": { "denyErrorMessage": "Đơn vị của tài khoản này chưa cho đăng nhập bằng Passkey. Hãy đăng nhập bằng mật khẩu." }
+    }
   ],
   "roles": {
     "realm": [
@@ -112,6 +159,10 @@
         {
           "name": "otp_required",
           "description": "Phải nhập OTP khi đăng nhập (ADR 0011, ADR 0028). Vai trò của client, không của realm: không vào realm_access nên Hasura và workflow-api không coi là vai trò"
+        },
+        {
+          "name": "passkey_allowed",
+          "description": "Được đăng nhập bằng Passkey (ADR 0042); gán cho group của tenant bằng make tenant-login. Vai trò của client, không dùng để phân quyền dữ liệu"
         }
       ]
     }

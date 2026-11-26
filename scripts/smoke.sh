@@ -336,6 +336,40 @@ claims "$manager_a" > "$claims_file"
 if scripts/contracts.sh token "$claims_file"; then status=ok; else status=lệch; fi
 check "Token khớp contracts/token-claims.schema.json" "$status" ok
 
+# Passkey (ADR 0042): curl không làm được WebAuthn, đăng nhập thật bằng Passkey nằm ở `make e2e`. Ở đây chỉ kiểm cấu
+# hình realm qua API quản trị: thứ tự các bước (gate Passkey và OTP sau yếu tố đầu, nên Passkey không bỏ qua được OTP),
+# amr của bước Passkey, chính sách của realm và tenant nào được bật.
+kc() { docker compose exec -T keycloak /opt/keycloak/bin/kcadm.sh "$@" </dev/null; }
+kc config credentials --server http://localhost:8080/auth --realm master \
+  --user admin --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null 2>&1
+forms=$(kc get "authentication/flows/browser-mfa%20forms/executions" -r mortise)
+check "Luồng trình duyệt: mật khẩu hay Passkey, rồi chặn Passkey chưa cho phép, rồi OTP theo otp_required" \
+  "$(jq -c '[.[] | select(.requirement != "DISABLED") | [.level, (.providerId // .displayName), .requirement]]' \
+    <<<"$forms")" \
+  '[[0,"browser-mfa first factor","REQUIRED"],[1,"auth-username-password-form","ALTERNATIVE"],'\
+'[1,"webauthn-authenticator-passwordless","ALTERNATIVE"],[0,"browser-mfa passkey policy","CONDITIONAL"],'\
+'[1,"conditional-credential","REQUIRED"],[1,"conditional-user-role","REQUIRED"],'\
+'[1,"deny-access-authenticator","REQUIRED"],[0,"browser-mfa approver otp","CONDITIONAL"],'\
+'[1,"conditional-user-role","REQUIRED"],[1,"auth-otp-form","REQUIRED"]]'
+config=$(jq -r '.[] | select(.providerId == "webauthn-authenticator-passwordless") | .authenticationConfig' <<<"$forms")
+# API quản trị của Keycloak che giá trị cấu hình (trả "**********"), nên smoke chỉ kiểm bước Passkey gắn đúng cấu hình
+# amr-hwk; giá trị hwk trong token do make e2e (passkey.spec.ts) kiểm.
+check "Bước Passkey gắn cấu hình amr-hwk" \
+  "$(kc get "authentication/config/$config" -r mortise | jq -r '.alias')" amr-hwk
+check "Ô mật khẩu không tự nhận Passkey; Passkey lưu trên thiết bị, phải xác minh người dùng" \
+  "$(kc get realms/mortise | jq -c '[.webAuthnPolicyPasswordlessPasskeysEnabled,
+    .webAuthnPolicyPasswordlessResidentKey, .webAuthnPolicyPasswordlessUserVerificationRequirement]')" \
+  '[false,"required","required"]'
+web_client=$(kc get clients -r mortise -q clientId=mortise-web --fields id --format csv --noquotes)
+passkey_of() {
+  local group
+  group=$(kc get groups -r mortise -q "search=$1" --fields id,name --format csv --noquotes |
+    awk -F, -v n="$1" '$2==n{print $1}')
+  kc get "groups/$group/role-mappings/clients/$web_client" -r mortise 2>/dev/null |
+    jq -r 'any(.[]; .name == "passkey_allowed")'
+}
+check "Chỉ tenant demo xa-c bật Passkey, xa-a không" "$(passkey_of xa-c) $(passkey_of xa-a)" "true false"
+
 # Flowable chỉ chứa quy trình deploy theo tenant. Hỏi thẳng Flowable ở cổng chỉ mở trong máy
 # chủ, vì workflow-api không cho thấy quy trình ngoài tenant của người gọi.
 stray=$(curl -fsS -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" \

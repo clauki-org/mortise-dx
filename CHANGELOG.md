@@ -24,6 +24,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Giấy tờ đính kèm trên màn hình chi tiết của danh mục: xem, tải về, đính kèm tệp qua API tệp của lõi; tệp nhiễm mã độc
   bị từ chối bằng lời báo tiếng Việt. Gói cơ sở vật chất xã đính kèm giấy tờ vào cơ sở
   ([ADR 0041](docs/adr/0041-documents-on-catalog-records.md)).
+- Đăng nhập bằng Passkey cho tenant được bật (`make tenant-login TENANT=<tenant> POLICY=passkey`): nút "Thêm Passkey"
+  trên giao diện, trang đăng nhập có lựa chọn Passkey thay mật khẩu, ai phải nhập OTP vẫn nhập; tenant demo `xa-c`
+  (ADR 0042).
 
 ### Removed
 

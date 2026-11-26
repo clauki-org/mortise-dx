@@ -94,8 +94,10 @@ users=(
   "manager.k  tinh-khac  manager"
   "user.k  tinh-khac  -  key"
 )
-# Tenant demo bắt mọi tài khoản nhập OTP (ADR 0040); tenant khác giữ chính sách mặc định.
+# Tenant demo bắt mọi tài khoản nhập OTP (ADR 0040), tenant demo cho đăng nhập bằng Passkey (ADR 0042: user.c đăng nhập
+# bằng Passkey, manager.c đăng nhập bằng Passkey rồi vẫn nhập OTP); tenant khác giữ chính sách mặc định.
 otp_tenants=(tinh-khac)
+passkey_tenants=(xa-c)
 
 # Tệp realm chỉ được nạp khi Keycloak khởi động lần đầu. Bản cài dựng trước khi có vai trò rollup_reader và tenant
 # cha (ADR 0016) thì tạo bù ở đây (group tạo bù trong vòng lặp dưới), để không phải `make reset`.
@@ -122,6 +124,8 @@ for flow in "browser-mfa%20approver%20otp" "direct-grant-mfa%20approver%20otp"; 
     done
 done
 echo "keycloak: luồng đăng nhập hỏi OTP người có otp_required (mọi manager)"
+# Passkey là yếu tố đầu thay mật khẩu, trước bước OTP ở trên (ADR 0042); dựng bù trên realm đã dựng trước.
+scripts/passkey-flow.sh
 
 for entry in "${users[@]}"; do
   read -r username tenant role otp <<<"$entry"
@@ -159,6 +163,7 @@ done
 # Sau vòng lặp trên vì group của tenant có thể vừa được tạo ở đó. Lệnh tự bỏ qua khi tenant đã có chính sách, và cũng là
 # đường áp chính sách cho realm đã dựng trước (tệp realm chỉ nạp lần đầu).
 for tenant in "${otp_tenants[@]}"; do scripts/tenant-login.sh "$tenant" otp; done
+for tenant in "${passkey_tenants[@]}"; do scripts/tenant-login.sh "$tenant" passkey; done
 
 # Tenant demo là dữ liệu, không phải lược đồ, nên nằm ở seed chứ không nằm trong migration:
 # bản cài thật không được tự có tenant demo. Ba xã của "Tỉnh Mẫu", tỉnh hư cấu dùng cho demo (#58), là con của

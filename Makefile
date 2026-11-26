@@ -43,7 +43,7 @@ seed: env ## Nạp tài khoản demo, metadata Hasura và quy trình mẫu
 otp: ## In mã OTP hiện tại của các tài khoản demo phải nhập OTP và khóa để nhập vào ứng dụng OTP
 	@uv run --quiet --no-project python scripts/otp.py show
 
-tenant-login: ## Đặt chính sách đăng nhập của một tenant: make tenant-login TENANT=<tenant> POLICY=otp|default
+tenant-login: ## Đặt chính sách đăng nhập của một tenant: make tenant-login TENANT=<tenant> POLICY=otp|default|passkey|no-passkey
 	@scripts/tenant-login.sh "$(TENANT)" "$(POLICY)"
 
 smoke: ## Kiểm tra đầu-cuối qua cổng (cần lõi đang chạy và đã seed)
