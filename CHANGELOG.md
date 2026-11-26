@@ -42,6 +42,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Mọi trang báo đang tải, rỗng, lỗi cùng một kiểu bằng lời tiếng Việt kèm cách sửa và nút Thử lại; lý do do máy chủ
   viết (ví dụ quy tắc bốn mắt, tệp chứa mã độc) giữ nguyên, chi tiết kỹ thuật thu gọn ([ADR
   0046](docs/adr/0046-shared-ui-states.md)).
+- Các trang dùng chung đầu trang, nhãn trạng thái, định dạng ngày giờ; bảng cuộn ngang được trên điện thoại, nút việc
+  chính nổi bật; câu truy vấn của trợ lý dữ liệu nằm sau nút "Xem câu truy vấn" ([ADR
+  0047](docs/adr/0047-page-header-status-badge-formatting.md)).
 
 ### Removed
 
