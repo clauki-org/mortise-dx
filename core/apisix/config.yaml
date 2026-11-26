@@ -15,6 +15,16 @@ deployment:
 
 nginx_config:
   error_log_level: warn
+  # limit-count (apisix.yaml) trả trang HTML của nginx khi vượt giới hạn; client viết theo ErrorBody cần JSON có khóa
+  # `error`. Không dùng `rejected_msg` vì nó cho khóa `error_msg`; không dùng thêm response-rewrite vì hai bản
+  # response-rewrite trên cùng yêu cầu chung một cờ khớp, bản 401 của bearer-token sẽ tắt bản 429. error_page chỉ bắt
+  # 429 do cổng tự sinh (proxy_intercept_errors tắt), nên 429 của dịch vụ phía sau, nếu có, vẫn đi nguyên vẹn.
+  http_server_configuration_snippet: |
+    error_page 429 @rate_limited;
+    location @rate_limited {
+        default_type application/json;
+        return 429 '{"error":"Gửi quá nhiều yêu cầu trong một phút; chờ một lát rồi thử lại."}\n';
+    }
   # Worker của nginx chỉ thấy biến môi trường được khai ở đây; apisix.yaml đọc biến này trong worker.
   envs:
     - APISIX_TRACE_SAMPLER

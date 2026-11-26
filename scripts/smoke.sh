@@ -342,14 +342,17 @@ api() {
 
 status=$(curl -s -o /dev/null -w '%{http_code}' "$wf/tasks")
 check "API quy trình không token bị chặn tại cổng" "$status" 401
-# Lỗi 401 của cổng có cùng dạng ErrorBody với lỗi của workflow-api (contracts/workflow-api.openapi.json), để giao
-# diện đọc được lý do và biết phải đăng nhập lại.
+# Dạng thân lỗi: "ErrorBody" khi đúng hợp đồng của workflow-api (contracts/workflow-api.openapi.json).
+error_shape() {
+  jq -r 'if type == "object" and keys == ["error"] then "ErrorBody" else "khác" end' <<<"$1" 2>/dev/null ||
+    echo "không phải JSON"
+}
+# Lỗi 401 của cổng có cùng dạng ErrorBody với lỗi của workflow-api, để giao diện đọc được lý do và biết phải đăng
+# nhập lại.
 for path in /v1/workflow/tasks /v1/graphql; do
   response=$(curl -s -X POST -w '\n%{http_code}' "$base$path")
   status=${response##*$'\n'} body=${response%$'\n'*}
-  shape=$(jq -r 'if type == "object" and keys == ["error"] then "ErrorBody" else "khác" end' <<<"$body" \
-    2>/dev/null || echo "không phải JSON")
-  check "Lỗi 401 của $path là JSON theo hợp đồng" "$status $shape" "401 ErrorBody"
+  check "Lỗi 401 của $path là JSON theo hợp đồng" "$status $(error_shape "$body")" "401 ErrorBody"
 done
 
 IFS=$'\t' read -r status body < <(api POST "$user_a" /processes/core-approval/instances \
@@ -509,6 +512,20 @@ status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_
 check "user.b (tenant khác) không tải được tệp của tenant A" "$status" 404
 status=$(curl -s -o /dev/null -w '%{http_code}' "$files/$file_id")
 check "API tệp không token bị chặn tại cổng" "$status" 401
+# Vượt giới hạn tần suất (core/apisix/apisix.yaml) thì cổng trả 429 dạng ErrorBody như lỗi 401, không phải trang
+# HTML. Token riêng vì cổng đếm theo token: dùng $user_a thì các bước sau bị chặn tới hết phút. Gửi tới khi gặp 429,
+# không chép ngưỡng vào đây; quá 200 lần mà chưa bị chặn thì kiểm báo lỗi.
+limited=$(token user.a)
+for _ in $(seq 1 200); do
+  response=$(curl -s -w '\n%{content_type}\n%{http_code}' -H "Authorization: Bearer $limited" \
+    "$files/00000000-0000-0000-0000-000000000000")
+  status=${response##*$'\n'}
+  [[ $status == 429 ]] && break
+done
+response=${response%$'\n'*}
+content_type=${response##*$'\n'} body=${response%$'\n'*}
+check "Vượt giới hạn tần suất của API tệp: lỗi 429 là JSON theo hợp đồng" \
+  "$status $content_type $(error_shape "$body")" "429 application/json ErrorBody"
 # Máy chủ trả 413 rồi đóng kết nối khi curl còn đang gửi, nên curl thoát mã khác 0 dù đã nhận đủ phản hồi.
 status=$(head -c $((${FILES_MAX_BYTES:-20971520} + 1)) /dev/zero | curl -s -o /dev/null -w '%{http_code}' -X POST \
   -H "Authorization: Bearer $user_a" --data-binary @- "$files?name=qua-co.bin" || true)

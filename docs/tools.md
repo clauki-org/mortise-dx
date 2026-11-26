@@ -86,8 +86,9 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
     chặn (403) ([ADR 0007](adr/0007-login-page-exception.md)).
   - `/v1/graphql` (Hasura), `/v1/workflow/*` (workflow-api) và `/v1/files` (files-api) bắt buộc access token. Cổng tự kiểm chữ ký token bằng
     khóa công khai (JWKS) của Keycloak; không token hoặc token giả thì trả 401.
-  - Giới hạn tần suất theo token: 600 yêu cầu mỗi phút cho API dữ liệu, 300 cho API quy trình. Đếm theo token, không
-    theo IP, để nhiều người sau cùng một NAT không chặn lẫn nhau.
+  - Giới hạn tần suất theo token: 600 yêu cầu mỗi phút cho API dữ liệu, 300 cho API quy trình, 120 cho API tệp, 300
+    cho API thiết bị, 20 cho trợ lý. Đếm theo token, không theo IP, để nhiều người sau cùng một NAT không chặn lẫn
+    nhau. Vượt giới hạn thì trả 429 dạng JSON `{"error": "..."}` (`error_page` trong `config.yaml`).
   - Plugin `prometheus` bật cho mọi route (`global_rules`): đếm yêu cầu theo route và mã trả về, đo độ trễ; số liệu
     chỉ đọc được ở cổng 9091 trong mạng nội bộ, cổng 9080 không trả ([ADR 0037](adr/0037-observability-profile.md)).
 - **Cấu hình:** `core/apisix/config.yaml` (chế độ chạy), `core/apisix/apisix.yaml` (tuyến đường). Sửa xong chạy

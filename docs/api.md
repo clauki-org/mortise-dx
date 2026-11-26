@@ -7,8 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 
 Mọi API đi qua cổng APISIX tại `http://localhost:9080` (đổi bằng `MORTISE_PUBLIC_URL`). Trừ đăng nhập, mọi lời gọi
 phải có access token của Keycloak; không có hoặc sai token thì cổng trả `401` với thân JSON `{"error": "..."}`,
-cùng dạng lỗi của API quy trình. Các ví dụ dưới đây chạy được sau
-`make up && make seed`, và cũng là những gì `make smoke` kiểm tra.
+cùng dạng lỗi của API quy trình. Gửi quá giới hạn tần suất của một API (đếm theo token, mỗi phút) thì cổng trả `429`
+cùng dạng JSON; header `X-RateLimit-Reset` cho biết còn bao nhiêu giây tới khi được gửi tiếp. Các ví dụ dưới đây
+chạy được sau `make up && make seed`, và cũng là những gì `make smoke` kiểm tra.
 
 ## Lấy token
 
@@ -71,7 +72,8 @@ Trợ lý hỏi văn bản (`contracts/assistant.openapi.json`, [ADR 0021](adr/0
 `POST /v1/assistant/questions`. Câu hỏi cần mô hình mà chưa bật profile `ai` thì nhận 503 kèm cách bật. Câu trả lời có
 `outcome` `answered` kèm `citations` (văn bản, nhãn vị trí, câu nguyên văn), hoặc `refused` kèm `reason`: không có
 đoạn nào đủ gần câu hỏi, mô hình nói không đủ căn cứ, hay câu trả lời không qua bước kiểm. Trợ lý chỉ đọc được đoạn
-của tenant trong token. Mỗi lúc chỉ trả lời một câu (đang bận thì 503); mô hình quá thời gian thì 504. `model` ghi
+của tenant trong token. Mỗi lúc chỉ trả lời một câu (đang bận thì 503); mô hình quá thời gian thì 504. Quá 20 yêu
+cầu mỗi phút cho mỗi token, tính chung mọi API dưới `/v1/assistant`, thì cổng trả 429. `model` ghi
 mô hình đã được hỏi (`name`, `provider`, `location` là `local` hay `api`, `host` là tên máy của API), null khi từ chối
 mà không gọi mô hình. Trợ lý cấu hình gọi API mà thiếu biến hay khóa bị từ chối thì 503 chỉ biến cần sửa; API giới
 hạn tần suất hay quá tải thì 503 kèm lời thử lại sau ít phút.
@@ -144,7 +146,7 @@ curl -fsS -X POST http://localhost:9080/v1/graphql \
 |---|---|
 | `200` | Truy vấn hợp lệ; lỗi nghiệp vụ nằm trong trường `errors` của GraphQL |
 | `401` | Thiếu hoặc sai token |
-| `429` | Vượt giới hạn 600 yêu cầu mỗi phút cho mỗi token; thân hiện là trang HTML của cổng, chưa theo dạng JSON |
+| `429` | Vượt giới hạn 600 yêu cầu mỗi phút cho mỗi token |
 
 ## Quy trình: `/v1/workflow/*`
 
@@ -245,6 +247,7 @@ curl -fsS -X POST http://localhost:9080/v1/workflow/processes/core-approval/inst
 | `404` | Task hay quy trình không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại), trừ bước của tenant con được gán cho nhóm của tenant mình; tenant chưa có quy trình đó; hồ sơ ở `/v1/workflow/cases/{id}` không do người gọi lập; xem số hồ sơ của quy trình mà người gọi không có vai trò của bước nào (cùng câu với quy trình không có) |
 | `409` | Hoàn thành: task vừa được người khác nhận. Khởi tạo: bảng phân cấp của tenant chưa có dòng cho một bước của quy trình (người vận hành chạy lại `make app-install`, quy trình mẫu: `make seed`) |
 | `422` | Thân yêu cầu sai định dạng hoặc có khóa ngoài `variables`, ví dụ gửi `{"approved": true}` thiếu lớp `variables` |
+| `429` | Vượt giới hạn 300 yêu cầu mỗi phút cho mỗi token |
 | `502` / `503` | Flowable trả lỗi (thông điệp được chuyển lại), hay khi đếm hồ sơ trả dòng ngoài tenant, quy trình, bước đã hỏi / không kết nối được Flowable, hay không đọc được bảng phân cấp hoặc tenant con trong CSDL |
 
 ## Tệp: `/v1/files`
@@ -274,6 +277,7 @@ curl -fsS -X POST "http://localhost:9080/v1/files?name=bien-ban.pdf" \
 | `404` | Tệp không tồn tại hoặc thuộc tenant khác (không tiết lộ là tồn tại); nội dung tệp không còn trong kho |
 | `413` | Tệp lớn quá giới hạn |
 | `422` | Tệp chứa mã độc, hoặc vượt giới hạn quét nên không kiểm hết được (lý do nêu tên mẫu, tệp không được lưu); thiếu tham số `name`; `id` không phải UUID |
+| `429` | Vượt giới hạn 120 yêu cầu mỗi phút cho mỗi token |
 | `503` | Không kết nối được CSDL, SeaweedFS hay ClamAV; tệp chưa quét được thì không được nhận |
 
 Trạng thái tệp: `clean` là đã quét trước khi lưu, không thấy mã độc; `unscanned` là tệp tải lên trước khi có bước
@@ -314,6 +318,7 @@ curl -fsS "http://localhost:9080/v1/context/temporal/entities/urn:ngsi-ld:Device
 | `401` | Thiếu hoặc sai token |
 | `403` | Tài khoản không thuộc đúng một tenant, hoặc mã tenant không đúng dạng slug |
 | `404` | Entity không có trong tenant mình, hoặc số đo chưa có lần đo nào |
+| `429` | Vượt giới hạn 300 yêu cầu mỗi phút cho mỗi token |
 | `502` / `503` | Kho dữ liệu thiết bị báo lỗi (chi tiết chỉ ghi vào log) / không kết nối được |
 
 ### Thiết bị gửi số đo qua MQTT
