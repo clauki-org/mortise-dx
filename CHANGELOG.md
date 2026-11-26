@@ -39,6 +39,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Bảng điều hành: số chính nổi bật ở khối chính, cách tính và nguồn thu gọn trong "Xem cách tính", biểu đồ ghi số trên
   từng thanh, số 0 vẫn hiện; mô tả khối bằng lời người xem, `make check-fast` chặn tên bảng, cột trong chữ người xem
   thấy ([ADR 0045](docs/adr/0045-readable-dashboard.md)).
+- Mọi trang báo đang tải, rỗng, lỗi cùng một kiểu bằng lời tiếng Việt kèm cách sửa và nút Thử lại; lý do do máy chủ
+  viết (ví dụ quy tắc bốn mắt, tệp chứa mã độc) giữ nguyên, chi tiết kỹ thuật thu gọn ([ADR
+  0046](docs/adr/0046-shared-ui-states.md)).
 
 ### Removed
 
