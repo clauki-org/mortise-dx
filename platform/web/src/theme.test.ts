@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Kiểm tương phản WCAG 2 của màu mặc định (theme.ts) bằng công thức độ chói tương đối, không ước bằng mắt: mỗi màu
-// được phép làm màu chính phải đạt AA (4,5:1 cho chữ thường) ở mọi chỗ Mantine dùng nó, theo biến CSS của Mantine 9.
+// được phép làm màu chính phải đạt AA (4,5:1 cho chữ thường) ở mọi chỗ Mantine dùng nó. Màu của từng chỗ lấy từ biến
+// CSS mà Mantine sinh ra cho theme thật (bộ sinh mặc định cộng cssVariablesResolver), không chép số sắc độ vào đây:
+// đổi theme hay nâng Mantine làm đổi màu thì kiểm thử đo màu mới.
 
-import { DEFAULT_THEME } from "@mantine/core";
+import { DEFAULT_THEME, defaultCssVariablesResolver, mergeMantineTheme } from "@mantine/core";
 import { describe, expect, it } from "vitest";
 import { BRAND_COLORS } from "./branding";
-import { DIMMED_SHADE, PRIMARY_SHADE } from "./theme";
+import { createAppTheme, cssVariablesResolver } from "./theme";
 
 const AA = 4.5;
 const WHITE = "#ffffff";
@@ -30,6 +32,22 @@ const shade = (color: string, index: number): string => {
   return value;
 };
 
+// Biến CSS của nền sáng như trình duyệt thấy: biến của Mantine, rồi biến của theme.ts đè lên.
+function lightVariables(color: (typeof BRAND_COLORS)[number]): Record<string, string> {
+  const theme = mergeMantineTheme(DEFAULT_THEME, createAppTheme(color));
+  return { ...defaultCssVariablesResolver(theme).light, ...cssVariablesResolver(theme).light };
+}
+
+// Đổi một biến (có thể trỏ qua vài biến khác) thành mã màu #rrggbb.
+function resolve(variables: Record<string, string>, name: string): string {
+  const value = variables[name];
+  if (value === undefined) throw new Error(`Không có biến ${name}`);
+  const reference = /^var\((--mantine-color-[a-z]+-\d|--mantine-color-[a-z-]+)\)$/.exec(value);
+  if (!reference?.[1]) return value;
+  const palette = /^--mantine-color-([a-z]+)-(\d)$/.exec(reference[1]);
+  return palette?.[1] && palette[2] ? shade(palette[1], Number(palette[2])) : resolve(variables, reference[1]);
+}
+
 describe("công thức tương phản", () => {
   it("khớp giá trị chuẩn", () => {
     expect(contrast("#000000", WHITE)).toBeCloseTo(21, 5);
@@ -40,25 +58,28 @@ describe("công thức tương phản", () => {
 });
 
 describe.each(BRAND_COLORS)("màu chính %s", (color) => {
-  const hoverShade = PRIMARY_SHADE === 9 ? 8 : PRIMARY_SHADE + 1;
+  const variables = lightVariables(color);
+  const v = (suffix: string) => resolve(variables, `--mantine-color-${color}-${suffix}`);
   it.each([
-    ["chữ trắng trên nút filled", WHITE, shade(color, PRIMARY_SHADE)],
-    ["chữ trắng trên nút filled khi di chuột", WHITE, shade(color, hoverShade)],
-    ["liên kết và chữ màu trên nền trắng", shade(color, PRIMARY_SHADE), WHITE],
-    ["chữ màu trên nền trang gray.0", shade(color, PRIMARY_SHADE), shade("gray", 0)],
-    ["chữ của nút light, subtle trên nền trắng", shade(color, 9), WHITE],
-    // Nền nhạt là sắc 1 cả khi di chuột (cssVariablesResolver trong theme.ts).
-    ["chữ của nút light, mục menu đang chọn trên nền nhạt", shade(color, 9), shade(color, 1)],
+    ["chữ trắng trên nút filled", WHITE, v("filled")],
+    ["chữ trắng trên nút filled khi di chuột", WHITE, v("filled-hover")],
+    ["liên kết trên nền trắng", resolve(variables, "--mantine-color-anchor"), WHITE],
+    ["chữ màu trên nền trắng", v("text"), WHITE],
+    ["chữ màu trên nền trang gray.0", v("text"), shade("gray", 0)],
+    ["chữ của nút light, subtle trên nền trắng", v("light-color"), WHITE],
+    ["chữ của nút light, mục menu đang chọn trên nền nhạt", v("light-color"), v("light")],
+    ["chữ của nút light, subtle khi di chuột", v("light-color"), v("light-hover")],
   ])("%s đạt AA", (_, foreground, background) => {
     expect(contrast(foreground, background)).toBeGreaterThanOrEqual(AA);
   });
 });
 
 describe("chữ phụ (dimmed)", () => {
+  const dimmed = resolve(lightVariables("blue"), "--mantine-color-dimmed");
   it.each([
     ["nền trắng", WHITE],
     ["nền trang gray.0", shade("gray", 0)],
   ])("đạt AA trên %s", (_, background) => {
-    expect(contrast(shade("gray", DIMMED_SHADE), background)).toBeGreaterThanOrEqual(AA);
+    expect(contrast(dimmed, background)).toBeGreaterThanOrEqual(AA);
   });
 });

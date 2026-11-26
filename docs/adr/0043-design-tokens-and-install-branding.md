@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # 0043. Bộ quy ước giao diện đạt tương phản AA và thương hiệu theo bản cài trong `/branding.json`
 
-- Trạng thái: Đề xuất
+- Trạng thái: Chấp nhận
 - Ngày: 2026-11-27
 
 ## Bối cảnh
@@ -14,8 +14,8 @@ Giao diện Tầng 2 ([ADR 0006](0006-frontend-stack.md)) dùng theme gần như
 thành phần tự đặt viền, bo góc, khoảng đệm cho thẻ và bảng. Tên "Mortise DX" viết cứng ở màn hình chờ đăng nhập, thanh
 trên và tiêu đề tab, nên đơn vị cài đặt không hiện được tên, logo, màu của mình.
 
-Tương phản tính theo công thức độ chói tương đối của WCAG 2 trên bảng màu mặc định của Mantine 9.8.0
-(`platform/web/src/theme.test.ts`, chạy ngày 2026-11-27):
+Tương phản tính theo công thức độ chói tương đối của WCAG 2 trên bảng màu mặc định của Mantine 9.8.0 (cùng công thức
+với `platform/web/src/theme.test.ts`, tính ngày 2026-11-27):
 
 | Cặp màu | Tỷ lệ | AA (4,5:1) |
 |---|---|---|
@@ -45,12 +45,13 @@ Các cách giữ màu chính đạt AA đã xét:
   bóng; thành phần chỉ chọn bậc trong thang, không đặt số riêng.
 - Phông của hệ điều hành (`system-ui` và các phông hệ thống theo nền tảng), không tải phông web.
 - Kiểu mặc định chung: `Card` có viền, bo góc `md`, đệm `lg`, bóng `xs`; `Paper` bo góc `md`; `Table` khoảng cách
-  dòng `sm`, cột `md`.
+  dòng `sm`, cột `md`. `Paper` có viền mặc định, nên khung trong hộp thoại của Mantine cũng có viền.
 - `primaryShade` là 8 cho mọi màu. Chữ phụ (`--mantine-color-dimmed`) là `gray.7`. Nền nhạt khi di chuột của màu chính
   giữ sắc 1 như lúc không di chuột, vì sắc 2 làm chữ sắc 9 tụt dưới AA với `blue`, `indigo`, `violet`.
-- Kiểm thử đơn vị tính tương phản của mọi màu được phép ở sáu chỗ: chữ trắng trên nút filled và khi di chuột, chữ màu
-  trên nền trắng và nền `gray.0`, chữ sắc 9 trên nền trắng và trên nền sắc 1; chữ phụ trên nền trắng và `gray.0`. Mục
-  tiêu là AA cho chữ thường (4,5:1).
+- Kiểm thử đơn vị lấy màu từ biến CSS mà Mantine sinh cho theme thật (bộ sinh mặc định cộng `cssVariablesResolver`)
+  và tính tương phản của mọi màu được phép: chữ trắng trên nút filled và khi di chuột, liên kết và chữ màu trên nền
+  trắng và nền `gray.0`, chữ của nút light, subtle trên nền trắng, nền nhạt và nền khi di chuột; chữ phụ trên nền
+  trắng và `gray.0`. Mục tiêu là AA cho chữ thường (4,5:1).
 
 **Thương hiệu theo bản cài**:
 
@@ -66,7 +67,8 @@ Các cách giữ màu chính đạt AA đã xét:
   diện, nên tên "Mortise DX" chỉ nằm ở một chỗ.
 - Ghi đè khi cài: `MORTISE_BRANDING_DIR` trong `.env` (mặc định `./platform/web/brand`) là thư mục compose gắn chỉ đọc
   vào `/brand/` của container `web`. Đặt `branding.json` và logo vào thư mục đó; trang tải sau thấy ngay, không dựng
-  lại image. Đổi biến này thì chạy `make up` để compose gắn thư mục mới. Gắn cả thư mục thay vì một tệp, vì trình
+  lại image. Đổi biến này thì chạy `make up` để compose gắn thư mục mới. Đường dẫn tương đối tính từ thư mục chứa
+  `compose.yaml`; thư mục của bản cài nên nằm ngoài repo để đổi tag phát hành không đụng tới nó. Gắn cả thư mục thay vì một tệp, vì trình
   soạn thảo lưu bằng cách thay tệp và bind mount một tệp sẽ giữ tệp cũ.
 - `src/main.tsx` đọc `/branding.json` trước lần vẽ đầu (chờ tối đa 5 giây), đặt `document.title`, màu chính và cung
   cấp tên, logo cho `Brand.tsx` (màn hình chờ đăng nhập, thanh trên). Không đọc được, không phải JSON (máy chủ phát

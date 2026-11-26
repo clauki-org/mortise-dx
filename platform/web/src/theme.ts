@@ -18,10 +18,10 @@ import type { BrandColor } from "./branding";
 
 // Sắc độ của màu dùng làm nền nút và chữ màu trên nền trắng. Mặc định của Mantine là 6: teal.6 với chữ trắng chỉ
 // khoảng 2,5:1. Sắc 8 (di chuột sang 9) đạt AA với mọi màu trong BRAND_COLORS.
-export const PRIMARY_SHADE: MantineColorShade = 8;
+const PRIMARY_SHADE: MantineColorShade = 8;
 
 // Chữ phụ (c="dimmed"): mặc định của Mantine là gray.6, khoảng 3,3:1 trên nền trắng, dưới mức AA.
-export const DIMMED_SHADE: MantineColorShade = 7;
+const DIMMED_SHADE: MantineColorShade = 7;
 
 // Phông có sẵn của hệ điều hành, không tải phông web: không thêm tệp phải tải trước lần vẽ đầu, không thêm giấy phép
 // phông phải kiểm. Trình duyệt lấy phông đầu tiên có trên máy.
@@ -59,7 +59,7 @@ export function createAppTheme(primaryColor: BrandColor) {
     // Thẻ, khung và bảng cùng một kiểu viền, bo góc, khoảng đệm, để trang ghép từ nhiều thành phần vẫn nhìn như một.
     components: {
       Card: Card.extend({ defaultProps: { withBorder: true, radius: "md", padding: "lg", shadow: "xs" } }),
-      Paper: Paper.extend({ defaultProps: { radius: "md" } }),
+      Paper: Paper.extend({ defaultProps: { withBorder: true, radius: "md" } }),
       Table: Table.extend({ defaultProps: { verticalSpacing: "sm", horizontalSpacing: "md" } }),
     },
   });
