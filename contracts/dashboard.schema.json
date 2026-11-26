@@ -10,10 +10,13 @@
     "title": { "description": "Tiêu đề của trang", "$ref": "#/$defs/text" },
     "description": { "description": "Đoạn giới thiệu dưới tiêu đề", "$ref": "#/$defs/text" },
     "panels": {
-      "description": "Các khối theo thứ tự hiện",
+      "description": "Các khối theo thứ tự hiện; khối chính (primary) luôn lên đầu",
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/panel" }
+      "items": { "$ref": "#/$defs/panel" },
+      "contains": { "required": ["primary"], "properties": { "primary": { "const": true } } },
+      "minContains": 0,
+      "maxContains": 1
     }
   },
   "$defs": {
@@ -26,14 +29,31 @@
           "description": "Đúng một nguồn",
           "oneOf": [{ "required": ["graphql"] }, { "required": ["workflow"] }, { "required": ["context"] }]
         },
-        { "description": "Đúng một cách hiện", "oneOf": [{ "required": ["cards"] }, { "required": ["chart"] }] }
+        { "description": "Đúng một cách hiện", "oneOf": [{ "required": ["cards"] }, { "required": ["chart"] }] },
+        {
+          "description": "Khối chính là thẻ số và luôn rộng cả hàng",
+          "if": { "required": ["primary"], "properties": { "primary": { "const": true } } },
+          "then": { "required": ["cards"], "properties": { "size": { "const": "full" } } }
+        }
       ],
       "properties": {
         "id": { "description": "Tên ngắn của khối, không trùng với khối khác", "$ref": "#/$defs/slug" },
         "title": { "$ref": "#/$defs/text" },
         "description": {
-          "description": "Nguồn là gì và số được tính thế nào, viết cho người xem; hiện ngay dưới tiêu đề khối",
+          "description": "Khối cho biết điều gì, một hai câu bằng lời của người xem; hiện ngay dưới tiêu đề khối. Không ghi tên bảng, view, cột hay giá trị mã (make check-fast từ chối); cách tính và ghi chú kỹ thuật viết ở method.",
           "$ref": "#/$defs/text"
+        },
+        "method": {
+          "description": "Cách tính và ghi chú kỹ thuật của khối (view nào, lọc theo giá trị nào, giới hạn của số); chỉ hiện trong mục \"Xem cách tính\" mở ra được, cùng cách tính của từng thẻ và nguồn",
+          "$ref": "#/$defs/text"
+        },
+        "primary": {
+          "description": "Khối chính của trang: hiện đầu tiên, rộng cả hàng, số lớn. Tối đa một khối, phải là thẻ số.",
+          "type": "boolean"
+        },
+        "size": {
+          "description": "Bề rộng của khối trên màn hình rộng: full là cả hàng, half là nửa hàng. Bỏ trống là full; màn hình hẹp luôn cả hàng.",
+          "enum": ["half", "full"]
         },
         "role": {
           "description": "Vai trò của khối, bỏ trống là user. Token của người xem không có vai trò này thì khối không được truy vấn và không hiện. Với nguồn graphql, vai trò còn được gửi kèm truy vấn (header X-Hasura-Role); nguồn workflow, context không gửi vai trò, dịch vụ đọc vai trò từ token. Khai vai trò không cấp quyền gì.",
@@ -144,7 +164,10 @@
           "description": "number: tối đa ba chữ số thập phân; integer: làm tròn tới hàng đơn vị. Bỏ trống là number.",
           "enum": ["number", "integer"]
         },
-        "description": { "description": "Cách tính của số này, hiện dưới số", "$ref": "#/$defs/text" }
+        "description": {
+          "description": "Cách tính của số này; hiện trong mục \"Xem cách tính\" của khối, không hiện trên thẻ",
+          "$ref": "#/$defs/text"
+        }
       }
     },
     "chart": {

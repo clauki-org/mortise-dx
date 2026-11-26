@@ -79,6 +79,9 @@ dashboard.free-color.yaml	$.panels[0].chart.y[0].color	'#ff0000' is not one of [
 dashboard.limit-too-large.yaml	$.panels[0].graphql.limit	201 is greater than the maximum of 200
 dashboard.too-many-series.yaml	$.panels[0].chart.y	[{'column': 'a', 'label': 'A', 'color': 'teal'}, {'column': 'b', 'label': 'B', 'color': 'blue'}, {'column': 'c', 'label': 'C', 'color': 'red'}, {'column': 'd', 'label': 'D', 'color': 'gray'}, {'column': 'e', 'label': 'E', 'color': 'lime'}] is too long
 dashboard.two-sources.yaml	$.panels[0]	{'id': 'totals', 'title': 'Tổng', 'description': 'View tổng của đơn vị.', 'graphql': {'field': 'app_example_totals'}, 'workflow': {'process': 'approval', 'counts': 'tenant'}, 'cards': [{'column': 'score', 'label': 'Điểm', 'description': 'Tổng điểm.'}]} is valid under each of {'required': ['workflow']}, {'required': ['graphql']}
+dashboard.two-primary.yaml	$.panels	Too many items match the given schema (expected at most 1)
+dashboard.primary-half.yaml	$.panels[0].size	'full' was expected
+dashboard.primary-chart.yaml	$.panels[0]	'cards' is a required property
 form.authority-prefix.yaml	$.fields[0].name	'authority_level' should not be valid under {'anyOf': [{'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}, {'pattern': '^authority_'}]}
 form.choices-on-string.yaml	$.fields[0]	False schema does not allow [{'value': 'a', 'label': 'A'}]
 form.choice-without-options.yaml	$.fields[0]	{'name': 'kind', 'label': 'Loại', 'type': 'choice'} is not valid under any of the given schemas
