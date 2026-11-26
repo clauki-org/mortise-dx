@@ -46,7 +46,7 @@ Các cách giữ màu chính đạt AA đã xét:
 - Phông của hệ điều hành (`system-ui` và các phông hệ thống theo nền tảng), không tải phông web.
 - Kiểu mặc định chung: `Card` có viền, bo góc `md`, đệm `lg`, bóng `xs`; `Paper` có viền, bo góc `md`; `Table`
   khoảng cách dòng `sm`, cột `md`. Khung trong hộp thoại của Mantine cũng có viền.
-- `primaryShade` là 8 cho mọi màu. Chữ phụ (`--mantine-color-dimmed`) là `gray.7`.
+- `primaryShade` là 8 cho mọi màu. Chữ phụ (`--mantine-color-dimmed`) và chữ gợi ý trong ô nhập (`--mantine-color-placeholder`) là `gray.7`.
 - Chữ của biến thể light (Alert, Badge light, nút light, subtle, mục menu đang chọn) là sắc 9 làm đậm thêm 30% cho
   mọi bảng màu: sắc 9 trên nền sắc 1 chỉ khoảng 2,7:1 với `yellow`, 3,6:1 với `orange`, 3,8:1 với `green`, và trên
   nền di chuột (sắc 2) dưới AA với cả `blue`, `indigo`, `violet`.

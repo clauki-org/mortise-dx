@@ -56,6 +56,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 - Cổng trả lỗi 429 (vượt giới hạn tần suất) của mọi API dưới `/v1` dạng JSON `{"error": "..."}` như lỗi 401,
   thay vì trang HTML; header `X-RateLimit-*` vẫn giữ.
+- Chữ gợi ý trong ô nhập đạt tương phản AA; hộp thoại không còn tạo vùng banner thứ hai; menu gập trên điện thoại
+  không còn nhận Tab. `make e2e` chặn lỗi trợ năng mức nghiêm trọng trên các trang của kịch bản demo và có bài đi kịch
+  bản bằng bàn phím.
 
 ## [0.1.0] - 2026-11-25
 
