@@ -13,10 +13,12 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+import { formatDateTime } from "./format";
 import { formValidator } from "./formValidator";
+import { PageHeader } from "./PageHeader";
 import { ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
-import { dateTime, detailRows, recordTitle, stepOf, useSteps } from "./steps";
+import { detailRows, recordTitle, stepOf, useSteps } from "./steps";
 import { DelegatedBadge, DueBadge } from "./TaskList";
 import { completeTask, fetchTasks, type StepConfig, type Task } from "./workflow";
 
@@ -42,8 +44,8 @@ function Details({ task, step }: { task: Task; step: StepConfig | undefined }) {
   // khóa trùng làm React vẽ nhầm dòng.
   const rows: [string, string, string][] = [
     ["core/initiatorName", "Người gửi", String(task.variables.initiatorName ?? "")],
-    ["core/created", "Nhận lúc", dateTime.format(new Date(task.created))],
-    ["core/due", "Hạn", task.due === null ? "Không đặt hạn" : dateTime.format(new Date(task.due))],
+    ["core/created", "Nhận lúc", formatDateTime(task.created)],
+    ["core/due", "Hạn", task.due === null ? "Không đặt hạn" : formatDateTime(task.due)],
     ...detailRows(task, step).map(([name, label, value]): [string, string, string] => [
       `details/${name}`,
       label,
@@ -190,23 +192,23 @@ export function TaskScreen() {
   const step = stepOf(steps, task);
   return (
     <Stack>
-      <Anchor component={Link} to="/tasks" size="sm">
-        Việc của tôi
-      </Anchor>
-      <Group justify="space-between" align="flex-start">
-        <div>
-          <Title order={1} size="h2">
-            {recordTitle(task, step)}
-          </Title>
-          <Group gap={6}>
+      <PageHeader
+        before={
+          <Anchor component={Link} to="/tasks" size="sm">
+            Việc của tôi
+          </Anchor>
+        }
+        title={recordTitle(task, step)}
+        meta={
+          <>
+            <DueBadge due={task.due} now={Date.now()} />
             <Text c="dimmed" size="sm">
               {task.name}
             </Text>
             <DelegatedBadge task={task} />
-          </Group>
-        </div>
-        <DueBadge due={task.due} now={Date.now()} />
-      </Group>
+          </>
+        }
+      />
       <Grid gap="md">
         <Grid.Col span={{ base: 12, md: 5 }}>
           <Paper withBorder radius="md" p="md">

@@ -7,6 +7,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "urql";
+import { formatNumber } from "./format";
 import type { StepConfig, Task } from "./workflow";
 
 const STEPS = "query { platform_workflow_steps { process step config } }";
@@ -41,12 +42,10 @@ export function dueText(due: string, now: number): { text: string; overdue: bool
   return ms < 0 ? { text: `Quá hạn ${amount}`, overdue: true } : { text: `Còn ${amount}`, overdue: false };
 }
 
-const number = new Intl.NumberFormat("vi-VN");
-
 /** Chữ hiện cho giá trị của một biến: số viết kiểu Việt Nam, đúng sai thành Có, Không. */
 export function variableText(value: unknown): string {
   if (typeof value === "string") return value;
-  if (typeof value === "number") return number.format(value);
+  if (typeof value === "number") return formatNumber(value);
   if (typeof value === "boolean") return value ? "Có" : "Không";
   return JSON.stringify(value);
 }
@@ -70,4 +69,5 @@ export function detailRows(task: Task, step: StepConfig | undefined): [string, s
   });
 }
 
-export const dateTime = new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" });
+// Bảng điều hành đọc dateTime từ đây; đưa lại từ format.ts để mọi trang cùng một kiểu ngày giờ.
+export { dateTime } from "./format";

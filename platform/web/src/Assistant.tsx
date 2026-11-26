@@ -10,6 +10,7 @@ import { Alert, Blockquote, Button, Group, Loader, Stack, Text, Textarea, Title 
 import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { type Answer, type AssistantConfig, ask, configProblems, modelLine } from "./assistant";
+import { PageHeader } from "./PageHeader";
 import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 
@@ -36,10 +37,7 @@ export function Assistant({ config, app }: Props) {
   };
   return (
     <Stack>
-      <Title order={1} size="h2">
-        Hỏi văn bản
-      </Title>
-      <Text>{config.intro}</Text>
+      <PageHeader title="Hỏi văn bản" description={config.intro} />
       <form onSubmit={submit}>
         <Stack gap="xs">
           <Textarea

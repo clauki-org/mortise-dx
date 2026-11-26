@@ -25,7 +25,9 @@ import {
   titleField,
 } from "./catalog";
 import { chainQuery, chainVariables, emptyState } from "./catalogQuery";
+import { PageHeader } from "./PageHeader";
 import { ErrorNotice, Loading } from "./States";
+import { Blank } from "./TableScroll";
 
 /** Tiêu đề của một dòng theo cấu hình; trường tiêu đề trống thì dùng giá trị khóa. */
 function titleOf(step: Step, row: Row): string {
@@ -97,27 +99,29 @@ export function CatalogRecord({ config, basePath, steps }: Props) {
 
   return (
     <Stack>
-      <Breadcrumbs>
-        <Anchor component={Link} to={basePath}>
-          {config.title}
-        </Anchor>
-        {steps.slice(0, -1).map((step, index) => (
-          <Anchor key={step.path} component={Link} to={`${basePath}/${step.path}`}>
-            {titleOf(step, rows[index] ?? {})}
-          </Anchor>
-        ))}
-      </Breadcrumbs>
-      <Title order={1} size="h2">
-        {titleOf(current, row)}
-      </Title>
-      <CatalogActions node={node} row={row} />
+      <PageHeader
+        before={
+          <Breadcrumbs>
+            <Anchor component={Link} to={basePath}>
+              {config.title}
+            </Anchor>
+            {steps.slice(0, -1).map((step, index) => (
+              <Anchor key={step.path} component={Link} to={`${basePath}/${step.path}`}>
+                {titleOf(step, rows[index] ?? {})}
+              </Anchor>
+            ))}
+          </Breadcrumbs>
+        }
+        title={titleOf(current, row)}
+        action={<CatalogActions node={node} row={row} />}
+      />
       <Paper withBorder radius="md">
         <Table variant="vertical" layout="fixed" verticalSpacing="sm" horizontalSpacing="md">
           <Table.Tbody>
             {node.fields.map((field) => (
               <Table.Tr key={field.name}>
                 <Table.Th w={240}>{field.label}</Table.Th>
-                <Table.Td>{display(field, fieldValue(row, field.name))}</Table.Td>
+                <Table.Td>{display(field, fieldValue(row, field.name)) || <Blank />}</Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>

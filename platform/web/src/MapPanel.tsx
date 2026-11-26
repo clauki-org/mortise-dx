@@ -24,8 +24,10 @@ import {
   visibleLayers,
 } from "./mapConfig";
 import { rolesOf } from "./menu";
+import { PageHeader } from "./PageHeader";
 import { Empty, ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
+import { TableScroll } from "./TableScroll";
 
 const MapCanvas = lazy(() => import("./MapCanvas"));
 
@@ -122,8 +124,9 @@ function LayerSection({ layer, selected, onPoints }: LayerProps) {
           Lớp có hơn {limitOf(layer)} dòng; chỉ hiện {limitOf(layer)} dòng đầu.
         </Text>
       )}
+      {/* Nhãn khung cuộn không lặp tên lớp: khối của lớp đã là vùng mang tên lớp, e2e tìm vùng theo tên đó. */}
       {points.length > 0 && (
-        <Table.ScrollContainer minWidth={480}>
+        <TableScroll label="Danh sách điểm" minWidth={480}>
           <Table>
             <Table.Thead>
               <Table.Tr>
@@ -151,7 +154,7 @@ function LayerSection({ layer, selected, onPoints }: LayerProps) {
               ))}
             </Table.Tbody>
           </Table>
-        </Table.ScrollContainer>
+        </TableScroll>
       )}
     </Stack>
   );
@@ -180,9 +183,7 @@ export function MapPanel({ config }: { config: MapConfig }) {
   }
   return (
     <Stack>
-      <Title order={1} size="h2">
-        {config.title}
-      </Title>
+      <PageHeader title={config.title} />
       <Paper withBorder radius="md">
         <CanvasBoundary>
           <Suspense fallback={<Loading what="bản đồ" />}>

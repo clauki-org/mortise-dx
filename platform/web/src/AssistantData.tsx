@@ -8,7 +8,7 @@
 // thường: dữ liệu do người dùng nhập (tên một bản ghi, ghi chú) không bao giờ được hiểu là định dạng hay lệnh. Thành phần
 // chỉ biết cấu hình của nó, gói và mục menu (ADR 0013); không có chữ của một lĩnh vực nào.
 
-import { Alert, Button, Code, Group, Loader, ScrollArea, Stack, Table, Text, Textarea, Title } from "@mantine/core";
+import { Alert, Box, Button, Code, Group, Loader, Stack, Table, Text, Textarea, Title } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import {
@@ -23,8 +23,10 @@ import {
   queryModelLine,
   runDataQuery,
 } from "./assistant";
+import { PageHeader } from "./PageHeader";
 import { ErrorNotice } from "./States";
 import { useSession } from "./session";
+import { TableScroll } from "./TableScroll";
 
 type Props = { config: DataAssistantConfig; app: string; item: string };
 // Câu mẫu chạy câu viết sẵn; câu gõ tự do để mô hình viết câu. Một kết quả trên màn hình cho cả hai.
@@ -54,13 +56,10 @@ export function AssistantData({ config, app, item }: Props) {
   const writing = running.variables !== undefined && "question" in running.variables;
   return (
     <Stack>
-      <Title order={1} size="h2">
-        Hỏi dữ liệu
-      </Title>
-      <Text>{config.intro}</Text>
-      <Text size="sm" c="dimmed">
-        Kết quả chỉ gồm dữ liệu mà tài khoản đang hỏi được quyền xem.
-      </Text>
+      <PageHeader
+        title="Hỏi dữ liệu"
+        description={`${config.intro} Kết quả chỉ gồm dữ liệu mà tài khoản đang hỏi được quyền xem.`}
+      />
       <form onSubmit={submit}>
         <Stack gap="xs">
           <Textarea
@@ -124,15 +123,31 @@ export function DataResult({ answer }: { answer: DataAnswer }) {
         ))
       )}
       {answer.model && <WrittenBy model={answer.model} answer={answer} />}
-      {answer.query !== "" && (
-        <>
-          <Title order={2} size="h4">
-            {answer.outcome === "refused" ? "Câu truy vấn bị từ chối" : "Câu truy vấn đã chạy"}
-          </Title>
-          <Code block>{answer.query}</Code>
-        </>
-      )}
+      {answer.query !== "" && <QueryDisclosure answer={answer} />}
     </Stack>
+  );
+}
+
+/**
+ * Câu truy vấn là mã kỹ thuật: thu sau nút "Xem câu truy vấn" để bảng kết quả là điểm nhìn chính, nhưng vẫn một lần bấm
+ * là đọc được, vì người hỏi cần đối chiếu câu đã chạy với điều mình hỏi (ADR 0027). Câu bị từ chối thì mở sẵn: lý do
+ * từ chối trỏ tới phần tử trong câu.
+ */
+function QueryDisclosure({ answer }: { answer: DataAnswer }) {
+  const refused = answer.outcome === "refused";
+  // details của trình duyệt như "Chi tiết kỹ thuật" của States.tsx: mở bằng bàn phím, không cần trạng thái riêng.
+  return (
+    <Box component="details" open={refused}>
+      <Text component="summary" size="sm" c="blue" style={{ cursor: "pointer" }}>
+        Xem câu truy vấn
+      </Text>
+      <Stack gap="xs" mt="xs">
+        <Title order={2} size="h4">
+          {refused ? "Câu truy vấn bị từ chối" : "Câu truy vấn đã chạy"}
+        </Title>
+        <Code block>{answer.query}</Code>
+      </Stack>
+    </Box>
   );
 }
 
@@ -167,8 +182,7 @@ function WrittenBy({ model, answer }: { model: ModelInfo; answer: DataAnswer }) 
       </Text>
       {answer.outcome === "data" && (
         <Text size="sm" c="dimmed">
-          Đọc câu truy vấn đã chạy bên dưới để chắc nó hỏi đúng điều bạn hỏi: câu đã qua guard vẫn có thể hiểu sai câu
-          hỏi.
+          Mở "Xem câu truy vấn" bên dưới để chắc nó hỏi đúng điều bạn hỏi: câu đã qua guard vẫn có thể hiểu sai câu hỏi.
         </Text>
       )}
     </Stack>
@@ -184,7 +198,7 @@ function ResultTable({ table }: { table: DataTable }) {
       {table.rows.length === 0 ? (
         <Text>Không có dòng nào trong phạm vi quyền của tài khoản này.</Text>
       ) : (
-        <ScrollArea>
+        <TableScroll label={table.title} minWidth={0}>
           <Table striped withTableBorder>
             <Table.Thead>
               <Table.Tr>
@@ -205,7 +219,7 @@ function ResultTable({ table }: { table: DataTable }) {
               ))}
             </Table.Tbody>
           </Table>
-        </ScrollArea>
+        </TableScroll>
       )}
     </Stack>
   );

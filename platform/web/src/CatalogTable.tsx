@@ -12,6 +12,7 @@ import { useQuery } from "urql";
 import { type CatalogNode, display, type Field, fieldOf, keyOf, pageSize, type Row } from "./catalog";
 import { type ListState, listVariables, rowsQuery, sortOf } from "./catalogQuery";
 import { Empty, ErrorNotice, Loading } from "./States";
+import { Blank, keepTogether, TableScroll } from "./TableScroll";
 
 type Props = {
   config: CatalogNode;
@@ -111,7 +112,7 @@ export function CatalogTable({ config, label, path, state, onChange, fixed }: Pr
               <Empty title="Chưa có dòng nào." hint={`${label} chưa có dữ liệu mà tài khoản này được xem.`} />
             )
           ) : (
-            <Table.ScrollContainer minWidth={480}>
+            <TableScroll label={label} minWidth={480}>
               <Table highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
                 <Table.Thead>
                   <Table.Tr>
@@ -144,23 +145,30 @@ export function CatalogTable({ config, label, path, state, onChange, fixed }: Pr
                     const key = String(row[keyOf(config)]);
                     return (
                       <Table.Tr key={key}>
-                        {columns.map((field, index) => (
-                          <Table.Td key={field.name} ta={field.type === "number" ? "right" : undefined}>
-                            {index === 0 ? (
-                              <Anchor component={Link} to={`${path}/${encodeURIComponent(key)}`} fw={500}>
-                                {display(field, row[field.name]) || key}
-                              </Anchor>
-                            ) : (
-                              display(field, row[field.name])
-                            )}
-                          </Table.Td>
-                        ))}
+                        {columns.map((field, index) => {
+                          const text = display(field, row[field.name]) || (index === 0 ? key : "");
+                          return (
+                            <Table.Td
+                              key={field.name}
+                              ta={field.type === "number" ? "right" : undefined}
+                              style={keepTogether(text) ? { whiteSpace: "nowrap" } : undefined}
+                            >
+                              {index === 0 ? (
+                                <Anchor component={Link} to={`${path}/${encodeURIComponent(key)}`} fw={500}>
+                                  {text}
+                                </Anchor>
+                              ) : (
+                                text || <Blank />
+                              )}
+                            </Table.Td>
+                          );
+                        })}
                       </Table.Tr>
                     );
                   })}
                 </Table.Tbody>
               </Table>
-            </Table.ScrollContainer>
+            </TableScroll>
           )}
         </Paper>
       )}

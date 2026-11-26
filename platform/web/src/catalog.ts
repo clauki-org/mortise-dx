@@ -7,6 +7,7 @@
 // kiểm thử được bằng hàm thuần.
 
 import { type DocumentsConfig, documentsProblems } from "./documents";
+import { formatDate, formatDateTime, formatNumber } from "./format";
 
 export type Field = {
   /** Tên cột, hoặc <quan hệ>.<cột> để đọc qua quan hệ một-một; loại sau chỉ hiện ở màn hình chi tiết */
@@ -188,24 +189,14 @@ export function resolvePath(config: CatalogNode, segments: string[]): Step[] | u
   return steps;
 }
 
-const number = new Intl.NumberFormat("vi-VN");
-// Năm đủ bốn chữ số: kiểu ngắn của vi-VN viết năm hai chữ số, nên 1820 và 2020 hiện giống nhau.
-const day = { day: "2-digit", month: "2-digit", year: "numeric" } as const;
-// Cột ngày không có giờ: đọc theo UTC, nếu không thì ở múi giờ phía tây ngày hiện ra lùi một ngày.
-const date = new Intl.DateTimeFormat("vi-VN", { ...day, timeZone: "UTC" });
-const dateTime = new Intl.DateTimeFormat("vi-VN", { ...day, hour: "2-digit", minute: "2-digit" });
-
 /** Chữ hiện ra cho một giá trị, theo kiểu và choices của trường; giá trị trống hiện thành chuỗi rỗng. */
 export function display(field: Field, value: unknown): string {
   if (value === null || value === undefined || value === "") return "";
   const choice = field.choices?.find((candidate) => candidate.value === String(value));
   if (choice) return choice.label;
-  if (field.type === "number") return typeof value === "number" ? number.format(value) : String(value);
-  if (field.type === "date" || field.type === "datetime") {
-    const time = new Date(String(value));
-    if (Number.isNaN(time.getTime())) return String(value);
-    return (field.type === "date" ? date : dateTime).format(time);
-  }
+  if (field.type === "number") return typeof value === "number" ? formatNumber(value) : String(value);
+  if (field.type === "date") return formatDate(String(value));
+  if (field.type === "datetime") return formatDateTime(String(value));
   return String(value);
 }
 

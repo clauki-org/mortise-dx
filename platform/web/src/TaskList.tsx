@@ -5,13 +5,17 @@
 // (workflow-api đã lọc theo tenant và vai trò). Mỗi dòng hiện tên hồ sơ theo khai báo của bước; việc gần hạn nhất
 // đứng đầu, lọc được theo hạn.
 
-import { Alert, Anchor, Badge, Group, Paper, SegmentedControl, Stack, Table, Text, Title } from "@mantine/core";
+import { Alert, Anchor, Badge, Group, Paper, SegmentedControl, Stack, Table, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
+import { formatDateTime } from "./format";
+import { PageHeader } from "./PageHeader";
 import { Empty, ErrorNotice, Loading } from "./States";
+import { StatusBadge } from "./StatusBadge";
 import { useSession } from "./session";
-import { dateTime, dueText, recordTitle, stepOf, useSteps } from "./steps";
+import { dueText, recordTitle, stepOf, useSteps } from "./steps";
+import { TableScroll } from "./TableScroll";
 import { delegatedFrom, fetchTasks, type Task } from "./workflow";
 
 type Filter = "all" | "overdue" | "upcoming" | "no-due";
@@ -45,18 +49,12 @@ function byDue(a: Task, b: Task): number {
 }
 
 export function DueBadge({ due, now }: { due: string | null; now: number }) {
-  if (due === null) {
-    return (
-      <Badge variant="light" color="gray" tt="none">
-        Không đặt hạn
-      </Badge>
-    );
-  }
+  if (due === null) return <StatusBadge tone="neutral">Không đặt hạn</StatusBadge>;
   const { text, overdue } = dueText(due, now);
   return (
-    <Badge variant="light" color={overdue ? "red" : "blue"} tt="none" title={dateTime.format(new Date(due))}>
+    <StatusBadge tone={overdue ? "overdue" : "active"} title={formatDateTime(due)}>
       {text}
-    </Badge>
+    </StatusBadge>
   );
 }
 
@@ -98,22 +96,18 @@ export function TaskList() {
           {done}: đã xử lý xong.
         </Alert>
       )}
-      <Group justify="space-between" align="flex-end">
-        <div>
-          <Title order={1} size="h2">
-            Việc của tôi
-          </Title>
-          <Text c="dimmed" size="sm">
-            Việc đang chờ bạn hoặc vai trò của bạn xử lý, việc gần hạn nhất đứng đầu.
-          </Text>
-        </div>
-        <SegmentedControl
-          aria-label="Lọc theo hạn"
-          data={FILTERS.map(({ value, label }) => ({ value, label: `${label} (${count(value)})` }))}
-          value={filter}
-          onChange={(value) => setFilter(value as Filter)}
-        />
-      </Group>
+      <PageHeader
+        title="Việc của tôi"
+        description="Việc đang chờ bạn hoặc vai trò của bạn xử lý, việc gần hạn nhất đứng đầu."
+        action={
+          <SegmentedControl
+            aria-label="Lọc theo hạn"
+            data={FILTERS.map(({ value, label }) => ({ value, label: `${label} (${count(value)})` }))}
+            value={filter}
+            onChange={(value) => setFilter(value as Filter)}
+          />
+        }
+      />
       {stepsError && (
         <Alert color="yellow" title="Không đọc được khai báo của bước">
           Cột hồ sơ tạm hiện tên bước thay cho tên hồ sơ. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
@@ -127,7 +121,7 @@ export function TaskList() {
             <Empty title="Không có việc nào khớp bộ lọc." hint="Chọn Tất cả để xem mọi việc đang chờ." />
           )
         ) : (
-          <Table.ScrollContainer minWidth={560}>
+          <TableScroll label="Việc của tôi" minWidth={560}>
             <Table highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
               <Table.Thead>
                 <Table.Tr>
@@ -164,14 +158,14 @@ export function TaskList() {
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" c="dimmed">
-                        {dateTime.format(new Date(task.created))}
+                        {formatDateTime(task.created)}
                       </Text>
                     </Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
             </Table>
-          </Table.ScrollContainer>
+          </TableScroll>
         )}
       </Paper>
     </Stack>
