@@ -14,9 +14,19 @@ import { createAppTheme, cssVariablesResolver } from "./theme";
 const AA = 4.5;
 const WHITE = "#ffffff";
 
-// Độ chói tương đối của một màu sRGB dạng #rrggbb (WCAG 2.2, định nghĩa "relative luminance").
-function luminance(hex: string): number {
-  const channels = [1, 3, 5].map((start) => Number.parseInt(hex.slice(start, start + 2), 16) / 255);
+// Kênh màu 0–255 của #rgb, #rrggbb hay rgba(r, g, b, a) (dạng darken của Mantine trả về).
+function channelsOf(color: string): number[] {
+  const rgba = /^rgba?\((\d+), (\d+), (\d+)/.exec(color);
+  if (rgba) return rgba.slice(1, 4).map(Number);
+  if (/^#[0-9a-f]{3}$/i.test(color)) return [1, 2, 3].map((i) => Number.parseInt(`${color[i]}${color[i]}`, 16));
+  if (/^#[0-9a-f]{6}$/i.test(color))
+    return [1, 3, 5].map((start) => Number.parseInt(color.slice(start, start + 2), 16));
+  throw new Error(`Không đọc được màu ${color}`);
+}
+
+// Độ chói tương đối của một màu sRGB (WCAG 2.2, định nghĩa "relative luminance").
+function luminance(color: string): number {
+  const channels = channelsOf(color).map((c) => c / 255);
   const [r = 0, g = 0, b = 0] = channels.map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
@@ -34,21 +44,27 @@ const shade = (color: string, index: number): string => {
 
 // Biến CSS của nền sáng như trình duyệt thấy (biến chung và biến riêng của nền sáng): biến của Mantine, rồi biến của
 // theme.ts đè lên.
-function lightVariables(color: (typeof BRAND_COLORS)[number]): Record<string, string> {
+function appTheme(color: (typeof BRAND_COLORS)[number]) {
   const theme = mergeMantineTheme(DEFAULT_THEME, createAppTheme(color));
   const mantine = defaultCssVariablesResolver(theme);
   const ours = cssVariablesResolver(theme);
-  return { ...mantine.variables, ...mantine.light, ...ours.variables, ...ours.light };
+  return { theme, variables: { ...mantine.variables, ...mantine.light, ...ours.variables, ...ours.light } };
 }
 
-// Đổi một biến (có thể trỏ qua vài biến khác) thành mã màu #rrggbb.
-function resolve(variables: Record<string, string>, name: string): string {
-  const value = variables[name];
-  if (value === undefined) throw new Error(`Không có biến ${name}`);
+const lightVariables = (color: (typeof BRAND_COLORS)[number]) => appTheme(color).variables;
+
+// Đổi một giá trị (màu, hay var() trỏ qua vài biến khác) thành màu đọc được.
+function resolveValue(variables: Record<string, string>, value: string): string {
   const reference = /^var\((--mantine-[a-z0-9-]+)\)$/.exec(value);
   if (!reference?.[1]) return value;
   const palette = /^--mantine-color-([a-z]+)-(\d)$/.exec(reference[1]);
   return palette?.[1] && palette[2] ? shade(palette[1], Number(palette[2])) : resolve(variables, reference[1]);
+}
+
+function resolve(variables: Record<string, string>, name: string): string {
+  const value = variables[name];
+  if (value === undefined) throw new Error(`Không có biến ${name}`);
+  return resolveValue(variables, value);
 }
 
 describe("công thức tương phản", () => {
@@ -90,3 +106,31 @@ describe("chữ phụ (dimmed)", () => {
     expect(contrast(dimmed, background)).toBeGreaterThanOrEqual(AA);
   });
 });
+
+// Màu trạng thái (Alert, Badge, Notification dùng color=) qua đúng bộ chọn màu theo biến thể mà các thành phần đó gọi.
+// Badge mặc định là filled, Alert mặc định là light.
+describe.each(["green", "yellow", "orange", "red", "blue", "teal", "cyan", "lime", "gray"])(
+  "màu trạng thái %s",
+  (color) => {
+    const { theme, variables } = appTheme("blue");
+    const variant = (name: string) => {
+      const colors = theme.variantColorResolver({ color, theme, variant: name });
+      return {
+        background: resolveValue(variables, colors.background ?? ""),
+        hover: resolveValue(variables, colors.hover ?? ""),
+        text: resolveValue(variables, colors.color ?? ""),
+      };
+    };
+    const filled = variant("filled");
+    const light = variant("light");
+    it.each([
+      ["chữ của Badge, nút filled", filled.text, filled.background],
+      ["chữ của nút filled khi di chuột", filled.text, filled.hover],
+      ["chữ của Alert, Badge light trên nền nhạt", light.text, light.background],
+      ["chữ của nút light khi di chuột", light.text, light.hover],
+      ["chữ của nút subtle trên nền trắng", light.text, WHITE],
+    ])("%s đạt AA", (_, foreground, background) => {
+      expect(contrast(foreground, background)).toBeGreaterThanOrEqual(AA);
+    });
+  },
+);

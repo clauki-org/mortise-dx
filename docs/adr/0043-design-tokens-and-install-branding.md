@@ -44,14 +44,22 @@ Các cách giữ màu chính đạt AA đã xét:
 - Một thang cỡ chữ (`xs`–`xl`, tiêu đề `h1`–`h4`), một thang khoảng cách theo bội 4px, một thang bo góc, một thang
   bóng; thành phần chỉ chọn bậc trong thang, không đặt số riêng.
 - Phông của hệ điều hành (`system-ui` và các phông hệ thống theo nền tảng), không tải phông web.
-- Kiểu mặc định chung: `Card` có viền, bo góc `md`, đệm `lg`, bóng `xs`; `Paper` bo góc `md`; `Table` khoảng cách
-  dòng `sm`, cột `md`. `Paper` có viền mặc định, nên khung trong hộp thoại của Mantine cũng có viền.
-- `primaryShade` là 8 cho mọi màu. Chữ phụ (`--mantine-color-dimmed`) là `gray.7`. Nền nhạt khi di chuột của màu chính
-  giữ sắc 1 như lúc không di chuột, vì sắc 2 làm chữ sắc 9 tụt dưới AA với `blue`, `indigo`, `violet`.
+- Kiểu mặc định chung: `Card` có viền, bo góc `md`, đệm `lg`, bóng `xs`; `Paper` có viền, bo góc `md`; `Table`
+  khoảng cách dòng `sm`, cột `md`. Khung trong hộp thoại của Mantine cũng có viền.
+- `primaryShade` là 8 cho mọi màu. Chữ phụ (`--mantine-color-dimmed`) là `gray.7`.
+- Chữ của biến thể light (Alert, Badge light, nút light, subtle, mục menu đang chọn) là sắc 9 làm đậm thêm 30% cho
+  mọi bảng màu: sắc 9 trên nền sắc 1 chỉ khoảng 2,7:1 với `yellow`, 3,6:1 với `orange`, 3,8:1 với `green`, và trên
+  nền di chuột (sắc 2) dưới AA với cả `blue`, `indigo`, `violet`.
+- `autoContrast` bật với ngưỡng độ chói 0,183: nền filled sáng hơn ngưỡng (`green`, `yellow`, `orange`, `teal`,
+  `cyan`, `lime` ở sắc 8) mang chữ đen, còn lại chữ trắng. Chữ trắng đạt 4,5:1 khi độ chói không quá 0,1833, chữ đen
+  khi từ 0,175, nên ngưỡng này cho nền nào cũng có một màu chữ đạt AA. Nền filled chữ đen sáng lên một sắc khi di
+  chuột thay vì tối đi, vì sắc 9 làm chữ đen tụt dưới AA với `teal`, `cyan`.
 - Kiểm thử đơn vị lấy màu từ biến CSS mà Mantine sinh cho theme thật (bộ sinh mặc định cộng `cssVariablesResolver`)
   và tính tương phản của mọi màu được phép: chữ trắng trên nút filled và khi di chuột, liên kết và chữ màu trên nền
-  trắng và nền `gray.0`, chữ của nút light, subtle trên nền trắng, nền nhạt và nền khi di chuột; chữ phụ trên nền
-  trắng và `gray.0`. Mục tiêu là AA cho chữ thường (4,5:1).
+  trắng và nền `gray.0`, chữ của nút light, subtle trên nền trắng, nền nhạt và nền khi di chuột, mục menu đang chọn;
+  chữ phụ trên nền trắng và `gray.0`. Màu trạng thái (`green`, `yellow`, `orange`, `red`, `blue`, `teal`, `cyan`,
+  `lime`, `gray`) được kiểm qua bộ chọn màu theo biến thể mà Alert, Badge gọi: filled và khi di chuột, light trên nền
+  nhạt và khi di chuột, subtle trên nền trắng. Mục tiêu là AA cho chữ thường (4,5:1).
 
 **Thương hiệu theo bản cài**:
 
@@ -78,9 +86,9 @@ Các cách giữ màu chính đạt AA đã xét:
 ## Hệ quả
 
 - Màu chính mặc định đổi từ `teal` sang `blue`; nút chính, liên kết và chữ phụ đạt AA trên nền trắng.
-- Mọi màu đặt qua `color=` (kể cả `red`, `green` của trạng thái) cũng dùng sắc 8, đậm hơn trước. Màu trạng thái
-  không nằm trong danh sách thương hiệu và chưa được kiểm tương phản ở đây.
-- Nút light của màu chính không đổi nền khi di chuột; con trỏ vẫn đổi hình.
+- Mọi màu đặt qua `color=` (kể cả `red`, `green` của trạng thái) cũng dùng sắc 8, đậm hơn trước; chữ trên Alert và
+  Badge light tối hơn màu gốc của Mantine.
+- Badge, nút filled màu `green`, `yellow`, `orange` có chữ đen thay vì chữ trắng.
 - Đơn vị chỉ chọn được sáu bảng màu. Muốn thêm màu riêng phải thêm bảng màu vào theme, vào danh sách và qua kiểm thử
   tương phản.
 - Trang tải chậm thêm một yêu cầu `/branding.json` trước lần vẽ đầu.

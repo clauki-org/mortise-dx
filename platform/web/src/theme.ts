@@ -9,6 +9,8 @@ import {
   Card,
   type CSSVariablesResolver,
   createTheme,
+  darken,
+  isLightColor,
   type MantineColorShade,
   type MantineTheme,
   Paper,
@@ -23,6 +25,13 @@ const PRIMARY_SHADE: MantineColorShade = 8;
 // Chữ phụ (c="dimmed"): mặc định của Mantine là gray.6, khoảng 3,3:1 trên nền trắng, dưới mức AA.
 const DIMMED_SHADE: MantineColorShade = 7;
 
+// Chữ trắng đạt 4,5:1 khi độ chói của nền không quá 0,1833, chữ đen khi từ 0,175 trở lên; ngưỡng ở giữa thì nền nào
+// cũng có một màu chữ đạt AA. Màu thương hiệu đều dưới ngưỡng ở sắc 8 nên giữ chữ trắng.
+const LUMINANCE_THRESHOLD = 0.183;
+
+// Mức làm đậm chữ của biến thể light so với sắc 9 (cssVariablesResolver ở dưới).
+const LIGHT_TEXT_DARKEN = 0.3;
+
 // Phông có sẵn của hệ điều hành, không tải phông web: không thêm tệp phải tải trước lần vẽ đầu, không thêm giấy phép
 // phông phải kiểm. Trình duyệt lấy phông đầu tiên có trên máy.
 const SYSTEM_FONTS =
@@ -32,6 +41,10 @@ export function createAppTheme(primaryColor: BrandColor) {
   return createTheme({
     primaryColor,
     primaryShade: { light: PRIMARY_SHADE, dark: PRIMARY_SHADE },
+    // Nút và nhãn filled của màu trạng thái (green, yellow, orange) quá sáng cho chữ trắng: autoContrast đổi sang chữ
+    // đen khi độ chói của nền vượt ngưỡng (cssVariablesResolver đổi luôn màu khi di chuột cho các nền đó).
+    autoContrast: true,
+    luminanceThreshold: LUMINANCE_THRESHOLD,
     fontFamily: SYSTEM_FONTS,
     headings: {
       fontFamily: SYSTEM_FONTS,
@@ -65,13 +78,26 @@ export function createAppTheme(primaryColor: BrandColor) {
   });
 }
 
-// Biến CSS mà theme không đặt được. Nền nhạt khi di chuột (light-hover) mặc định là sắc 2 của màu, làm chữ sắc 9 của
-// nút light, subtle và mục menu đang chọn tụt dưới AA; dùng lại sắc 1 như lúc không di chuột, con trỏ vẫn đổi hình.
+// Biến CSS mà theme không đặt được, cho nền sáng:
+// - Chữ của biến thể light (Alert, Badge, nút light, subtle, mục menu đang chọn) mặc định là sắc 9 trên nền sắc 1, di
+//   chuột thì sắc 2: yellow chỉ khoảng 2,7:1, orange, green dưới 4:1. Chữ đậm thêm 30% từ sắc 9 đạt AA trên cả hai nền
+//   với mọi bảng màu, mà vẫn đọc ra màu của trạng thái.
+// - Nút filled chữ đen sáng lên khi di chuột (xem dưới).
+// - Chữ phụ (dimmed) là gray.7 thay vì gray.6.
 export const cssVariablesResolver: CSSVariablesResolver = (theme: MantineTheme) => ({
   variables: {},
   light: {
     "--mantine-color-dimmed": `var(--mantine-color-gray-${DIMMED_SHADE})`,
-    [`--mantine-color-${theme.primaryColor}-light-hover`]: `var(--mantine-color-${theme.primaryColor}-1)`,
+    ...Object.fromEntries(
+      Object.entries(theme.colors).flatMap(([name, shades]) => [
+        [`--mantine-color-${name}-light-color`, darken(shades[9], LIGHT_TEXT_DARKEN)],
+        // Nền filled đủ sáng để mang chữ đen thì khi di chuột sáng lên một sắc thay vì tối đi: tối đi (sắc 9) làm chữ
+        // đen tụt dưới AA với teal, cyan.
+        ...(isLightColor(shades[PRIMARY_SHADE], LUMINANCE_THRESHOLD)
+          ? [[`--mantine-color-${name}-filled-hover`, `var(--mantine-color-${name}-${PRIMARY_SHADE - 1})`]]
+          : []),
+      ]),
+    ),
   },
   dark: {},
 });
