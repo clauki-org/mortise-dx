@@ -68,7 +68,9 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - Access token sống 15 phút; bật chống dò mật khẩu; tắt tự đăng ký.
   - Người có vai trò `otp_required` của client `mortise-web` (mọi `manager` có sẵn qua vai trò gộp) đăng nhập hai bước
     (mật khẩu và mã OTP) qua luồng `browser-mfa` và `direct-grant-mfa`; token ghi cách đăng nhập trong claim `amr`
-    ([ADR 0011](adr/0011-approver-mfa.md)).
+    ([ADR 0011](adr/0011-approver-mfa.md)). `make tenant-login TENANT=<tenant> POLICY=otp` gán vai trò đó cho group
+    của tenant, nên mọi tài khoản của tenant phải nhập OTP; `POLICY=default` bỏ đi
+    ([ADR 0040](adr/0040-tenant-login-policy.md)).
 - **Cấu hình:** `core/keycloak/realm-mortise.json`, được nạp khi Keycloak khởi động lần đầu. Tài khoản demo, khóa OTP
   của người duyệt demo (`DEMO_OTP_SECRET`) và client `mortise-test` do `scripts/seed.sh` tạo, không nằm trong tệp
   realm. `make otp` in mã OTP hiện tại của người duyệt demo.

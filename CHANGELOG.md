@@ -19,6 +19,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   mới mà không tự nâng cấp; `make check-fast` chặn ghim hay giấy phép sai; workflow hằng tuần đăng báo cáo vào issue
   theo dõi (đã cấu hình, chưa chạy) ([ADR 0039](docs/adr/0039-dependency-check-script.md)). Image Python của các
   dịch vụ tự viết ghim `3.13.18`, công cụ kiểm chạy qua `uvx` ghim phiên bản.
+- Chính sách đăng nhập theo tenant: `make tenant-login TENANT=<tenant> POLICY=otp|default` bắt mọi tài khoản của một
+  tenant nhập OTP hoặc bỏ yêu cầu đó; tenant demo `tinh-khac` bắt buộc OTP, có thêm `user.k` (ADR 0040).
 
 ### Fixed
 

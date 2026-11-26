@@ -60,6 +60,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0037](0037-observability-profile.md) | Giám sát trong profile `observability`: Prometheus, Loki, Grafana chỉ ở 127.0.0.1; log container đọc qua docker-socket-proxy chỉ cho đọc, trong mạng riêng với Alloy | Chấp nhận |
 | [0038](0038-distributed-tracing.md) | Truy vết phân tán bằng OpenTelemetry, mặc định tắt (`MORTISE_TRACING`): cổng truy vết API dưới /v1, dịch vụ FastAPI tự viết chạy dưới `opentelemetry-instrument`; Jaeger 2.20.0 (Apache-2.0, không chọn Tempo AGPL-3.0) trong profile `observability` bỏ chuỗi truy vấn, user-agent, địa chỉ người gọi trước khi lưu | Chấp nhận |
 | [0039](0039-dependency-check-script.md) | Ghim phiên bản và giấy phép phụ thuộc kiểm bằng script trong repo, chạy trong `make check-fast`; bản mới chỉ báo, mỗi tuần đăng báo cáo vào issue theo dõi; chính sách ở `scripts/deps-policy.toml` | Chấp nhận |
+| [0040](0040-tenant-login-policy.md) | Chính sách đăng nhập theo tenant: gán vai trò `otp_required` cho group của tenant, không đổi luồng; người vận hành đặt bằng `make tenant-login` | Chấp nhận |
 
 ## Quyết định còn mở
 

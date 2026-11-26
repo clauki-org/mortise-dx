@@ -12,7 +12,7 @@ export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
   check-fast deps-check web-check e2e audit-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up \
-  obs-up obs-down obs-check
+  obs-up obs-down obs-check tenant-login
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -40,8 +40,11 @@ logs: ## Theo dõi log
 seed: env ## Nạp tài khoản demo, metadata Hasura và quy trình mẫu
 	@scripts/seed.sh
 
-otp: ## In mã OTP hiện tại của tài khoản người duyệt demo và khóa để nhập vào ứng dụng OTP
+otp: ## In mã OTP hiện tại của các tài khoản demo phải nhập OTP và khóa để nhập vào ứng dụng OTP
 	@uv run --quiet --no-project python scripts/otp.py show
+
+tenant-login: ## Đặt chính sách đăng nhập của một tenant: make tenant-login TENANT=<tenant> POLICY=otp|default
+	@scripts/tenant-login.sh "$(TENANT)" "$(POLICY)"
 
 smoke: ## Kiểm tra đầu-cuối qua cổng (cần lõi đang chạy và đã seed)
 	@scripts/smoke.sh

@@ -316,7 +316,22 @@ manager_a=$(token manager.a "$(otp manager.a)")
 check "Người duyệt có mã OTP lấy được token ghi đã nhập OTP" "$(claims "$manager_a" | jq -c '.amr | sort')" \
   '["otp","pwd"]'
 user_a=$(token user.a)
-check "Người dùng thường vẫn đăng nhập bằng mật khẩu" "$(claims "$user_a" | jq -c .amr)" '["pwd"]'
+check "Người dùng thường của tenant không có chính sách OTP vẫn đăng nhập bằng mật khẩu" \
+  "$(claims "$user_a" | jq -c .amr)" '["pwd"]'
+# Chính sách đăng nhập theo tenant (ADR 0040): `make seed` đặt tinh-khac bắt buộc OTP, user.k không có vai trò nào thêm.
+# Đổi tạm về mặc định thì user.k chỉ cần mật khẩu; đặt lại otp ngay, cả khi bài dừng giữa chừng (trap). Lấy token có
+# OTP sau khi đặt lại nên cũng kiểm việc đặt lại. Chỉ thử sai một lần, như ở trên.
+error=$(curl -s "$base/auth/realms/mortise/protocol/openid-connect/token" -d grant_type=password \
+  -d client_id=mortise-test -d username=user.k -d "password=$DEMO_USER_PASSWORD" | jq -r .error)
+check "Tenant bắt buộc OTP: người dùng thường thiếu mã OTP không lấy được token" "$error" invalid_grant
+trap 'rm -f "$claims_file"; scripts/tenant-login.sh tinh-khac otp >/dev/null' EXIT
+scripts/tenant-login.sh tinh-khac default >/dev/null
+check "Tenant về chính sách mặc định: người dùng thường đăng nhập bằng mật khẩu" \
+  "$(claims "$(token user.k)" | jq -c .amr)" '["pwd"]'
+scripts/tenant-login.sh tinh-khac otp >/dev/null
+trap 'rm -f "$claims_file"' EXIT
+check "Tenant bắt buộc OTP: người dùng thường có mã OTP lấy được token ghi đã nhập OTP" \
+  "$(claims "$(token user.k "$(otp user.k)")" | jq -c '.amr | sort')" '["otp","pwd"]'
 claims "$manager_a" > "$claims_file"
 if scripts/contracts.sh token "$claims_file"; then status=ok; else status=lệch; fi
 check "Token khớp contracts/token-claims.schema.json" "$status" ok

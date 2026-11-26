@@ -74,7 +74,9 @@ fi
 # của các xã con (ADR 0028), manager.tinh hoàn thành bước thuộc thẩm quyền của tỉnh trong hồ sơ của xã con (ADR 0029);
 # manager.k là người duyệt của tỉnh khác, không có quyền gì với xã của Tỉnh Mẫu. admin2.a là quản trị xã A có
 # otp_required, nhận được bước mà workflow-api gán cho tenant_admin theo bảng phân cấp; admin.a giữ đăng nhập bằng mật
-# khẩu. manager luôn phải nhập OTP vì gộp otp_required.
+# khẩu. manager luôn phải nhập OTP vì gộp otp_required. `key` chỉ gắn khóa OTP demo, không gán vai trò: user.k phải
+# nhập OTP chỉ vì tenant của mình có chính sách otp (otp_tenants, ADR 0040), nên đổi chính sách là đổi cách user.k
+# đăng nhập.
 users=(
   "user.a  xa-a  -"
   "manager.a  xa-a  manager"
@@ -90,7 +92,10 @@ users=(
   "admin.tinh  tinh-mau  tenant_admin"
   "manager.tinh  tinh-mau  manager"
   "manager.k  tinh-khac  manager"
+  "user.k  tinh-khac  -  key"
 )
+# Tenant demo bắt mọi tài khoản nhập OTP (ADR 0040); tenant khác giữ chính sách mặc định.
+otp_tenants=(tinh-khac)
 
 # Tệp realm chỉ được nạp khi Keycloak khởi động lần đầu. Bản cài dựng trước khi có vai trò rollup_reader và tenant
 # cha (ADR 0016) thì tạo bù ở đây (group tạo bù trong vòng lặp dưới), để không phải `make reset`.
@@ -136,9 +141,10 @@ for entry in "${users[@]}"; do
   if [[ "$otp" == otp ]]; then
     kc add-roles -r mortise --uusername "$username" --cclientid mortise-web --rolename otp_required >/dev/null
   fi
-  # Người có otp_required phải nhập mã OTP khi đăng nhập (ADR 0011). Gắn sẵn khóa từ .env để demo và kiểm thử không phải
-  # quét mã QR; xóa khóa cũ trước để chạy lại seed không tích nhiều khóa. Người dùng thật tự cài khi đăng nhập lần đầu.
-  if [[ "$role" == manager || "$otp" == otp ]]; then
+  # Người có otp_required, riêng hay qua tenant, phải nhập mã OTP khi đăng nhập (ADR 0011, ADR 0040). Gắn sẵn khóa từ
+  # .env để demo và kiểm thử không phải quét mã QR; xóa khóa cũ trước để chạy lại seed không tích nhiều khóa. Người
+  # dùng thật tự cài khi đăng nhập lần đầu.
+  if [[ "$role" == manager || "$otp" == otp || "$otp" == key ]]; then
     : "${DEMO_OTP_SECRET:?Thiếu DEMO_OTP_SECRET trong .env; chạy make env}"
     kc get "users/$user_id/credentials" -r mortise | jq -r '.[] | select(.type == "otp") | .id' |
       while read -r credential; do kc delete "users/$user_id/credentials/$credential" -r mortise; done
@@ -150,6 +156,9 @@ for entry in "${users[@]}"; do
   fi
   echo "keycloak: $username, tenant $tenant, vai trò thêm: $role${otp:+, OTP}"
 done
+# Sau vòng lặp trên vì group của tenant có thể vừa được tạo ở đó. Lệnh tự bỏ qua khi tenant đã có chính sách, và cũng là
+# đường áp chính sách cho realm đã dựng trước (tệp realm chỉ nạp lần đầu).
+for tenant in "${otp_tenants[@]}"; do scripts/tenant-login.sh "$tenant" otp; done
 
 # Tenant demo là dữ liệu, không phải lược đồ, nên nằm ở seed chứ không nằm trong migration:
 # bản cài thật không được tự có tenant demo. Ba xã của "Tỉnh Mẫu", tỉnh hư cấu dùng cho demo (#58), là con của

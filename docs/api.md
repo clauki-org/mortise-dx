@@ -23,8 +23,9 @@ TOKEN=$(curl -fsS http://localhost:9080/auth/realms/mortise/protocol/openid-conn
   -d username=user.a -d "password=$DEMO_USER_PASSWORD" | jq -r .access_token)
 ```
 
-Người duyệt (vai trò `manager`) và người có vai trò `otp_required` của client `mortise-web` (tài khoản demo
-`admin2.a`) gửi kèm mã OTP, ví dụ `-d username=manager.a -d totp=<mã>`; `make otp` in mã của tài khoản demo. Thiếu mã thì Keycloak trả `invalid_grant`. Mỗi mã chỉ dùng được một lần.
+Người duyệt (vai trò `manager`), người có vai trò `otp_required` của client `mortise-web` (tài khoản demo
+`admin2.a`) và mọi người của tenant có chính sách bắt buộc OTP (tài khoản demo `user.k`,
+[ADR 0040](adr/0040-tenant-login-policy.md)) gửi kèm mã OTP, ví dụ `-d username=manager.a -d totp=<mã>`; `make otp` in mã của tài khoản demo. Thiếu mã thì Keycloak trả `invalid_grant`. Mỗi mã chỉ dùng được một lần.
 
 Token mang các claim lõi dùng để phân quyền (hợp đồng: [`contracts/token-claims.schema.json`](../contracts/token-claims.schema.json)):
 
