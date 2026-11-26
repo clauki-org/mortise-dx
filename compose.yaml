@@ -304,6 +304,11 @@ services:
     build: platform/web
     image: ${MORTISE_IMAGE_PREFIX:-mortise.invalid}/web:${MORTISE_VERSION:-dev}
     restart: unless-stopped
+    # Thương hiệu của bản cài: thư mục chứa branding.json (contracts/branding.schema.json) và logo, phục vụ ở /brand/
+    # (ADR 0043). Gắn cả thư mục, không gắn từng tệp: trình soạn thảo lưu tệp mới thay tệp cũ, và bind mount một tệp
+    # sẽ giữ tệp cũ tới khi dựng lại container.
+    volumes:
+      - ${MORTISE_BRANDING_DIR:-./platform/web/brand}:/usr/share/nginx/html/brand:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
       interval: 5s

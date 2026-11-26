@@ -14,4 +14,6 @@ FROM nginx:1.30.6-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /app/dist /usr/share/nginx/html
+# Thương hiệu mặc định; compose gắn thư mục của bản cài đè lên đường này (ADR 0043).
+COPY brand/ /usr/share/nginx/html/brand/
 EXPOSE 8080
