@@ -5,23 +5,11 @@
 // (workflow-api đã lọc theo tenant và vai trò). Mỗi dòng hiện tên hồ sơ theo khai báo của bước; việc gần hạn nhất
 // đứng đầu, lọc được theo hạn.
 
-import {
-  Alert,
-  Anchor,
-  Badge,
-  Button,
-  Group,
-  Loader,
-  Paper,
-  SegmentedControl,
-  Stack,
-  Table,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Alert, Anchor, Badge, Group, Paper, SegmentedControl, Stack, Table, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
+import { Empty, ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
 import { dateTime, dueText, recordTitle, stepOf, useSteps } from "./steps";
 import { delegatedFrom, fetchTasks, type Task } from "./workflow";
@@ -96,18 +84,9 @@ export function TaskList() {
   const { steps, error: stepsError } = useSteps();
   const now = Date.now();
 
-  if (tasks.isPending) return <Loader aria-label="Đang tải danh sách việc" />;
+  if (tasks.isPending) return <Loading what="danh sách việc" />;
   if (tasks.isError) {
-    return (
-      <Stack align="flex-start">
-        <Alert color="red" title="Không tải được danh sách việc">
-          {tasks.error.message}
-        </Alert>
-        <Button variant="light" onClick={() => tasks.refetch()}>
-          Thử lại
-        </Button>
-      </Stack>
-    );
+    return <ErrorNotice title="Không tải được danh sách việc" error={tasks.error} onRetry={() => tasks.refetch()} />;
   }
   const count = (value: Filter) => tasks.data.filter((task) => matches(task, value, now)).length;
   const shown = tasks.data.filter((task) => matches(task, filter, now)).sort(byDue);
@@ -142,9 +121,11 @@ export function TaskList() {
       )}
       <Paper withBorder radius="md">
         {shown.length === 0 ? (
-          <Text c="dimmed" p="xl" ta="center">
-            {tasks.data.length === 0 ? "Không có việc nào đang chờ bạn." : "Không có việc nào khớp bộ lọc."}
-          </Text>
+          tasks.data.length === 0 ? (
+            <Empty title="Không có việc nào đang chờ bạn." hint="Việc mới được giao sẽ hiện ở đây." />
+          ) : (
+            <Empty title="Không có việc nào khớp bộ lọc." hint="Chọn Tất cả để xem mọi việc đang chờ." />
+          )
         ) : (
           <Table.ScrollContainer minWidth={560}>
             <Table highlightOnHover verticalSpacing="sm" horizontalSpacing="md">

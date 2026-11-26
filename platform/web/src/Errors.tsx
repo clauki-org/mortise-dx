@@ -4,8 +4,9 @@
 // Màn hình khi đường dẫn không có trang, hoặc khi một màn hình gặp lỗi lúc vẽ. Router hiện màn hình lỗi trong khung
 // trang thay vì để React gỡ cả cây và để lại trang trắng.
 
-import { Alert, Button, Stack, Title } from "@mantine/core";
+import { Button, Stack, Title } from "@mantine/core";
 import { Link, useRouteError } from "react-router";
+import { ErrorNotice } from "./States";
 
 export function NotFound() {
   return (
@@ -20,9 +21,5 @@ export function NotFound() {
 
 export function RouteError() {
   const error = useRouteError();
-  return (
-    <Alert color="red" title="Màn hình gặp lỗi">
-      {error instanceof Error ? error.message : String(error)}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
-    </Alert>
-  );
+  return <ErrorNotice title="Màn hình gặp lỗi" error={error} />;
 }

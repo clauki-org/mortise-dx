@@ -5,12 +5,13 @@
 // điểm là một nút HTML đặt theo tọa độ. Nút HTML thay cho lớp vẽ trên canvas để trình đọc màn hình đọc được tên và
 // màu của từng điểm và bấm được bằng bàn phím. MapPanel.tsx nạp tệp này khi cần, để trang khác không tải MapLibre.
 
-import { Alert } from "@mantine/core";
+import { Text } from "@mantine/core";
 import { LngLatBounds, Map as MapLibre, Marker, NavigationControl, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { useEffect, useRef, useState } from "react";
 import type { Point } from "./mapConfig";
+import { ErrorNotice } from "./States";
 
 // Mặc định MapLibre tìm tệp worker cạnh mã của nó trong node_modules; sau khi build, mã nằm trong assets/ nên phải
 // chỉ đường tới bản worker do Vite build ra, cùng origin để Content-Security-Policy (worker-src 'self') cho chạy.
@@ -49,7 +50,7 @@ function markerElement(point: Point, onSelect: (key: string) => void): HTMLButto
 export default function MapCanvas({ points, selected, onSelect }: Props) {
   const container = useRef<HTMLElement>(null);
   const [map, setMap] = useState<MapLibre>();
-  const [failure, setFailure] = useState<string>();
+  const [failure, setFailure] = useState<unknown>();
 
   useEffect(() => {
     if (!container.current) return;
@@ -71,7 +72,7 @@ export default function MapCanvas({ points, selected, onSelect }: Props) {
       created.addControl(new NavigationControl({ showCompass: false }));
     } catch (error) {
       // MapLibre cần WebGL; trình duyệt tắt WebGL thì báo lý do, danh sách điểm bên dưới vẫn dùng được.
-      setFailure(error instanceof Error ? error.message : String(error));
+      setFailure(error);
       return;
     }
     // MapLibre đo khung một lần khi tạo và chỉ đo lại khi cửa sổ đổi cỡ; khung đổi cỡ vì bố cục trang (CSS nạp sau,
@@ -105,11 +106,11 @@ export default function MapCanvas({ points, selected, onSelect }: Props) {
     map.fitBounds(bounds, { padding: 48, maxZoom: 14, animate: false });
   }, [map, points]);
 
-  if (failure) {
+  if (failure !== undefined) {
     return (
-      <Alert color="yellow" title="Không vẽ được bản đồ">
-        Trình duyệt không vẽ được bản đồ ({failure}). Danh sách điểm bên dưới vẫn đủ.
-      </Alert>
+      <ErrorNotice title="Không vẽ được bản đồ" error={failure}>
+        <Text size="sm">Trình duyệt cần bật WebGL để vẽ bản đồ. Danh sách điểm bên dưới vẫn đủ.</Text>
+      </ErrorNotice>
     );
   }
   return <section ref={container} aria-label="Bản đồ" style={{ height: 420, borderRadius: 8 }} />;

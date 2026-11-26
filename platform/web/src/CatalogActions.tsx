@@ -12,6 +12,7 @@ import { Link, useParams } from "react-router";
 import { casesPathFor } from "./cases";
 import { type Action, actionVariables, type CatalogNode, type Row } from "./catalog";
 import { usePackageMenu } from "./PackagePage";
+import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 import { idempotencyKey, startProcess } from "./workflow";
 
@@ -103,11 +104,7 @@ export function CatalogActions({ node, row }: { node: CatalogNode; row: Row }) {
                 Dòng này chưa có giá trị ở: {preview.missing.join(", ")}. Bổ sung dữ liệu rồi thử lại.
               </Alert>
             )}
-            {start.error && (
-              <Alert color="red" title="Không lập được hồ sơ">
-                {start.error.message}. Bấm gửi lại; nếu vẫn lỗi, báo người quản trị.
-              </Alert>
-            )}
+            {start.error && <ErrorNotice title="Không lập được hồ sơ" error={start.error} />}
             <Group justify="flex-end">
               <Button variant="default" onClick={close} disabled={start.isPending}>
                 Hủy

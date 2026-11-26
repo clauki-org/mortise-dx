@@ -9,6 +9,7 @@ import { Select, Stack, Text } from "@mantine/core";
 import type { WidgetProps } from "@rjsf/utils";
 import { useMemo } from "react";
 import { useQuery } from "urql";
+import { errorText } from "./errorText";
 import { type Source, sourceLimit, sourceOptions, sourceQuery, type Values } from "./formConfig";
 
 /** Dữ liệu chung FormPanel đưa cho mọi ô: giá trị hiện tại của biểu mẫu và vai trò gửi kèm truy vấn (formRole). */
@@ -36,9 +37,7 @@ export function SourceChoice(props: WidgetProps) {
   // một mục không thuộc trường cha vừa chọn.
   const items = useMemo(() => (fetching ? [] : sourceOptions(source, data?.rows ?? [])), [source, data, fetching]);
   const limit = sourceLimit(source);
-  const problem = error
-    ? `Không tải được danh sách: ${error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.`
-    : undefined;
+  const problem = error ? `Không tải được danh sách. ${errorText(error).text}` : undefined;
   return (
     <Stack gap={4}>
       <Select

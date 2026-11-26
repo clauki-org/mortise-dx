@@ -14,6 +14,7 @@ import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useClient } from "urql";
 import { casesPathFor } from "./cases";
+import { ReadableError } from "./errorText";
 import {
   clearDependents,
   type FormConfig,
@@ -30,6 +31,7 @@ import { formValidator } from "./formValidator";
 import { findItem, itemPath, rolesOf } from "./menu";
 import { usePackageMenu } from "./PackagePage";
 import { type FormContext, SourceChoice } from "./SourceChoice";
+import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 import { idempotencyKey, startProcess } from "./workflow";
 
@@ -55,9 +57,11 @@ function useSubmit(config: FormConfig) {
       // đã đọc từ bảng này (ví dụ danh mục ở done.menu) cần đọc lại.
       const context = { role, additionalTypenames: [table] };
       const result = await client.mutation(insertMutation(table), { object: payload }, context).toPromise();
-      if (result.error) throw new Error(insertError(result.error, role, config.fields));
+      if (result.error) throw new ReadableError(insertError(result.error, role, config.fields));
       if (result.data?.result?.affected_rows !== 1) {
-        throw new Error("Máy chủ không thêm dòng nào. Tải lại trang rồi gửi lại; nếu vẫn lỗi, báo người quản trị.");
+        throw new ReadableError(
+          "Máy chủ không thêm dòng nào. Tải lại trang rồi gửi lại; nếu vẫn lỗi, báo người quản trị.",
+        );
       }
       return undefined;
     },
@@ -150,12 +154,7 @@ function FormBody({ config, app }: { config: FormConfig; app: string }) {
       noHtml5Validate
     >
       <Stack mt="md" gap="sm">
-        {submit.isError && (
-          <Alert color="red" title="Chưa gửi được">
-            {submit.error.message}
-            {config.submit.process && ". Bấm gửi lại; nếu vẫn lỗi, báo người quản trị."}
-          </Alert>
-        )}
+        {submit.isError && <ErrorNotice title="Chưa gửi được" error={submit.error} />}
         <Group>
           <Button type="submit" loading={submit.isPending}>
             {config.submit.label}
