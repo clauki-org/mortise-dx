@@ -97,13 +97,16 @@ describe.each(BRAND_COLORS)("màu chính %s", (color) => {
   });
 });
 
-describe("chữ phụ (dimmed)", () => {
-  const dimmed = resolve(lightVariables("blue"), "--mantine-color-dimmed");
+describe.each([
+  ["chữ phụ (dimmed)", "--mantine-color-dimmed"],
+  ["chữ gợi ý trong ô nhập (placeholder)", "--mantine-color-placeholder"],
+])("%s", (_, name) => {
+  const color = resolve(lightVariables("blue"), name);
   it.each([
     ["nền trắng", WHITE],
     ["nền trang gray.0", shade("gray", 0)],
   ])("đạt AA trên %s", (_, background) => {
-    expect(contrast(dimmed, background)).toBeGreaterThanOrEqual(AA);
+    expect(contrast(color, background)).toBeGreaterThanOrEqual(AA);
   });
 });
 
@@ -134,3 +137,12 @@ describe.each(["green", "yellow", "orange", "red", "blue", "teal", "cyan", "lime
     });
   },
 );
+
+// Hộp thoại không vẽ được ở đây (cổng và hiệu ứng chỉ chạy trên trình duyệt; e2e/visual.spec.ts chạy axe trên hộp
+// thật), nên chỉ kiểm giá trị mặc định mà ModalHeader nhận từ theme.
+describe("đầu hộp thoại", () => {
+  it("không là vùng banner thứ hai cạnh thanh trên của trang", () => {
+    const theme = mergeMantineTheme(DEFAULT_THEME, createAppTheme("blue"));
+    expect(theme.components.ModalHeader?.defaultProps).toMatchObject({ role: "none" });
+  });
+});

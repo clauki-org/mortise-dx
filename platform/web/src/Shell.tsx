@@ -5,7 +5,7 @@
 // đăng xuất), thanh bên với menu chia nhóm (MenuNav.tsx, ADR 0044) và vùng nội dung do route hiện tại vẽ, giới hạn
 // bề rộng. Dưới cỡ `sm` thanh bên thu vào nút mở menu; hai nút tài khoản chuyển xuống cuối thanh bên.
 
-import { AppShell, Burger, Button, Container, Group, ScrollArea, Stack, Text } from "@mantine/core";
+import { AppShell, Burger, Button, Container, Group, ScrollArea, Stack, Text, useMatches } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Outlet, useLocation } from "react-router";
 import { userManager } from "./auth";
@@ -51,6 +51,9 @@ export function Shell() {
   const { pathname, search } = useLocation();
   const packages = usePackageMenu();
   const groups = menuGroups(SHARED, packages.items);
+  // Dưới cỡ `sm` thanh bên đóng chỉ bị đẩy ra ngoài màn hình, các liên kết vẫn nhận Tab mà người dùng không thấy tiêu
+  // điểm ở đâu. `inert` bỏ cả thanh khỏi thứ tự Tab và cây trợ năng cho tới khi mở menu.
+  const narrow = useMatches({ base: true, sm: false }, { getInitialValueInEffect: false });
 
   return (
     <AppShell
@@ -83,7 +86,7 @@ export function Shell() {
           </Group>
         </Group>
       </AppShell.Header>
-      <AppShell.Navbar aria-label="Menu chính">
+      <AppShell.Navbar aria-label="Menu chính" inert={narrow && !opened}>
         <AppShell.Section grow component={ScrollArea} p="xs">
           <MenuNav groups={groups} pathname={pathname} onNavigate={close} />
           {/* Lỗi đọc menu của gói không chặn các màn hình dùng chung; chỉ báo ở cuối menu. */}
