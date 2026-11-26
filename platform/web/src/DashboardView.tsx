@@ -123,12 +123,16 @@ function Bars({ chart, rows, ordinal }: { chart: Chart; rows: Row[]; ordinal: bo
       ) : (
         <Text size="sm">{chart.y[0]?.label}</Text>
       )}
-      {rows.map((row, index) => (
-        // Dòng không có khóa riêng (view tổng hợp có thể không có cột id); thứ tự đã cố định bằng order_by.
-        // biome-ignore lint/suspicious/noArrayIndexKey: xem chú thích trên
-        <Box key={index}>
-          <Text size="sm">{axisText(chart, row[chart.x.column], index, ordinal)}</Text>
-          <Box style={{ ...BAR_GRID, rowGap: 2 }} mt={2}>
+      {/* Mọi nhóm và thang chung một lưới: cột số rộng theo số dài nhất của cả biểu đồ, nên mọi thanh và thang có
+          cùng bề rộng; tách mỗi nhóm một lưới thì cùng giá trị mà thanh dài khác nhau. */}
+      <Box style={{ ...BAR_GRID, rowGap: 2 }}>
+        {rows.map((row, index) => (
+          // Dòng không có khóa riêng (view tổng hợp có thể không có cột id); thứ tự đã cố định bằng order_by.
+          // biome-ignore lint/suspicious/noArrayIndexKey: xem chú thích trên
+          <Box key={index} style={{ display: "contents" }}>
+            <Text size="sm" mt={index > 0 ? "xs" : 0} style={{ gridColumn: "1 / -1" }}>
+              {axisText(chart, row[chart.x.column], index, ordinal)}
+            </Text>
             {chart.y.map((series, at) => {
               const mark = marks[index]?.[at];
               return (
@@ -153,10 +157,13 @@ function Bars({ chart, rows, ordinal }: { chart: Chart; rows: Row[]; ordinal: bo
               );
             })}
           </Box>
-        </Box>
-      ))}
-      <Box style={BAR_GRID}>
-        <Group justify="space-between" pt={2} style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}>
+        ))}
+        <Group
+          justify="space-between"
+          mt={4}
+          pt={2}
+          style={{ gridColumn: 1, borderTop: "1px solid var(--mantine-color-default-border)" }}
+        >
           <Text size="xs">0</Text>
           <Text size="xs">{numberText(scaleTop(chart, rows))}</Text>
         </Group>

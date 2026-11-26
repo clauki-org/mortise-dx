@@ -53,8 +53,8 @@ thông điệp lỗi đúng từng ký tự, và thông điệp có cả khối 
   thì cuộn ngang trong một khung nhận focus và có tên, để người dùng bàn phím cuộn được.
 - **Mã máy trên trục**: với nguồn `context`, giá trị trục là mã entity. Thanh ghi nhãn trong `chart.x.choices` nếu gói
   khai; không có thì ghi nhãn trục kèm số thứ tự ("Thiết bị 1"), mã gốc chỉ còn trong bảng số liệu thu gọn.
-- Chữ trên thẻ, thang và lời báo rỗng dùng màu chữ thường của theme, không dùng màu `dimmed`, vì màu đó ở cỡ chữ nhỏ
-  không đạt tương phản WCAG AA.
+- Chữ trên thẻ, thang và lời báo rỗng dùng màu chữ thường của theme, không dùng màu `dimmed`: axe báo lỗi
+  `color-contrast` cho chữ xám nhỏ trên trang này, và chữ thường không phụ thuộc vào màu xám của theme.
 - **`make check-fast` từ chối** tiêu đề, mô tả của trang và của khối, nhãn của thẻ, nhãn trục, cột số, cột chi tiết,
   nhãn của `choices` và của `link` khi chứa tên kỹ thuật của khối: trường GraphQL và tên bảng ngắn theo quyền Hasura
   của gói, cột, giá trị của `where`, vai trò, khóa quy trình, loại và tên số đo của `context`; hay bất kỳ tên dạng
