@@ -2,19 +2,19 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/clauki-org/mortise-dx/contracts/component.schema.json",
   "title": "Bản mô tả một thành phần Tầng 2 (<tên>.component.yaml)",
-  "description": "Tệp contracts/<tên>.component.yaml, nằm cạnh schema cấu hình của thành phần. Người viết gói và công cụ sinh cấu hình đọc tệp này để biết thành phần làm được gì và không làm được gì trước khi chọn nó cho một mục menu trong app.yaml. Chỉ ghi điều thành phần đã làm được; đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.",
+  "description": "Tệp contracts/<tên>.component.yaml, nằm cạnh schema cấu hình của thành phần. Người viết gói và công cụ sinh cấu hình đọc tệp này để biết thành phần làm được gì và không làm được gì trước khi chọn nó cho một mục menu trong app.yaml hay cho một khóa trong cấu hình của thành phần khác. Chỉ ghi điều thành phần đã làm được; đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.",
   "type": "object",
   "additionalProperties": false,
   "required": ["component", "summary", "config_schema", "example", "capabilities", "limits"],
   "properties": {
     "component": {
-      "description": "Tên thành phần: giá trị của khóa component trong app.yaml, và là phần <tên> trong tên tệp này",
+      "description": "Tên thành phần, là phần <tên> trong tên tệp này. Thành phần mở từ menu thì đây là giá trị của khóa component trong app.yaml; thành phần nằm trong cấu hình của thành phần khác (documents trong detail.documents của danh mục) thì tên chỉ dùng cho tệp mô tả và schema",
       "type": "string",
       "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
     },
     "summary": { "description": "Một câu: thành phần hiển thị gì", "$ref": "#/$defs/text" },
     "config_schema": {
-      "description": "Schema của tệp cấu hình mà mục menu trỏ tới; đường dẫn tính từ contracts/",
+      "description": "Schema cấu hình của thành phần: của tệp mà mục menu trỏ tới, hay của khóa chứa thành phần trong cấu hình của thành phần khác; đường dẫn tính từ contracts/",
       "$ref": "#/$defs/path"
     },
     "example": {

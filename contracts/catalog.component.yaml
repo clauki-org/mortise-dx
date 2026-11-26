@@ -3,8 +3,8 @@
 #
 # Bản mô tả thành phần danh mục theo contracts/component.schema.json; `make check-fast` kiểm tệp này.
 # Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, CatalogActions.tsx,
-# catalog.ts, catalogQuery.ts). Mỗi dòng dưới đây đã được chạy thử trên giao diện; đổi hành vi của thành phần thì sửa
-# tệp này trong cùng pull request.
+# catalog.ts, catalogQuery.ts; phần tài liệu ở CatalogDocuments.tsx). Mỗi dòng dưới đây đã được chạy thử trên giao
+# diện; đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
 
 component: catalog
 summary: Danh sách và màn hình chi tiết của một loại đối tượng cùng các đối tượng con của nó, đọc qua GraphQL theo cấu hình của gói.
@@ -28,9 +28,12 @@ capabilities:
     qua API quy trình, với biến lấy từ khóa hay trường của dòng (ADR 0026). Hộp xác nhận hiện các giá trị sẽ gửi;
     trường còn trống thì không cho gửi. Bấm đúp hay gửi lại sau lỗi trong cùng hộp chỉ tạo một quy trình
     (Idempotency-Key).
+  - Phần tài liệu đính kèm của dòng đang xem (detail.documents, ở mọi cấp cha–con) để xem, tải xuống, đính kèm tệp;
+    năng lực và giới hạn ở contracts/documents.component.yaml (ADR 0041).
   - Nơi gọi chỉ đưa cấu hình và địa chỉ gốc; thành phần không cần menu, bảng hay cấu hình nào khác của hệ thống.
 limits:
-  - Không thêm, sửa hay xóa dòng; việc ghi duy nhất là khởi tạo quy trình bằng nút gói khai.
+  - Không thêm, sửa hay xóa dòng của danh mục; việc ghi chỉ có khởi tạo quy trình bằng nút gói khai và đính kèm tệp ở
+    phần tài liệu (thêm một dòng vào bảng nối).
   - Mỗi danh sách đọc một bảng; không hiện cột của bảng khác, kể cả tên của đối tượng cha. Cột qua quan hệ chỉ hiện ở
     màn hình chi tiết, chỉ một cấp, không tìm, lọc hay sắp xếp được.
   - Nút chỉ mở quy trình của cùng gói, chỉ khởi tạo; không hiện trạng thái hồ sơ đã lập và không chặn hai hồ sơ cùng

@@ -154,6 +154,34 @@
     - role: tenant_admin
       permission: { filter: *tenant }
 
+# Giấy tờ đính kèm cơ sở (ADR 0041): ai thấy dòng nối theo đúng luật thấy cơ sở; custodian và quản trị xã đính kèm,
+# tenant_id và created_by đặt từ token. Không sửa, không xóa: giấy tờ đã đính kèm là hồ sơ của cơ sở. Nội dung tệp tải
+# qua /v1/files theo tenant (files-api), không qua Hasura.
+- table: { schema: app_facilities_commune, name: facility_documents }
+  object_relationships:
+    - name: facility
+      using:
+        manual_configuration:
+          remote_table: { schema: app_facilities_commune, name: facilities }
+          column_mapping: { tenant_id: tenant_id, facility_id: id }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &document_columns [id, tenant_id, facility_id, file_id, note, created_by, created_at]
+        filter: { _and: [*tenant, { facility: *facility_assigned }] }
+    - role: manager
+      permission: { columns: *document_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *document_columns, filter: *tenant }
+  insert_permissions:
+    - role: user
+      permission:
+        columns: &document_input [facility_id, file_id, note]
+        check: { _and: [*tenant, { facility: *facility_custodian }] }
+        set: &document_from_token { tenant_id: X-Hasura-Tenant-Id, created_by: X-Hasura-User-Id }
+    - role: tenant_admin
+      permission: { columns: *document_input, check: *tenant, set: *document_from_token }
+
 # Biên chế và diện tích chuyên dùng do xã nhập; mức m² theo chức danh (working_area_norms) là dữ liệu chung, không
 # đăng ký, xã đọc qua view staffing_allowances. Không gắn với cơ sở nên không xét phân công: user đọc ghi toàn xã như
 # trước; manager chỉ đọc; tenant_admin đọc ghi (seed-demo nạp biên chế bằng vai trò này).

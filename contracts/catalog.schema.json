@@ -114,6 +114,10 @@
           "description": "Các nút trên màn hình chi tiết; mỗi nút khởi tạo một quy trình của gói cho dòng đang xem, qua API quy trình của lõi",
           "type": "array",
           "items": { "$ref": "#/$defs/action" }
+        },
+        "documents": {
+          "description": "Phần tài liệu đính kèm của dòng đang xem (ADR 0041). Schema nằm ở tệp riêng vì phần này là một thành phần có bản mô tả riêng (contracts/documents.component.yaml); scripts/contracts.sh kiểm với --base-uri để tên tệp dưới đây trỏ về contracts/ thay vì địa chỉ trong $id.",
+          "$ref": "documents.schema.json"
         }
       }
     },

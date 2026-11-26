@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clauki-org/mortise-dx/contracts/documents.schema.json",
+  "title": "Cấu hình phần tài liệu đính kèm (component: documents)",
+  "description": "Phần tài liệu trên màn hình chi tiết của thành phần danh mục, khai ở `detail.documents` của contracts/catalog.schema.json (ADR 0041). Tệp nằm ở API tệp của lõi (/v1/files); việc tệp thuộc dòng nào là một dòng trong bảng nối của gói (`source`): cột `via` chứa khóa của dòng đang xem, cột `file` chứa mã tệp. Tên, cỡ, kiểu của tệp đọc từ /v1/files/{id}, không đọc từ bảng nối. Ai thấy tệp nào do quyền đọc bảng nối của Hasura quyết định; ai đính kèm được do quyền thêm dòng. Mọi tên ghép vào câu GraphQL theo luật tên của GraphQL; `make check-fast` đối chiếu chúng với quyền Hasura của gói (scripts/check-documents-config.py).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "source", "via", "file"],
+  "properties": {
+    "title": { "description": "Tiêu đề của phần tài liệu", "$ref": "#/$defs/text" },
+    "source": {
+      "description": "Trường gốc GraphQL của bảng nối trong Hasura: <lược đồ>_<bảng>",
+      "$ref": "#/$defs/identifier"
+    },
+    "via": {
+      "description": "Cột của bảng nối chứa khóa của dòng đang xem (key của loại đối tượng, bỏ trống là id)",
+      "$ref": "#/$defs/identifier"
+    },
+    "file": {
+      "description": "Cột của bảng nối chứa mã tệp (uuid) mà POST /v1/files trả về",
+      "$ref": "#/$defs/identifier"
+    },
+    "fields": {
+      "description": "Cột khác của bảng nối hiện cạnh tên tệp, theo thứ tự khai (ví dụ ghi chú, ngày đính kèm)",
+      "type": "array",
+      "items": { "$ref": "#/$defs/field" }
+    },
+    "sort": {
+      "description": "Thứ tự của danh sách. Bỏ trống là theo cột file, tăng dần.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field"],
+      "properties": {
+        "field": { "$ref": "#/$defs/identifier" },
+        "direction": { "enum": ["asc", "desc"] }
+      }
+    },
+    "limit": {
+      "description": "Số tệp hiện nhiều nhất. Bỏ trống là 20. Mỗi tệp tốn một lần gọi /v1/files/{id} để lấy tên và cỡ, mà cổng giới hạn số lần gọi mỗi phút theo token, nên có trần.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50
+    },
+    "upload": {
+      "description": "Có khóa này thì phần tài liệu có ô chọn tệp và nút đính kèm: tệp tải lên /v1/files rồi thêm một dòng vào bảng nối. Không có thì chỉ xem và tải xuống.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "description": "Chữ trên nút. Bỏ trống là \"Đính kèm\".", "$ref": "#/$defs/text" },
+        "role": {
+          "description": "Vai trò Hasura gửi kèm lệnh thêm dòng (header X-Hasura-Role), như biểu mẫu (ADR 0030). Token không có vai trò này thì không hiện ô tải lên. Bỏ trống là user.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "note": {
+          "description": "Cột chữ của bảng nối nhận ghi chú người đính kèm gõ (không bắt buộc); bỏ trống thì không có ô ghi chú",
+          "$ref": "#/$defs/identifier"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "label"],
+      "properties": {
+        "name": { "description": "Tên cột của bảng nối", "$ref": "#/$defs/identifier" },
+        "label": { "$ref": "#/$defs/text" },
+        "type": { "description": "Cách hiển thị giá trị. Bỏ trống là text.", "enum": ["text", "date", "datetime"] }
+      }
+    },
+    "identifier": {
+      "description": "Tên theo luật của GraphQL; ký tự khác sẽ đổi nghĩa của câu truy vấn",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "text": {
+      "description": "Chữ hiển thị cho người dùng: có ít nhất một ký tự không phải khoảng trắng",
+      "type": "string",
+      "pattern": "\\S"
+    }
+  }
+}

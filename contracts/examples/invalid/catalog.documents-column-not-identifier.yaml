@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối qua documents.schema.json: tên cột không phải tên GraphQL.
+# Nếu lọt, tên chứa dấu ngoặc ghép vào câu truy vấn sẽ đổi nghĩa của câu. Tệp này cũng chứng minh catalog.schema.json
+# thật sự kiểm detail.documents bằng schema riêng.
+
+title: Danh mục
+source: app_example_items
+fields:
+  - name: name
+    label: Tên
+list:
+  columns: [name]
+detail:
+  documents:
+    title: Giấy tờ
+    source: app_example_item_documents
+    via: "item_id } x {"
+    file: file_id

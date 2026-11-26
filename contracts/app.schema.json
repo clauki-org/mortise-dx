@@ -85,7 +85,7 @@
           "label": { "$ref": "#/$defs/text" },
           "component": {
             "description": "Thành phần Tầng 2 hiển thị mục này",
-            "enum": ["catalog", "form", "map", "tasks", "documents", "dashboard", "rules", "assistant", "cases"]
+            "enum": ["catalog", "form", "map", "tasks", "dashboard", "rules", "assistant", "cases"]
           },
           "config": { "description": "Tệp cấu hình của thành phần", "$ref": "#/$defs/path" },
           "roles": {
