@@ -185,8 +185,13 @@ test("đếm số lần bấm để cán bộ xã A lập một hồ sơ rà so�
     });
   } finally {
     // Người duyệt trả lại hồ sơ vừa lập rồi xóa cơ sở (phân công đi theo, CASCADE), như record.spec.ts.
-    for (const task of await reviewsOf(request, id)) {
-      await complete(request, "manager.a", task.id, { approved: false });
+    // Lỗi khi trả hồ sơ không được bỏ qua bước xóa cơ sở, kẻo cơ sở thử nằm lại trên danh mục demo.
+    try {
+      for (const task of await reviewsOf(request, id)) {
+        await complete(request, "manager.a", task.id, { approved: false });
+      }
+    } catch (error) {
+      console.warn(`Trả lại hồ sơ của cơ sở ${id} chưa xong: ${error instanceof Error ? error.message : error}`);
     }
     await graphql(
       request,
