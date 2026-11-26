@@ -23,5 +23,10 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // Cỡ điện thoại chỉ cho bài chụp giao diện (#188), để các bài khác không chạy hai lần. Pixel 7 chạy trên Chromium
+    // nên không cần cài thêm trình duyệt.
+    { name: "mobile", use: { ...devices["Pixel 7"] }, testMatch: "visual.spec.ts" },
+  ],
 });
