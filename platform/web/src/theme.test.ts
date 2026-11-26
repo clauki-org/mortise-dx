@@ -32,17 +32,20 @@ const shade = (color: string, index: number): string => {
   return value;
 };
 
-// Biến CSS của nền sáng như trình duyệt thấy: biến của Mantine, rồi biến của theme.ts đè lên.
+// Biến CSS của nền sáng như trình duyệt thấy (biến chung và biến riêng của nền sáng): biến của Mantine, rồi biến của
+// theme.ts đè lên.
 function lightVariables(color: (typeof BRAND_COLORS)[number]): Record<string, string> {
   const theme = mergeMantineTheme(DEFAULT_THEME, createAppTheme(color));
-  return { ...defaultCssVariablesResolver(theme).light, ...cssVariablesResolver(theme).light };
+  const mantine = defaultCssVariablesResolver(theme);
+  const ours = cssVariablesResolver(theme);
+  return { ...mantine.variables, ...mantine.light, ...ours.variables, ...ours.light };
 }
 
 // Đổi một biến (có thể trỏ qua vài biến khác) thành mã màu #rrggbb.
 function resolve(variables: Record<string, string>, name: string): string {
   const value = variables[name];
   if (value === undefined) throw new Error(`Không có biến ${name}`);
-  const reference = /^var\((--mantine-color-[a-z]+-\d|--mantine-color-[a-z-]+)\)$/.exec(value);
+  const reference = /^var\((--mantine-[a-z0-9-]+)\)$/.exec(value);
   if (!reference?.[1]) return value;
   const palette = /^--mantine-color-([a-z]+)-(\d)$/.exec(reference[1]);
   return palette?.[1] && palette[2] ? shade(palette[1], Number(palette[2])) : resolve(variables, reference[1]);
@@ -60,6 +63,7 @@ describe("công thức tương phản", () => {
 describe.each(BRAND_COLORS)("màu chính %s", (color) => {
   const variables = lightVariables(color);
   const v = (suffix: string) => resolve(variables, `--mantine-color-${color}-${suffix}`);
+  const p = (suffix: string) => resolve(variables, `--mantine-primary-color-${suffix}`);
   it.each([
     ["chữ trắng trên nút filled", WHITE, v("filled")],
     ["chữ trắng trên nút filled khi di chuột", WHITE, v("filled-hover")],
@@ -67,8 +71,11 @@ describe.each(BRAND_COLORS)("màu chính %s", (color) => {
     ["chữ màu trên nền trắng", v("text"), WHITE],
     ["chữ màu trên nền trang gray.0", v("text"), shade("gray", 0)],
     ["chữ của nút light, subtle trên nền trắng", v("light-color"), WHITE],
-    ["chữ của nút light, mục menu đang chọn trên nền nhạt", v("light-color"), v("light")],
+    ["chữ của nút light trên nền nhạt", v("light-color"), v("light")],
     ["chữ của nút light, subtle khi di chuột", v("light-color"), v("light-hover")],
+    // NavLink đọc biến --mantine-primary-color-light* (styles/NavLink.css), không đọc biến theo tên màu.
+    ["mục menu đang chọn", p("light-color"), p("light")],
+    ["mục menu đang chọn khi di chuột", p("light-color"), p("light-hover")],
   ])("%s đạt AA", (_, foreground, background) => {
     expect(contrast(foreground, background)).toBeGreaterThanOrEqual(AA);
   });
