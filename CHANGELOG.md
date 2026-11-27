@@ -48,6 +48,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Giao diện kiểu Bento dịu: nền xám nhạt, thẻ viền mảnh bo 12px, ô nhập viền rõ, liên kết gạch chân, phông Be Vietnam
   Pro đóng gói cùng giao diện; nhãn trạng thái dùng một bộ nghĩa màu chung ([ADR
   0048](docs/adr/0048-bento-tokens-status-tones-font.md)).
+- Bảng điều hành xếp lưới bốn cột theo thứ tự khai; khối chính có vòng đo phần trăm do gói tính, thẻ số có màu và chữ
+  mức độ theo ngưỡng của gói, biểu đồ có trần ([ADR 0049](docs/adr/0049-bento-dashboard.md)).
 
 ### Removed
 
