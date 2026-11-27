@@ -169,6 +169,9 @@ export const uniqueTitle = (label: string) => `${label} ${Date.now().toString(36
 export async function openMenuItem(page: Page, label: string) {
   const nav = page.getByRole("navigation", { name: "Menu chính" });
   const burger = page.getByRole("button", { name: "Mở menu" });
+  // Ngay sau khi đăng nhập, khung trang có thể chưa vẽ: hỏi nút mở menu lúc đó thì ở cỡ điện thoại bỏ lỡ bước mở menu
+  // và chờ mãi một liên kết đang ẩn. Chờ tiêu đề trang trước để khung đã có.
+  await page.getByRole("heading", { level: 1 }).first().waitFor();
   if (await burger.isVisible()) await burger.click();
   // Tạo từ page chứ không từ nav: locator trong `has` được tìm bên trong từng nhóm, nên không được bắt đầu bằng nav.
   const anyLink = page.getByRole("link", { name: label, exact: true, includeHidden: true });
