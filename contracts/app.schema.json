@@ -18,7 +18,16 @@
       "type": "string",
       "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
     },
-    "description": { "type": "string" },
+    "description": {
+      "description": "Một hai câu nói gói làm gì; trang \"Ứng dụng\" của quản trị org hiện dưới tên gói (ADR 0065)",
+      "$ref": "#/$defs/text"
+    },
+    "requires": {
+      "description": "Mã các gói mà gói này cần để chạy đúng. Bộ cài từ chối cài khi gói cần chưa cài và từ chối gỡ gói mà gói khác cần; quản trị org không tắt được gói mà gói đang bật khác cần, không bật được gói khi gói nó cần đang tắt (ADR 0065).",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/slug", "maxLength": 63 }
+    },
     "database": {
       "description": "Lược đồ CSDL riêng của gói. Gỡ gói thì lùi hết migration của gói; bảng theo dõi migration nằm ngoài lược đồ này.",
       "type": "object",

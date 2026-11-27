@@ -8,26 +8,31 @@
 import { AppShell, Burger, Button, Container, Group, ScrollArea, Stack, Text, useMatches } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Outlet, useLocation } from "react-router";
+import { useOrgAdmin } from "./AppsPage";
 import { userManager } from "./auth";
 import { Brand } from "./Brand";
 import { MenuNav } from "./MenuNav";
-import { type MenuGroup, menuGroups } from "./menu";
+import { type MenuGroup, type MenuLink, menuGroups } from "./menu";
 import { usePackageMenu } from "./PackagePage";
 import { addPasskey, canAddPasskey } from "./passkey";
 import { useSession } from "./session";
 import { TenantInfo } from "./TenantInfo";
 
 // Nhóm của các màn hình dùng chung, luôn có, đứng đầu; trang chủ là mục đầu (ADR 0051). Mục do các gói đã cài khai trong app.yaml (menu) gom theo gói
-// ở sau, đọc qua GraphQL theo tenant: gỡ gói thì nhóm của nó tự mất, không phải sửa giao diện.
-const SHARED: MenuGroup = {
+// ở sau, đọc qua GraphQL theo tenant: gỡ gói hay quản trị org tắt gói thì nhóm của nó tự mất, không phải sửa giao diện.
+const SHARED_LINKS: MenuLink[] = [
+  { to: "/", label: "Trang chủ", icon: "home" },
+  { to: "/tasks", label: "Việc của tôi", icon: "inbox" },
+];
+// Trang bật, tắt gói chỉ dành cho quản trị org (ADR 0065); người khác mở đường dẫn thì trang tự báo không có quyền.
+const APPS_LINK: MenuLink = { to: "/packages", label: "Ứng dụng", icon: "settings" };
+
+const sharedGroup = (orgAdmin: boolean): MenuGroup => ({
   id: "",
   label: "Chung",
-  links: [
-    { to: "/", label: "Trang chủ", icon: "home" },
-    { to: "/tasks", label: "Việc của tôi", icon: "inbox" },
-  ],
+  links: orgAdmin ? [...SHARED_LINKS, APPS_LINK] : SHARED_LINKS,
   collapsible: false,
-};
+});
 
 const signOut = () => userManager.signoutRedirect();
 
@@ -53,7 +58,8 @@ export function Shell() {
   const [opened, { toggle, close }] = useDisclosure();
   const { pathname, search } = useLocation();
   const packages = usePackageMenu();
-  const groups = menuGroups(SHARED, packages.items);
+  const orgAdmin = useOrgAdmin() === true;
+  const groups = menuGroups(sharedGroup(orgAdmin), packages.items);
   // Dưới cỡ `sm` thanh bên đóng chỉ bị đẩy ra ngoài màn hình, các liên kết vẫn nhận Tab mà người dùng không thấy tiêu
   // điểm ở đâu. `inert` bỏ cả thanh khỏi thứ tự Tab và cây trợ năng cho tới khi mở menu.
   const narrow = useMatches({ base: true, sm: false }, { getInitialValueInEffect: false });

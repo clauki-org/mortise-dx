@@ -11,12 +11,23 @@
         columns: [tenant_id, process, step, config]
         filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
 
+# Mục của gói mà quản trị org đã tắt (ADR 0065) không trả cho ai trong org: menu, trang chủ, khối của trang và trợ lý
+# hỏi dữ liệu cùng đọc bảng này, nên cùng mất mà không phải lọc ở từng nơi. Dữ liệu của gói vẫn nằm nguyên.
 - table: { schema: platform, name: menu_items }
+  array_relationships:
+    - name: disabled
+      using:
+        manual_configuration:
+          remote_table: { schema: platform, name: disabled_apps }
+          column_mapping: { tenant_id: tenant_id, app: app }
   select_permissions:
     - role: user
       permission:
         columns: [tenant_id, app, app_name, item, position, label, component, config, roles, icon]
-        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        filter:
+          _and:
+            - { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+            - { _not: { disabled: { app: { _is_null: false } } } }
 
 # Văn bản cho trợ lý hỏi văn bản (ADR 0021): trợ lý đọc bằng token người hỏi, nên quyền ở đây quyết định đoạn nào được
 # tìm và được trích.
@@ -143,3 +154,46 @@
   delete_permissions:
     - role: tenant_admin
       permission: { filter: *override_admin }
+
+# Bật, tắt gói theo org (ADR 0065). Danh sách gói đọc qua view, chỉ quản trị của chính tenant gốc (dòng có tenant_id
+# trùng tenant gốc) thấy: trang "Ứng dụng" chỉ dành cho quản trị org. Gói tắt đi qua quan hệ `disabled` của menu_items
+# ở trên; view disabled_apps không vai trò nào đọc thẳng.
+- table: { schema: platform, name: apps_by_tenant }
+  select_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [tenant_id, root_tenant_id, app, name, description, requires, enabled]
+        filter:
+          _and:
+            - { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+            - { root_tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+- table: { schema: platform, name: disabled_apps }
+
+# Chỉ tenant_admin của tenant không có cha ghi; insert kèm on_conflict sửa enabled. Không có quyền xóa: bật lại là ghi
+# enabled = true, để nhật ký luôn có một dòng nói ai bật, ai tắt. Gói cần nhau do trigger của bảng kiểm.
+- table: { schema: platform, name: app_states }
+  object_relationships:
+    - name: root
+      using:
+        manual_configuration:
+          remote_table: { schema: core, name: tenants }
+          column_mapping: { root_tenant_id: id }
+  # Đọc bảng gốc chỉ để mutation trả lại dòng vừa ghi (returning); giao diện đọc qua view.
+  select_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [root_tenant_id, app, enabled, updated_at]
+        filter: &app_state_admin
+          _and:
+            - { root_tenant_id: { _eq: X-Hasura-Tenant-Id } }
+            - { root: { parent_id: { _is_null: true } } }
+  insert_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [app, enabled]
+        check: *app_state_admin
+        set: { root_tenant_id: X-Hasura-Tenant-Id }
+  update_permissions:
+    - role: tenant_admin
+      permission: { columns: [enabled], filter: *app_state_admin, check: *app_state_admin }

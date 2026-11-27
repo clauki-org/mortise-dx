@@ -4,7 +4,8 @@
 # Nạp phần chạy lúc dùng của một gói vào lõi, cho mọi tenant đang có trong core.tenants: deploy BPMN lên
 # Flowable, khai báo bước vào platform.workflow_steps, mục menu kèm nội dung tệp cấu hình vào
 # platform.menu_items, luật ngưỡng vào core.threshold_rules, văn bản cho trợ lý vào bảng knowledge của
-# platform (scripts/app_knowledge.py), bảng phân cấp mặc định vào core.step_authorities. Bảy lệnh:
+# platform (scripts/app_knowledge.py), bảng phân cấp mặc định vào core.step_authorities, tên, mô tả và gói cần
+# (`requires`) vào platform.apps cho trang "Ứng dụng" (ADR 0065). Bảy lệnh:
 #   install <thư mục gói>   đọc app.yaml (workflows, menu, rules, knowledge, authorities) và
 #                           <gói>/workflows/*.yaml; app.sh gọi khi cài
 #   remove <thư mục gói>    xóa deployment (kèm hồ sơ đang chạy), khai báo bước, menu, luật, văn bản, bảng
@@ -215,6 +216,50 @@ def load_menu(directory: str, app: dict) -> None:
     # Tên hiển thị của gói là tên nhóm của các mục trên menu (ADR 0044); trình duyệt không đọc được app.yaml.
     psql(MENU_SQL, app=app["id"], app_name=app["name"], items=json.dumps(items))
     print(f"postgres: {len(items)} mục menu của {app['id']}")
+
+
+# Chỉ sửa dòng đã có, không xóa rồi ghi lại: platform.app_states trỏ về đây với ON DELETE CASCADE,
+# xóa thì cài lại gói làm mất lựa chọn tắt của mọi org.
+APP_SQL = """
+INSERT INTO platform.apps (app, name, description, requires)
+VALUES (:'app', :'app_name', nullif(:'description', ''),
+        coalesce(string_to_array(nullif(:'requires', ''), ','), '{}'))
+ON CONFLICT (app) DO UPDATE
+    SET name = EXCLUDED.name, description = EXCLUDED.description, requires = EXCLUDED.requires,
+    updated_at = now();
+"""
+
+
+def installed_apps() -> set[str]:
+    return set(psql("SELECT app FROM platform.apps;").split())
+
+
+def check_requires(app: dict) -> None:
+    """Gói cần (`requires`) phải cài trước: trigger của platform.app_states coi gói chưa cài như gói đang tắt,
+    nên gói cài thiếu gói nó cần sẽ không bật lại được sau khi tắt."""
+    missing = sorted(set(app.get("requires") or []) - installed_apps())
+    if missing:
+        raise SystemExit(
+            f"Gói {app['id']} cần gói {', '.join(missing)} chưa cài; "
+            f"cài trước: make app-install APP={missing[0]}"
+        )
+
+
+def load_app(app: dict) -> None:
+    requires = app.get("requires") or []
+    # Dấu phẩy không có trong mã gói (schema: chữ thường, số, gạch ngang), nên ghép bằng dấu phẩy không nhầm.
+    description = app.get("description") or ""
+    psql(APP_SQL, app=app["id"], app_name=app["name"], description=description, requires=",".join(requires))
+    needs = f", cần {', '.join(requires)}" if requires else ""
+    print(f"postgres: gói {app['id']} vào platform.apps{needs}")
+
+
+def check_not_required(app: dict) -> None:
+    """Không gỡ gói mà gói đã cài khác cần: gói kia còn đó mà mất phần nó dựa vào."""
+    sql = "SELECT app FROM platform.apps WHERE :'app' = ANY (requires) AND app <> :'app' ORDER BY app;"
+    users = psql(sql, app=app["id"]).split()
+    if users:
+        raise SystemExit(f"Gói {', '.join(users)} cần gói {app['id']}; gỡ các gói đó trước.")
 
 
 RULES_SQL = """
@@ -453,6 +498,7 @@ def main() -> int:
                 for entry in app_knowledge.assistant_configs(args.directory, app)
             ],
         )
+        check_requires(app)
         # Bảng phân cấp nạp trước BPMN: quy trình mới đọc bảng ngay khi deploy xong, thiếu dòng thì hồ sơ lập
         # trong khoảng đó bị từ chối.
         load_authorities(
@@ -461,9 +507,11 @@ def main() -> int:
         deploy(bpmn, every, package_settings(app))
         load_steps(steps)
         load_menu(args.directory, app)
+        load_app(app)
         load_rules(app["id"], [os.path.join(args.directory, path) for path in app.get("rules", [])])
         load_knowledge(app["id"], documents)
         return 0
+    check_not_required(app)
     undeploy(bpmn, every)
     processes = [load_yaml(path)["process"] for path in steps]
     psql(
@@ -472,11 +520,15 @@ def main() -> int:
         "DELETE FROM core.threshold_rules WHERE app = :'app';"
         "DELETE FROM platform.knowledge_passages WHERE app = :'app';"
         "DELETE FROM platform.knowledge_documents WHERE app = :'app';"
-        "DELETE FROM core.step_authorities WHERE app = :'app';",
+        "DELETE FROM core.step_authorities WHERE app = :'app';"
+        "DELETE FROM platform.apps WHERE app = :'app';",
         processes=",".join(processes),
         app=app["id"],
     )
-    print(f"postgres: xóa khai báo bước, menu, luật ngưỡng, văn bản và bảng phân cấp của {app['id']}")
+    print(
+        "postgres: xóa khai báo bước, menu, luật ngưỡng, văn bản, bảng phân cấp và trạng thái bật, tắt của "
+        + app["id"]
+    )
     return 0
 
 

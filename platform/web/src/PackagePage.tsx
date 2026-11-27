@@ -11,6 +11,7 @@ import { useParams } from "react-router";
 import { useQuery } from "urql";
 import { Assistant } from "./Assistant";
 import { AssistantData } from "./AssistantData";
+import { PACKAGE_STATE_TYPENAME } from "./apps";
 import { type AssistantConfig, isDataConfig } from "./assistant";
 import { Cases } from "./CasesPanel";
 import { Catalog } from "./Catalog";
@@ -35,6 +36,10 @@ const OVERRIDES_CONTEXT = {
   additionalTypenames: ["platform_config_overrides", "platform_config_overrides_mutation_response"],
 };
 
+// Bật, tắt gói ở trang "Ứng dụng" (ADR 0065) đổi mục menu Hasura trả; khai kiểu của mutation đó để menu, trang chủ
+// đọc lại ngay sau khi ghi.
+const MENU_CONTEXT = { additionalTypenames: [PACKAGE_STATE_TYPENAME] };
+
 const warn = (message: string) => console.warn(message);
 
 type OverridesData = { platform_config_overrides_by_tenant: ItemOverride[] };
@@ -46,7 +51,7 @@ type OverridesData = { platform_config_overrides_by_tenant: ItemOverride[] };
  */
 export function usePackageMenu() {
   const { getToken } = useSession();
-  const [{ data, fetching, error }] = useQuery<MenuData>({ query: MENU_QUERY });
+  const [{ data, fetching, error }] = useQuery<MenuData>({ query: MENU_QUERY, context: MENU_CONTEXT });
   const [overridden] = useQuery<OverridesData>({ query: OVERRIDES_QUERY, context: OVERRIDES_CONTEXT });
   const baseItems = useMemo(() => visibleItems(data?.platform_menu_items ?? [], rolesOf(getToken())), [data, getToken]);
   const overrides = useMemo(() => overridden.data?.platform_config_overrides_by_tenant ?? [], [overridden.data]);

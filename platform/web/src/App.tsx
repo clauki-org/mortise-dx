@@ -10,6 +10,7 @@ import type { User } from "oidc-client-ts";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { Provider } from "urql";
+import { AppsPage } from "./AppsPage";
 import { ApiError } from "./api";
 import { CALLBACK_PATH, userManager } from "./auth";
 import { Brand } from "./Brand";
@@ -50,6 +51,8 @@ const createRouter = () =>
             { index: true, element: <Home /> },
             { path: "tasks", element: <TaskList /> },
             { path: "tasks/:taskId", element: <TaskScreen /> },
+            // Bật, tắt gói của org (ADR 0065); không nằm dưới apps/ để không trùng địa chỉ của mục menu của gói.
+            { path: "packages", element: <AppsPage /> },
             // Mục menu của gói; phần đường dẫn sau mục do thành phần của mục tự đọc (ví dụ dòng chi tiết của danh mục).
             { path: "apps/:app/:item/*", element: <PackagePage /> },
             { path: "*", element: <NotFound /> },

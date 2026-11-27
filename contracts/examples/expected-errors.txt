@@ -14,6 +14,7 @@ app.knowledge-not-yaml.yaml	$.knowledge[0]	'knowledge/example-rules.pdf' does no
 app.missing-id.yaml	$	'id' is a required property
 app.path-escapes-package.yaml	$.menu[0].config	'../../core/keycloak/realm.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
 app.path-is-url.yaml	$.menu[0].config	'http://no-such-host.invalid/items.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
+app.requires-not-slug.yaml	$.requires[0]	'Example Base' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
 app.settings-unsafe-value.yaml	$.settings.approval_limit	'1000 || true' is not valid under any of the given schemas
 app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'dashboard', 'rules', 'assistant', 'cases']
 app.unknown-field.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)

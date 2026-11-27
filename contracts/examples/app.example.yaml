@@ -8,6 +8,9 @@ id: example
 name: Gói ví dụ
 version: 0.1.0
 description: Một danh mục đối tượng, một báo cáo và một quy trình duyệt.
+# Gói phải cài trước và phải đang bật thì gói này mới bật được (ADR 0065).
+requires:
+  - example-base
 database:
   schema: app_example
   migrations: schema/migrations

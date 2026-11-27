@@ -76,6 +76,17 @@ curl -fsS -X POST http://localhost:9080/v1/graphql \
   -d '{"query":"mutation { insert_platform_config_overrides_one(object: {app: \"core\", item: \"ask-example\", kind: \"label\", target: \"\", value: \"Hỏi thử\"}, on_conflict: {constraint: config_overrides_pkey, update_columns: [value]}) { value } }"}'
 ```
 
+Bật, tắt gói theo org ([ADR 0065](adr/0065-package-on-off.md)): `platform_apps_by_tenant` liệt kê gói đã cài (tên, mô
+tả, `requires`, `enabled`), chỉ `tenant_admin` của tenant không có cha đọc được. Người đó ghi
+`insert_platform_app_states_one` kèm `on_conflict` để đổi `enabled`; CSDL từ chối tắt gói mà gói đang bật khác cần,
+và bật gói khi gói nó cần đang tắt. Gói tắt thì `platform_menu_items` không trả mục của gói cho tenant nào trong org.
+
+```bash
+curl -fsS -X POST http://localhost:9080/v1/graphql \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H 'X-Hasura-Role: tenant_admin' -H 'Content-Type: application/json' \
+  -d '{"query":"mutation { insert_platform_app_states_one(object: {app: \"supplies-commune\", enabled: false}, on_conflict: {constraint: app_states_pkey, update_columns: [enabled]}) { enabled } }"}'
+```
+
 ```bash
 curl -fsS -X POST http://localhost:9080/v1/graphql \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
