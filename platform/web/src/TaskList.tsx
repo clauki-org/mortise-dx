@@ -5,25 +5,17 @@
 // (workflow-api đã lọc theo tenant và vai trò). Mỗi dòng hiện tên hồ sơ theo khai báo của bước; việc gần hạn nhất
 // đứng đầu, lọc được theo hạn.
 
-import {
-  Alert,
-  Anchor,
-  Badge,
-  Button,
-  Group,
-  Loader,
-  Paper,
-  SegmentedControl,
-  Stack,
-  Table,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Alert, Anchor, Badge, Group, Paper, SegmentedControl, Stack, Table, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
+import { formatDateTime } from "./format";
+import { PageHeader } from "./PageHeader";
+import { Empty, ErrorNotice, Loading } from "./States";
+import { StatusBadge } from "./StatusBadge";
 import { useSession } from "./session";
-import { dateTime, dueText, recordTitle, stepOf, useSteps } from "./steps";
+import { dueText, recordTitle, stepOf, useSteps } from "./steps";
+import { TableScroll } from "./TableScroll";
 import { delegatedFrom, fetchTasks, type Task } from "./workflow";
 
 type Filter = "all" | "overdue" | "upcoming" | "no-due";
@@ -49,26 +41,20 @@ function matches(task: Task, filter: Filter, now: number): boolean {
   }
 }
 
-// Có hạn trước, hạn sớm trước; không hạn xếp cuối. Cùng hạn thì việc đến trước đứng trước.
-function byDue(a: Task, b: Task): number {
+// Có hạn trước, hạn sớm trước; không hạn xếp cuối. Cùng hạn thì việc đến trước đứng trước. Trang chủ xếp cùng cách.
+export function byDue(a: Task, b: Task): number {
   const dueA = a.due === null ? Number.POSITIVE_INFINITY : Date.parse(a.due);
   const dueB = b.due === null ? Number.POSITIVE_INFINITY : Date.parse(b.due);
   return dueA - dueB || Date.parse(a.created) - Date.parse(b.created);
 }
 
 export function DueBadge({ due, now }: { due: string | null; now: number }) {
-  if (due === null) {
-    return (
-      <Badge variant="light" color="gray" tt="none">
-        Không đặt hạn
-      </Badge>
-    );
-  }
+  if (due === null) return <StatusBadge tone="neutral">Không đặt hạn</StatusBadge>;
   const { text, overdue } = dueText(due, now);
   return (
-    <Badge variant="light" color={overdue ? "red" : "blue"} tt="none" title={dateTime.format(new Date(due))}>
+    <StatusBadge tone={overdue ? "bad" : "info"} title={formatDateTime(due)}>
       {text}
-    </Badge>
+    </StatusBadge>
   );
 }
 
@@ -96,18 +82,9 @@ export function TaskList() {
   const { steps, error: stepsError } = useSteps();
   const now = Date.now();
 
-  if (tasks.isPending) return <Loader aria-label="Đang tải danh sách việc" />;
+  if (tasks.isPending) return <Loading what="danh sách việc" />;
   if (tasks.isError) {
-    return (
-      <Stack align="flex-start">
-        <Alert color="red" title="Không tải được danh sách việc">
-          {tasks.error.message}
-        </Alert>
-        <Button variant="light" onClick={() => tasks.refetch()}>
-          Thử lại
-        </Button>
-      </Stack>
-    );
+    return <ErrorNotice title="Không tải được danh sách việc" error={tasks.error} onRetry={() => tasks.refetch()} />;
   }
   const count = (value: Filter) => tasks.data.filter((task) => matches(task, value, now)).length;
   const shown = tasks.data.filter((task) => matches(task, filter, now)).sort(byDue);
@@ -119,22 +96,18 @@ export function TaskList() {
           {done}: đã xử lý xong.
         </Alert>
       )}
-      <Group justify="space-between" align="flex-end">
-        <div>
-          <Title order={1} size="h2">
-            Việc của tôi
-          </Title>
-          <Text c="dimmed" size="sm">
-            Việc đang chờ bạn hoặc vai trò của bạn xử lý, việc gần hạn nhất đứng đầu.
-          </Text>
-        </div>
-        <SegmentedControl
-          aria-label="Lọc theo hạn"
-          data={FILTERS.map(({ value, label }) => ({ value, label: `${label} (${count(value)})` }))}
-          value={filter}
-          onChange={(value) => setFilter(value as Filter)}
-        />
-      </Group>
+      <PageHeader
+        title="Việc của tôi"
+        description="Việc đang chờ bạn hoặc vai trò của bạn xử lý, việc gần hạn nhất đứng đầu."
+        action={
+          <SegmentedControl
+            aria-label="Lọc theo hạn"
+            data={FILTERS.map(({ value, label }) => ({ value, label: `${label} (${count(value)})` }))}
+            value={filter}
+            onChange={(value) => setFilter(value as Filter)}
+          />
+        }
+      />
       {stepsError && (
         <Alert color="yellow" title="Không đọc được khai báo của bước">
           Cột hồ sơ tạm hiện tên bước thay cho tên hồ sơ. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
@@ -142,11 +115,13 @@ export function TaskList() {
       )}
       <Paper withBorder radius="md">
         {shown.length === 0 ? (
-          <Text c="dimmed" p="xl" ta="center">
-            {tasks.data.length === 0 ? "Không có việc nào đang chờ bạn." : "Không có việc nào khớp bộ lọc."}
-          </Text>
+          tasks.data.length === 0 ? (
+            <Empty title="Không có việc nào đang chờ bạn." hint="Việc mới được giao sẽ hiện ở đây." />
+          ) : (
+            <Empty title="Không có việc nào khớp bộ lọc." hint="Chọn Tất cả để xem mọi việc đang chờ." />
+          )
         ) : (
-          <Table.ScrollContainer minWidth={560}>
+          <TableScroll label="Việc của tôi" minWidth={560}>
             <Table highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
               <Table.Thead>
                 <Table.Tr>
@@ -160,7 +135,7 @@ export function TaskList() {
                 {shown.map((task) => (
                   <Table.Tr key={task.id}>
                     <Table.Td>
-                      <Anchor component={Link} to={`/tasks/${encodeURIComponent(task.id)}`} fw={500}>
+                      <Anchor component={Link} to={`/tasks/${encodeURIComponent(task.id)}`} fw={600}>
                         {recordTitle(task, stepOf(steps, task))}
                       </Anchor>
                       <Group gap={6}>
@@ -183,14 +158,14 @@ export function TaskList() {
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" c="dimmed">
-                        {dateTime.format(new Date(task.created))}
+                        {formatDateTime(task.created)}
                       </Text>
                     </Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
             </Table>
-          </Table.ScrollContainer>
+          </TableScroll>
         )}
       </Paper>
     </Stack>

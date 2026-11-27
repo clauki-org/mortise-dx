@@ -8,12 +8,16 @@
 import logging
 
 import pg8000.native
+from opentelemetry import trace
 from pg8000.exceptions import DatabaseError, InterfaceError
 
 from .config import settings
 from .policy import Denied
 
 log = logging.getLogger("files-api.db")
+# pg8000.native không có instrumentation của OpenTelemetry: span tự viết quanh mỗi câu (ADR 0038), chỉ ghi
+# loại câu, không ghi câu SQL hay tham số (tên tệp, người tải). Tắt truy vết thì span không làm gì.
+_tracer = trace.get_tracer(__name__)
 # Mã lỗi PostgreSQL khi vi phạm khóa ngoại: tenant trong token chưa có trong core.tenants.
 FOREIGN_KEY_VIOLATION = "23503"
 
@@ -37,6 +41,17 @@ def _connect() -> pg8000.native.Connection:
 
 
 def _run(sql: str, actor: str | None = None, **params) -> list[list]:
+    operation = sql.split(maxsplit=1)[0].upper()
+    with _tracer.start_as_current_span(
+        f"postgres {operation}",
+        kind=trace.SpanKind.CLIENT,
+        attributes={"db.system.name": "postgresql", "db.operation.name": operation},
+        record_exception=False,
+    ):
+        return _execute(sql, actor, **params)
+
+
+def _execute(sql: str, actor: str | None, **params) -> list[list]:
     connection = _connect()
     try:
         if actor is None:

@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/documents.schema.json từ chối: limit vượt trần 50.
+# Nếu lọt, mỗi lần mở một dòng tốn quá nhiều lần gọi /v1/files/{id} và chạm giới hạn tần suất của cổng.
+
+title: Giấy tờ
+source: app_example_item_documents
+via: item_id
+file: file_id
+limit: 500

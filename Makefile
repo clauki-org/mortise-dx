@@ -11,8 +11,8 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast web-check e2e audit-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up \
-  obs-up obs-down obs-check
+  check-fast deps-check web-check e2e audit-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up \
+  obs-up obs-down obs-check tenant-login
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
@@ -40,8 +40,11 @@ logs: ## Theo dõi log
 seed: env ## Nạp tài khoản demo, metadata Hasura và quy trình mẫu
 	@scripts/seed.sh
 
-otp: ## In mã OTP hiện tại của tài khoản người duyệt demo và khóa để nhập vào ứng dụng OTP
+otp: ## In mã OTP hiện tại của các tài khoản demo phải nhập OTP và khóa để nhập vào ứng dụng OTP
 	@uv run --quiet --no-project python scripts/otp.py show
+
+tenant-login: ## Đặt chính sách đăng nhập của một tenant: make tenant-login TENANT=<tenant> POLICY=otp|default|passkey|no-passkey
+	@scripts/tenant-login.sh "$(TENANT)" "$(POLICY)"
 
 smoke: ## Kiểm tra đầu-cuối qua cổng (cần lõi đang chạy và đã seed)
 	@scripts/smoke.sh
@@ -74,7 +77,7 @@ ai-up: env ## Chạy Ollama (profile ai), tải mô hình ghim trong core/ollama
 	@scripts/ai.sh
 
 # Dịch vụ của profile `observability` (ADR 0037); obs-down chỉ gỡ chúng, lõi vẫn chạy.
-OBS_SERVICES := grafana prometheus loki alloy docker-socket-proxy blackbox
+OBS_SERVICES := grafana prometheus loki alloy docker-socket-proxy blackbox jaeger
 
 obs-up: env ## Chạy giám sát (profile observability): Prometheus, Grafana (chỉ 127.0.0.1), Loki, Alloy; dựng cả lõi nếu chưa chạy
 	COMPOSE_PROFILES=observability scripts/compose.sh up -d --wait
@@ -133,7 +136,7 @@ restore-drill: ## Diễn tập khôi phục trên máy trắng, đo thời gian;
 	@CONFIRM="$(CONFIRM)" scripts/restore-drill.sh "$(FROM)"
 
 lint: ## Kiểm tra giấy phép từng tệp (REUSE)
-	uvx reuse lint
+	uvx reuse==6.3.0 lint
 
 test: ## Kiểm thử đơn vị các dịch vụ tự viết của lõi và bộ giả lập thiết bị
 	@for dir in core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive \
@@ -150,33 +153,41 @@ contracts: ## Xuất lại OpenAPI của workflow-api, files-api, context-api v�
 # Gói có mã riêng (ví dụ bộ nạp seed/load.py) không nằm trong danh sách này.
 DECLARATIVE_APPS := supplies-commune
 
-# shellcheck, yamllint và ruff chạy qua uvx để không phải cài sẵn; chỉ cần uv.
-check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp đồng API; không cần dựng lõi
+# shellcheck, yamllint và ruff chạy qua uvx để không phải cài sẵn, chỉ cần uv; phiên bản ghim để kết quả không đổi
+# khi công cụ ra bản mới (make deps-check kiểm).
+check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp đồng API, ghim và giấy phép phụ thuộc; không cần dựng lõi
 	@test -f .env || cp .env.example .env.check-fast
 	@if [ -f .env.check-fast ]; then docker compose --env-file .env.check-fast config -q; rm -f .env.check-fast; \
 	  else docker compose config -q; fi
 	@# Dịch vụ tự viết mang image phát hành đúng tên, và không lệnh nào dựng image ngoài scripts/compose.sh (ADR 0036).
 	@python3 scripts/check-compose-images.py || { docker compose version >&2; exit 1; }
-	uvx --from shellcheck-py shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh \
+	uvx --from shellcheck-py==0.11.0.1 shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh \
 	  core/mosquitto/start.sh deploy/*.sh \
 	  apps/*/tests/*.sh
-	uvx yamllint -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps deploy .github
-	uvx ruff check --no-cache core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive \
+	uvx yamllint==1.38.0 -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps deploy .github
+	uvx ruff==0.17.6 check --no-cache core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive \
 	  platform/services/assistant devices/simulator
-	uvx ruff format --no-cache --check core/workflow-api core/files-api core/context-api core/iot-bridge \
+	uvx ruff==0.17.6 format --no-cache --check core/workflow-api core/files-api core/context-api core/iot-bridge \
 	  core/cold-archive platform/services/assistant devices/simulator
-	uvx ruff check --no-cache --config core/workflow-api/pyproject.toml scripts apps
-	uvx ruff format --no-cache --check --config core/workflow-api/pyproject.toml scripts apps
+	uvx ruff==0.17.6 check --no-cache --config core/workflow-api/pyproject.toml scripts apps
+	uvx ruff==0.17.6 format --no-cache --check --config core/workflow-api/pyproject.toml scripts apps
 	@scripts/contracts.sh check
 	uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py lint
 	$(if $(DECLARATIVE_APPS),@scripts/check-declarative.sh $(DECLARATIVE_APPS))
+	@# Ghim phiên bản và giấy phép phụ thuộc, không hỏi registry (ADR 0039); để cuối để các bước trên vẫn báo kết quả.
+	@python3 scripts/deps-check.py --offline
+
+# Bản đầy đủ thêm phần bản mới (cần mạng); workflow deps-check.yml chạy hằng tuần và đăng báo cáo vào issue theo dõi.
+deps-check: ## Ghim phiên bản, giấy phép và bản mới của image, thư viện, mô hình (bản mới chỉ báo, không tự nâng cấp); REPORT=<tệp> ghi báo cáo
+	@python3 scripts/deps-check.py $(if $(REPORT),--report "$(REPORT)")
 
 # Giấy phép phụ thuộc của giao diện (ADR 0006). Thư viện đóng gói vào tệp giao diện gửi tới người dùng chỉ được mang
-# giấy phép dễ dãi được OSI duyệt; BlueOak-1.0.0 (OSI duyệt 19/01/2024) có vì sax, thư viện pdfmake dùng để đọc SVG
-# khi xuất PDF (ADR 0038). Công cụ chỉ chạy lúc phát triển và build, không đóng gói vào sản phẩm, được thêm: MPL-2.0
-# (OSI; lightningcss mà Vite dùng để xử lý CSS) và CC0-1.0, CC-BY-3.0 (dữ liệu danh sách giấy phép SPDX mà chính công
-# cụ kiểm giấy phép đọc).
-WEB_LICENSES_SHIPPED := MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;BlueOak-1.0.0
+# giấy phép dễ dãi; thêm OFL-1.1 (OSI) cho tệp phông Be Vietnam Pro (ADR 0048), đóng gói nguyên bản: điều kiện của nó
+# chỉ áp cho chính tệp phông (không bán riêng, bản sửa vẫn theo OFL), không ràng buộc mã dùng phông; BlueOak-1.0.0 (OSI
+# duyệt 19/01/2024) có vì sax, thư viện pdfmake dùng để đọc SVG khi xuất PDF (ADR 0052). Công cụ chỉ chạy lúc phát
+# triển và build, không đóng gói vào sản phẩm, được thêm: MPL-2.0 (OSI; lightningcss mà Vite dùng để xử lý CSS) và
+# CC0-1.0, CC-BY-3.0 (dữ liệu danh sách giấy phép SPDX mà chính công cụ kiểm giấy phép đọc).
+WEB_LICENSES_SHIPPED := MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;OFL-1.1;BlueOak-1.0.0
 WEB_LICENSES_TOOLING := $(WEB_LICENSES_SHIPPED);MPL-2.0;CC0-1.0;CC-BY-3.0
 
 # Bài kiểm chỉ nhận mật khẩu demo và địa chỉ cổng, không nhận các bí mật khác của .env. Trình duyệt Chromium do
@@ -184,7 +195,9 @@ WEB_LICENSES_TOOLING := $(WEB_LICENSES_SHIPPED);MPL-2.0;CC0-1.0;CC-BY-3.0
 e2e: ## Kiểm thử trên trình duyệt qua cổng (Playwright); cần lõi đang chạy, đã seed và cài gói facilities-commune, supplies-commune (cần Node)
 	cd platform/web && npm ci --no-audit --no-fund && npx playwright install chromium
 	cd platform/web && DEMO_USER_PASSWORD="$$(sed -n 's/^DEMO_USER_PASSWORD=//p' ../../.env)" \
-	  MORTISE_PUBLIC_URL="$$(sed -n 's/^MORTISE_PUBLIC_URL=//p' ../../.env)" npx playwright test
+	  MORTISE_PUBLIC_URL="$$(sed -n 's/^MORTISE_PUBLIC_URL=//p' ../../.env)" \
+	  FLOWABLE_ADMIN_PASSWORD="$$(sed -n 's/^FLOWABLE_ADMIN_PASSWORD=//p' ../../.env)" \
+	  FLOWABLE_PORT="$$(sed -n 's/^FLOWABLE_PORT=//p' ../../.env)" npx playwright test
 
 web-check: ## Giao diện: cài theo package-lock, Biome, kiểm thử đơn vị, kiểu TypeScript, build, giấy phép phụ thuộc (cần Node)
 	cd platform/web && npm ci --no-audit --no-fund

@@ -6,7 +6,7 @@
 // GraphQL (submit.insert), bằng token của người dùng. Trình duyệt chỉ kiểm trước cho nhanh; workflow-api và Hasura
 // vẫn quyết định. Ở đây không có tên bảng hay chữ của một lĩnh vực nào.
 
-import { Alert, Anchor, Button, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { Alert, Anchor, Button, Group, Paper, Stack } from "@mantine/core";
 import { Form as MantineForm } from "@rjsf/mantine";
 import type { RJSFValidationError } from "@rjsf/utils";
 import { useMutation } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useClient } from "urql";
 import { casesPathFor } from "./cases";
+import { ReadableError } from "./errorText";
 import {
   clearDependents,
   type FormConfig,
@@ -29,7 +30,9 @@ import { insertError, insertMutation } from "./formInsert";
 import { formValidator } from "./formValidator";
 import { findItem, itemPath, rolesOf } from "./menu";
 import { usePackageMenu } from "./PackagePage";
+import { PageHeader } from "./PageHeader";
 import { type FormContext, SourceChoice } from "./SourceChoice";
+import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 import { idempotencyKey, startProcess } from "./workflow";
 
@@ -55,9 +58,11 @@ function useSubmit(config: FormConfig) {
       // đã đọc từ bảng này (ví dụ danh mục ở done.menu) cần đọc lại.
       const context = { role, additionalTypenames: [table] };
       const result = await client.mutation(insertMutation(table), { object: payload }, context).toPromise();
-      if (result.error) throw new Error(insertError(result.error, role, config.fields));
+      if (result.error) throw new ReadableError(insertError(result.error, role, config.fields));
       if (result.data?.result?.affected_rows !== 1) {
-        throw new Error("Máy chủ không thêm dòng nào. Tải lại trang rồi gửi lại; nếu vẫn lỗi, báo người quản trị.");
+        throw new ReadableError(
+          "Máy chủ không thêm dòng nào. Tải lại trang rồi gửi lại; nếu vẫn lỗi, báo người quản trị.",
+        );
       }
       return undefined;
     },
@@ -150,12 +155,7 @@ function FormBody({ config, app }: { config: FormConfig; app: string }) {
       noHtml5Validate
     >
       <Stack mt="md" gap="sm">
-        {submit.isError && (
-          <Alert color="red" title="Chưa gửi được">
-            {submit.error.message}
-            {config.submit.process && ". Bấm gửi lại; nếu vẫn lỗi, báo người quản trị."}
-          </Alert>
-        )}
+        {submit.isError && <ErrorNotice title="Chưa gửi được" error={submit.error} />}
         <Group>
           <Button type="submit" loading={submit.isPending}>
             {config.submit.label}
@@ -179,11 +179,9 @@ export function FormPanel({ config, app }: { config: FormConfig; app: string }) 
   const role = formRole(config);
   const allowed = rolesOf(getToken()).includes(role);
   return (
-    <Stack maw={720}>
-      <Title order={1} size="h2">
-        {config.title}
-      </Title>
-      {config.description && <Text c="dimmed">{config.description}</Text>}
+    // Một cột hẹp (ADR 0050): mắt không phải đi ngang xa giữa nhãn, gợi ý và ô nhập.
+    <Stack maw={640}>
+      <PageHeader title={config.title} description={config.description} />
       {allowed ? (
         <Paper withBorder radius="md" p="md">
           <FormBody config={config} app={app} />

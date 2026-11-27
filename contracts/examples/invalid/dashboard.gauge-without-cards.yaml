@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/dashboard.schema.json từ chối: vòng đo trên khối biểu đồ. Vòng đo đọc cột của đúng một
+# dòng và cần số gốc hiện bằng chữ trên thẻ; biểu đồ có nhiều dòng và không có thẻ.
+
+title: Tổng quan
+panels:
+  - id: children
+    title: Đơn vị con
+    description: Điểm của đơn vị con.
+    role: rollup_reader
+    graphql: { field: app_example_rollup }
+    gauge: { value: score, limit: target, percent: score_percent, label: Điểm so với chỉ tiêu }
+    chart: { type: bar, x: { column: unit_name, label: Đơn vị }, y: [{ column: score, label: Điểm, color: teal }] }

@@ -12,8 +12,64 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
-- Danh sách của thành phần danh mục xuất được ra CSV, Excel và PDF: mọi dòng khớp tìm, lọc đang xem, bằng quyền
-  của người xuất, đầu tệp ghi nguồn, đơn vị, thời điểm và người xuất (ADR 0038).
+- Truy vết phân tán, mặc định tắt: `MORTISE_TRACING=on` cùng `make obs-up` cho xem trong Grafana từng chặng của một
+  yêu cầu qua cổng tới dịch vụ tự viết, Flowable, Scorpio, CSDL (Jaeger, không lưu chuỗi truy vấn hay header;
+  [ADR 0038](docs/adr/0038-distributed-tracing.md)).
+- `make deps-check`: kiểm image và thư viện được ghim đúng phiên bản, giấy phép nằm trong danh sách cho phép, báo bản
+  mới mà không tự nâng cấp; `make check-fast` chặn ghim hay giấy phép sai; workflow hằng tuần đăng báo cáo vào issue
+  theo dõi (đã cấu hình, chưa chạy) ([ADR 0039](docs/adr/0039-dependency-check-script.md)). Image Python của các
+  dịch vụ tự viết ghim `3.13.18`, công cụ kiểm chạy qua `uvx` ghim phiên bản.
+- Chính sách đăng nhập theo tenant: `make tenant-login TENANT=<tenant> POLICY=otp|default` bắt mọi tài khoản của một
+  tenant nhập OTP hoặc bỏ yêu cầu đó; tenant demo `tinh-khac` bắt buộc OTP, có thêm `user.k` (ADR 0040).
+- Giấy tờ đính kèm trên màn hình chi tiết của danh mục: xem, tải về, đính kèm tệp qua API tệp của lõi; tệp nhiễm mã độc
+  bị từ chối bằng lời báo tiếng Việt. Gói cơ sở vật chất xã đính kèm giấy tờ vào cơ sở
+  ([ADR 0041](docs/adr/0041-documents-on-catalog-records.md)).
+- Đăng nhập bằng Passkey cho tenant được bật (`make tenant-login TENANT=<tenant> POLICY=passkey`): nút "Thêm Passkey"
+  trên giao diện, trang đăng nhập có lựa chọn Passkey thay mật khẩu, ai phải nhập OTP vẫn nhập; tenant demo `xa-c`
+  (ADR 0042).
+- Giao diện dùng chung một bộ cỡ chữ, khoảng cách, màu đạt tương phản WCAG AA (màu chính mặc định đổi sang xanh
+  dương); tên, logo, màu theo bản cài trong `branding.json`, ghi đè bằng `MORTISE_BRANDING_DIR` không cần dựng lại
+  image ([ADR 0043](docs/adr/0043-design-tokens-and-install-branding.md)).
+- Menu bên chia nhóm theo gói, mỗi mục có biểu tượng, nhóm mẫu thử của lõi thu gọn ở cuối; thanh trên ghi đơn vị và
+  người dùng; dùng được trên điện thoại. Bản cài cũ chạy `make seed` và cài lại các gói để menu có tên nhóm và biểu
+  tượng ([ADR 0044](docs/adr/0044-menu-groups-and-icons.md)).
+- Danh mục có nhãn trạng thái màu theo `tone` của gói, công tắc Bảng/Thẻ và trang chi tiết dạng lưới ô; trường biểu
+  mẫu có dòng gợi ý `help` ([ADR 0050](docs/adr/0050-catalog-tones-cards-form-help.md)).
+- Danh sách của thành phần danh mục xuất được ra CSV, Excel và PDF: mọi dòng khớp tìm, lọc đang xem, bằng quyền của
+  người xuất, đầu tệp ghi nguồn, đơn vị, thời điểm và người xuất ([ADR 0052](docs/adr/0052-catalog-export.md)).
+
+### Changed
+
+- Bảng điều hành: số chính nổi bật ở khối chính, cách tính và nguồn thu gọn trong "Xem cách tính", biểu đồ ghi số trên
+  từng thanh, số 0 vẫn hiện; mô tả khối bằng lời người xem, `make check-fast` chặn tên bảng, cột trong chữ người xem
+  thấy ([ADR 0045](docs/adr/0045-readable-dashboard.md)).
+- Mọi trang báo đang tải, rỗng, lỗi cùng một kiểu bằng lời tiếng Việt kèm cách sửa và nút Thử lại; lý do do máy chủ
+  viết (ví dụ quy tắc bốn mắt, tệp chứa mã độc) giữ nguyên, chi tiết kỹ thuật thu gọn ([ADR
+  0046](docs/adr/0046-shared-ui-states.md)).
+- Các trang dùng chung đầu trang, nhãn trạng thái, định dạng ngày giờ; bảng cuộn ngang được trên điện thoại, nút việc
+  chính nổi bật; câu truy vấn của trợ lý dữ liệu nằm sau nút "Xem câu truy vấn" ([ADR
+  0047](docs/adr/0047-page-header-status-badge-formatting.md)).
+- Giao diện kiểu Bento dịu: nền xám nhạt, thẻ viền mảnh bo 12px, ô nhập viền rõ, liên kết gạch chân, phông Be Vietnam
+  Pro đóng gói cùng giao diện; nhãn trạng thái dùng một bộ nghĩa màu chung ([ADR
+  0048](docs/adr/0048-bento-tokens-status-tones-font.md)).
+- Bảng điều hành xếp lưới bốn cột theo thứ tự khai; khối chính có vòng đo phần trăm do gói tính, thẻ số có màu và chữ
+  mức độ theo ngưỡng của gói, biểu đồ có trần ([ADR 0049](docs/adr/0049-bento-dashboard.md)).
+- Trang chủ sau khi đăng nhập: một ô lối tắt cho mỗi gói và việc đang chờ dạng liên kết; menu có "Trang chủ" đầu nhóm
+  "Chung" ([ADR 0051](docs/adr/0051-home-page.md)).
+
+### Removed
+
+- `component: documents` không còn là giá trị của mục menu trong `app.yaml`: tài liệu đính kèm là một phần của màn
+  hình chi tiết danh mục, không có trang menu riêng (ADR 0041). Nâng cấp: gói đã khai mục menu `component: documents`
+  chuyển cấu hình đó vào `detail.documents` của cấu hình danh mục.
+
+### Fixed
+
+- Cổng trả lỗi 429 (vượt giới hạn tần suất) của mọi API dưới `/v1` dạng JSON `{"error": "..."}` như lỗi 401,
+  thay vì trang HTML; header `X-RateLimit-*` vẫn giữ.
+- Chữ gợi ý trong ô nhập đạt tương phản AA; hộp thoại không còn tạo vùng banner thứ hai; menu gập trên điện thoại
+  không còn nhận Tab. `make e2e` chặn lỗi trợ năng mức nghiêm trọng trên các trang của kịch bản demo và có bài đi kịch
+  bản bằng bàn phím.
 
 ## [0.1.0] - 2026-11-25
 

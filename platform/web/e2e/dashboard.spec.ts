@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Bảng điều hành của gói cơ sở vật chất xã trên trình duyệt (ADR 0033): sau khi quản trị xã A thêm một phòng có diện
-// tích lẻ, cán bộ xã A thấy thẻ số đúng bằng số Hasura trả cho chính tài khoản đó, viết kiểu Việt Nam, mục "Nguồn" ghi
-// đúng câu truy vấn trang đã gửi, và trang không truy vấn khối của tỉnh; cán bộ xã B thấy số của xã B, không thấy số
+// tích lẻ, cán bộ xã A thấy thẻ số đúng bằng số Hasura trả cho chính tài khoản đó, viết kiểu Việt Nam, mục "Xem cách
+// tính" ghi đúng câu truy vấn trang đã gửi, vòng đo đọc đúng phần trăm Hasura trả, thẻ phần vượt có chữ mức độ khi
+// lớn hơn 0 (ADR 0049), và trang không truy vấn khối của tỉnh; cán bộ xã B thấy số của xã B, không thấy số
 // của xã A; tỉnh thấy dòng của xã A trong bảng số liệu bằng đúng số xã A thấy, truy vấn với vai trò rollup_reader;
 // lãnh đạo xã A thấy khối phân công mà cán bộ không thấy. Nguồn REST (ADR 0035): lãnh đạo xã A thấy số hồ sơ rà soát
 // bằng đúng số workflow-api trả cho chính tài khoản đó và số việc đang chờ mình bằng số việc trên bảng việc; cán bộ
@@ -12,7 +13,7 @@
 // tự dọn dữ liệu nên không cần `make seed-demo`.
 
 import { type APIRequestContext, type Browser, expect, type Page, type TestInfo, test } from "@playwright/test";
-import { graphql, signIn, token, uniqueTitle } from "./support.ts";
+import { graphql, openMenuItem, signIn, token, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
 const PREFIX = "app_facilities_commune";
@@ -22,8 +23,14 @@ const AREA = "Diện tích nhà làm việc của xã";
 const COMMUNES = "Diện tích của các xã";
 const COVERAGE = "Phân công cơ sở";
 
-type Summary = { allowed_m2: unknown; in_use_m2: unknown; surplus_m2: unknown; excess_m2: unknown };
-const CARDS: [keyof Summary, string][] = [
+type Summary = {
+  allowed_m2: unknown;
+  in_use_m2: unknown;
+  surplus_m2: unknown;
+  excess_m2: unknown;
+  in_use_percent: unknown;
+};
+const CARDS: [Exclude<keyof Summary, "in_use_percent">, string][] = [
   ["allowed_m2", "Diện tích được phép"],
   ["in_use_m2", "Đang dùng"],
   ["excess_m2", "Phần vượt tiêu chuẩn, định mức"],
@@ -32,13 +39,17 @@ const CARDS: [keyof Summary, string][] = [
 
 const vi = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 3 });
 const number = (value: unknown) => vi.format(Number(value));
+// Xã chưa có diện tích được phép (chưa nạp dữ liệu demo) thì view không có phần trăm và vòng đo ghi chưa có số liệu.
+const percent = (value: unknown) => (value === null || value === undefined ? "Chưa có số liệu" : `${number(value)}%`);
+// Chữ mức độ mà gói khai cho thẻ (tone trong dashboards/overview.yaml): chỉ hiện khi số lớn hơn 0.
+const level = (value: unknown, text: string) => (Number(value) > 0 ? text : "");
 
 /** Dòng area_summary mà Hasura trả cho một tài khoản với vai trò user: đúng một dòng, của xã trong token. */
 async function summary(request: APIRequestContext, username: string): Promise<Summary> {
   const data = await graphql<{ rows: Summary[] }>(
     request,
     username,
-    `{ rows: ${PREFIX}_area_summary { allowed_m2 in_use_m2 surplus_m2 excess_m2 } }`,
+    `{ rows: ${PREFIX}_area_summary { allowed_m2 in_use_m2 surplus_m2 excess_m2 in_use_percent } }`,
   );
   expect(data.rows, `area_summary của ${username}`).toHaveLength(1);
   return data.rows[0] as Summary;
@@ -66,19 +77,30 @@ async function open(browser: Browser, testInfo: TestInfo, username: string) {
   const seen = watch(page);
   await page.goto("/");
   await signIn(page, username);
-  await page.getByRole("link", { name: MENU, exact: true }).click();
+  await openMenuItem(page, MENU);
   await expect(page.getByRole("heading", { level: 1, name: TITLE })).toBeVisible();
   return { context, page, seen };
 }
 
-// Nhãn, số, đơn vị rồi "Cách tính" liền nhau trong chữ của thẻ: so cả cụm để "0 m²" không khớp nhầm "1.000 m²".
+// Chữ của thẻ chỉ gồm nhãn, số và đơn vị, rồi chữ mức độ nếu có (cách tính nằm trong "Xem cách tính"): so cả chữ của
+// thẻ để "0 m²" không khớp nhầm "1.000 m²" và "1" không khớp nhầm "12". Vòng đo có tên gồm phần trăm của view và hai
+// số gốc.
 async function expectCards(page: Page, numbers: Summary) {
   const area = page.getByRole("region", { name: AREA });
   for (const [column, label] of CARDS) {
-    await expect(area.getByRole("group", { name: label, exact: true })).toContainText(
-      `${label}${number(numbers[column])} m²Cách tính`,
+    const suffix = column === "excess_m2" ? level(numbers.excess_m2, "Vượt định mức") : "";
+    await expect(area.getByRole("group", { name: label, exact: true })).toHaveText(
+      `${label}${number(numbers[column])} m²${suffix}`,
     );
   }
+  await expect(
+    area.getByRole("img", {
+      name:
+        `Đang dùng so với diện tích được phép: ${percent(numbers.in_use_percent)}. ` +
+        `Đang dùng ${number(numbers.in_use_m2)} m²; Diện tích được phép ${number(numbers.allowed_m2)} m².`,
+      exact: true,
+    }),
+  ).toBeVisible();
 }
 
 test("số trên bảng điều hành bằng số Hasura trả cho người xem; xã B không thấy số của xã A; tỉnh thấy tổng hợp", async ({
@@ -125,9 +147,9 @@ test("số trên bảng điều hành bằng số Hasura trả cho người xem;
     await expectCards(commune.page, numbersA);
     await expect(commune.page.getByRole("region", { name: COMMUNES })).toHaveCount(0);
     await expect(commune.page.getByRole("region", { name: COVERAGE })).toHaveCount(0);
-    // Mục "Nguồn" ghi nguyên văn câu mà trang đã gửi, với vai trò user.
+    // Mục "Xem cách tính" ghi nguyên văn câu mà trang đã gửi, với vai trò user.
     const area = commune.page.getByRole("region", { name: AREA });
-    await area.getByText("Nguồn", { exact: true }).click();
+    await area.getByText("Xem cách tính", { exact: true }).click();
     const shown = (await area.locator("pre").first().textContent()) ?? "";
     expect(shown).toContain(`${PREFIX}_area_summary`);
     expect(commune.seen.sent).toContainEqual({ role: "user", query: shown });
@@ -155,7 +177,10 @@ test("số trên bảng điều hành bằng số Hasura trả cho người xem;
     const nameA = rollup.rows[0]?.tenant_name ?? "";
     const province = await open(browser, testInfo, "leader.tinh");
     pages.push(province.context);
-    const row = province.page.getByRole("region", { name: COMMUNES }).getByRole("row", { name: nameA });
+    // Bảng số liệu thu gọn dưới biểu đồ; dòng trong mục đóng không có trong cây trợ năng nên phải mở trước.
+    const communes = province.page.getByRole("region", { name: COMMUNES });
+    await communes.getByText("Xem bảng số liệu", { exact: true }).click();
+    const row = communes.getByRole("row", { name: nameA });
     await expect(row.getByRole("cell")).toHaveText([
       number(numbersA.allowed_m2),
       number(numbersA.in_use_m2),
@@ -175,13 +200,14 @@ test("số trên bảng điều hành bằng số Hasura trả cho người xem;
     const head = await open(browser, testInfo, "manager.a");
     pages.push(head.context);
     const region = head.page.getByRole("region", { name: COVERAGE });
-    for (const [column, label] of [
-      ["facility_count", "Số cơ sở"],
-      ["without_custodian", "Chưa có người phụ trách"],
-      ["without_approver", "Chưa có người duyệt"],
+    for (const [column, label, text] of [
+      ["facility_count", "Số cơ sở", ""],
+      ["without_custodian", "Chưa có người phụ trách", "Cần phân công"],
+      ["without_approver", "Chưa có người duyệt", "Cần phân công"],
     ] as const) {
-      await expect(region.getByRole("group", { name: label, exact: true })).toContainText(
-        `${label}${number(coverage.rows[0]?.[column])}Cách tính`,
+      const value = coverage.rows[0]?.[column];
+      await expect(region.getByRole("group", { name: label, exact: true })).toHaveText(
+        `${label}${number(value)}${level(value, text)}`,
       );
     }
     expect(head.seen.sent.map((sent) => sent.role)).toContain("manager");
@@ -237,25 +263,25 @@ test("lãnh đạo xã thấy số hồ sơ và việc đang chờ mình đúng 
     const head = await open(browser, testInfo, "manager.a");
     pages.push(head.context);
     const reviews = head.page.getByRole("region", { name: REVIEWS, exact: true });
-    for (const [column, label] of [
-      ["open", "Đang xử lý"],
-      ["overdue", "Bước quá hạn"],
-      ["finished", "Đã kết thúc"],
+    for (const [column, label, text] of [
+      ["open", "Đang xử lý", ""],
+      ["overdue", "Bước quá hạn", "Có bước quá hạn"],
+      ["finished", "Đã kết thúc", ""],
     ] as const) {
-      await expect(reviews.getByRole("group", { name: label, exact: true })).toContainText(
-        `${label}${number(counts[column])}Cách tính`,
+      await expect(reviews.getByRole("group", { name: label, exact: true })).toHaveText(
+        `${label}${number(counts[column])}${level(counts[column], text)}`,
       );
     }
-    await reviews.getByText("Nguồn", { exact: true }).click();
+    await reviews.getByText("Xem cách tính", { exact: true }).click();
     await expect(reviews).toContainText("GET /v1/workflow/processes/facilities-review/counts");
     const mine = head.page.getByRole("region", { name: MINE, exact: true });
     await expect(mine).toContainText("Số việc đang chờ bạn");
-    await expect(mine.getByRole("group", { name: "Đang chờ bạn", exact: true })).toContainText(
-      `Đang chờ bạn${number(waiting)}Cách tính`,
+    await expect(mine.getByRole("group", { name: "Đang chờ bạn", exact: true })).toHaveText(
+      `Đang chờ bạn${number(waiting)}`,
     );
-    // Có thiết bị gửi độ ẩm thì bảng số liệu có dòng; chưa có thì khối báo chưa có số đo, không báo lỗi.
+    // Có thiết bị gửi độ ẩm thì có biểu đồ kèm bảng số liệu thu gọn; chưa có thì khối báo chưa có số đo, không báo lỗi.
     const humidity = head.page.getByRole("region", { name: HUMIDITY, exact: true });
-    await expect(humidity.getByText(/Số liệu của biểu đồ|Chưa có số đo/).first()).toBeVisible();
+    await expect(humidity.getByText(/^(Xem bảng số liệu|Chưa có số đo\.)$/).first()).toBeVisible();
     await expect(humidity.getByText("Không đọc được số liệu")).toHaveCount(0);
     expect(head.seen.violations, "vi phạm CSP").toEqual([]);
 

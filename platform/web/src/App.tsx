@@ -4,18 +4,21 @@
 // Điểm vào sau khi khởi động: chưa đăng nhập thì mời đăng nhập qua Keycloak; đã đăng nhập thì dựng các màn hình
 // theo đường dẫn (React Router) trong khung trang, với client GraphQL và bộ nhớ đệm REST dùng chung.
 
-import { Alert, Button, Center, Loader, Paper, Stack, Text, Title } from "@mantine/core";
+import { Button, Center, Loader, Paper, Stack, Text, Title } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { User } from "oidc-client-ts";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
+import { createBrowserRouter, RouterProvider } from "react-router";
 import { Provider } from "urql";
 import { ApiError } from "./api";
 import { CALLBACK_PATH, userManager } from "./auth";
+import { Brand } from "./Brand";
 import { NotFound, RouteError } from "./Errors";
 import { createGraphqlClient } from "./graphql";
+import { Home } from "./Home";
 import { PackagePage } from "./PackagePage";
 import { Shell } from "./Shell";
+import { ErrorNotice } from "./States";
 import { type Session, SessionContext } from "./session";
 import { TaskList } from "./TaskList";
 import { TaskScreen } from "./TaskScreen";
@@ -43,7 +46,8 @@ const createRouter = () =>
           // Lỗi của một màn hình hiện trong khung trang, menu vẫn dùng được.
           errorElement: <RouteError />,
           children: [
-            { index: true, element: <Navigate to="/tasks" replace /> },
+            // Trang chủ là điểm vào sau khi đăng nhập: việc đang chờ rồi lối tắt theo gói (ADR 0051).
+            { index: true, element: <Home /> },
             { path: "tasks", element: <TaskList /> },
             { path: "tasks/:taskId", element: <TaskScreen /> },
             // Mục menu của gói; phần đường dẫn sau mục do thành phần của mục tự đọc (ví dụ dòng chi tiết của danh mục).
@@ -83,9 +87,9 @@ export function App() {
     case "error":
       return (
         <Gate>
-          <Alert color="red" title="Không đăng nhập được">
-            {auth.message}. Thử lại sau ít phút; nếu vẫn lỗi, báo người quản trị.
-          </Alert>
+          <ErrorNotice title="Không đăng nhập được" error={new Error(auth.message)}>
+            Thử lại sau ít phút; nếu vẫn lỗi, báo người quản trị.
+          </ErrorNotice>
           <Button onClick={signIn}>Đăng nhập lại</Button>
         </Gate>
       );
@@ -94,7 +98,7 @@ export function App() {
         <Gate>
           <div>
             <Title order={1} size="h2">
-              Mortise DX
+              <Brand />
             </Title>
             <Text c="dimmed" size="sm">
               Đăng nhập bằng tài khoản do đơn vị cấp để xem và xử lý việc.

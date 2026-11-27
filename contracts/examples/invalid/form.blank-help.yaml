@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/form.schema.json từ chối: dòng gợi ý của trường chỉ có khoảng trắng. Nếu lọt, ô nhập
+# mang một mô tả rỗng mà trình đọc màn hình vẫn đọc (ADR 0050).
+
+title: Lập yêu cầu
+fields:
+  - { name: amount, label: Số lượng, type: number, help: "   " }
+submit:
+  label: Gửi
+  process: core-approval
+done:
+  message: Đã gửi

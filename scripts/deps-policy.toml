@@ -1,0 +1,90 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Chính sách của `make deps-check` (scripts/deps-check.py, ADR 0039): giấy phép được nhận, image nào ứng với dòng
+# nào của bảng giấy phép trong README, image nào được ghim tới mức thô hơn bản vá và vì sao. Đổi tệp này là đổi
+# chính sách, nên đi qua pull request như mã. Mọi mã giấy phép dưới đây được danh sách giấy phép SPDX đánh dấu
+# OSI công nhận (isOsiApproved), kiểm ngày 2026-11-25 trên bản danh sách phát hành 2026-11-18.
+
+[licenses]
+# Thư viện Python nằm trong image của dịch vụ tự viết, chạy chung tiến trình với mã Apache-2.0 của dự án: chỉ nhận
+# giấy phép dễ dãi, như thư viện web đóng gói (WEB_LICENSES_SHIPPED trong Makefile). Thêm MIT-0 (MIT bỏ điều kiện
+# ghi công); Python-2.0.1, giấy phép của chính trình thông dịch Python mà image nào cũng chạy; và MPL-2.0: copyleft
+# theo từng tệp, chỉ buộc công bố tệp của chính thư viện khi sửa nó; certifi (bộ chứng chỉ gốc mà HTTPX, botocore
+# dùng) mang giấy phép này và được dùng nguyên bản.
+python = [
+  "MIT", "MIT-0", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "0BSD", "Python-2.0.1", "MPL-2.0",
+]
+# Image bên thứ ba chạy thành tiến trình riêng, không sửa, không liên kết với mã của dự án (ADR 0002), nên nhận cả
+# giấy phép copyleft được OSI công nhận.
+images = [
+  "MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "PostgreSQL", "EPL-2.0", "GPL-2.0-only",
+  "GPL-2.0-or-later", "AGPL-3.0-only",
+]
+
+# Cách viết trong README hay trong METADATA của thư viện không phải mã SPDX, quy về mã SPDX trước khi đối chiếu.
+# EDL-1.0: danh sách SPDX ghi Eclipse Distribution License 1.0 trùng văn bản BSD-3-Clause. GPL-2.0 và AGPL-3.0 là
+# mã SPDX cũ, nghĩa là bản "-only".
+[licenses.aliases]
+"PostgreSQL License" = "PostgreSQL"
+"EDL-1.0" = "BSD-3-Clause"
+"GPL-2.0" = "GPL-2.0-only"
+"AGPL-3.0" = "AGPL-3.0-only"
+"BSD 3-Clause License" = "BSD-3-Clause"
+"Apache License 2.0" = "Apache-2.0"
+"License :: OSI Approved :: MIT License" = "MIT"
+"License :: OSI Approved :: Apache Software License" = "Apache-2.0"
+"License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)" = "MPL-2.0"
+"License :: OSI Approved :: ISC License (ISCL)" = "ISC"
+
+# Giấy phép đọc từ tệp LICENSE mà gói đóng kèm, dùng thay cho METADATA khi METADATA ghi một mã không đủ hay mơ
+# hồ. Chỉ áp cho đúng bản ghi ở đây: lên bản mới thì phải đọc lại LICENSE của bản đó. Đọc ngày 2026-11-25 trong
+# `*.dist-info` của gói đã cài theo uv.lock.
+[licenses.packages.typing-extensions]
+version = "4.16.0"
+license = "Python-2.0.1"
+reason = """METADATA ghi PSF-2.0 (danh sách SPDX không đánh dấu OSI), nhưng tệp LICENSE đóng kèm là trọn bộ giấy \
+phép của CPython: lịch sử, PSF, BeOpen, CNRI cho Python 1.6.1, CWI; trùng 99,5% LICENSE.txt của CPython 3.13. Trọn bộ \
+đó là SPDX Python-2.0.1, được OSI công nhận."""
+
+[licenses.packages.python-dateutil]
+version = "2.9.0.post0"
+license = "BSD-3-Clause"
+reason = """METADATA chỉ có classifier BSD và Apache. Tệp LICENSE: phần đóng góp từ 2017-12-01 theo Apache-2.0, \
+và "The above BSD License Applies to all code, even that also covered by Apache 2.0", tức mọi mã đều theo \
+BSD-3-Clause."""
+
+[licenses.packages.protobuf]
+version = "7.36.2"
+license = "BSD-3-Clause"
+reason = """METADATA ghi "License: 3-Clause BSD License" (chữ tự do, không phải mã SPDX). Tệp LICENSE đóng kèm là \
+giấy phép BSD ba điều khoản của Google (Copyright 2008 Google Inc.)."""
+
+# Image bên thứ ba trong compose.yaml (mọi profile) ứng với cột "Thành phần" của bảng "Thành phần đang chạy" trong
+# README. Image mới chưa có ở đây thì kiểm báo lỗi: phải thêm dòng vào bảng README rồi thêm ánh xạ.
+[readme]
+"pgvector/pgvector" = "PostgreSQL + pgvector"
+"quay.io/keycloak/keycloak" = "Keycloak"
+"ghcr.io/amacneil/dbmate" = "dbmate"
+"hasura/graphql-engine" = "Hasura GraphQL Engine CE"
+"flowable/flowable-rest" = "Flowable REST"
+"apache/apisix" = "Apache APISIX (standalone)"
+"chrislusf/seaweedfs" = "SeaweedFS"
+"clamav/clamav" = "ClamAV"
+"postgis/postgis" = "PostgreSQL + PostGIS"
+"scorpiobroker/all-in-one-runner" = "Scorpio (bản native)"
+"eclipse-mosquitto" = "Eclipse Mosquitto"
+"ollama/ollama" = "Ollama"
+"grafana/grafana" = "Grafana"
+"prom/prometheus" = "Prometheus"
+"grafana/loki" = "Grafana Loki"
+"grafana/alloy" = "Grafana Alloy"
+"tecnativa/docker-socket-proxy" = "docker-socket-proxy (Tecnativa)"
+"prom/blackbox-exporter" = "Blackbox exporter"
+"jaegertracing/jaeger" = "Jaeger"
+
+# Image mà phiên bản trong tag có ít hơn ba số (chính, phụ, vá) vẫn được coi là đã ghim, kèm lý do. Kiểm tag trên
+# registry ngày 2026-11-25.
+[pins.coarse]
+"chrislusf/seaweedfs" = "SeaweedFS đánh số phiên bản hai phần (4.52); không có tag nào chi tiết hơn"
+"postgis/postgis" = "Tag ổn định chỉ có dạng <Postgres>-<PostGIS chính.phụ> (17-3.6); không có tag bản vá ổn định"

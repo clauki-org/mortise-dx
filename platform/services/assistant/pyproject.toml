@@ -16,6 +16,15 @@ dependencies = [
   # Guard của trợ lý dữ liệu (app/guard.py) phân tích câu GraphQL; ghim đúng bản vì scripts/contracts.sh đọc số này để
   # kiểm câu mẫu của gói bằng cùng trình phân tích mà dịch vụ dùng.
   "graphql-core==3.3.2",
+  # Truy vết (ADR 0038): chỉ nạp khi MORTISE_TRACING=on, qua opentelemetry-instrument (Dockerfile). Gói
+  # instrumentation còn là bản beta (0.x) nên ghim đúng bản, cùng đợt phát hành với SDK.
+  "opentelemetry-api==1.45.2",
+  "opentelemetry-sdk==1.45.2",
+  "opentelemetry-exporter-otlp-proto-http==1.45.2",
+  "opentelemetry-distro==0.66b2",
+  "opentelemetry-instrumentation-fastapi==0.66b2",
+  "opentelemetry-instrumentation-logging==0.66b2",
+  "opentelemetry-instrumentation-httpx==0.66b2",
 ]
 
 [dependency-groups]

@@ -3,19 +3,34 @@
 //
 // Cấu hình của thành phần bảng điều hành (contracts/dashboard.schema.json): kiểu dữ liệu, lỗi cấu hình mà schema
 // không bắt được, khối nào được truy vấn với vai trò trong token, câu truy vấn của từng khối, cách viết một số và độ
-// dài của thanh. Hai nguồn REST (workflow, context) ở dashboardSources.ts; phần hiển thị ở DashboardView.tsx và
+// dài của thanh. Mức độ của thẻ, vòng đo và bề rộng trên lưới ở dashboardBento.ts. Hai nguồn REST (workflow, context) ở dashboardSources.ts; phần hiển thị ở DashboardView.tsx và
 // DashboardPanel.tsx. Không có React ở đây để kiểm thử được bằng hàm thuần. Thành phần không cộng hay đếm gì: mọi số là
 // cột mà nguồn trả (ADR 0033), trừ số việc đang chờ chính người xem (ADR 0035, dashboardSources.ts).
 
 import { createRequest, formatDocument, stringifyDocument } from "urql";
 import { type ContextSource, restProblems, type WorkflowSource } from "./dashboardSources";
 
-export type Card = { column: string; label: string; unit?: string; format?: "number" | "integer"; description: string };
+/** Một mức độ của thẻ: đúng một phép so với hằng số và chữ hiện cạnh số khi khớp (ADR 0049). */
+export type Level = { gt?: number; gte?: number; lt?: number; lte?: number; label: string };
+
+export type Card = {
+  column: string;
+  label: string;
+  unit?: string;
+  format?: "number" | "integer";
+  description: string;
+  tone?: { warn_when?: Level; bad_when?: Level };
+};
+
+/** Vòng đo của khối thẻ số: ba cột của cùng dòng; percent do gói tính sẵn (ADR 0049). */
+export type Gauge = { value: string; limit: string; percent: string; label: string };
 
 export type Series = { column: string; label: string; color: string };
 
 export type Chart = {
   type: "bar";
+  /** Trần của thang; bỏ trống là số lớn nhất trong khối */
+  max?: number;
   x: { column: string; label: string; choices?: { value: string; label: string }[] };
   y: Series[];
   details?: { column: string; label: string; format?: Card["format"] }[];
@@ -32,11 +47,16 @@ export type Panel = {
   id: string;
   title: string;
   description: string;
+  /** Cách tính và ghi chú kỹ thuật; chỉ hiện trong mục "Xem cách tính" (ADR 0045) */
+  method?: string;
+  primary?: boolean;
+  size?: "quarter" | "half" | "full";
   role?: string;
   graphql?: GraphqlSource;
   workflow?: WorkflowSource;
   context?: ContextSource;
   cards?: Card[];
+  gauge?: Gauge;
   chart?: Chart;
   link?: { menu: string; label: string };
 };
@@ -78,13 +98,49 @@ export const limitOf = (panel: Panel) => panel.graphql?.limit ?? 50;
 /** Loại nguồn của khối. */
 export const sourceKind = (panel: Panel) => (panel.workflow ? "workflow" : panel.context ? "context" : "graphql");
 
-/** Các cột mà khối đọc ra để hiện, theo thứ tự khai, không trùng. */
+/** Các cột mà khối đọc ra để hiện (thẻ, vòng đo, biểu đồ), theo thứ tự khai, không trùng. */
 export function columnsOf(panel: Panel): string[] {
   const chart = panel.chart;
+  const gauge = panel.gauge ? [panel.gauge.value, panel.gauge.limit, panel.gauge.percent] : [];
   const names = chart
     ? [chart.x.column, ...chart.y.map((series) => series.column), ...(chart.details ?? []).map((d) => d.column)]
-    : (panel.cards ?? []).map((card) => card.column);
+    : [...(panel.cards ?? []).map((card) => card.column), ...gauge];
   return [...new Set(names)];
+}
+
+/** Phép so của một mức độ: lớn hơn, lớn hơn hay bằng, nhỏ hơn, nhỏ hơn hay bằng. */
+export const OPERATORS = ["gt", "gte", "lt", "lte"] as const;
+
+/** Mức độ dùng được: đúng một phép so với một số hữu hạn, có chữ. */
+const levelUsable = (level: Level) =>
+  OPERATORS.filter((key) => level[key] !== undefined).length === 1 &&
+  OPERATORS.every((key) => level[key] === undefined || Number.isFinite(level[key])) &&
+  typeof level.label === "string" &&
+  level.label.trim() !== "";
+
+/** Lỗi của khối thẻ số mới (ADR 0049): mức độ của thẻ, vòng đo, trần của biểu đồ. */
+function bentoProblems(panel: Panel): string[] {
+  const problems: string[] = [];
+  for (const card of panel.cards ?? []) {
+    const levels = [card.tone?.warn_when, card.tone?.bad_when].filter((level) => level !== undefined);
+    if (levels.some((level) => !levelUsable(level))) {
+      problems.push(`${panel.title}: mức độ của thẻ "${card.label}" cần đúng một phép so với một số và có chữ`);
+    }
+  }
+  const gauge = panel.gauge;
+  if (gauge) {
+    const shown = (panel.cards ?? []).map((card) => card.column);
+    if (!panel.graphql || !panel.cards || panel.size === "quarter") {
+      problems.push(`${panel.title}: vòng đo cần nguồn graphql, thẻ số và khối rộng hơn một phần tư hàng`);
+    } else if (!shown.includes(gauge.value) || !shown.includes(gauge.limit)) {
+      problems.push(`${panel.title}: value, limit của vòng đo phải là cột của một thẻ trong khối`);
+    }
+  }
+  const max = panel.chart?.max;
+  if (max !== undefined && !(Number.isFinite(max) && max > 0)) {
+    problems.push(`${panel.title}: trần của biểu đồ phải là số lớn hơn 0`);
+  }
+  return problems;
 }
 
 function panelNames(panel: Panel): string[] {
@@ -109,8 +165,8 @@ export function dashboardProblems(config: DashboardConfig): string[] {
   for (const id of new Set(ids.filter((id, index) => ids.indexOf(id) !== index))) {
     problems.push(`hai khối cùng tên ngắn "${id}"`);
   }
-  for (const panel of config.panels) {
-    problems.push(...restProblems(panel));
+  config.panels.forEach((panel, index) => {
+    problems.push(...restProblems(panel), ...bentoProblems(panel));
     for (const name of panelNames(panel)) {
       if (!IDENTIFIER.test(name)) {
         problems.push(`${panel.title}: "${name}" không phải tên hợp lệ (chỉ chữ không dấu, số, gạch dưới)`);
@@ -123,7 +179,10 @@ export function dashboardProblems(config: DashboardConfig): string[] {
     }
     const series = (panel.chart?.y ?? []).map((item) => item.column);
     if (new Set(series).size !== series.length) problems.push(`${panel.title}: một cột khai hai lần trong chart.y`);
-  }
+    if (panel.primary && (index > 0 || !panel.cards || panel.size === "quarter")) {
+      problems.push(`${panel.title}: khối chính phải là khối đầu tiên, là thẻ số và rộng ít nhất nửa hàng`);
+    }
+  });
   return problems;
 }
 
@@ -172,10 +231,9 @@ const CONFIG_ERRORS = ["validation-failed", "data-exception"];
  * không hợp kiểu của cột: giá trị đó luôn gửi dạng chữ và make check-fast không biết kiểu cột (ADR 0033). Người xem
  * không tự sửa được, nên lời báo dẫn tới người quản trị kèm chỗ cần sửa, không bảo tải lại trang.
  */
-export function queryErrorText(panel: Panel, codes: string[], message: string): string {
-  if (!codes.some((code) => CONFIG_ERRORS.includes(code))) {
-    return `${message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.`;
-  }
+// Trả null với lỗi không do cấu hình của gói (mạng, phiên hết hạn…): nơi gọi hiện ErrorNotice dùng chung (ADR 0046).
+export function queryErrorText(panel: Panel, codes: string[], message: string): string | null {
+  if (!codes.some((code) => CONFIG_ERRORS.includes(code))) return null;
   const where = panel.graphql?.where;
   const typed = where ? `, hoặc where.equals "${where.equals}" không hợp kiểu của cột ${where.field}` : "";
   return (
@@ -212,11 +270,40 @@ export function categoryText(chart: Chart, value: unknown): string {
 }
 
 /**
- * Độ dài thanh theo phần trăm của giá trị lớn nhất trong khối; mọi cột số chung một thang để các thanh so được với
- * nhau. Giá trị âm hay không phải số thành thanh rỗng; bảng số liệu vẫn ghi đúng giá trị.
+ * Độ dài thanh theo phần trăm của đầu mút thang; mọi cột số chung một thang để các thanh so được với nhau. Giá trị âm
+ * hay không phải số thành thanh rỗng, giá trị trên trần (chart.max) thành thanh đầy; số cạnh thanh và bảng số liệu
+ * vẫn ghi đúng giá trị.
  */
 export function barPercents(chart: Chart, rows: Row[]): number[][] {
-  const values = rows.map((row) => chart.y.map((series) => Math.max(numeric(row[series.column]) ?? 0, 0)));
-  const top = Math.max(0, ...values.flat());
-  return values.map((group) => group.map((value) => (top > 0 ? (value / top) * 100 : 0)));
+  const top = scaleTop(chart, rows);
+  return rows.map((row) =>
+    chart.y.map((series) => {
+      const value = Math.max(numeric(row[series.column]) ?? 0, 0);
+      return top > 0 ? Math.min((value / top) * 100, 100) : 0;
+    }),
+  );
+}
+
+/**
+ * Đầu mút của thang chung: trần chart.max của gói nếu có, để số có trần tự nhiên (phần trăm) không trông như đầy khi
+ * nó chỉ là số lớn nhất; không có thì giá trị lớn nhất trong khối, không nhỏ hơn 0.
+ */
+export const scaleTop = (chart: Chart, rows: Row[]) =>
+  chart.max ?? Math.max(0, ...rows.flatMap((row) => chart.y.map((series) => numeric(row[series.column]) ?? 0)));
+
+/**
+ * Một thanh: độ dài, chữ số ghi cạnh thanh, và có vẽ không. Ô có số, kể cả 0, luôn có vạch để số 0 không bị nhìn
+ * thành thiếu dòng; ô trống hay không phải số thì không vẽ, chỉ ghi chữ.
+ */
+export type BarMark = { percent: number; text: string; drawn: boolean };
+
+export function barMarks(chart: Chart, rows: Row[]): BarMark[][] {
+  const percents = barPercents(chart, rows);
+  return rows.map((row, index) =>
+    chart.y.map((series, at) => ({
+      percent: percents[index]?.[at] ?? 0,
+      text: numberText(row[series.column]),
+      drawn: numeric(row[series.column]) !== undefined,
+    })),
+  );
 }

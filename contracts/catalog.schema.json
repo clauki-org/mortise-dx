@@ -53,7 +53,11 @@
             "required": ["value", "label"],
             "properties": {
               "value": { "type": "string" },
-              "label": { "$ref": "#/$defs/text" }
+              "label": { "$ref": "#/$defs/text" },
+              "tone": {
+                "description": "Nghĩa màu khi giá trị này hiện thành nhãn trạng thái (ADR 0050): bad cần xử lý ngay, warn cần để ý, info đang diễn ra, ok đạt hay đang dùng tốt, neutral không mang mức nào. Có tone thì giá trị hiện thành nhãn màu kèm chữ ở danh sách, thẻ và màn hình chi tiết; bỏ trống thì hiện chữ thường.",
+                "enum": ["bad", "warn", "info", "ok", "neutral"]
+              }
             }
           }
         }
@@ -114,6 +118,10 @@
           "description": "Các nút trên màn hình chi tiết; mỗi nút khởi tạo một quy trình của gói cho dòng đang xem, qua API quy trình của lõi",
           "type": "array",
           "items": { "$ref": "#/$defs/action" }
+        },
+        "documents": {
+          "description": "Phần tài liệu đính kèm của dòng đang xem (ADR 0041). Schema nằm ở tệp riêng vì phần này là một thành phần có bản mô tả riêng (contracts/documents.component.yaml); scripts/contracts.sh kiểm với --base-uri để tên tệp dưới đây trỏ về contracts/ thay vì địa chỉ trong $id.",
+          "$ref": "documents.schema.json"
         }
       }
     },

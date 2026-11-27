@@ -15,8 +15,9 @@ app.missing-id.yaml	$	'id' is a required property
 app.path-escapes-package.yaml	$.menu[0].config	'../../core/keycloak/realm.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
 app.path-is-url.yaml	$.menu[0].config	'http://no-such-host.invalid/items.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
 app.settings-unsafe-value.yaml	$.settings.approval_limit	'1000 || true' is not valid under any of the given schemas
-app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'documents', 'dashboard', 'rules', 'assistant', 'cases']
+app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'dashboard', 'rules', 'assistant', 'cases']
 app.unknown-field.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
+app.unknown-icon.yaml	$.menu[0].icon	'no-such-icon' is not one of ['home', 'list', 'form', 'map', 'chart', 'chat', 'inbox', 'document', 'folder', 'settings']
 app.version-leading-zero.yaml	$.version	'01.0.0' does not match '^(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)$'
 assistant.blank-intro.yaml	$.intro	'   ' does not match '\\\\S'
 assistant.document-not-slug.yaml	$.documents[0]	'knowledge/example-rules.yaml' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
@@ -36,6 +37,7 @@ catalog.blank-field-label.yaml	$.fields[0].label	'   ' does not match '\\\\S'
 catalog.child-id-not-slug.yaml	$.detail.children[0].id	'No Such/Child' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
 catalog.child-missing-id.yaml	$.detail.children[0]	'id' is a required property
 catalog.child-missing-via.yaml	$.detail.children[0]	'via' is a required property
+catalog.documents-column-not-identifier.yaml	$.detail.documents.via	'item_id } x {' does not match '^[A-Za-z_][A-Za-z0-9_]*$'
 catalog.duplicate-column.yaml	$.list.columns	['name', 'name'] has non-unique elements
 catalog.empty-choices.yaml	$.fields[0].choices	[] should be non-empty
 catalog.field-path-too-deep.yaml	$.fields[1].name	'category.group.name' does not match '^[A-Za-z_][A-Za-z0-9_]*(\\\\.[A-Za-z_][A-Za-z0-9_]*)?$'
@@ -47,11 +49,15 @@ catalog.source-not-identifier.yaml	$.source	'app_example_items { no_such_column 
 catalog.unknown-field-type.yaml	$.fields[0].type	'no-such-type' is not one of ['text', 'number', 'date', 'datetime']
 catalog.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
 catalog.unknown-sort-direction.yaml	$.list.sort.direction	'no-such-direction' is not one of ['asc', 'desc']
+catalog.unknown-tone.yaml	$.fields[0].choices[0].tone	'green' is not one of ['bad', 'warn', 'info', 'ok', 'neutral']
 component.no-capabilities.yaml	$.capabilities	[] should be non-empty
 component.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
 device-message.reserved-name.json	$.measurements	'type' should not be valid under {'enum': ['id', 'type', 'scope', 'location', 'observationSpace', 'operationSpace', 'createdAt', 'modifiedAt', 'deletedAt', 'observedAt']}
 device-message.tenant-in-body.json	$	Additional properties are not allowed ('tenant' was unexpected)
 device-message.text-value.json	$.measurements.humidity	'71' is not of type 'number', 'boolean'
+documents.limit-too-large.yaml	$.limit	500 is greater than the maximum of 50
+documents.missing-file.yaml	$	'file' is a required property
+documents.upload-unknown-key.yaml	$.upload	Additional properties are not allowed ('notes' was unexpected)
 seed.missing-key.yaml	$['xa-a'].tables[0]	'key' is a required property
 seed.tenant-id-in-row.yaml	$['xa-a'].tables[0].rows[0]	'tenant_id' should not be valid under {'const': 'tenant_id'}
 knowledge.blank-text.yaml	$.passages[0].text	'   ' does not match '\\\\S'
@@ -74,7 +80,16 @@ dashboard.free-color.yaml	$.panels[0].chart.y[0].color	'#ff0000' is not one of [
 dashboard.limit-too-large.yaml	$.panels[0].graphql.limit	201 is greater than the maximum of 200
 dashboard.too-many-series.yaml	$.panels[0].chart.y	[{'column': 'a', 'label': 'A', 'color': 'teal'}, {'column': 'b', 'label': 'B', 'color': 'blue'}, {'column': 'c', 'label': 'C', 'color': 'red'}, {'column': 'd', 'label': 'D', 'color': 'gray'}, {'column': 'e', 'label': 'E', 'color': 'lime'}] is too long
 dashboard.two-sources.yaml	$.panels[0]	{'id': 'totals', 'title': 'Tổng', 'description': 'View tổng của đơn vị.', 'graphql': {'field': 'app_example_totals'}, 'workflow': {'process': 'approval', 'counts': 'tenant'}, 'cards': [{'column': 'score', 'label': 'Điểm', 'description': 'Tổng điểm.'}]} is valid under each of {'required': ['workflow']}, {'required': ['graphql']}
+dashboard.two-primary.yaml	$.panels[1].primary	False was expected
+dashboard.primary-quarter.yaml	$.panels[0].size	'quarter' is not one of ['half', 'full']
+dashboard.primary-not-first.yaml	$.panels[1].primary	False was expected
+dashboard.tone-without-label.yaml	$.panels[0].cards[0].tone.bad_when	'label' is a required property
+dashboard.tone-two-comparisons.yaml	$.panels[0].cards[0].tone.warn_when	{'gt': 10, 'lt': 50, 'label': 'Thấp'} has too many properties
+dashboard.gauge-without-cards.yaml	$.panels[0]	'cards' is a required property
+dashboard.chart-max-zero.yaml	$.panels[0].chart.max	0 is less than or equal to the minimum of 0
+dashboard.primary-chart.yaml	$.panels[0]	'cards' is a required property
 form.authority-prefix.yaml	$.fields[0].name	'authority_level' should not be valid under {'anyOf': [{'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}, {'pattern': '^authority_'}]}
+form.blank-help.yaml	$.fields[0].help	'   ' does not match '\\\\S'
 form.choices-on-string.yaml	$.fields[0]	False schema does not allow [{'value': 'a', 'label': 'A'}]
 form.choice-without-options.yaml	$.fields[0]	{'name': 'kind', 'label': 'Loại', 'type': 'choice'} is not valid under any of the given schemas
 form.empty-choice-value.yaml	$.fields[0].choices[0].value	'' should be non-empty
@@ -108,3 +123,6 @@ assistant.documents-and-data.yaml	$	{'intro': 'Hỏi về quy chế đặt phòn
 cases.duplicate-process.yaml	$.processes	['core-approval', 'core-approval'] has non-unique elements
 cases.no-processes.yaml	$.processes	[] should be non-empty
 cases.process-not-slug.yaml	$.processes[0]	'core-approval&state=all' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
+branding.logo-other-origin.json	$.logo	'https://cdn.example.org/logo.svg' does not match '^/brand/[A-Za-z0-9][A-Za-z0-9._-]*\\\\.(svg|png|webp)$'
+branding.low-contrast-color.json	$.color	'teal' is not one of ['blue', 'indigo', 'violet', 'grape', 'pink', 'dark']
+branding.missing-short-name.json	$	'short_name' is a required property

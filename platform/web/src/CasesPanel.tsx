@@ -5,7 +5,7 @@
 // quy trình trong cấu hình, và màn hình một hồ sơ bên dưới địa chỉ của mục (CaseScreen.tsx). workflow-api chỉ trả hồ sơ
 // của chính người gọi, nên ở đây không lọc theo người. Không có tên quy trình hay chữ của một lĩnh vực nào.
 
-import { Alert, Anchor, Button, Group, Loader, SegmentedControl, Stack, Table, Text, Title } from "@mantine/core";
+import { Alert, Anchor, Button, Group, SegmentedControl, Stack, Table, Text } from "@mantine/core";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
@@ -20,8 +20,13 @@ import {
   PAGE_SIZE,
   processSteps,
 } from "./cases";
+import { formatDateTime } from "./format";
+import { PageHeader } from "./PageHeader";
+import { Empty, ErrorNotice, Loading } from "./States";
+import { StatusBadge } from "./StatusBadge";
 import { useSession } from "./session";
-import { dateTime, useSteps } from "./steps";
+import { useSteps } from "./steps";
+import { TableScroll } from "./TableScroll";
 import { DueBadge } from "./TaskList";
 
 const STATES: { value: CaseState; label: string }[] = [
@@ -43,25 +48,28 @@ function CaseList({ config, basePath }: { config: CasesConfig; basePath: string 
   const now = Date.now();
   return (
     <Stack>
-      <SegmentedControl
-        data={STATES}
-        value={state}
-        onChange={(value) => {
-          setState(value as CaseState);
-          setPage(1);
-        }}
-        aria-label="Lọc hồ sơ theo trạng thái"
-        w="fit-content"
+      <PageHeader
+        title={config.title}
+        description={config.description}
+        action={
+          <SegmentedControl
+            data={STATES}
+            value={state}
+            onChange={(value) => {
+              setState(value as CaseState);
+              setPage(1);
+            }}
+            aria-label="Lọc hồ sơ theo trạng thái"
+          />
+        }
       />
-      {cases.isPending && <Loader aria-label="Đang tải hồ sơ" />}
+      {cases.isPending && <Loading what="hồ sơ" />}
       {cases.isError && (
-        <Alert color="red" title="Không tải được hồ sơ">
-          {cases.error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
-        </Alert>
+        <ErrorNotice title="Không tải được hồ sơ" error={cases.error} onRetry={() => cases.refetch()} />
       )}
-      {cases.data?.items.length === 0 && <Text c="dimmed">Chưa có hồ sơ nào.</Text>}
+      {cases.data?.items.length === 0 && <Empty title="Chưa có hồ sơ nào." />}
       {cases.data && cases.data.items.length > 0 && (
-        <Table.ScrollContainer minWidth={560}>
+        <TableScroll label={config.title} minWidth={560}>
           <Table striped>
             <Table.Thead>
               <Table.Tr>
@@ -81,17 +89,23 @@ function CaseList({ config, basePath }: { config: CasesConfig; basePath: string 
                         {caseTitle(item, processSteps(steps, item.process)) ?? `Hồ sơ ${item.id.slice(0, 8)}`}
                       </Anchor>
                     </Table.Td>
-                    <Table.Td>{caseStatus(item)}</Table.Td>
+                    <Table.Td>
+                      {item.ended === null ? (
+                        caseStatus(item)
+                      ) : (
+                        <StatusBadge tone={item.outcome === null ? "neutral" : "ok"}>{caseStatus(item)}</StatusBadge>
+                      )}
+                    </Table.Td>
                     <Table.Td>
                       {item.ended === null && item.current.length > 0 && <DueBadge due={due} now={now} />}
                     </Table.Td>
-                    <Table.Td>{dateTime.format(new Date(item.started))}</Table.Td>
+                    <Table.Td>{formatDateTime(item.started)}</Table.Td>
                   </Table.Tr>
                 );
               })}
             </Table.Tbody>
           </Table>
-        </Table.ScrollContainer>
+        </TableScroll>
       )}
       {cases.data && cases.data.total > PAGE_SIZE && (
         <Group justify="space-between">
@@ -127,19 +141,13 @@ export function Cases({ config, basePath }: { config: CasesConfig; basePath: str
   if (segments.length === 1) {
     return <CaseScreen key={segments[0]} id={segments[0] ?? ""} basePath={basePath} title={config.title} />;
   }
+  if (segments.length === 0) return <CaseList config={config} basePath={basePath} />;
   return (
     <Stack>
-      <Title order={1} size="h2">
-        {config.title}
-      </Title>
-      {config.description && <Text c="dimmed">{config.description}</Text>}
-      {segments.length === 0 ? (
-        <CaseList config={config} basePath={basePath} />
-      ) : (
-        <Alert color="yellow" title="Không có trang này">
-          Đường dẫn không khớp với trang theo dõi hồ sơ.
-        </Alert>
-      )}
+      <PageHeader title={config.title} description={config.description} />
+      <Alert color="yellow" title="Không có trang này">
+        Đường dẫn không khớp với trang theo dõi hồ sơ.
+      </Alert>
     </Stack>
   );
 }

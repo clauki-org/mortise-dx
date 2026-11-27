@@ -5,8 +5,9 @@
 // `details` của các bước, các bước đã qua và đang chờ theo thời gian, kết quả. workflow-api trả 404 như nhau cho hồ sơ
 // không có, của đơn vị khác hay của người khác, nên màn hình cũng chỉ có một câu không tìm thấy.
 
-import { Alert, Anchor, Badge, Group, Loader, Paper, Stack, Table, Text, Timeline, Title } from "@mantine/core";
+import { Alert, Anchor, Group, Paper, Stack, Table, Text, Timeline, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { ApiError } from "./api";
 import {
@@ -19,24 +20,32 @@ import {
   groupLabel,
   processSteps,
 } from "./cases";
+import { formatDateTime } from "./format";
+import { PageHeader } from "./PageHeader";
+import { ErrorNotice, Loading } from "./States";
+import { StatusBadge } from "./StatusBadge";
 import { useSession } from "./session";
-import { dateTime, useSteps } from "./steps";
+import { useSteps } from "./steps";
 import { DueBadge } from "./TaskList";
+import type { Tone } from "./tones";
 
-const STATUS: Record<CaseStep["status"], string> = {
-  open: "Đang chờ",
-  done: "Đã xong",
-  cancelled: "Dừng, không ai hoàn thành",
+const STATUS: Record<CaseStep["status"], { text: string; tone: Tone }> = {
+  open: { text: "Đang chờ", tone: "info" },
+  done: { text: "Đã xong", tone: "ok" },
+  cancelled: { text: "Dừng, không ai hoàn thành", tone: "neutral" },
 };
 
 function StepItem({ step }: { step: CaseStep }) {
-  const time = (value: string) => dateTime.format(new Date(value));
+  const status = STATUS[step.status];
   return (
     <Stack gap={4}>
-      <Text size="sm" c="dimmed">
-        {STATUS[step.status]} · {time(step.started)}
-        {step.ended && ` – ${time(step.ended)}`}
-      </Text>
+      <Group gap="xs">
+        <StatusBadge tone={status.tone}>{status.text}</StatusBadge>
+        <Text size="sm" c="dimmed">
+          {formatDateTime(step.started)}
+          {step.ended && ` – ${formatDateTime(step.ended)}`}
+        </Text>
+      </Group>
       {step.groups.length > 0 && <Text size="sm">Người xử lý: {step.groups.map(groupLabel).join("; ")}</Text>}
       {step.status === "open" && step.kind === "task" && (
         <Group gap="xs">
@@ -48,11 +57,11 @@ function StepItem({ step }: { step: CaseStep }) {
   );
 }
 
-function Body({ found }: { found: CaseDetail }) {
+function Body({ found, back }: { found: CaseDetail; back: ReactNode }) {
   const { steps } = useSteps();
   const declared = processSteps(steps, found.process);
   const rows: [string, string, string][] = [
-    ["core/started", "Lập lúc", dateTime.format(new Date(found.started))],
+    ["core/started", "Lập lúc", formatDateTime(found.started)],
     ["core/status", found.ended === null ? "Đang ở bước" : "Kết quả", caseStatus(found)],
     ...caseDetails(found, declared).map(([name, label, value]): [string, string, string] => [
       `details/${name}`,
@@ -63,9 +72,17 @@ function Body({ found }: { found: CaseDetail }) {
   const open = found.steps.findIndex((step) => step.status === "open");
   return (
     <>
-      <Title order={1} size="h2">
-        {caseTitle(found, declared) ?? `Hồ sơ ${found.id.slice(0, 8)}`}
-      </Title>
+      <PageHeader
+        before={back}
+        title={caseTitle(found, declared) ?? `Hồ sơ ${found.id.slice(0, 8)}`}
+        meta={
+          found.ended === null ? (
+            <StatusBadge tone="info">Đang xử lý</StatusBadge>
+          ) : (
+            <StatusBadge tone={found.outcome === null ? "neutral" : "ok"}>Đã kết thúc</StatusBadge>
+          )
+        }
+      />
       <Paper withBorder radius="md" p="md">
         <Table variant="vertical" layout="fixed">
           <Table.Tbody>
@@ -90,9 +107,9 @@ function Body({ found }: { found: CaseDetail }) {
           ))}
           {found.ended !== null && (
             <Timeline.Item title={found.outcomeName ?? "Đã dừng"}>
-              <Badge variant="light" color={found.outcome === null ? "gray" : "green"} tt="none">
-                Kết thúc {dateTime.format(new Date(found.ended))}
-              </Badge>
+              <StatusBadge tone={found.outcome === null ? "neutral" : "ok"}>
+                Kết thúc {formatDateTime(found.ended)}
+              </StatusBadge>
             </Timeline.Item>
           )}
         </Timeline>
@@ -104,23 +121,24 @@ function Body({ found }: { found: CaseDetail }) {
 export function CaseScreen({ id, basePath, title }: { id: string; basePath: string; title: string }) {
   const { getToken } = useSession();
   const found = useQuery({ queryKey: ["case", id], queryFn: () => fetchCase(getToken(), id) });
+  const back = (
+    <Anchor component={Link} to={basePath} size="sm">
+      {title}
+    </Anchor>
+  );
   return (
     <Stack maw={880}>
-      <Anchor component={Link} to={basePath} size="sm">
-        {title}
-      </Anchor>
-      {found.isPending && <Loader aria-label="Đang tải hồ sơ" />}
+      {!found.data && back}
+      {found.isPending && <Loading what="hồ sơ" />}
       {found.isError &&
         (found.error instanceof ApiError && found.error.status === 404 ? (
           <Alert color="yellow" title="Không tìm thấy hồ sơ">
             Hồ sơ không có, hoặc không phải hồ sơ bạn đã lập.
           </Alert>
         ) : (
-          <Alert color="red" title="Không tải được hồ sơ">
-            {found.error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
-          </Alert>
+          <ErrorNotice title="Không tải được hồ sơ" error={found.error} onRetry={() => found.refetch()} />
         ))}
-      {found.data && <Body found={found.data} />}
+      {found.data && <Body found={found.data} back={back} />}
     </Stack>
   );
 }

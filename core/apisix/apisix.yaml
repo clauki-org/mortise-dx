@@ -62,6 +62,12 @@ plugin_configs:
           set:
             Content-Type: application/json
         body: "{\"error\":\"Thiếu hoặc sai access token; đăng nhập lại để lấy token mới.\"}\n"
+      # Truy vết (ADR 0038) chỉ cho API dưới /v1, không cho /auth và giao diện: URL của chúng mang mã đăng nhập. Bộ lấy
+      # mẫu theo MORTISE_TRACING trong .env (compose.yaml đặt APISIX_TRACE_SAMPLER): tắt thì không vết nào được gửi đi,
+      # nhưng cổng vẫn chuyển header traceparent cho dịch vụ phía sau. Bật thì lưu mọi yêu cầu, kể cả 401.
+      opentelemetry:
+        sampler:
+          name: ${{APISIX_TRACE_SAMPLER:=always_off}}
 
 # Đếm yêu cầu, mã trả về và độ trễ của mọi route cho Prometheus (profile `observability`, ADR 0037). Số liệu chỉ đọc
 # được ở cổng 9091 trong mạng nội bộ (config.yaml); cổng 9080 không có route nào trả số liệu.
@@ -69,6 +75,16 @@ global_rules:
   - id: metrics
     plugins:
       prometheus: {}
+
+# Nơi gửi vết: Jaeger của profile `observability`, trong mạng nội bộ. Chưa bật profile mà bật truy vết thì cổng ghi
+# lỗi gửi vết vào log, yêu cầu vẫn chạy bình thường. set_ngx_var cho log truy cập mang trace_id (config.yaml).
+plugin_metadata:
+  - id: opentelemetry
+    resource:
+      service.name: apisix
+    collector:
+      address: jaeger:4318
+    set_ngx_var: true
 
 routes:
   # Chỉ mở các đường OIDC mà ứng dụng và trình duyệt cần của realm mortise (ADR 0007): cấu hình, đăng nhập, token,

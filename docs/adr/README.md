@@ -58,7 +58,21 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0035](0035-case-counts-and-device-readings-on-dashboards.md) | Số hồ sơ và số đo thiết bị trên bảng điều hành: workflow-api trả tổng Flowable đếm theo tenant, quy trình, bước, chỉ cho người có vai trò của một bước; việc đang chờ người xem đếm trên trình duyệt; số đo đọc qua context-api | Chấp nhận |
 | [0036](0036-pull-based-gitops-with-compose.md) | Phát hành theo tag: CI dựng image lên GHCR và tạo Release từ CHANGELOG; máy chủ demo tự kéo tag mới về chạy bằng Compose (image theo `MORTISE_IMAGE_PREFIX`, `MORTISE_VERSION`, `MORTISE_NO_BUILD=1` cấm dựng tại chỗ), smoke lỗi thì quay về tag trước, CSDL không tự khôi phục; Argo CD khi chuyển lên Kubernetes | Chấp nhận |
 | [0037](0037-observability-profile.md) | Giám sát trong profile `observability`: Prometheus, Loki, Grafana chỉ ở 127.0.0.1; log container đọc qua docker-socket-proxy chỉ cho đọc, trong mạng riêng với Alloy | Chấp nhận |
-| [0038](0038-catalog-export.md) | Xuất danh sách của danh mục ra CSV, Excel và PDF ngay trong trình duyệt, bằng quyền của người xuất | Chấp nhận |
+| [0038](0038-distributed-tracing.md) | Truy vết phân tán bằng OpenTelemetry, mặc định tắt (`MORTISE_TRACING`): cổng truy vết API dưới /v1, dịch vụ FastAPI tự viết chạy dưới `opentelemetry-instrument`; Jaeger 2.20.0 (Apache-2.0, không chọn Tempo AGPL-3.0) trong profile `observability` bỏ chuỗi truy vấn, user-agent, địa chỉ người gọi trước khi lưu | Chấp nhận |
+| [0039](0039-dependency-check-script.md) | Ghim phiên bản và giấy phép phụ thuộc kiểm bằng script trong repo, chạy trong `make check-fast`; bản mới chỉ báo, mỗi tuần đăng báo cáo vào issue theo dõi; chính sách ở `scripts/deps-policy.toml` | Chấp nhận |
+| [0040](0040-tenant-login-policy.md) | Chính sách đăng nhập theo tenant: gán vai trò `otp_required` cho group của tenant, không đổi luồng; người vận hành đặt bằng `make tenant-login` | Chấp nhận |
+| [0041](0041-documents-on-catalog-records.md) | Tài liệu đính kèm là phần `detail.documents` của màn hình chi tiết danh mục: bảng nối của gói quyết định ai thấy tệp nào, tệp tải lên, tải xuống qua `/v1/files`; tải xuống theo tenant và mã tệp, không theo bản ghi; check-fast kiểm theo quyền của gói | Chấp nhận |
+| [0042](0042-passkey-login.md) | Đăng nhập bằng Passkey theo tenant: bước WebAuthn riêng ngang ô mật khẩu ghi amr `hwk`, từ chối khi thiếu vai trò `passkey_allowed` gán cho group của tenant; Passkey thay mật khẩu, không thay OTP | Chấp nhận |
+| [0043](0043-design-tokens-and-install-branding.md) | Bộ quy ước giao diện đạt AA và thương hiệu theo bản cài | Chấp nhận |
+| [0044](0044-menu-groups-and-icons.md) | Menu chia nhóm theo gói, biểu tượng theo ý nghĩa, tên gói lưu cùng mục menu | Chấp nhận |
+| [0045](0045-readable-dashboard.md) | Bảng điều hành dễ đọc: số chính nổi bật, cách tính và nguồn thu gọn, biểu đồ có nhãn số | Chấp nhận |
+| [0046](0046-shared-ui-states.md) | Trạng thái đang tải, rỗng, lỗi dùng chung; lỗi đổi sang lời tiếng Việt theo mã | Chấp nhận |
+| [0047](0047-page-header-status-badge-formatting.md) | Đầu trang, nhãn trạng thái, định dạng ngày giờ và số dùng chung | Chấp nhận |
+| [0048](0048-bento-tokens-status-tones-font.md) | Kiểu Bento dịu, bộ nghĩa màu chung, phông Be Vietnam Pro | Chấp nhận |
+| [0049](0049-bento-dashboard.md) | Bảng điều hành dạng lưới Bento, mức độ thẻ, vòng đo, biểu đồ có trần | Chấp nhận |
+| [0050](0050-catalog-tones-cards-form-help.md) | Nghĩa màu cho giá trị của danh mục, dạng thẻ, chi tiết dạng lưới ô và dòng gợi ý của biểu mẫu | Chấp nhận |
+| [0051](0051-home-page.md) | Trang chủ: ô lối tắt theo gói và việc đang chờ | Chấp nhận |
+| [0052](0052-catalog-export.md) | Xuất danh sách của danh mục ra CSV, Excel và PDF ngay trong trình duyệt, bằng quyền của người xuất | Chấp nhận |
 
 ## Quyết định còn mở
 

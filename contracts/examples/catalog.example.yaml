@@ -15,13 +15,16 @@ fields:
     label: Mã
   - name: name
     label: Tên
+  # tone chọn nghĩa màu của nhãn trong bộ nghĩa chung (ADR 0050); lựa chọn không khai tone hiện chữ thường.
   - name: status
     label: Tình trạng
     choices:
       - value: active
         label: Đang dùng
+        tone: ok
       - value: retired
         label: Ngừng dùng
+        tone: neutral
   - name: quantity
     label: Số lượng
     type: number
@@ -49,6 +52,13 @@ detail:
         itemId: id
         title: name
         quantity: quantity
+  # Giấy tờ đính kèm của danh mục đang xem (contracts/documents.schema.json, ADR 0041).
+  documents:
+    title: Giấy tờ đính kèm
+    source: app_example_item_documents
+    via: item_id
+    file: file_id
+    upload: { note: note }
   children:
     - id: parts
       label: Thành phần

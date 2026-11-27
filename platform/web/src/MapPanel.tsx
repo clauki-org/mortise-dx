@@ -5,7 +5,7 @@
 // khung bản đồ (MapCanvas.tsx, nạp khi cần) và danh sách điểm của từng lớp. Danh sách đi kèm để người không xem được
 // bản đồ, hay trình duyệt không có WebGL, vẫn đọc đủ các điểm. Ở đây không có tên bảng hay chữ của một lĩnh vực nào.
 
-import { Alert, Button, ColorSwatch, Group, Loader, Paper, Stack, Table, Text, Title } from "@mantine/core";
+import { Alert, Button, ColorSwatch, Group, Paper, Stack, Table, Text, Title } from "@mantine/core";
 import { Component, lazy, type ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "urql";
 import {
@@ -24,7 +24,10 @@ import {
   visibleLayers,
 } from "./mapConfig";
 import { rolesOf } from "./menu";
+import { PageHeader } from "./PageHeader";
+import { Empty, ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
+import { TableScroll } from "./TableScroll";
 
 const MapCanvas = lazy(() => import("./MapCanvas"));
 
@@ -45,17 +48,14 @@ class CanvasBoundary extends Component<{ children: ReactNode }, CanvasFailure> {
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <Alert color="yellow" title="Không tải được bản đồ" m="md">
-        <Stack gap="xs" align="flex-start">
-          <Text size="sm">
-            {this.state.error.message}. Danh sách điểm bên dưới vẫn đủ. Tải lại trang để thử lại; nếu vẫn lỗi, báo người
-            quản trị.
-          </Text>
+      <Stack m="md">
+        <ErrorNotice title="Không tải được bản đồ" error={this.state.error}>
+          <Text size="sm">Danh sách điểm bên dưới vẫn đủ.</Text>
           <Button size="xs" variant="light" onClick={() => window.location.reload()}>
             Tải lại trang
           </Button>
-        </Stack>
-      </Alert>
+        </ErrorNotice>
+      </Stack>
     );
   }
 }
@@ -67,7 +67,7 @@ function useLayer(layer: Layer) {
   const { query, variables } = useMemo(() => layerQuery(layer), [layer]);
   // Truy vấn mang vai trò riêng; bộ nhớ đệm của urql không phân biệt vai trò nên luôn đọc lại từ máy chủ.
   const context = useMemo(() => (layer.role ? { role: layer.role } : {}), [layer.role]);
-  const [{ data, fetching, error }] = useQuery<{ rows: Row[] }>({
+  const [{ data, fetching, error }, reload] = useQuery<{ rows: Row[] }>({
     query,
     variables,
     context,
@@ -75,7 +75,7 @@ function useLayer(layer: Layer) {
   });
   // Dựng điểm theo data chứ không theo một mảng tạo mới mỗi lần vẽ, để khung bản đồ chỉ vẽ lại khi dữ liệu đổi.
   const placed = useMemo(() => pointsOf(layer, data?.rows.slice(0, limitOf(layer)) ?? []), [layer, data]);
-  return { ...placed, more: (data?.rows.length ?? 0) > limitOf(layer), fetching, error };
+  return { ...placed, more: (data?.rows.length ?? 0) > limitOf(layer), fetching, error, reload };
 }
 
 function Legend({ layer }: { layer: Layer }) {
@@ -99,7 +99,7 @@ function Legend({ layer }: { layer: Layer }) {
 type LayerProps = { layer: Layer; selected?: string; onPoints: (id: string, points: Point[]) => void };
 
 function LayerSection({ layer, selected, onPoints }: LayerProps) {
-  const { points, unplaced, more, fetching, error } = useLayer(layer);
+  const { points, unplaced, more, fetching, error, reload } = useLayer(layer);
   // Báo điểm lên khung bản đồ chung mỗi khi tập điểm của lớp đổi.
   useEffect(() => onPoints(layer.id, points), [layer.id, points, onPoints]);
   const fields = layer.fields ?? [];
@@ -110,20 +110,23 @@ function LayerSection({ layer, selected, onPoints }: LayerProps) {
       </Title>
       <Legend layer={layer} />
       {error && (
-        <Alert color="red" title={`Không đọc được lớp ${layer.label}`}>
-          {error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
-        </Alert>
+        <ErrorNotice
+          title={`Không đọc được lớp ${layer.label}`}
+          error={error}
+          onRetry={() => reload({ requestPolicy: "network-only" })}
+        />
       )}
-      {fetching && points.length === 0 && <Loader size="sm" aria-label={`Đang tải lớp ${layer.label}`} />}
-      {!fetching && !error && points.length === 0 && unplaced === 0 && <Text c="dimmed">Không có điểm nào.</Text>}
+      {fetching && points.length === 0 && <Loading what={`lớp ${layer.label}`} inline />}
+      {!fetching && !error && points.length === 0 && unplaced === 0 && <Empty title="Không có điểm nào." />}
       {unplaced > 0 && <Text size="sm">{unplaced} dòng chưa có tọa độ nên không hiện trên bản đồ.</Text>}
       {more && (
         <Text size="sm">
           Lớp có hơn {limitOf(layer)} dòng; chỉ hiện {limitOf(layer)} dòng đầu.
         </Text>
       )}
+      {/* Nhãn khung cuộn không lặp tên lớp: khối của lớp đã là vùng mang tên lớp, e2e tìm vùng theo tên đó. */}
       {points.length > 0 && (
-        <Table.ScrollContainer minWidth={480}>
+        <TableScroll label="Danh sách điểm" minWidth={480}>
           <Table>
             <Table.Thead>
               <Table.Tr>
@@ -151,7 +154,7 @@ function LayerSection({ layer, selected, onPoints }: LayerProps) {
               ))}
             </Table.Tbody>
           </Table>
-        </Table.ScrollContainer>
+        </TableScroll>
       )}
     </Stack>
   );
@@ -180,12 +183,10 @@ export function MapPanel({ config }: { config: MapConfig }) {
   }
   return (
     <Stack>
-      <Title order={1} size="h2">
-        {config.title}
-      </Title>
+      <PageHeader title={config.title} />
       <Paper withBorder radius="md">
         <CanvasBoundary>
-          <Suspense fallback={<Loader m="md" aria-label="Đang tải bản đồ" />}>
+          <Suspense fallback={<Loading what="bản đồ" />}>
             <MapCanvas points={points} selected={selected} onSelect={setSelected} />
           </Suspense>
         </CanvasBoundary>

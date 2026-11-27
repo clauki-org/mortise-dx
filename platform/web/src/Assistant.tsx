@@ -10,6 +10,8 @@ import { Alert, Blockquote, Button, Group, Loader, Stack, Text, Textarea, Title 
 import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { type Answer, type AssistantConfig, ask, configProblems, modelLine } from "./assistant";
+import { PageHeader } from "./PageHeader";
+import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 
 type Props = { config: AssistantConfig; app: string };
@@ -35,10 +37,7 @@ export function Assistant({ config, app }: Props) {
   };
   return (
     <Stack>
-      <Title order={1} size="h2">
-        Hỏi văn bản
-      </Title>
-      <Text>{config.intro}</Text>
+      <PageHeader title="Hỏi văn bản" description={config.intro} />
       <form onSubmit={submit}>
         <Stack gap="xs">
           <Textarea
@@ -76,11 +75,7 @@ export function Assistant({ config, app }: Props) {
           <Text>Đang tìm trong văn bản và trả lời; có thể mất một lúc.</Text>
         </Group>
       )}
-      {asking.isError && (
-        <Alert color="red" title="Chưa hỏi được">
-          {asking.error.message}
-        </Alert>
-      )}
+      {asking.isError && <ErrorNotice title="Chưa hỏi được" error={asking.error} />}
       {asking.data && <Result answer={asking.data} />}
     </Stack>
   );
@@ -97,7 +92,7 @@ export function Result({ answer }: { answer: Answer }) {
   }
   return (
     <Stack>
-      <Text fw={500}>{answer.answer}</Text>
+      <Text>{answer.answer}</Text>
       {answer.model && (
         <Text size="sm" c="dimmed">
           {modelLine(answer.model)}

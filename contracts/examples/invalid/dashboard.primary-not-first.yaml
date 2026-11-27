@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/dashboard.schema.json từ chối: khối chính đứng sau một khối khác. Lưới xếp đúng thứ tự
+# khai để thứ tự Tab khớp thứ tự nhìn; nếu lọt, khối chính nằm giữa trang hoặc thành phần phải đảo thứ tự.
+
+title: Tổng quan
+panels:
+  - id: count
+    title: Số đối tượng
+    description: Số đối tượng của đơn vị.
+    graphql: { field: app_example_totals }
+    cards: [{ column: item_count, label: Số đối tượng, description: Đếm mọi dòng. }]
+  - id: totals
+    title: Tổng
+    description: Số của đơn vị.
+    primary: true
+    graphql: { field: app_example_totals }
+    cards: [{ column: score, label: Điểm, description: Tổng điểm. }]

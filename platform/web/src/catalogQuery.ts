@@ -8,8 +8,17 @@
 
 import { type CatalogNode, firstColumn, keyOf, pageSize, type Sort, type Step, titleField } from "./catalog";
 
-/** Trạng thái của một danh sách: người dùng đang tìm gì, lọc gì, xếp theo gì, ở trang nào (trang đầu là 0). */
-export type ListState = { search: string; filters: Record<string, string>; sort?: Sort; page: number };
+/**
+ * Trạng thái của một danh sách: người dùng đang tìm gì, lọc gì, xếp theo gì, ở trang nào (trang đầu là 0), và có
+ * đang xem dạng thẻ không (ADR 0050); không có view là dạng bảng mặc định.
+ */
+export type ListState = {
+  search: string;
+  filters: Record<string, string>;
+  sort?: Sort;
+  page: number;
+  view?: "cards";
+};
 
 type Where = Record<string, unknown>;
 
@@ -118,6 +127,7 @@ export function readState(params: URLSearchParams): ListState {
     filters,
     sort: sort ? { field: sort.replace(/^-/, ""), direction: sort.startsWith("-") ? "desc" : "asc" } : undefined,
     page: Number.isInteger(page) && page > 1 ? page - 1 : 0,
+    view: params.get("view") === "cards" ? "cards" : undefined,
   };
 }
 
@@ -129,5 +139,7 @@ export function writeState(state: ListState): URLSearchParams {
   }
   if (state.sort) params.set("sort", `${state.sort.direction === "desc" ? "-" : ""}${state.sort.field}`);
   if (state.page > 0) params.set("page", String(state.page + 1));
+  // Dạng bảng là mặc định nên không ghi: đường dẫn của danh sách mới mở vẫn không có chuỗi truy vấn.
+  if (state.view === "cards") params.set("view", "cards");
   return params;
 }

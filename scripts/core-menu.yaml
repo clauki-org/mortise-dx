@@ -4,6 +4,9 @@
 # Mục menu mẫu của lõi, cùng dạng mục `menu` trong app.yaml; `make seed` nạp tất cả một lần bằng
 # `scripts/app-deploy.py menu --owner core`. Bộ nạp xóa mục của lõi không có trong tệp này, nên mọi mục mẫu phải
 # nằm ở đây: nạp từng mục một thì mục sau xóa mục trước. Đường dẫn cấu hình tính từ gốc repo.
+# `name` là tên nhóm của các mục này trên menu, như `name` của app.yaml là tên nhóm của gói; giao diện đặt nhóm
+# của lõi cuối cùng và thu gọn vì đây chỉ là mục mẫu (ADR 0044).
+name: Mẫu thử
 menu:
   # Hỏi văn bản trên hai văn bản mẫu hư cấu (/apps/core/ask-example), để thử trợ lý khi chưa gói nào khai văn bản;
   # `make e2e` hỏi qua mục này.
@@ -11,9 +14,11 @@ menu:
     label: Hỏi văn bản mẫu
     component: assistant
     config: contracts/examples/assistant.example.yaml
+    icon: chat
   # Hỏi dữ liệu trên bảng văn bản của Tầng 2 (/apps/core/ask-data-example, ADR 0027); `make smoke` và `make e2e`
   # chạy câu mẫu của mục này mà không cần mô hình.
   - id: ask-data-example
     label: Hỏi dữ liệu mẫu
     component: assistant
     config: contracts/examples/assistant-data.example.yaml
+    icon: chat

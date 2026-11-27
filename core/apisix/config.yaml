@@ -15,6 +15,37 @@ deployment:
 
 nginx_config:
   error_log_level: warn
+  # limit-count (apisix.yaml) trả trang HTML của nginx khi vượt giới hạn; client viết theo ErrorBody cần JSON có khóa
+  # `error`. Không dùng `rejected_msg` vì nó cho khóa `error_msg`; không dùng thêm response-rewrite vì hai bản
+  # response-rewrite trên cùng yêu cầu chung một cờ khớp, bản 401 của bearer-token sẽ tắt bản 429. error_page chỉ bắt
+  # 429 do cổng tự sinh (proxy_intercept_errors tắt), nên 429 của dịch vụ phía sau, nếu có, vẫn đi nguyên vẹn.
+  http_server_configuration_snippet: |
+    error_page 429 @rate_limited;
+    location @rate_limited {
+        default_type application/json;
+        return 429 '{"error":"Gửi quá nhiều yêu cầu trong một phút; chờ một lát rồi thử lại."}\n';
+    }
+  # Worker của nginx chỉ thấy biến môi trường được khai ở đây; apisix.yaml đọc biến này trong worker.
+  envs:
+    - APISIX_TRACE_SAMPLER
+  http:
+    # Định dạng mặc định của APISIX 3.19.0 thêm trace_id ở cuối, để log của cổng trong Loki nối được sang vết trong
+    # Jaeger (ADR 0038). Mã vết luôn có, cả khi tắt truy vết (vết đó không được lưu).
+    access_log_format: >-
+      $remote_addr - $remote_user [$time_local] $http_host "$request" $status $body_bytes_sent $request_time
+      "$http_referer" "$http_user_agent" $upstream_addr $upstream_status $upstream_response_time
+      "$upstream_scheme://$upstream_host$upstream_uri" "$apisix_request_id" trace_id=$opentelemetry_trace_id
+
+# Thay danh sách plugin mặc định: opentelemetry không có trong danh sách đó, mà khai `plugins` thì APISIX chỉ nạp đúng
+# các plugin liệt kê. Liệt kê mọi plugin apisix.yaml dùng; dùng thêm plugin nào thì thêm vào đây, thiếu thì cấu hình
+# chứa plugin đó bị từ chối.
+plugins:
+  - opentelemetry
+  - openid-connect
+  - fault-injection
+  - limit-count
+  - response-rewrite
+  - prometheus
 
 # Plugin prometheus (bật cho mọi route ở global_rules trong apisix.yaml) xuất số liệu ở một cổng riêng 9091, không qua
 # cổng 9080 của người dùng. Mặc định cổng này chỉ nghe 127.0.0.1 trong container, Prometheus ở container khác không

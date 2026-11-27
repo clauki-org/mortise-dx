@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mortise.invalid/contracts/branding.schema.json",
+  "title": "Thương hiệu của bản cài",
+  "description": "Tệp /branding.json mà giao diện đọc trước lần vẽ đầu (ADR 0043): tên, tên ngắn, logo, màu chính của đơn vị cài đặt. Bản mặc định là platform/web/brand/branding.json; người vận hành ghi đè bằng thư mục MORTISE_BRANDING_DIR. Tệp sai thì giao diện bỏ cả tệp và dùng bản mặc định. Trang đăng nhập của Keycloak không đọc tệp này.",
+  "type": "object",
+  "required": ["name", "short_name", "color"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "description": "Tên đầy đủ: tiêu đề màn hình chờ đăng nhập, thanh trên trên màn hình rộng, tiêu đề tab trình duyệt.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "\\S"
+    },
+    "short_name": {
+      "description": "Tên ngắn cho thanh trên trên màn hình hẹp.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 24,
+      "pattern": "\\S"
+    },
+    "logo": {
+      "description": "Tệp ảnh trong thư mục thương hiệu, viết là /brand/<tệp>. Chỉ ảnh cùng origin: CSP của giao diện chặn ảnh từ nơi khác.",
+      "type": "string",
+      "pattern": "^/brand/[A-Za-z0-9][A-Za-z0-9._-]*\\.(svg|png|webp)$"
+    },
+    "color": {
+      "description": "Tên bảng màu Mantine làm màu chính. Chỉ các bảng mà chữ trắng trên nền màu và chữ màu trên nền trắng, nền nhạt đều đạt WCAG AA ở sắc độ giao diện dùng (platform/web/src/theme.test.tsx).",
+      "enum": ["blue", "indigo", "violet", "grape", "pink", "dark"]
+    }
+  }
+}

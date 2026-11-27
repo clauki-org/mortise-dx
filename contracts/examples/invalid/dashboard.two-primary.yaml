@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/dashboard.schema.json từ chối: hai khối cùng là khối chính. Nếu lọt, trang có hai
+# điểm nhìn chính và thứ tự hiện tùy vào thành phần chọn khối nào.
+
+title: Tổng quan
+panels:
+  - id: totals
+    title: Tổng
+    description: Số của đơn vị.
+    primary: true
+    graphql: { field: app_example_totals }
+    cards: [{ column: score, label: Điểm, description: Tổng điểm. }]
+  - id: count
+    title: Số đối tượng
+    description: Số đối tượng của đơn vị.
+    primary: true
+    graphql: { field: app_example_totals }
+    cards: [{ column: item_count, label: Số đối tượng, description: Đếm mọi dòng. }]

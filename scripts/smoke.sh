@@ -316,10 +316,59 @@ manager_a=$(token manager.a "$(otp manager.a)")
 check "Người duyệt có mã OTP lấy được token ghi đã nhập OTP" "$(claims "$manager_a" | jq -c '.amr | sort')" \
   '["otp","pwd"]'
 user_a=$(token user.a)
-check "Người dùng thường vẫn đăng nhập bằng mật khẩu" "$(claims "$user_a" | jq -c .amr)" '["pwd"]'
+check "Người dùng thường của tenant không có chính sách OTP vẫn đăng nhập bằng mật khẩu" \
+  "$(claims "$user_a" | jq -c .amr)" '["pwd"]'
+# Chính sách đăng nhập theo tenant (ADR 0040): `make seed` đặt tinh-khac bắt buộc OTP, user.k không có vai trò nào thêm.
+# Đổi tạm về mặc định thì user.k chỉ cần mật khẩu; đặt lại otp ngay, cả khi bài dừng giữa chừng (trap). Lấy token có
+# OTP sau khi đặt lại nên cũng kiểm việc đặt lại. Chỉ thử sai một lần, như ở trên.
+error=$(curl -s "$base/auth/realms/mortise/protocol/openid-connect/token" -d grant_type=password \
+  -d client_id=mortise-test -d username=user.k -d "password=$DEMO_USER_PASSWORD" | jq -r .error)
+check "Tenant bắt buộc OTP: người dùng thường thiếu mã OTP không lấy được token" "$error" invalid_grant
+trap 'rm -f "$claims_file"; scripts/tenant-login.sh tinh-khac otp >/dev/null' EXIT
+scripts/tenant-login.sh tinh-khac default >/dev/null
+check "Tenant về chính sách mặc định: người dùng thường đăng nhập bằng mật khẩu" \
+  "$(claims "$(token user.k)" | jq -c .amr)" '["pwd"]'
+scripts/tenant-login.sh tinh-khac otp >/dev/null
+trap 'rm -f "$claims_file"' EXIT
+check "Tenant bắt buộc OTP: người dùng thường có mã OTP lấy được token ghi đã nhập OTP" \
+  "$(claims "$(token user.k "$(otp user.k)")" | jq -c '.amr | sort')" '["otp","pwd"]'
 claims "$manager_a" > "$claims_file"
 if scripts/contracts.sh token "$claims_file"; then status=ok; else status=lệch; fi
 check "Token khớp contracts/token-claims.schema.json" "$status" ok
+
+# Passkey (ADR 0042): curl không làm được WebAuthn, đăng nhập thật bằng Passkey nằm ở `make e2e`. Ở đây chỉ kiểm cấu
+# hình realm qua API quản trị: thứ tự các bước (gate Passkey và OTP sau yếu tố đầu, nên Passkey không bỏ qua được OTP),
+# amr của bước Passkey, chính sách của realm và tenant nào được bật.
+kc() { docker compose exec -T keycloak /opt/keycloak/bin/kcadm.sh "$@" </dev/null; }
+kc config credentials --server http://localhost:8080/auth --realm master \
+  --user admin --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null 2>&1
+forms=$(kc get "authentication/flows/browser-mfa%20forms/executions" -r mortise)
+check "Luồng trình duyệt: mật khẩu hay Passkey, rồi chặn Passkey chưa cho phép, rồi OTP theo otp_required" \
+  "$(jq -c '[.[] | select(.requirement != "DISABLED") | [.level, (.providerId // .displayName), .requirement]]' \
+    <<<"$forms")" \
+  '[[0,"browser-mfa first factor","REQUIRED"],[1,"auth-username-password-form","ALTERNATIVE"],'\
+'[1,"webauthn-authenticator-passwordless","ALTERNATIVE"],[0,"browser-mfa passkey policy","CONDITIONAL"],'\
+'[1,"conditional-credential","REQUIRED"],[1,"conditional-user-role","REQUIRED"],'\
+'[1,"deny-access-authenticator","REQUIRED"],[0,"browser-mfa approver otp","CONDITIONAL"],'\
+'[1,"conditional-user-role","REQUIRED"],[1,"auth-otp-form","REQUIRED"]]'
+config=$(jq -r '.[] | select(.providerId == "webauthn-authenticator-passwordless") | .authenticationConfig' <<<"$forms")
+# API quản trị của Keycloak che giá trị cấu hình (trả "**********"), nên smoke chỉ kiểm bước Passkey gắn đúng cấu hình
+# amr-hwk; giá trị hwk trong token do make e2e (passkey.spec.ts) kiểm.
+check "Bước Passkey gắn cấu hình amr-hwk" \
+  "$(kc get "authentication/config/$config" -r mortise | jq -r '.alias')" amr-hwk
+check "Ô mật khẩu không tự nhận Passkey; Passkey lưu trên thiết bị, phải xác minh người dùng" \
+  "$(kc get realms/mortise | jq -c '[.webAuthnPolicyPasswordlessPasskeysEnabled,
+    .webAuthnPolicyPasswordlessResidentKey, .webAuthnPolicyPasswordlessUserVerificationRequirement]')" \
+  '[false,"required","required"]'
+web_client=$(kc get clients -r mortise -q clientId=mortise-web --fields id --format csv --noquotes)
+passkey_of() {
+  local group
+  group=$(kc get groups -r mortise -q "search=$1" --fields id,name --format csv --noquotes |
+    awk -F, -v n="$1" '$2==n{print $1}')
+  kc get "groups/$group/role-mappings/clients/$web_client" -r mortise 2>/dev/null |
+    jq -r 'any(.[]; .name == "passkey_allowed")'
+}
+check "Chỉ tenant demo xa-c bật Passkey, xa-a không" "$(passkey_of xa-c) $(passkey_of xa-a)" "true false"
 
 # Flowable chỉ chứa quy trình deploy theo tenant. Hỏi thẳng Flowable ở cổng chỉ mở trong máy
 # chủ, vì workflow-api không cho thấy quy trình ngoài tenant của người gọi.
@@ -342,14 +391,17 @@ api() {
 
 status=$(curl -s -o /dev/null -w '%{http_code}' "$wf/tasks")
 check "API quy trình không token bị chặn tại cổng" "$status" 401
-# Lỗi 401 của cổng có cùng dạng ErrorBody với lỗi của workflow-api (contracts/workflow-api.openapi.json), để giao
-# diện đọc được lý do và biết phải đăng nhập lại.
+# Dạng thân lỗi: "ErrorBody" khi đúng hợp đồng của workflow-api (contracts/workflow-api.openapi.json).
+error_shape() {
+  jq -r 'if type == "object" and keys == ["error"] then "ErrorBody" else "khác" end' <<<"$1" 2>/dev/null ||
+    echo "không phải JSON"
+}
+# Lỗi 401 của cổng có cùng dạng ErrorBody với lỗi của workflow-api, để giao diện đọc được lý do và biết phải đăng
+# nhập lại.
 for path in /v1/workflow/tasks /v1/graphql; do
   response=$(curl -s -X POST -w '\n%{http_code}' "$base$path")
   status=${response##*$'\n'} body=${response%$'\n'*}
-  shape=$(jq -r 'if type == "object" and keys == ["error"] then "ErrorBody" else "khác" end' <<<"$body" \
-    2>/dev/null || echo "không phải JSON")
-  check "Lỗi 401 của $path là JSON theo hợp đồng" "$status $shape" "401 ErrorBody"
+  check "Lỗi 401 của $path là JSON theo hợp đồng" "$status $(error_shape "$body")" "401 ErrorBody"
 done
 
 IFS=$'\t' read -r status body < <(api POST "$user_a" /processes/core-approval/instances \
@@ -358,6 +410,12 @@ check "user.a khởi tạo quy trình duyệt" "$status" 201
 instance=$(jq -r .id <<<"$body")
 
 task_of() { api GET "$1" /tasks | cut -f2 | jq -r --arg p "$instance" '.[] | select(.processInstanceId == $p) | .id'; }
+# Xóa quy trình thử thẳng ở Flowable trong máy chủ (workflow-api không có lệnh hủy). Dùng cho hồ sơ mà bài kiểm không
+# đóng được hay không cần đóng, để bảng việc demo của người duyệt không tích hồ sơ do smoke để lại.
+drop_instance() {
+  curl -fsS -o /dev/null -X DELETE -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" \
+    "http://127.0.0.1:${FLOWABLE_PORT:-8083}/flowable-rest/service/runtime/process-instances/$1"
+}
 
 check "manager.b (tenant khác, cùng vai trò) không thấy task" "$(task_of "$manager_b")" ""
 task=$(task_of "$manager_a")
@@ -384,6 +442,8 @@ instance=$(jq -r .id <<<"$body")
 IFS=$'\t' read -r status body < <(api POST "$manager_a" "/tasks/$(task_of "$manager_a")/complete" \
   '{"variables":{"approved":true}}')
 check "Quy tắc bốn mắt: người gửi không tự duyệt được" "$status" 403
+# Xã không còn người duyệt nào khác manager.a nên hồ sơ này không bao giờ đóng.
+drop_instance "$instance"
 
 IFS=$'\t' read -r status _ < <(api POST "$user_a" /processes/core-approval/instances \
   '{"variables":{"initiator":"gia-mao"}}')
@@ -437,6 +497,9 @@ check "Gửi lại sau đó với cùng mã vẫn trả quy trình cũ" "$(start
 other=$(start_once "$manager_a")
 check "Người khác dùng trùng mã được quy trình của riêng mình" \
   "$([[ "$other" =~ ^[0-9a-f-]+$ && "$other" != "$created" ]] && echo yes)" yes
+for started in "$created" "$other"; do
+  if [[ "$started" =~ ^[0-9a-f-]+$ ]]; then drop_instance "$started"; fi
+done
 
 # Tài khoản dịch vụ (ADR 0017): mở quy trình thay cho tenant ghi ở header, ngoài ra không làm được gì.
 token_url="$base/auth/realms/mortise/protocol/openid-connect/token"
@@ -509,6 +572,20 @@ status=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $user_
 check "user.b (tenant khác) không tải được tệp của tenant A" "$status" 404
 status=$(curl -s -o /dev/null -w '%{http_code}' "$files/$file_id")
 check "API tệp không token bị chặn tại cổng" "$status" 401
+# Vượt giới hạn tần suất (core/apisix/apisix.yaml) thì cổng trả 429 dạng ErrorBody như lỗi 401, không phải trang
+# HTML. Token riêng vì cổng đếm theo token: dùng $user_a thì các bước sau bị chặn tới hết phút. Gửi tới khi gặp 429,
+# không chép ngưỡng vào đây; quá 200 lần mà chưa bị chặn thì kiểm báo lỗi.
+limited=$(token user.a)
+for _ in $(seq 1 200); do
+  response=$(curl -s -w '\n%{content_type}\n%{http_code}' -H "Authorization: Bearer $limited" \
+    "$files/00000000-0000-0000-0000-000000000000")
+  status=${response##*$'\n'}
+  [[ $status == 429 ]] && break
+done
+response=${response%$'\n'*}
+content_type=${response##*$'\n'} body=${response%$'\n'*}
+check "Vượt giới hạn tần suất của API tệp: lỗi 429 là JSON theo hợp đồng" \
+  "$status $content_type $(error_shape "$body")" "429 application/json ErrorBody"
 # Máy chủ trả 413 rồi đóng kết nối khi curl còn đang gửi, nên curl thoát mã khác 0 dù đã nhận đủ phản hồi.
 status=$(head -c $((${FILES_MAX_BYTES:-20971520} + 1)) /dev/zero | curl -s -o /dev/null -w '%{http_code}' -X POST \
   -H "Authorization: Bearer $user_a" --data-binary @- "$files?name=qua-co.bin" || true)

@@ -25,11 +25,13 @@ detail:
       fields:
         - { name: code, label: Mã }
         - { name: name, label: Tên }
+        # Loại không phải trạng thái tốt hay xấu, nên cả hai lựa chọn mang nghĩa neutral: nhãn xám có chữ, không
+        # mức nào (ADR 0050).
         - name: kind
           label: Loại
           choices:
-            - { value: consumable, label: Vật tư tiêu hao }
-            - { value: equipment, label: Thiết bị }
+            - { value: consumable, label: Vật tư tiêu hao, tone: neutral }
+            - { value: equipment, label: Thiết bị, tone: neutral }
         - { name: quantity, label: Số lượng, type: number }
         - { name: unit, label: Đơn vị tính }
         - { name: created_at, label: Ngày tạo, type: datetime }

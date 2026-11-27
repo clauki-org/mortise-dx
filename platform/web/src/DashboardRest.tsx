@@ -6,10 +6,11 @@
 // dashboardSources.ts, vẽ bằng DashboardView.tsx như khối graphql. Ở đây không có tên quy trình hay chữ của một lĩnh
 // vực nào.
 
-import { Alert, Loader, Text } from "@mantine/core";
+import { Loader, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { callApi } from "./api";
-import { CardsView, ChartView, type RestSent, SourceDetails } from "./DashboardView";
+import { CardsView, ChartView, MethodDetails, type RestSent } from "./DashboardView";
 import type { Panel, Row } from "./dashboardConfig";
 import {
   type ContextSource,
@@ -22,6 +23,7 @@ import {
   restPath,
   type WorkflowSource,
 } from "./dashboardSources";
+import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 import { dateTime } from "./steps";
 import type { Task } from "./workflow";
@@ -60,7 +62,7 @@ async function loadContext(token: string | undefined, panel: Panel, source: Cont
   return { rows, notes, more: entities.length > limit };
 }
 
-export function RestBody({ panel }: { panel: Panel }) {
+export function RestBody({ panel, link, columns }: { panel: Panel; link: ReactNode; columns?: number }) {
   const { getToken } = useSession();
   const path = restPath(panel);
   // Khóa gồm quy trình: khối "mine" của các quy trình khác nhau gửi cùng đường dẫn mà ra dòng khác nhau. gcTime 0: mở
@@ -80,19 +82,32 @@ export function RestBody({ panel }: { panel: Panel }) {
     <>
       {panel.workflow?.counts === "mine" && <Text size="sm">{MINE}</Text>}
       {result.isError && (
-        <Alert color="red" title={`Không đọc được số liệu của khối "${panel.title}"`}>
-          {result.error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
-        </Alert>
+        <ErrorNotice
+          title={`Không đọc được số liệu của khối "${panel.title}"`}
+          error={result.error}
+          onRetry={() => void result.refetch()}
+        />
       )}
       {result.isPending && <Loader size="sm" aria-label={`Đang tải ${panel.title}`} />}
-      {data && panel.cards && <CardsView cards={panel.cards} rows={data.rows} empty={empty} />}
-      {data && panel.chart && <ChartView chart={panel.chart} rows={data.rows} title={panel.title} empty={empty} />}
+      {data && panel.cards && (
+        <CardsView cards={panel.cards} rows={data.rows} empty={empty} large={panel.primary} columns={columns} />
+      )}
+      {data && panel.chart && (
+        <ChartView
+          chart={panel.chart}
+          rows={data.rows}
+          title={panel.title}
+          empty={empty}
+          ordinal={Boolean(panel.context)}
+        />
+      )}
       {data?.more && panel.context && (
         <Text size="sm">
           Nguồn có hơn {contextLimit(panel.context)} thiết bị; chỉ hiện {contextLimit(panel.context)} thiết bị đầu.
         </Text>
       )}
-      <SourceDetails panel={panel} rest={sent} />
+      {link}
+      <MethodDetails panel={panel} rest={sent} />
     </>
   );
 }

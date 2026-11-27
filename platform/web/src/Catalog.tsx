@@ -6,13 +6,14 @@
 // chỉ gốc, mọi đường dẫn bên dưới địa chỉ gốc do thành phần tự đọc. Ở đây không có tên bảng, tên cột hay chữ của
 // một lĩnh vực nào.
 
-import { Alert, Group, Stack, Title } from "@mantine/core";
+import { Alert, Stack } from "@mantine/core";
 import { useLocation, useSearchParams } from "react-router";
 import { CatalogExport } from "./CatalogExport";
 import { CatalogRecord } from "./CatalogRecord";
 import { CatalogTable } from "./CatalogTable";
 import { type CatalogConfig, configProblems, problemText, resolvePath } from "./catalog";
 import { readState, writeState } from "./catalogQuery";
+import { PageHeader } from "./PageHeader";
 
 type Props = {
   config: CatalogConfig;
@@ -38,14 +39,16 @@ export function Catalog({ config, basePath }: Props) {
     const state = readState(params);
     return (
       <Stack>
-        {/* Nút xuất chỉ ở danh sách ngoài cùng; bảng đối tượng con trong màn hình chi tiết không xuất (ADR 0038). */}
-        <Group justify="space-between" align="flex-end">
-          <Title order={1} size="h2">
-            {config.title}
-          </Title>
-          <CatalogExport config={config} state={state} />
-        </Group>
-        <CatalogTable config={config} path={basePath} state={state} onChange={(next) => setParams(writeState(next))} />
+        {/* Nút xuất chỉ ở danh sách ngoài cùng; bảng đối tượng con trong màn hình chi tiết không xuất (ADR 0052). */}
+        <PageHeader title={config.title} action={<CatalogExport config={config} state={state} />} />
+        <CatalogTable
+          config={config}
+          label={config.title}
+          path={basePath}
+          state={state}
+          onChange={(next) => setParams(writeState(next))}
+          views
+        />
       </Stack>
     );
   }

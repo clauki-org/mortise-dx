@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Ghi bảng xuất của danh mục (catalogExport.ts) ra Excel (.xlsx, write-excel-file) và PDF (pdfmake), ADR 0038. Mỗi
+// Ghi bảng xuất của danh mục (catalogExport.ts) ra Excel (.xlsx, write-excel-file) và PDF (pdfmake), ADR 0052. Mỗi
 // định dạng có một hàm thuần dựng dữ liệu cho thư viện, để kiểm thử không cần thư viện, và một hàm nạp thư viện khi
 // người dùng bấm xuất: hai thư viện nặng (PDF kèm font tiếng Việt) nên không nằm trong phần tải trang ban đầu.
 

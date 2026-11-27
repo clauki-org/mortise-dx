@@ -68,7 +68,12 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   - Access token sống 15 phút; bật chống dò mật khẩu; tắt tự đăng ký.
   - Người có vai trò `otp_required` của client `mortise-web` (mọi `manager` có sẵn qua vai trò gộp) đăng nhập hai bước
     (mật khẩu và mã OTP) qua luồng `browser-mfa` và `direct-grant-mfa`; token ghi cách đăng nhập trong claim `amr`
-    ([ADR 0011](adr/0011-approver-mfa.md)).
+    ([ADR 0011](adr/0011-approver-mfa.md)). `make tenant-login TENANT=<tenant> POLICY=otp` gán vai trò đó cho group
+    của tenant, nên mọi tài khoản của tenant phải nhập OTP; `POLICY=default` bỏ đi
+    ([ADR 0040](adr/0040-tenant-login-policy.md)). `POLICY=passkey` (gỡ bằng `no-passkey`) gán vai trò
+    `passkey_allowed` cho group của tenant: người của tenant thêm Passkey bằng nút "Thêm Passkey" trên giao diện và
+    đăng nhập bằng nó thay mật khẩu (amr `hwk`), vẫn nhập OTP nếu có `otp_required`; Passkey của tenant khác bị từ chối
+    ([ADR 0042](adr/0042-passkey-login.md)).
 - **Cấu hình:** `core/keycloak/realm-mortise.json`, được nạp khi Keycloak khởi động lần đầu. Tài khoản demo, khóa OTP
   của người duyệt demo (`DEMO_OTP_SECRET`) và client `mortise-test` do `scripts/seed.sh` tạo, không nằm trong tệp
   realm. `make otp` in mã OTP hiện tại của người duyệt demo.
@@ -86,8 +91,9 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
     chặn (403) ([ADR 0007](adr/0007-login-page-exception.md)).
   - `/v1/graphql` (Hasura), `/v1/workflow/*` (workflow-api) và `/v1/files` (files-api) bắt buộc access token. Cổng tự kiểm chữ ký token bằng
     khóa công khai (JWKS) của Keycloak; không token hoặc token giả thì trả 401.
-  - Giới hạn tần suất theo token: 600 yêu cầu mỗi phút cho API dữ liệu, 300 cho API quy trình. Đếm theo token, không
-    theo IP, để nhiều người sau cùng một NAT không chặn lẫn nhau.
+  - Giới hạn tần suất theo token: 600 yêu cầu mỗi phút cho API dữ liệu, 300 cho API quy trình, 120 cho API tệp, 300
+    cho API thiết bị, 20 cho trợ lý. Đếm theo token, không theo IP, để nhiều người sau cùng một NAT không chặn lẫn
+    nhau. Vượt giới hạn thì trả 429 dạng JSON `{"error": "..."}` (`error_page` trong `config.yaml`).
   - Plugin `prometheus` bật cho mọi route (`global_rules`): đếm yêu cầu theo route và mã trả về, đo độ trễ; số liệu
     chỉ đọc được ở cổng 9091 trong mạng nội bộ, cổng 9080 không trả ([ADR 0037](adr/0037-observability-profile.md)).
 - **Cấu hình:** `core/apisix/config.yaml` (chế độ chạy), `core/apisix/apisix.yaml` (tuyến đường). Sửa xong chạy
@@ -292,9 +298,9 @@ mở cổng, và chỉ ở `127.0.0.1`.
   route và mã trả về, lỗi 5xx theo route, độ trễ p95 theo route ở cổng, đích của Prometheus và sức khỏe từng dịch vụ,
   số lần đăng nhập lỗi (sự kiện `LOGIN_ERROR` của Keycloak trong log), bảng log lọc theo biến `service`. Tắt truy cập
   ẩn danh, tự đăng ký, gửi thống kê và hỏi bản mới.
-- **Cấu hình:** dịch vụ `grafana` trong `compose.yaml`; nguồn dữ liệu (uid `prometheus`, `loki`) và nơi nạp dashboard ở
-  `core/observability/grafana/provisioning/`, dashboard ở `core/observability/grafana/dashboards/`. Sửa trên giao diện
-  không lưu được: sửa tệp JSON rồi `docker compose restart grafana`.
+- **Cấu hình:** dịch vụ `grafana` trong `compose.yaml`; nguồn dữ liệu (uid `prometheus`, `loki`, `jaeger`) và nơi nạp
+  dashboard ở `core/observability/grafana/provisioning/`, dashboard ở `core/observability/grafana/dashboards/`. Sửa trên
+  giao diện không lưu được: sửa tệp JSON rồi `docker compose restart grafana`.
 - **Xem:** `http://127.0.0.1:3000` (`GRAFANA_PORT`), tài khoản `admin`, mật khẩu `GRAFANA_ADMIN_PASSWORD`. Mật khẩu chỉ
   áp dụng khi volume `grafanadata` còn trống; đổi trong `.env` sau đó không đổi mật khẩu đã lưu.
 
@@ -326,6 +332,21 @@ mở cổng, và chỉ ở `127.0.0.1`.
   vị trí đã đọc của Alloy trong `alloydata`. Docker rootless hay socket ở chỗ khác: đặt `DOCKER_SOCK` trong `.env`.
 - **Xem:** Grafana, bảng log của dashboard hay mục Explore với nguồn Loki, ví dụ `{service="workflow-api"}`.
 
+### Jaeger và OpenTelemetry: vết của một yêu cầu
+
+- **Làm gì:** mỗi chặng của một yêu cầu (cổng, dịch vụ, lời gọi ra ngoài) thành một span có thời điểm và thời gian;
+  các span chung một mã vết. OpenTelemetry tạo span, Jaeger nhận qua OTLP, lọc rồi lưu.
+- **Trong dự án:** mặc định tắt; `MORTISE_TRACING=on` trong `.env` rồi `make up` thì plugin `opentelemetry` của APISIX
+  ghi mọi yêu cầu tới API dưới /v1, và workflow-api, files-api, context-api, assistant chạy dưới
+  `opentelemetry-instrument` (span của FastAPI, HTTPX và quanh CSDL). Jaeger bỏ chuỗi truy vấn, user-agent, địa chỉ người
+  gọi trước khi lưu, giữ 7 ngày. Log của cổng và dịch vụ mang `trace_id=` để Grafana nối log với vết. Lý do và phạm vi:
+  [ADR 0038](adr/0038-distributed-tracing.md).
+- **Cấu hình:** `core/observability/jaeger.yaml` (nhận, lọc, lưu Badger trong volume `jaegerdata`); plugin và nơi gửi
+  vết ở `core/apisix/apisix.yaml`; biến `OTEL_*` chung của dịch vụ ở `x-tracing` trong `compose.yaml`. Không mở cổng ra
+  máy chủ.
+- **Xem:** Grafana, mục Explore, nguồn Jaeger: tìm theo dịch vụ và thời gian hay dán mã vết; từ một span bấm sang các
+  dòng log chứa mã vết trong Loki, từ dòng log có `trace_id=` bấm "Xem vết".
+
 ## Giao diện Tầng 2
 
 ### Khung giao diện (`platform/web/`, tự viết)
@@ -345,6 +366,13 @@ mở cổng, và chỉ ở `127.0.0.1`.
     `role` đã khai hoặc `user` khi bỏ trống, để Hasura dùng đúng vai trò mà `make check-fast` đã kiểm; token không có
     vai trò đó thì biểu mẫu không hiện, khối không được truy vấn ([ADR 0030](adr/0030-form-component.md),
     [ADR 0033](adr/0033-dashboard-component.md)).
+  - Menu chia nhóm theo gói, tên nhóm là `name` của gói; mỗi mục có biểu tượng theo ý nghĩa `icon` khai trong
+    `app.yaml`, hình lấy từ Tabler Icons (`@tabler/icons-react` 3.51.0, MIT), nhập tĩnh từng hình nên bản build chỉ
+    chứa các hình đã dùng ([ADR 0044](adr/0044-menu-groups-and-icons.md)). Dưới cỡ `sm` menu thu vào nút mở menu.
+  - Chữ là Be Vietnam Pro (`@fontsource/be-vietnam-pro` 5.3.0, OFL-1.1), ba độ đậm 400, 600, 800, tệp phông nằm
+    trong `assets/` cùng origin, không nhúng `data:` vì CSP, văn bản giấy phép đi kèm ở
+    `licenses/be-vietnam-pro-OFL-1.1.txt`; chưa tải được thì dùng phông của hệ điều hành
+    ([ADR 0048](adr/0048-bento-tokens-status-tones-font.md)).
   - Bản đồ vẽ bằng MapLibre GL JS 6.18.0 trên nền trơn, không tải tile từ máy chủ nào; mã của nó chỉ tải khi mở
     trang bản đồ, worker chạy từ tệp cùng origin nên CSP không mở `blob:`.
   - Biểu đồ của bảng điều hành là thanh vẽ bằng CSS theo biến màu của Mantine, không thêm thư viện biểu đồ; mỗi biểu
@@ -378,11 +406,13 @@ hưởng tới mã Apache-2.0 của dự án. Những công cụ chạy qua `uvx
 | check-jsonschema | Kiểm hợp đồng trong `contracts/` và token thật theo JSON Schema | `make check-fast`, `make smoke` | Apache-2.0 |
 | pytest | Kiểm thử đơn vị workflow-api và files-api | `make test` | MIT |
 | Playwright | Kiểm thử giao diện trên trình duyệt thật qua cổng; bài kiểm ở `platform/web/e2e/` | `make e2e` | Apache-2.0 |
+| axe-core cho Playwright (`@axe-core/playwright`) | Báo lỗi trợ năng của từng trang trong bài chụp giao diện `e2e/visual.spec.ts`, ghi thành tệp JSON kèm ảnh trong kết quả của Playwright; lỗi mức critical, serious theo WCAG 2.1 A, AA làm bài hỏng, mức khác chỉ ghi trong báo cáo | `make e2e` | MPL-2.0 |
 | Node.js, npm | Build và kiểm giao diện; Node chỉ có trong image build, không có khi chạy | `make web-check`, `npm run dev` | MIT / Artistic-2.0 |
 | Biome | Kiểm lỗi và định dạng mã giao diện | `make web-check` | MIT OR Apache-2.0 |
 | Vitest | Kiểm thử đơn vị mã giao diện không cần trình duyệt; bài kiểm là tệp `*.test.ts` trong `platform/web/src/` | `make web-check` | MIT |
 | license-checker-rseidelsohn | Kiểm giấy phép phụ thuộc của giao diện theo danh sách cho phép trong `Makefile` | `make web-check` | BSD-3-Clause |
+| `scripts/deps-check.py` (tự viết) | Kiểm image, thư viện Python, web, mô hình và công cụ chạy qua `uvx` được ghim phiên bản; giấy phép thư viện Python và image theo danh sách cho phép và bảng giấy phép của README (chính sách ở `scripts/deps-policy.toml`); báo bản mới qua registry, `uv pip list --outdated`, `npm outdated`, không tự nâng cấp ([ADR 0039](adr/0039-dependency-check-script.md)) | `make check-fast` (bỏ phần bản mới), `make deps-check` | Apache-2.0 |
 | curl, jq, openssl | Gọi API trong seed và smoke, đọc JSON, sinh bí mật ngẫu nhiên | `scripts/` | curl / MIT / Apache-2.0 |
-| GitHub Actions | CI: `make check-fast` và `make test` với mọi thay đổi; `make web-check` khi đổi `platform/web/`; dựng lõi trên máy trắng, `make smoke`, `make heal-check` và `make e2e` khi pull request đổi thứ ngoài tài liệu; `make restore-drill` trên một máy trắng khác khi đổi phần sao lưu, khôi phục phụ thuộc; push lên `main` chạy đủ. Tag `v*`: chạy lại toàn bộ CI, dựng và đẩy image, kéo lại không đăng nhập để smoke, tạo GitHub Release ([ADR 0036](adr/0036-pull-based-gitops-with-compose.md)) | `.github/workflows/ci.yml`, `.github/workflows/release.yml` | dịch vụ của GitHub |
+| GitHub Actions | CI: `make check-fast` và `make test` với mọi thay đổi; `make web-check` khi đổi `platform/web/`; dựng lõi trên máy trắng, `make smoke`, `make heal-check` và `make e2e` khi pull request đổi thứ ngoài tài liệu; `make restore-drill` trên một máy trắng khác khi đổi phần sao lưu, khôi phục phụ thuộc; push lên `main` chạy đủ. Tag `v*`: chạy lại toàn bộ CI, dựng và đẩy image, kéo lại không đăng nhập để smoke, tạo GitHub Release ([ADR 0036](adr/0036-pull-based-gitops-with-compose.md)). Thứ Hai hằng tuần: `make deps-check` và đăng báo cáo thành comment trong issue theo dõi (đã cấu hình, chưa chạy lần nào) | `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `.github/workflows/deps-check.yml` | dịch vụ của GitHub |
 | GitHub Container Registry (GHCR) | Giữ image của tám dịch vụ tự viết theo từng tag phát hành, `ghcr.io/clauki-org/mortise-dx/<dịch vụ>:<tag>`; CI đẩy bằng `GITHUB_TOKEN`, máy chủ kéo không đăng nhập (gói phải ở chế độ Public) | `release.yml`, `MORTISE_IMAGE_PREFIX` trong `compose.yaml` | dịch vụ của GitHub |
 | systemd timer | Trên máy chủ demo, chạy `deploy/pull-deploy.sh` 5 phút sau khi khởi động rồi 15 phút một lần; log xem bằng `journalctl -u mortise-deploy.service` | `deploy/systemd/` ([deploy/README.md](../deploy/README.md)) | LGPL-2.1-or-later |

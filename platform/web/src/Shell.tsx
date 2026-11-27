@@ -1,40 +1,72 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Khung trang khi đã đăng nhập: thanh trên (đơn vị, người dùng, đăng xuất), menu bên trái và vùng nội dung do route
-// hiện tại vẽ. Trên màn hình hẹp, menu thu vào nút mở menu.
+// Khung trang khi đã đăng nhập: thanh trên (tên hệ thống, đơn vị và người dùng, thêm Passkey khi đơn vị cho phép,
+// đăng xuất), thanh bên với menu chia nhóm (MenuNav.tsx, ADR 0044) và vùng nội dung do route hiện tại vẽ, giới hạn
+// bề rộng. Dưới cỡ `sm` thanh bên thu vào nút mở menu; hai nút tài khoản chuyển xuống cuối thanh bên.
 
-import { AppShell, Burger, Button, Group, NavLink, Text } from "@mantine/core";
+import { AppShell, Burger, Button, Container, Group, ScrollArea, Stack, Text, useMatches } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { Link, Outlet, useLocation } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import { userManager } from "./auth";
-import { itemPath } from "./menu";
+import { Brand } from "./Brand";
+import { MenuNav } from "./MenuNav";
+import { type MenuGroup, menuGroups } from "./menu";
 import { usePackageMenu } from "./PackagePage";
+import { addPasskey, canAddPasskey } from "./passkey";
 import { useSession } from "./session";
 import { TenantInfo } from "./TenantInfo";
 
-// Mục của các màn hình dùng chung, luôn có. Mục do các gói đã cài khai trong app.yaml (menu) nối theo sau, đọc qua
-// GraphQL theo tenant: gỡ gói thì mục của nó tự mất, không phải sửa giao diện.
-const MENU = [{ to: "/tasks", label: "Việc của tôi" }];
+// Nhóm của các màn hình dùng chung, luôn có, đứng đầu; trang chủ là mục đầu (ADR 0051). Mục do các gói đã cài khai trong app.yaml (menu) gom theo gói
+// ở sau, đọc qua GraphQL theo tenant: gỡ gói thì nhóm của nó tự mất, không phải sửa giao diện.
+const SHARED: MenuGroup = {
+  id: "",
+  label: "Chung",
+  links: [
+    { to: "/", label: "Trang chủ", icon: "home" },
+    { to: "/tasks", label: "Việc của tôi", icon: "inbox" },
+  ],
+  collapsible: false,
+};
 
 const signOut = () => userManager.signoutRedirect();
+
+/** Thêm Passkey (khi đơn vị cho phép) và đăng xuất; Shell đặt ở thanh trên hay cuối thanh bên tùy bề rộng. */
+function AccountActions({ returnTo }: { returnTo: string }) {
+  const { user } = useSession();
+  return (
+    <>
+      {canAddPasskey(user.access_token) && (
+        <Button variant="subtle" onClick={() => addPasskey(returnTo)}>
+          Thêm Passkey
+        </Button>
+      )}
+      <Button variant="subtle" onClick={signOut}>
+        Đăng xuất
+      </Button>
+    </>
+  );
+}
 
 export function Shell() {
   const { user } = useSession();
   const [opened, { toggle, close }] = useDisclosure();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const packages = usePackageMenu();
-  const items = [...MENU, ...packages.items.map((entry) => ({ to: itemPath(entry), label: entry.label }))];
+  const groups = menuGroups(SHARED, packages.items);
+  // Dưới cỡ `sm` thanh bên đóng chỉ bị đẩy ra ngoài màn hình, các liên kết vẫn nhận Tab mà người dùng không thấy tiêu
+  // điểm ở đâu. `inert` bỏ cả thanh khỏi thứ tự Tab và cây trợ năng cho tới khi mở menu.
+  const narrow = useMatches({ base: true, sm: false }, { getInitialValueInEffect: false });
 
   return (
     <AppShell
       header={{ height: 56 }}
-      navbar={{ width: 240, breakpoint: "sm", collapsed: { mobile: !opened } }}
+      navbar={{ width: 260, breakpoint: "sm", collapsed: { mobile: !opened } }}
       padding="md"
     >
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
-          <Group wrap="nowrap">
+        <Group h="100%" px="md" justify="space-between" wrap="nowrap" gap="md">
+          <Group wrap="nowrap" gap="sm">
             <Burger
               opened={opened}
               onClick={toggle}
@@ -44,42 +76,43 @@ export function Shell() {
               aria-expanded={opened}
             />
             {/* Tên hệ thống không phải tiêu đề của trang; mỗi màn hình có tiêu đề cấp 1 của nó. */}
-            <Text fw={700} size="lg" style={{ whiteSpace: "nowrap" }}>
-              Mortise DX
+            <Text fw={800} size="lg" style={{ whiteSpace: "nowrap" }}>
+              <Brand compact />
             </Text>
           </Group>
-          <Group wrap="nowrap">
-            <Group visibleFrom="sm" wrap="nowrap">
-              <TenantInfo />
-              <Text size="sm">{user.profile.preferred_username}</Text>
+          {/* Đơn vị và người dùng hiện ở mọi bề rộng: cùng máy có thể đăng nhập nhiều đơn vị, nhìn nhầm là ghi nhầm. */}
+          <Group wrap="nowrap" gap="xs" miw={0}>
+            <TenantInfo username={user.profile.preferred_username} />
+            <Group visibleFrom="sm" wrap="nowrap" gap={4}>
+              <AccountActions returnTo={`${pathname}${search}`} />
             </Group>
-            <Button variant="subtle" onClick={signOut}>
-              Đăng xuất
-            </Button>
           </Group>
         </Group>
       </AppShell.Header>
-      <AppShell.Navbar p="xs" aria-label="Menu chính">
-        {items.map((item) => (
-          <NavLink
-            key={item.to}
-            component={Link}
-            to={item.to}
-            label={item.label}
-            active={pathname === item.to || pathname.startsWith(`${item.to}/`)}
-            onClick={close}
-          />
-        ))}
-        {/* Lỗi đọc menu của gói không chặn các màn hình dùng chung; chỉ báo ở cuối menu. */}
-        {packages.error && (
-          <Text size="xs" c="red" p="xs" title={packages.error.message}>
-            Không đọc được menu của các gói
-          </Text>
-        )}
+      <AppShell.Navbar aria-label="Menu chính" inert={narrow && !opened}>
+        <AppShell.Section grow component={ScrollArea} p="xs">
+          <MenuNav groups={groups} pathname={pathname} onNavigate={close} />
+          {/* Lỗi đọc menu của gói không chặn các màn hình dùng chung; chỉ báo ở cuối menu. */}
+          {packages.error && (
+            <Text size="xs" c="red.8" p="xs" title={packages.error.message}>
+              Không đọc được menu của các gói
+            </Text>
+          )}
+        </AppShell.Section>
+        {/* Trên điện thoại thanh trên không đủ chỗ cho hai nút; Passkey thường là vân tay hay khuôn mặt trên điện
+            thoại nên vẫn phải tới được. */}
+        <AppShell.Section hiddenFrom="sm" p="xs" style={{ borderTop: "1px solid var(--mantine-color-gray-3)" }}>
+          <Stack gap={4} align="flex-start">
+            <AccountActions returnTo={`${pathname}${search}`} />
+          </Stack>
+        </AppShell.Section>
       </AppShell.Navbar>
-      {/* Nền xám nhạt để các khung nội dung (Paper, nền trắng) tách khỏi nền trang. */}
+      {/* Nền xám nhạt để các khung nội dung (Paper, nền trắng) tách khỏi nền trang. Giới hạn bề rộng để bảng và
+          biểu mẫu không giãn hết màn hình rộng, dòng chữ còn đọc được. */}
       <AppShell.Main bg="gray.0">
-        <Outlet />
+        <Container size="xl" px={0}>
+          <Outlet />
+        </Container>
       </AppShell.Main>
     </AppShell>
   );

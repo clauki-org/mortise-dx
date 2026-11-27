@@ -12,9 +12,12 @@ const authority = import.meta.env.VITE_OIDC_AUTHORITY ?? `${window.location.orig
 
 export const CALLBACK_PATH = "/callback";
 
+/** Client OIDC của giao diện; vai trò riêng của client nằm ở `resource_access` của token dưới tên này. */
+export const CLIENT_ID = "mortise-web";
+
 export const userManager = new UserManager({
   authority,
-  client_id: "mortise-web",
+  client_id: CLIENT_ID,
   redirect_uri: `${window.location.origin}${CALLBACK_PATH}`,
   post_logout_redirect_uri: `${window.location.origin}/`,
   scope: "openid",

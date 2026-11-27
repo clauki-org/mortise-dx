@@ -30,6 +30,8 @@ Các lựa chọn đã xét:
 - **Cấu hình riêng** `contracts/dashboard.schema.json`, mục menu `component: dashboard`. Trang gồm các khối; mỗi khối
   có `description` bắt buộc ghi nguồn là gì và số tính thế nào, đúng một nguồn và đúng một cách hiện: `cards` (thẻ
   số) hoặc `chart` (cột ngang, `type: bar`, tối đa bốn cột số chung một thang, `details` là cột chỉ hiện trong bảng).
+  Được sửa theo [ADR 0049](0049-bento-dashboard.md): thẻ số có thể có mức độ so với hằng số của gói và vòng đo đọc cột
+  phần trăm của view; biểu đồ có thể có trần `chart.max`; các khối xếp trên lưới bốn cột theo thứ tự khai.
 - **Không tính trên trình duyệt.** Nguồn `graphql` đọc một bảng hay view bằng token của người xem, lọc được theo một
   cột bằng một giá trị. Mọi con số là một cột mà nguồn trả; gói tính sẵn trong view của migration, không dùng
   `_aggregate`. Thẻ số cần đúng một dòng: câu truy vấn xin hai dòng, không dòng thì hiện "Chưa có số liệu", nhiều
@@ -39,6 +41,8 @@ Các lựa chọn đã xét:
   được: loại nguồn, bảng, các cột, vai trò đã dùng, nguyên văn câu truy vấn mà client gửi (gồm `__typename` do
   cacheExchange của urql thêm) và biến. Biểu đồ luôn kèm bảng số liệu có chú thích; phần thanh ẩn khỏi trình đọc màn
   hình.
+  Cách hiện các phần này được sửa theo [ADR 0045](0045-readable-dashboard.md): `description` là lời của người xem, ghi
+  chú kỹ thuật ở `method`; cách tính, "Nguồn" và bảng số liệu thu gọn.
 - **Vai trò** như biểu mẫu ([ADR 0030](0030-form-component.md)): `role` của khối, bỏ trống là `user`, luôn gửi kèm
   header `X-Hasura-Role`; token không có vai trò đó thì khối không được truy vấn và không hiện. Truy vấn luôn đọc lại
   từ máy chủ, vì bộ nhớ đệm của urql không phân biệt vai trò.

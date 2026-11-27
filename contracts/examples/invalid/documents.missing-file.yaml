@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/documents.schema.json từ chối: thiếu cột chứa mã tệp.
+# Nếu lọt, phần tài liệu đọc được dòng nối mà không biết tải tệp nào.
+
+title: Giấy tờ
+source: app_example_item_documents
+via: item_id

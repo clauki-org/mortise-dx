@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 Mortise DX contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# 0038. Xuất danh sách của danh mục ra CSV, Excel và PDF ngay trong trình duyệt, bằng quyền của người xuất
+# 0052. Xuất danh sách của danh mục ra CSV, Excel và PDF ngay trong trình duyệt, bằng quyền của người xuất
 
 - Trạng thái: Chấp nhận
 - Ngày: 2026-11-25

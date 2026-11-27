@@ -91,4 +91,37 @@ describe("FormPanel", () => {
     expect(html).toContain("Biểu mẫu cần vai trò user");
     expect(html).not.toContain('id="root_title"');
   });
+
+  it("gợi ý của gói hiện dưới nhãn và gắn vào ô bằng aria-describedby, với mọi kiểu trường", () => {
+    const fields: FormConfig["fields"] = [
+      { name: "title", label: "Tên", type: "string", help: "Gợi ý chữ" },
+      { name: "note", label: "Ghi chú", type: "string", multiline: true, help: "Gợi ý nhiều dòng" },
+      { name: "amount", label: "Số lượng", type: "number", help: "Gợi ý số" },
+      { name: "day", label: "Ngày", type: "date", help: "Gợi ý ngày" },
+      { name: "kind", label: "Loại", type: "choice", choices: [{ value: "a", label: "A" }], help: "Gợi ý chọn" },
+      {
+        name: "group",
+        label: "Nhóm",
+        type: "choice",
+        source: { table: "t_g", value: "c", label: "n" },
+        help: "Gợi ý danh sách",
+      },
+      { name: "agree", label: "Xác nhận", type: "boolean", help: "Gợi ý ô đánh dấu" },
+      { name: "plain", label: "Không gợi ý", type: "string" },
+    ];
+    const html = render(["user"], { ...config, role: undefined, fields });
+    for (const field of fields) {
+      const input = new RegExp(`<(input|textarea|button)[^>]*id="root_${field.name}"[^>]*>`).exec(html)?.[0] ?? "";
+      expect(input, field.name).not.toBe("");
+      const described = /aria-describedby="([^"]*)"/.exec(input)?.[1] ?? "";
+      if (!field.help) {
+        expect(described, field.name).toBe("");
+        continue;
+      }
+      const texts = described.split(" ").map((id) => new RegExp(`id="${id}"[^>]*>([^<]*)<`).exec(html)?.[1] ?? "");
+      expect(texts, field.name).toContain(field.help);
+      // Gợi ý chỉ hiện một lần: ô nào cũng vẽ thêm một dòng riêng thì người đọc thấy hai lần.
+      expect(html.split(field.help).length - 1, field.name).toBe(1);
+    }
+  });
 });

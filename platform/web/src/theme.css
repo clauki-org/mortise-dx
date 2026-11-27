@@ -1,0 +1,21 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Mortise DX contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Hai kiểu của "Bento dịu" (ADR 0048) mà theme Mantine không đặt được vì CSS của Mantine viết cứng giá trị: nền trang
+ * và viền ô nhập. Màu lấy từ biến mà cssVariablesResolver trong theme.ts đặt, nên theme.test.tsx đo được tương phản.
+ * main.tsx nạp tệp này sau CSS của Mantine: bộ chọn cùng độ ưu tiên thì quy tắc nạp sau thắng.
+ */
+
+/* Nền xám nhạt chỉ cho trang; thẻ, khung, hộp thoại vẫn trắng vì chúng tô bằng --mantine-color-body. */
+body {
+  background-color: var(--mortise-page-background, var(--mantine-color-body));
+}
+
+/*
+ * Cùng dạng bộ chọn với quy tắc gray.4 của Mantine. Quy tắc lỗi ([data-error]) và quy tắc khi có tiêu điểm của Mantine
+ * cụ thể hơn (hay đặt trên chính ô nhập) nên viền đỏ khi lỗi và viền màu chính khi gõ vẫn giữ.
+ */
+[data-mantine-color-scheme="light"] .mantine-Input-wrapper[data-variant="default"] {
+  --input-bd: var(--mortise-input-border);
+}

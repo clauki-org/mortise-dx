@@ -30,8 +30,9 @@ capabilities:
     truy vấn do mô hình nào viết, chạy tại chỗ hay qua API của máy nào, ghi khi mô hình đã viết lại, và nhắc đọc câu
     đã chạy. Lời từ chối là chữ cố định theo bước từ chối (mô hình, guard kèm lý do của guard, Hasura), không phải chữ
     của mô hình. Mô hình chưa chạy hay đang bận thì hiện thông điệp của dịch vụ.
-  - Kết quả hỏi dữ liệu hiện thành bảng với tiêu đề cột của gói, mỗi ô là chữ thường; luôn kèm khối "Câu truy vấn đã
-    chạy". Câu bị guard hay Hasura từ chối hiện lý do và câu bị từ chối; mô hình không viết câu nào thì không có khối
+  - Kết quả hỏi dữ liệu hiện thành bảng với tiêu đề cột của gói, mỗi ô là chữ thường; luôn kèm câu truy vấn đã chạy
+    trong phần "Xem câu truy vấn" đóng sẵn (ADR 0047). Câu bị guard hay Hasura từ chối hiện lý do và câu bị từ chối,
+    phần câu truy vấn mở sẵn; mô hình không viết câu nào thì không có khối
     câu truy vấn. Màn hình nói rõ dữ liệu chỉ trong phạm vi
     quyền của tài khoản đang hỏi.
 limits:

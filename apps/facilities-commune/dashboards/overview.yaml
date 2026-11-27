@@ -5,35 +5,34 @@
 # menu `dashboard` và `make check-fast` kiểm (scripts/check-dashboard-config.py: bảng, cột nằm trong quyền đọc của vai
 # trò từng khối ở hasura/tables.yaml; quy trình có trong bpmn/). Số diện tích, cơ sở là cột của view do migration của
 # gói tính (ADR 0033), mô tả cách tính chép theo chú thích của view trong schema/migrations/. Số hồ sơ do workflow-api
-# đếm, số đo thiết bị do context-api trả; riêng việc đang chờ người xem đếm trên trình duyệt (ADR 0035).
+# đếm, số đo thiết bị do context-api trả; riêng việc đang chờ người xem đếm trên trình duyệt (ADR 0035). description
+# và nhãn là lời của người xem; tên view, cột, giá trị mã và căn cứ chi tiết nằm ở method, chỉ hiện trong mục "Xem cách
+# tính" (ADR 0045). Khối xếp trên lưới bốn cột đúng thứ tự dưới đây, khối chính đầu tiên; ngưỡng và chữ mức độ của thẻ
+# (tone), vòng đo (gauge) và trần của biểu đồ (max) là của gói, thành phần chỉ so và vẽ (ADR 0049).
 
 title: Bảng điều hành cơ sở vật chất xã
 description: >-
-  Số liệu của cả xã, đọc bằng quyền của người xem. Mỗi số ghi cách tính; mục "Nguồn" của từng khối ghi câu truy vấn
-  đã gửi để đối chiếu.
+  Số liệu của cả xã. Mở "Xem cách tính" dưới mỗi khối để biết số được tính thế nào và lấy từ đâu.
 panels:
-  # Tỉnh (tenant cha) thấy số của từng xã con qua view area_rollup, không đọc được bảng gốc của xã (ADR 0016). Không
-  # cộng các xã lại: mỗi xã có tiêu chuẩn riêng, và facility_rollup lặp phần vượt của xã trên từng trụ sở.
-  - id: communes
-    title: Diện tích của các xã
-    description: >-
-      View area_rollup: mỗi xã con một dòng, lấy nguyên số của area_summary mà xã tự thấy, không tính lại. Chỉ tài
-      khoản có vai trò rollup_reader của tỉnh thấy khối này.
-    role: rollup_reader
-    graphql: { field: app_facilities_commune_area_rollup, order_by: [{ column: tenant_name }] }
-    chart:
-      type: bar
-      x: { column: tenant_name, label: Xã }
-      y:
-        - { column: allowed_m2, label: Được phép (m²), color: teal }
-        - { column: in_use_m2, label: Đang dùng (m²), color: blue }
-        - { column: excess_m2, label: Phần vượt (m²), color: red }
   - id: area
     title: Diện tích nhà làm việc của xã
     description: >-
+      Xã được phép dùng bao nhiêu mét vuông nhà làm việc, đang dùng bao nhiêu và vượt bao nhiêu, tính chung cho mọi
+      trụ sở của xã.
+    method: >-
       View area_summary, mỗi xã một dòng. Tiêu chuẩn tính trên tổng diện tích của mọi trụ sở xã đang dùng (Điều 3
-      khoản 3 NĐ 155/2025/NĐ-CP, sửa bởi Điều 2 NĐ 369/2026/NĐ-CP), không tính riêng từng cơ sở.
+      khoản 3 NĐ 155/2025/NĐ-CP, sửa bởi Điều 2 NĐ 369/2026/NĐ-CP), không tính riêng từng cơ sở. Phần trăm của vòng
+      đo là cột in_use_percent của view: đang dùng chia được phép, nhân 100, làm tròn tới hàng đơn vị; xã chưa có diện
+      tích được phép thì không có phần trăm.
+    size: half
+    primary: true
     graphql: { field: app_facilities_commune_area_summary }
+    # Phần trăm do view tính (in_use_percent); một vòng đầy là diện tích được phép, phần vượt thành vòng thứ hai.
+    gauge:
+      value: in_use_m2
+      limit: allowed_m2
+      percent: in_use_percent
+      label: Đang dùng so với diện tích được phép
     cards:
       - column: allowed_m2
         label: Diện tích được phép
@@ -50,6 +49,8 @@ panels:
         label: Phần vượt tiêu chuẩn, định mức
         unit: m²
         description: Đang dùng trừ được phép, không nhỏ hơn 0.
+        # Phần vượt nào cũng là vượt tiêu chuẩn, định mức: không có mức cảnh báo ở giữa.
+        tone: { bad_when: { gt: 0, label: Vượt định mức } }
       - column: surplus_m2
         label: Cơ sở dôi dư
         unit: m²
@@ -61,7 +62,9 @@ panels:
   # Hai khối riêng cho hai trạng thái: thẻ số cần đúng một dòng, và view có sẵn một dòng cho mỗi cặp xã, trạng thái.
   - id: in-use
     title: Cơ sở đang dùng
-    description: View facility_status_counts, dòng có status in_use của xã.
+    description: Số cơ sở xã đang dùng và tổng diện tích của chúng.
+    method: View facility_status_counts, dòng có status in_use của xã.
+    size: quarter
     graphql: { field: app_facilities_commune_facility_status_counts, where: { field: status, equals: in_use } }
     cards:
       - column: facility_count
@@ -74,7 +77,9 @@ panels:
         description: Tổng diện tích thông thủy của các phòng thuộc những cơ sở này; bằng số "Đang dùng" ở trên.
   - id: surplus
     title: Cơ sở dôi dư
-    description: View facility_status_counts, dòng có status surplus của xã.
+    description: Số cơ sở xã không còn dùng tới và tổng diện tích của chúng.
+    method: View facility_status_counts, dòng có status surplus của xã.
+    size: quarter
     graphql: { field: app_facilities_commune_facility_status_counts, where: { field: status, equals: surplus } }
     cards:
       - column: facility_count
@@ -85,11 +90,94 @@ panels:
         label: Diện tích thông thủy
         unit: m²
         description: Tổng diện tích thông thủy của các phòng thuộc những cơ sở này; không tính vào phần vượt.
+  - id: my-reviews
+    title: Việc đang chờ bạn
+    description: Việc rà soát đang nằm trên bảng việc của bạn, không phải của cả xã.
+    method: Việc của quy trình facilities-review trong danh sách việc của tài khoản đang đăng nhập.
+    size: half
+    workflow: { process: facilities-review, counts: mine }
+    cards:
+      - { column: open, label: Đang chờ bạn, format: integer, description: Việc rà soát đang ở bảng việc của bạn. }
+      - column: overdue
+        label: Đã quá hạn
+        format: integer
+        description: Trong số đó, việc có hạn xử lý trước lúc mở trang.
+        tone: { bad_when: { gt: 0, label: Có việc quá hạn } }
+  - id: coverage
+    title: Phân công cơ sở
+    description: Cơ sở nào chưa có người phụ trách hay người duyệt. Chỉ lãnh đạo và quản trị xã thấy khối này.
+    method: >-
+      View facility_coverage: đếm cơ sở của xã, cả đang dùng và dôi dư, theo bảng phân công.
+    size: half
+    role: manager
+    graphql: { field: app_facilities_commune_facility_coverage }
+    cards:
+      - { column: facility_count, label: Số cơ sở, format: integer, description: Đếm mọi cơ sở của xã. }
+      - column: without_custodian
+        label: Chưa có người phụ trách
+        format: integer
+        description: Cơ sở không có dòng phân công nào với nhiệm vụ phụ trách (custodian).
+        tone: { warn_when: { gt: 0, label: Cần phân công } }
+      - column: without_approver
+        label: Chưa có người duyệt
+        format: integer
+        description: Cơ sở không có dòng phân công nào với nhiệm vụ duyệt (approver).
+        tone: { warn_when: { gt: 0, label: Cần phân công } }
+  # Hồ sơ rà soát của cả xã: workflow-api chỉ trả số cho người có vai trò của một bước (manager ở BPMN), người khác nhận
+  # 404, nên khối khai role manager để cán bộ không thấy khối báo lỗi.
+  - id: reviews
+    title: Hồ sơ rà soát
+    description: Hồ sơ rà soát diện tích trụ sở của cả xã. Chỉ lãnh đạo xã thấy khối này.
+    method: Quy trình facilities-review của cả xã, do workflow-api đếm lúc mở trang.
+    size: half
+    role: manager
+    workflow: { process: facilities-review, counts: tenant }
+    cards:
+      - column: open
+        label: Đang xử lý
+        format: integer
+        description: Hồ sơ đã lập, chưa kết thúc, kể cả hồ sơ đang trong thời gian công khai.
+      - column: overdue
+        label: Bước quá hạn
+        format: integer
+        description: Bước đang chờ đã quá hạn xử lý; đếm bước, không đếm hồ sơ.
+        tone: { bad_when: { gt: 0, label: Có bước quá hạn } }
+      - column: finished
+        label: Đã kết thúc
+        format: integer
+        description: Hồ sơ đã tới kết quả, kể cả hồ sơ bị trả lại hay bị dừng giữa chừng.
+  # Số hồ sơ luật ngưỡng đã mở, không phải số lần đo vượt ngưỡng: lần vượt chưa đủ lâu hay vượt khi hồ sơ cũ còn mở thì
+  # không mở hồ sơ (ADR 0018).
+  - id: inspections
+    title: Hồ sơ kiểm tra kho do luật ngưỡng mở
+    description: >-
+      Hồ sơ kiểm tra kho lưu trữ được mở tự động khi độ ẩm kho cao quá lâu. Chỉ lãnh đạo xã thấy khối này.
+    method: >-
+      Quy trình archive-inspection của xã, do workflow-api đếm. Mỗi hồ sơ do iot-bridge mở khi độ ẩm kho lưu trữ vượt
+      ngưỡng đủ lâu theo luật rules/archive-humidity.yaml.
+    size: half
+    role: manager
+    workflow: { process: archive-inspection, counts: tenant }
+    cards:
+      - column: open
+        label: Chưa kiểm tra xong
+        format: integer
+        description: Hồ sơ luật ngưỡng đã mở, chưa kết thúc.
+      - column: overdue
+        label: Quá hạn
+        format: integer
+        description: Bước kiểm tra đã quá hạn một ngày của quy trình.
+        tone: { bad_when: { gt: 0, label: Có bước quá hạn } }
+      - { column: finished, label: Đã kiểm tra, format: integer, description: Hồ sơ đã kết thúc. }
   - id: by-type
     title: Diện tích theo loại
     description: >-
+      Được phép và đang dùng của từng loại diện tích, để biết phần nào dùng nhiều. Phần vượt tính trên tổng, không
+      tính theo từng loại.
+    method: >-
       View area_by_type: đang dùng cộng theo loại diện tích của phòng ở cơ sở đang dùng; được phép lấy nguyên các phần
       làm việc, sử dụng chung, chuyên dùng của area_summary. Chỉ để đối chiếu, phần vượt theo luật tính trên tổng.
+    size: half
     graphql: { field: app_facilities_commune_area_by_type }
     chart:
       type: bar
@@ -103,11 +191,48 @@ panels:
       y:
         - { column: allowed_m2, label: Được phép (m²), color: teal }
         - { column: in_use_m2, label: Đang dùng (m²), color: blue }
+  - id: humidity
+    title: Độ ẩm thiết bị
+    description: Độ ẩm đo gần nhất của từng thiết bị của xã. Thiết bị chưa gửi số đo thì không có trong biểu đồ.
+    method: >-
+      Số đo humidity mới nhất của từng entity Device của xã, do context-api trả. Lúc đo ghi theo giờ UTC, nguyên văn
+      như context-api trả.
+    size: half
+    context: { type: Device, attribute: humidity }
+    chart:
+      type: bar
+      # Độ ẩm là phần trăm: thang luôn tới 100 để 81% không trông như đầy chỉ vì là số lớn nhất.
+      max: 100
+      # Mã entity do iot-bridge đặt theo tên thiết bị trong devices/simulator/devices.yaml; thiết bị không có nhãn ở
+      # đây hiện "Thiết bị <số thứ tự>", mã gốc nằm trong bảng số liệu thu gọn.
+      x:
+        column: id
+        label: Thiết bị
+        choices: [{ value: "urn:ngsi-ld:Device:archive-01", label: Kho lưu trữ }]
+      y: [{ column: value, label: Độ ẩm (%), color: cyan }]
+      details: [{ column: observedAt, label: Lúc đo }]
+  - id: review-steps
+    title: Hồ sơ rà soát đang chờ theo bước
+    description: >-
+      Hồ sơ rà soát đang chờ ở từng bước. Hồ sơ đang trong thời gian công khai không ở bước nào nên không có trong
+      biểu đồ.
+    method: Cùng nguồn với khối "Hồ sơ rà soát", mỗi userTask của quy trình facilities-review một dòng.
+    size: half
+    role: manager
+    workflow: { process: facilities-review, counts: tenant }
+    chart:
+      type: bar
+      x: { column: step, label: Bước }
+      y:
+        - { column: open, label: Đang chờ, color: blue }
+        - { column: overdue, label: Quá hạn, color: red }
   - id: staffing
     title: Diện tích làm việc theo biên chế
-    description: >-
+    description: Diện tích làm việc được phép của từng chức danh, theo số người và mức tối đa mỗi người.
+    method: >-
       View staffing_allowances: mỗi dòng biên chế của xã, được phép bằng số người nhân mức m² của dòng phụ lục mà xã
       xếp chức danh vào; nguồn ghi dòng phụ lục NĐ 369/2026/NĐ-CP.
+    size: half
     graphql:
       field: app_facilities_commune_staffing_allowances
       order_by: [{ column: norm_row }, { column: position }]
@@ -121,102 +246,30 @@ panels:
         - { column: source, label: Nguồn }
   - id: specialized
     title: Diện tích chuyên dùng được duyệt
-    description: Bảng specialized_allowances do xã nhập, mỗi dòng một quyết định của cấp có thẩm quyền kèm căn cứ.
+    description: Diện tích chuyên dùng cấp có thẩm quyền đã duyệt cho xã, mỗi hạng mục kèm căn cứ.
+    method: Bảng specialized_allowances do xã nhập, mỗi dòng một quyết định của cấp có thẩm quyền kèm căn cứ.
+    size: half
     graphql: { field: app_facilities_commune_specialized_allowances, order_by: [{ column: name }] }
     chart:
       type: bar
       x: { column: name, label: Hạng mục }
       y: [{ column: area_m2, label: Diện tích (m²), color: grape }]
       details: [{ column: basis, label: Căn cứ }]
-  - id: coverage
-    title: Phân công cơ sở
-    description: >-
-      View facility_coverage: đếm cơ sở của xã, cả đang dùng và dôi dư, theo bảng phân công. Chỉ lãnh đạo và quản trị
-      xã thấy khối này.
-    role: manager
-    graphql: { field: app_facilities_commune_facility_coverage }
-    cards:
-      - { column: facility_count, label: Số cơ sở, format: integer, description: Đếm mọi cơ sở của xã. }
-      - column: without_custodian
-        label: Chưa có người phụ trách
-        format: integer
-        description: Cơ sở không có dòng phân công nào với nhiệm vụ phụ trách (custodian).
-      - column: without_approver
-        label: Chưa có người duyệt
-        format: integer
-        description: Cơ sở không có dòng phân công nào với nhiệm vụ duyệt (approver).
-  # Hồ sơ rà soát của cả xã: workflow-api chỉ trả số cho người có vai trò của một bước (manager ở BPMN), người khác nhận
-  # 404, nên khối khai role manager để cán bộ không thấy khối báo lỗi.
-  - id: reviews
-    title: Hồ sơ rà soát
-    description: >-
-      Quy trình rà soát diện tích trụ sở (facilities-review) của cả xã, do workflow-api đếm lúc mở trang. Chỉ lãnh đạo
-      xã thấy khối này.
-    role: manager
-    workflow: { process: facilities-review, counts: tenant }
-    cards:
-      - column: open
-        label: Đang xử lý
-        format: integer
-        description: Hồ sơ đã lập, chưa kết thúc, kể cả hồ sơ đang trong thời gian công khai.
-      - column: overdue
-        label: Bước quá hạn
-        format: integer
-        description: Bước đang chờ đã quá hạn xử lý; đếm bước, không đếm hồ sơ.
-      - column: finished
-        label: Đã kết thúc
-        format: integer
-        description: Hồ sơ đã tới kết quả, kể cả hồ sơ bị trả lại hay bị dừng giữa chừng.
-  - id: review-steps
-    title: Hồ sơ rà soát đang chờ theo bước
-    description: >-
-      Cùng nguồn với khối trên, mỗi bước người làm của quy trình một dòng. Hồ sơ đang công khai không ở bước nào nên
-      không có trong biểu đồ.
-    role: manager
-    workflow: { process: facilities-review, counts: tenant }
+  # Tỉnh (tenant cha) thấy số của từng xã con qua view area_rollup, không đọc được bảng gốc của xã (ADR 0016). Không
+  # cộng các xã lại: mỗi xã có tiêu chuẩn riêng, và facility_rollup lặp phần vượt của xã trên từng trụ sở.
+  - id: communes
+    title: Diện tích của các xã
+    description: Diện tích được phép, đang dùng và phần vượt của từng xã, đúng bằng số mỗi xã thấy trên trang của mình.
+    method: >-
+      View area_rollup: mỗi xã con một dòng, lấy nguyên số của area_summary mà xã tự thấy, không tính lại. Chỉ tài
+      khoản có vai trò rollup_reader của tỉnh thấy khối này.
+    size: full
+    role: rollup_reader
+    graphql: { field: app_facilities_commune_area_rollup, order_by: [{ column: tenant_name }] }
     chart:
       type: bar
-      x: { column: step, label: Bước }
+      x: { column: tenant_name, label: Xã }
       y:
-        - { column: open, label: Đang chờ, color: blue }
-        - { column: overdue, label: Quá hạn, color: red }
-  - id: my-reviews
-    title: Việc đang chờ bạn
-    description: Việc của quy trình rà soát trên bảng việc của tài khoản đang đăng nhập, không phải của cả xã.
-    workflow: { process: facilities-review, counts: mine }
-    cards:
-      - { column: open, label: Đang chờ bạn, format: integer, description: Việc rà soát đang ở bảng việc của bạn. }
-      - column: overdue
-        label: Đã quá hạn
-        format: integer
-        description: Trong số đó, việc có hạn xử lý trước lúc mở trang.
-  # Số hồ sơ luật ngưỡng đã mở, không phải số lần đo vượt ngưỡng: lần vượt chưa đủ lâu hay vượt khi hồ sơ cũ còn mở thì
-  # không mở hồ sơ (ADR 0018).
-  - id: inspections
-    title: Hồ sơ kiểm tra kho do luật ngưỡng mở
-    description: >-
-      Quy trình archive-inspection của xã, do workflow-api đếm. Mỗi hồ sơ do iot-bridge mở khi độ ẩm kho lưu trữ vượt
-      ngưỡng đủ lâu theo luật rules/archive-humidity.yaml. Chỉ lãnh đạo xã thấy khối này.
-    role: manager
-    workflow: { process: archive-inspection, counts: tenant }
-    cards:
-      - column: open
-        label: Chưa kiểm tra xong
-        format: integer
-        description: Hồ sơ luật ngưỡng đã mở, chưa kết thúc.
-      - column: overdue
-        label: Quá hạn
-        format: integer
-        description: Bước kiểm tra đã quá hạn một ngày của quy trình.
-      - { column: finished, label: Đã kiểm tra, format: integer, description: Hồ sơ đã kết thúc. }
-  - id: humidity
-    title: Độ ẩm thiết bị
-    description: >-
-      Số đo humidity mới nhất của từng thiết bị (entity Device) của xã, do context-api trả. Thiết bị chưa gửi số đo này
-      không có dòng.
-    context: { type: Device, attribute: humidity }
-    chart:
-      type: bar
-      x: { column: id, label: Thiết bị }
-      y: [{ column: value, label: Độ ẩm (%), color: cyan }]
-      details: [{ column: observedAt, label: Lúc đo (UTC) }]
+        - { column: allowed_m2, label: Được phép (m²), color: teal }
+        - { column: in_use_m2, label: Đang dùng (m²), color: blue }
+        - { column: excess_m2, label: Phần vượt (m²), color: red }

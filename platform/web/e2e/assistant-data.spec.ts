@@ -2,17 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Trợ lý hỏi dữ liệu trên trình duyệt (ADR 0027, ADR 0034): cán bộ mở mục menu mẫu của lõi, bấm một câu mẫu và thấy
-// bảng do giao diện vẽ cùng câu truy vấn đã chạy; câu mẫu chạy không qua mô hình, nên bài đầu chạy được khi chưa có mô
-// hình. Bài thứ hai gõ câu hỏi tự do: có mô hình thì hiện dòng ghi mô hình đã viết câu (kết quả hay lời từ chối đều
-// được, độ đúng đo bằng bộ câu hỏi riêng); chưa có mô hình thì hiện thông điệp chỉ cách bật. Cần `make seed`.
+// bảng do giao diện vẽ, mở "Xem câu truy vấn" thì thấy câu đã chạy; câu mẫu chạy không qua mô hình, nên bài đầu
+// chạy được khi chưa có mô hình. Bài thứ hai gõ câu hỏi tự do: có mô hình thì hiện dòng ghi mô hình đã viết câu
+// (kết quả hay lời từ chối đều được, độ đúng đo bằng bộ câu hỏi riêng); chưa có mô hình thì hiện thông điệp chỉ cách
+// bật. Cần `make seed`.
 
 import { expect, test } from "@playwright/test";
-import { signIn } from "./support.ts";
+import { openMenuItem, signIn } from "./support.ts";
 
 test("câu mẫu chạy ngay, hiện bảng văn bản mẫu và câu truy vấn đã chạy", async ({ page }) => {
   await page.goto("/");
   await signIn(page, "user.a");
-  await page.getByRole("link", { name: "Hỏi dữ liệu mẫu" }).click();
+  await openMenuItem(page, "Hỏi dữ liệu mẫu");
   await expect(page.getByRole("heading", { level: 1, name: "Hỏi dữ liệu" })).toBeVisible();
 
   await page.getByRole("button", { name: "Đơn vị mình có những văn bản mẫu nào?" }).click();
@@ -20,6 +21,9 @@ test("câu mẫu chạy ngay, hiện bảng văn bản mẫu và câu truy vấn
   const table = page.getByRole("table");
   await expect(table.getByRole("columnheader", { name: "Tên văn bản" })).toBeVisible();
   await expect(table.getByRole("cell", { name: "Quy chế mẫu về đặt phòng họp (hư cấu)" })).toBeVisible();
+  // Câu truy vấn là mã kỹ thuật, thu sau "Xem câu truy vấn"; một lần bấm là đọc được.
+  await expect(page.getByRole("heading", { name: "Câu truy vấn đã chạy" })).toBeHidden();
+  await page.getByText("Xem câu truy vấn", { exact: true }).click();
   await expect(page.getByRole("heading", { name: "Câu truy vấn đã chạy" })).toBeVisible();
   await expect(page.getByText("platform_knowledge_documents(where:")).toBeVisible();
 });
@@ -29,7 +33,7 @@ test("câu hỏi gõ tự do: mô hình viết câu truy vấn, hay thông đi�
   test.setTimeout(200_000);
   await page.goto("/");
   await signIn(page, "user.a");
-  await page.getByRole("link", { name: "Hỏi dữ liệu mẫu" }).click();
+  await openMenuItem(page, "Hỏi dữ liệu mẫu");
 
   await page.getByLabel("Câu hỏi").fill("Đơn vị mình có bao nhiêu văn bản mẫu?");
   await page.getByRole("button", { name: "Hỏi", exact: true }).click();

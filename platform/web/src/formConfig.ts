@@ -27,6 +27,8 @@ export type FormField = {
   multiline?: boolean;
   choices?: { value: string; label: string }[];
   source?: Source;
+  /** Dòng gợi ý dưới nhãn của trường (ADR 0050) */
+  help?: string;
 };
 
 export type FormConfig = {
@@ -70,6 +72,10 @@ function fieldProblems(field: FormField, earlier: string[]): string[] {
   // theo nó bị khóa mãi.
   if (field.choices?.some((choice) => typeof choice?.value !== "string" || choice.value === "")) {
     problems.push(`${at}: mỗi mục của choices cần value khác rỗng`);
+  }
+  // Gợi ý hiện dạng chữ dưới nhãn; giá trị không phải chữ thì React vẽ thành gì không đoán trước được.
+  if (field.help !== undefined && (typeof field.help !== "string" || !/\S/.test(field.help))) {
+    problems.push(`${at}: help phải là một dòng chữ`);
   }
   const source = field.source;
   if (!source) return problems;
@@ -132,11 +138,21 @@ function propertyOf(field: FormField): RJSFSchema {
   }
 }
 
+/**
+ * Gợi ý của gói đi qua ui:description chứ không qua ui:help: ô của rjsf-mantine đưa nó vào description của Mantine,
+ * Mantine tự gắn aria-describedby của ô vào dòng đó. ui:help vẽ một dòng riêng mà aria-describedby của Mantine đè mất.
+ */
+const helpOf = (field: FormField): UiSchema => (field.help ? { "ui:description": field.help } : {});
+
 function uiOf(field: FormField, config: FormConfig): UiSchema {
-  if (field.multiline) return { "ui:widget": "textarea" };
-  if (!field.source) return {};
+  if (field.multiline) return { "ui:widget": "textarea", ...helpOf(field) };
+  if (!field.source) return helpOf(field);
   const parent = config.fields.find((candidate) => candidate.name === field.source?.where?.field);
-  return { "ui:widget": "sourceChoice", "ui:options": { source: field.source, parentLabel: parent?.label } };
+  return {
+    "ui:widget": "sourceChoice",
+    "ui:options": { source: field.source, parentLabel: parent?.label },
+    ...helpOf(field),
+  };
 }
 
 /**

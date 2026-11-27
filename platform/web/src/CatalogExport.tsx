@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Nút "Xuất" trên màn hình danh sách của thành phần danh mục (ADR 0038): chọn CSV, Excel hay PDF. Đọc qua client
+// Nút "Xuất" trên màn hình danh sách của thành phần danh mục (ADR 0052): chọn CSV, Excel hay PDF. Đọc qua client
 // GraphQL của trang, tức bằng token của người đang đăng nhập: tệp chỉ chứa dòng Hasura cho người đó đọc, như trên màn
 // hình. Dựng tệp và tải về ngay trong trình duyệt, không qua dịch vụ nào khác. Bảng xuất ở catalogExport.ts; Excel
 // và PDF ở catalogExportOffice.ts.

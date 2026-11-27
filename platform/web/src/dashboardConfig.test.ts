@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Kiểm thử lớp đọc cấu hình của bảng điều hành (dashboardConfig.ts): câu truy vấn sinh từ cấu hình, lỗi cấu hình mà
-// schema không bắt được, khối nào được truy vấn theo vai trò trong token, cách viết số và độ dài thanh. Cấu hình mẫu
+// schema không bắt được (khối chính, mức độ, vòng đo, trần của thang), khối nào được truy vấn theo vai trò trong
+// token, cách viết số, độ dài và chữ số của thanh, đầu mút của thang. Cấu hình mẫu
 // cùng dạng với contracts/examples/dashboard.example.yaml.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  barMarks,
   barPercents,
   categoryText,
   type DashboardConfig,
@@ -16,6 +18,7 @@ import {
   type Panel,
   panelQuery,
   queryErrorText,
+  scaleTop,
   sentText,
   visiblePanels,
 } from "./dashboardConfig";
@@ -48,6 +51,11 @@ const children: Panel & { graphql: GraphqlSource } = {
   },
 };
 const config: DashboardConfig = { title: "Tổng quan", panels: [totals, children] };
+
+function chart() {
+  if (!children.chart) throw new Error("thiếu biểu đồ mẫu");
+  return children.chart;
+}
 
 describe("panelQuery", () => {
   it("thẻ số xin hai dòng, điều kiện đi qua biến, không xếp", () => {
@@ -110,6 +118,63 @@ describe("dashboardProblems", () => {
       "Đơn vị con: một cột khai hai lần trong chart.y",
     ]);
   });
+
+  it("khối chính là khối đầu tiên, là thẻ số, rộng ít nhất nửa hàng", () => {
+    const main = { ...totals, primary: true };
+    expect(dashboardProblems({ title: "x", panels: [main, children] })).toEqual([]);
+    expect(dashboardProblems({ title: "x", panels: [{ ...main, size: "half" }, children] })).toEqual([]);
+    expect(
+      dashboardProblems({
+        title: "x",
+        panels: [
+          { ...main, size: "quarter" },
+          { ...children, primary: true },
+          { ...totals, id: "t2", primary: true },
+        ],
+      }),
+    ).toEqual([
+      "Tổng: khối chính phải là khối đầu tiên, là thẻ số và rộng ít nhất nửa hàng",
+      "Đơn vị con: khối chính phải là khối đầu tiên, là thẻ số và rộng ít nhất nửa hàng",
+      "Tổng: khối chính phải là khối đầu tiên, là thẻ số và rộng ít nhất nửa hàng",
+    ]);
+  });
+
+  it("mức độ cần đúng một phép so và chữ; vòng đo đọc cột của thẻ; trần của thang lớn hơn 0", () => {
+    const gauge = { value: "score", limit: "item_count", percent: "score_percent", label: "Điểm" };
+    const good: Panel = {
+      ...totals,
+      gauge,
+      cards: [
+        { column: "item_count", label: "Số", description: "Đếm." },
+        { column: "score", label: "Điểm", description: "Tổng.", tone: { bad_when: { gt: 0, label: "Cao" } } },
+      ],
+    };
+    expect(dashboardProblems({ title: "x", panels: [good, { ...children, chart: { ...chart(), max: 100 } }] })).toEqual(
+      [],
+    );
+    const bad: DashboardConfig = {
+      title: "x",
+      panels: [
+        {
+          ...good,
+          gauge: { ...gauge, limit: "target" },
+          cards: [
+            { column: "a", label: "A", description: "A.", tone: { warn_when: { gt: 1, lt: 5, label: "Lệch" } } },
+            { column: "b", label: "B", description: "B.", tone: { bad_when: { gt: 1, label: " " } } },
+          ],
+        },
+        { ...good, id: "q", title: "Hẹp", size: "quarter" },
+        { ...children, chart: { ...chart(), max: 0 } },
+      ],
+    };
+    expect(dashboardProblems(bad)).toEqual([
+      'Tổng: mức độ của thẻ "A" cần đúng một phép so với một số và có chữ',
+      'Tổng: mức độ của thẻ "B" cần đúng một phép so với một số và có chữ',
+      "Tổng: value, limit của vòng đo phải là cột của một thẻ trong khối",
+      "Hẹp: vòng đo cần nguồn graphql, thẻ số và khối rộng hơn một phần tư hàng",
+      "Đơn vị con: trần của biểu đồ phải là số lớn hơn 0",
+    ]);
+  });
 });
 
 describe("visiblePanels", () => {
@@ -153,6 +218,39 @@ describe("barPercents và categoryText", () => {
     expect(categoryText(chart, "u1")).toBe("Đơn vị một");
     expect(categoryText(chart, "u2")).toBe("u2");
   });
+
+  it("thanh có số, kể cả 0, thì được vẽ và ghi số; ô trống không vẽ; thang tới số lớn nhất", () => {
+    const chart = children.chart;
+    if (!chart) throw new Error("thiếu biểu đồ mẫu");
+    const rows = [
+      { score: 0, target: "1500.5" },
+      { score: null, target: 300 },
+    ];
+    expect(barMarks(chart, rows)).toEqual([
+      [
+        { percent: 0, text: "0", drawn: true },
+        { percent: 100, text: "1.500,5", drawn: true },
+      ],
+      [
+        { percent: 0, text: "Chưa có số liệu", drawn: false },
+        { percent: (300 / 1500.5) * 100, text: "300", drawn: true },
+      ],
+    ]);
+    expect(scaleTop(chart, rows)).toBe(1500.5);
+    expect(scaleTop(chart, [{ score: -5, target: null }])).toBe(0);
+  });
+
+  it("trần của gói là đầu mút của thang; số trên trần thành thanh đầy nhưng vẫn ghi đúng số", () => {
+    const capped = { ...chart(), max: 100 };
+    const rows = [{ score: 81, target: 140 }];
+    expect(scaleTop(capped, rows)).toBe(100);
+    expect(barMarks(capped, rows)).toEqual([
+      [
+        { percent: 81, text: "81", drawn: true },
+        { percent: 100, text: "140", drawn: true },
+      ],
+    ]);
+  });
 });
 
 describe("sentText", () => {
@@ -178,8 +276,6 @@ describe("queryErrorText", () => {
   });
 
   it("lỗi khác bảo tải lại trang", () => {
-    expect(queryErrorText(children, [], "Failed to fetch")).toBe(
-      "Failed to fetch. Tải lại trang; nếu vẫn lỗi, báo người quản trị.",
-    );
+    expect(queryErrorText(children, [], "Failed to fetch")).toBeNull();
   });
 });

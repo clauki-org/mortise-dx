@@ -29,7 +29,8 @@ Các lựa chọn đã xét:
 ## Quyết định
 
 - **Cấu hình riêng** `contracts/form.schema.json`, mục menu `component: form`. Trường có tên, nhãn, kiểu (string,
-  number, integer, boolean, date, choice), bắt buộc, giới hạn theo kiểu. Trường choice lấy mục từ `choices` cố định
+  number, integer, boolean, date, choice), bắt buộc, giới hạn theo kiểu. Được sửa theo [ADR 0050](0050-catalog-tones-cards-form-help.md):
+  trường có thêm `help`, một dòng gợi ý dưới nhãn gắn vào ô bằng `aria-describedby`. Trường choice lấy mục từ `choices` cố định
   hoặc từ một bảng của gói (`source`), lọc được theo một trường đứng trước; đổi trường đó thì trường con bị xóa. Tên
   trường không trùng biến dành riêng của lõi và không bắt đầu bằng `authority_`, tiền tố lõi dành riêng cho biến chọn
   nhóm xử lý của bước theo bảng phân cấp thẩm quyền. Thành phần dựng JSON Schema, uiSchema từ các khóa đã biết, vẽ

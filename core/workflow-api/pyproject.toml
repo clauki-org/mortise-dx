@@ -13,6 +13,15 @@ dependencies = [
   "httpx>=0.28",
   "pyjwt[crypto]>=2.10",
   "pg8000>=1.31",
+  # Truy vết (ADR 0038): chỉ nạp khi MORTISE_TRACING=on, qua opentelemetry-instrument (Dockerfile). Gói
+  # instrumentation còn là bản beta (0.x) nên ghim đúng bản, cùng đợt phát hành với SDK.
+  "opentelemetry-api==1.45.2",
+  "opentelemetry-sdk==1.45.2",
+  "opentelemetry-exporter-otlp-proto-http==1.45.2",
+  "opentelemetry-distro==0.66b2",
+  "opentelemetry-instrumentation-fastapi==0.66b2",
+  "opentelemetry-instrumentation-logging==0.66b2",
+  "opentelemetry-instrumentation-httpx==0.66b2",
 ]
 
 [dependency-groups]

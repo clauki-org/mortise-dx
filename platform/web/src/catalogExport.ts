@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Xuất danh sách của thành phần danh mục (ADR 0038): đọc mọi dòng khớp tìm, lọc và thứ tự đang xem bằng chính câu
+// Xuất danh sách của thành phần danh mục (ADR 0052): đọc mọi dòng khớp tìm, lọc và thứ tự đang xem bằng chính câu
 // truy vấn của bảng (catalogQuery.ts), dựng một bảng chung (phần đầu, cột, ô đã phân kiểu) rồi ghi ra CSV ở đây; Excel
 // và PDF ở catalogExportOffice.ts. Không có React ở đây để kiểm thử được bằng hàm thuần; nút ở CatalogExport.tsx.
 

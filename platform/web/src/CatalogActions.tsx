@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Nút trên màn hình chi tiết của thành phần danh mục (detail.actions, ADR 0026): mỗi nút khởi tạo một quy trình của
-// gói cho dòng đang xem qua API quy trình của lõi, với biến lấy từ dòng. CatalogRecord.tsx vẽ khối này dưới tiêu
-// đề. Người bấm xem các giá trị sẽ gửi trong hộp xác nhận trước khi gửi; quyền khởi tạo do workflow-api quyết định.
+// gói cho dòng đang xem qua API quy trình của lõi, với biến lấy từ dòng. CatalogRecord.tsx vẽ khối này ở chỗ việc
+// chính của đầu trang (PageHeader). Người bấm xem các giá trị sẽ gửi trong hộp xác nhận trước khi gửi; quyền khởi tạo do workflow-api quyết định.
 
 import { Alert, Anchor, Button, Group, Modal, Stack, Table, Text } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import { Link, useParams } from "react-router";
 import { casesPathFor } from "./cases";
 import { type Action, actionVariables, type CatalogNode, type Row } from "./catalog";
 import { usePackageMenu } from "./PackagePage";
+import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 import { idempotencyKey, startProcess } from "./workflow";
 
@@ -50,16 +51,19 @@ export function CatalogActions({ node, row }: { node: CatalogNode; row: Row }) {
   const preview = open ? actionVariables(node, open.action, row) : undefined;
 
   return (
-    <Stack gap="xs">
+    // Đứng ở chỗ việc chính của đầu trang (PageHeader): nút và lời báo đã gửi căn phải, dưới tiêu đề khi màn hình hẹp.
+    <Stack gap="xs" align="flex-end">
       <Group>
-        {actions.map((action) => (
-          <Button key={action.id} variant="light" onClick={() => choose(action)}>
+        {/* Nút đầu là việc chính của trang nên nổi bật; nút sau cùng kiểu với nút phụ của màn hình xử lý việc. */}
+        {actions.map((action, index) => (
+          <Button key={action.id} variant={index === 0 ? "filled" : "default"} onClick={() => choose(action)}>
             {action.label}
           </Button>
         ))}
       </Group>
       {done && (
         <Alert
+          maw={420}
           color="green"
           title={`Đã gửi: ${done.label}`}
           withCloseButton
@@ -103,11 +107,7 @@ export function CatalogActions({ node, row }: { node: CatalogNode; row: Row }) {
                 Dòng này chưa có giá trị ở: {preview.missing.join(", ")}. Bổ sung dữ liệu rồi thử lại.
               </Alert>
             )}
-            {start.error && (
-              <Alert color="red" title="Không lập được hồ sơ">
-                {start.error.message}. Bấm gửi lại; nếu vẫn lỗi, báo người quản trị.
-              </Alert>
-            )}
+            {start.error && <ErrorNotice title="Không lập được hồ sơ" error={start.error} />}
             <Group justify="flex-end">
               <Button variant="default" onClick={close} disabled={start.isPending}>
                 Hủy

@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/documents.schema.json từ chối: khóa lạ trong upload.
+# Nếu lọt, gõ nhầm tên khóa (`notes` thay vì `note`) bị bỏ qua trong im lặng và ô ghi chú không hiện.
+
+title: Giấy tờ
+source: app_example_item_documents
+via: item_id
+file: file_id
+upload:
+  notes: note

@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ phần tài liệu đính kèm hợp lệ theo contracts/documents.schema.json; `make check-fast` kiểm tệp này. Phần này
+# không đứng riêng trên menu: gói khai nó ở `detail.documents` của cấu hình danh mục (xem catalog.example.yaml). Bảng
+# nối app_example_item_documents có cột item_id trỏ về danh mục, file_id là mã tệp mà /v1/files trả về.
+
+title: Giấy tờ đính kèm
+source: app_example_item_documents
+via: item_id
+file: file_id
+fields:
+  - { name: note, label: Ghi chú }
+  - { name: created_at, label: Ngày đính kèm, type: datetime }
+sort: { field: created_at, direction: desc }
+limit: 20
+upload:
+  label: Đính kèm tệp
+  role: user
+  note: note

@@ -6,13 +6,20 @@
 // ở catalogQuery.ts; phần hiển thị ở Catalog.tsx, CatalogRecord.tsx và CatalogTable.tsx. Không có React ở đây để
 // kiểm thử được bằng hàm thuần.
 
+import { type DocumentsConfig, documentsProblems } from "./documents";
+import { formatDate, formatDateTime, formatNumber } from "./format";
+import { TONES, type Tone } from "./tones";
+
 export type Field = {
   /** Tên cột, hoặc <quan hệ>.<cột> để đọc qua quan hệ một-một; loại sau chỉ hiện ở màn hình chi tiết */
   name: string;
   label: string;
   type?: "text" | "number" | "date" | "datetime";
-  choices?: { value: string; label: string }[];
+  choices?: Choice[];
 };
+
+/** Một giá trị cố định của trường: giá trị lưu, chữ hiện ra, và nghĩa màu của nhãn nếu gói khai (ADR 0050). */
+export type Choice = { value: string; label: string; tone?: Tone };
 
 /** Một loại đối tượng: đọc bảng nào, có trường nào, danh sách hiện gì, và các loại đối tượng con lồng trong nó. */
 export type CatalogNode = {
@@ -26,7 +33,7 @@ export type CatalogNode = {
     sort?: Sort;
     page_size?: number;
   };
-  detail?: { title?: string; children?: Child[]; actions?: Action[] };
+  detail?: { title?: string; children?: Child[]; actions?: Action[]; documents?: DocumentsConfig };
 };
 
 /** Nút khởi tạo quy trình cho dòng đang xem: tên biến của quy trình -> khóa hoặc trường của dòng (ADR 0026). */
@@ -98,6 +105,14 @@ function nodeProblems(config: CatalogNode): string[] {
       problems.push(`list.filters dùng trường "${name}" không có choices`);
     }
   }
+  for (const field of config.fields) {
+    // Cấu hình đọc từ CSDL, không qua schema lúc chạy: nghĩa lạ thì nhãn không có màu nào mà người đọc vẫn tưởng có.
+    for (const choice of field.choices ?? []) {
+      if (choice.tone !== undefined && !(TONES as readonly string[]).includes(choice.tone)) {
+        problems.push(`trường "${field.name}" khai tone "${choice.tone}" ngoài ${TONES.join(", ")}`);
+      }
+    }
+  }
   for (const name of config.list.search ?? []) {
     const field = fieldOf(config, name);
     // Tìm chữ dùng phép so mẫu của CSDL, chỉ có trên cột chữ; trên cột số hay ngày Hasura từ chối cả câu truy vấn.
@@ -105,7 +120,8 @@ function nodeProblems(config: CatalogNode): string[] {
       problems.push(`list.search dùng trường "${name}" không phải kiểu text`);
     }
   }
-  return [...problems, ...actionProblems(config, names)];
+  const documents = config.detail?.documents;
+  return [...problems, ...actionProblems(config, names), ...(documents ? documentsProblems(documents) : [])];
 }
 
 /** Nút trỏ tới trường chưa khai thì biến của quy trình nhận giá trị trống; báo ngay thay vì đợi người dùng bấm. */
@@ -185,25 +201,21 @@ export function resolvePath(config: CatalogNode, segments: string[]): Step[] | u
   return steps;
 }
 
-const number = new Intl.NumberFormat("vi-VN");
-// Năm đủ bốn chữ số: kiểu ngắn của vi-VN viết năm hai chữ số, nên 1820 và 2020 hiện giống nhau.
-const day = { day: "2-digit", month: "2-digit", year: "numeric" } as const;
-// Cột ngày không có giờ: đọc theo UTC, nếu không thì ở múi giờ phía tây ngày hiện ra lùi một ngày.
-const date = new Intl.DateTimeFormat("vi-VN", { ...day, timeZone: "UTC" });
-const dateTime = new Intl.DateTimeFormat("vi-VN", { ...day, hour: "2-digit", minute: "2-digit" });
-
 /** Chữ hiện ra cho một giá trị, theo kiểu và choices của trường; giá trị trống hiện thành chuỗi rỗng. */
 export function display(field: Field, value: unknown): string {
   if (value === null || value === undefined || value === "") return "";
   const choice = field.choices?.find((candidate) => candidate.value === String(value));
   if (choice) return choice.label;
-  if (field.type === "number") return typeof value === "number" ? number.format(value) : String(value);
-  if (field.type === "date" || field.type === "datetime") {
-    const time = new Date(String(value));
-    if (Number.isNaN(time.getTime())) return String(value);
-    return (field.type === "date" ? date : dateTime).format(time);
-  }
+  if (field.type === "number") return typeof value === "number" ? formatNumber(value) : String(value);
+  if (field.type === "date") return formatDate(String(value));
+  if (field.type === "datetime") return formatDateTime(String(value));
   return String(value);
+}
+
+/** Nghĩa màu của một giá trị khi gói khai tone cho lựa chọn đó; còn lại hiện chữ thường, không thành nhãn. */
+export function toneOf(field: Field, value: unknown): Tone | undefined {
+  if (value === null || value === undefined) return undefined;
+  return field.choices?.find((candidate) => candidate.value === String(value))?.tone;
 }
 
 /** Một giá trị mà nút sẽ gửi, kèm nhãn của trường để hộp xác nhận cho người bấm thấy trước. */

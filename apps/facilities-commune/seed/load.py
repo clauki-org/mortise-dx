@@ -3,7 +3,8 @@
 #
 # Nạp dữ liệu demo của gói (demo.yaml) qua cổng, như quản trị xã nhập tay: lấy token của tài khoản quản trị
 # từng xã (vai trò tenant_admin, thấy và ghi toàn xã) rồi ghi bằng GraphQL, sau đó phân công cán bộ phụ trách
-# từng cơ sở. Gói không đụng thẳng vào CSDL (AGENTS.md), và nhật ký thay đổi ghi đúng người làm của từng xã.
+# (custodian) và người duyệt (approver) từng cơ sở. Gói không đụng thẳng vào CSDL (AGENTS.md), và nhật ký thay
+# đổi ghi đúng người làm của từng xã.
 # Dòng đã có (trùng mã, trùng phân công, hay trùng chức danh với biên chế) thì giữ nguyên, nên chạy lại không
 # tạo bản trùng; riêng tọa độ của cơ sở đã có thì được ghi theo demo.yaml khi khác.
 # Gọi bằng `make seed-demo` sau `make seed` và `make app-install APP=facilities-commune`.
@@ -11,6 +12,7 @@
 import base64
 import json
 import os
+import subprocess
 import sys
 import urllib.error
 import urllib.parse
@@ -23,6 +25,10 @@ import yaml
 BASE = os.environ.get("MORTISE_PUBLIC_URL") or "http://localhost:9080"
 PASSWORD = os.environ.get("DEMO_USER_PASSWORD")
 DATA = Path(__file__).with_name("demo.yaml")
+# Mã OTP của tài khoản demo do scripts/otp.py tính từ .env, như smoke và e2e lấy (ADR 0011).
+OTP = Path(__file__).resolve().parents[3] / "scripts" / "otp.py"
+# Nhiệm vụ trong bảng phân công và khóa liệt kê tài khoản của nhiệm vụ đó trong demo.yaml.
+DUTIES = {"custodian": "custodians", "approver": "approvers"}
 TABLE = "app_facilities_commune"
 # Cán bộ (vai trò user) chỉ thấy cơ sở mình được phân công, nên nạp và phân công chạy bằng vai trò quản trị
 # xã.
@@ -42,12 +48,37 @@ def post(path: str, body: bytes, headers: dict[str, str]) -> dict:
         raise SystemExit(f"Không gọi được cổng tại {BASE} ({error.reason}); kiểm tra `make ps`.") from error
 
 
+def otp(username: str) -> str:
+    try:
+        done = subprocess.run(  # noqa: S603
+            [sys.executable, str(OTP), "next", username],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=120,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        reason = f"Không lấy được mã OTP cho {username} ({error}); chạy `make seed` trước."
+        raise SystemExit(reason) from error
+    return done.stdout.strip()
+
+
 def token(username: str) -> str:
-    # Client kiểm thử do `make seed` tạo; tài khoản demo của xã là người dùng thường nên không cần mã OTP.
+    """Token qua client kiểm thử do `make seed` tạo. Tài khoản phải nhập OTP (người duyệt, tenant bắt OTP) bị
+    Keycloak từ chối lần đầu; khi đó mới xin mã, vì mỗi mã chỉ dùng được một lần."""
     form = {"grant_type": "password", "client_id": "mortise-test", "username": username, "password": PASSWORD}
-    body = urllib.parse.urlencode(form).encode()
-    reply = post("/auth/realms/mortise/protocol/openid-connect/token", body, {})
-    return reply["access_token"]
+    path = "/auth/realms/mortise/protocol/openid-connect/token"
+    request = urllib.request.Request(f"{BASE}{path}", data=urllib.parse.urlencode(form).encode())  # noqa: S310
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
+            return json.load(response)["access_token"]
+    except urllib.error.HTTPError as error:
+        if error.code not in (400, 401):
+            raise SystemExit(f"Cổng từ chối {path} ({error.code}): {error.read()[:300]!r}") from error
+    except urllib.error.URLError as error:
+        raise SystemExit(f"Không gọi được cổng tại {BASE} ({error.reason}); kiểm tra `make ps`.") from error
+    body = urllib.parse.urlencode(form | {"totp": otp(username)}).encode()
+    return post(path, body, {})["access_token"]
 
 
 def graphql(access: str, query: str, variables: dict) -> dict:
@@ -103,21 +134,21 @@ def tenant_of(access: str) -> str:
     return claims(access)["tenant"][0]
 
 
-def custodian_sub(tenant: str, username: str) -> str:
-    """sub của tài khoản cán bộ, giá trị mà quyền Hasura so với X-Hasura-User-Id."""
+def staff_sub(tenant: str, username: str) -> str:
+    """sub của tài khoản được phân công, giá trị mà quyền Hasura so với X-Hasura-User-Id."""
     access = token(username)
     if tenant_of(access) != tenant:
         raise SystemExit(f"demo.yaml: cán bộ {username} thuộc {tenant_of(access)}, không phải {tenant}.")
     return claims(access)["sub"]
 
 
-def assign(access: str, facility_id: str, user_id: str) -> int:
-    """Phân công custodian nếu chưa có; trả số dòng thêm."""
-    where = {"facility_id": {"_eq": facility_id}, "user_id": {"_eq": user_id}, "duty": {"_eq": "custodian"}}
+def assign(access: str, facility_id: str, user_id: str, duty: str) -> int:
+    """Phân công một nhiệm vụ (custodian, approver) nếu chưa có; trả số dòng thêm."""
+    where = {"facility_id": {"_eq": facility_id}, "user_id": {"_eq": user_id}, "duty": {"_eq": duty}}
     name = f"{TABLE}_facility_assignments"
     if graphql(access, f"query($w: {name}_bool_exp!) {{ {name}(where: $w) {{ id }} }}", {"w": where})[name]:
         return 0
-    row = {"facility_id": facility_id, "user_id": user_id, "duty": "custodian"}
+    row = {"facility_id": facility_id, "user_id": user_id, "duty": duty}
     insert(access, "facility_assignments", row)
     return 1
 
@@ -145,8 +176,9 @@ def load_tenant(tenant: str, spec: dict) -> int:
             place(access, facility_id, facility["location"])
             placed += 1
         # Phân công cả cho cơ sở đã có từ lần nạp trước, khi gói chưa có bảng phân công.
-        for username in facility.get("custodians", []):
-            added += assign(access, facility_id, custodian_sub(tenant, username))
+        for duty, key in DUTIES.items():
+            for username in facility.get(key, []):
+                added += assign(access, facility_id, staff_sub(tenant, username), duty)
         buildings = codes(access, "buildings", {"facility_id": {"_eq": facility_id}})
         for building in facility["buildings"]:
             building_id = buildings.get(building["code"])

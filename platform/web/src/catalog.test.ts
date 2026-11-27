@@ -6,7 +6,7 @@
 // với contracts/examples/catalog.example.yaml.
 
 import { describe, expect, it } from "vitest";
-import { type CatalogConfig, type Child, configProblems, display, resolvePath } from "./catalog";
+import { type CatalogConfig, type Child, configProblems, display, resolvePath, toneOf } from "./catalog";
 import {
   chainQuery,
   chainVariables,
@@ -48,7 +48,7 @@ const config: CatalogConfig = {
       name: "status",
       label: "Tình trạng",
       choices: [
-        { value: "active", label: "Đang dùng" },
+        { value: "active", label: "Đang dùng", tone: "ok" },
         { value: "retired", label: "Ngừng dùng" },
       ],
     },
@@ -145,6 +145,13 @@ describe("configProblems", () => {
       'list.search dùng trường "status" không phải kiểu text',
     ]);
   });
+
+  it("báo tone ngoài bộ nghĩa chung, vì cấu hình đọc từ CSDL không qua schema", () => {
+    const fields = [{ name: "code", label: "Mã", choices: [{ value: "a", label: "A", tone: "red" as never }] }];
+    expect(configProblems({ ...config, fields, list: { columns: ["code"] }, detail: undefined })).toEqual([
+      'trường "code" khai tone "red" ngoài bad, warn, info, ok, neutral',
+    ]);
+  });
 });
 
 describe("đối tượng con lồng trong cấu hình", () => {
@@ -214,6 +221,13 @@ describe("trạng thái trên thanh địa chỉ", () => {
     expect(readState(new URLSearchParams("page=abc")).page).toBe(0);
     expect(readState(new URLSearchParams("page=-4")).page).toBe(0);
   });
+
+  it("dạng thẻ nằm trên thanh địa chỉ, dạng bảng mặc định thì không; giá trị lạ là dạng bảng", () => {
+    const cards = { ...emptyState, view: "cards" as const };
+    expect(writeState(cards).toString()).toBe("view=cards");
+    expect(readState(writeState(cards))).toEqual(cards);
+    expect(readState(new URLSearchParams("view=table")).view).toBeUndefined();
+  });
 });
 
 describe("display", () => {
@@ -226,6 +240,13 @@ describe("display", () => {
   it("hiện chữ của choices thay cho giá trị lưu; giá trị ngoài choices hiện nguyên", () => {
     expect(display(field("status"), "retired")).toBe("Ngừng dùng");
     expect(display(field("status"), "unknown")).toBe("unknown");
+  });
+
+  it("tone theo lựa chọn gói khai; lựa chọn không khai tone, giá trị ngoài choices hay trống thì không có", () => {
+    expect(toneOf(field("status"), "active")).toBe("ok");
+    expect(toneOf(field("status"), "retired")).toBeUndefined();
+    expect(toneOf(field("status"), "unknown")).toBeUndefined();
+    expect(toneOf(field("status"), null)).toBeUndefined();
   });
 
   it("số theo cách viết tiếng Việt; giá trị trống thành chuỗi rỗng", () => {

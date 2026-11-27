@@ -31,7 +31,12 @@ fields:
       label: name
       where: { column: group_code, field: groupCode }
       limit: 100
-  - { name: amount, label: Số lượng, type: number, required: true, min: 1 }
+  - name: amount
+    label: Số lượng
+    type: number
+    required: true
+    min: 1
+    help: Tính theo đơn vị của đối tượng đã chọn.
   - { name: neededBy, label: Cần trước ngày, type: date }
   - { name: note, label: Ghi chú, type: string, multiline: true, max_length: 1000 }
 submit:

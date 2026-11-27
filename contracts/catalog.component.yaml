@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Bản mô tả thành phần danh mục theo contracts/component.schema.json; `make check-fast` kiểm tệp này.
-# Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, CatalogActions.tsx,
-# catalog.ts, catalogQuery.ts). Mỗi dòng dưới đây đã được chạy thử trên giao diện; đổi hành vi của thành phần thì sửa
-# tệp này trong cùng pull request.
+# Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, CatalogRows.tsx,
+# CatalogActions.tsx, catalog.ts, catalogQuery.ts; phần tài liệu ở CatalogDocuments.tsx). Mỗi dòng dưới đây đã được chạy thử trên giao
+# diện; đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
 
 component: catalog
 summary: Danh sách và màn hình chi tiết của một loại đối tượng cùng các đối tượng con của nó, đọc qua GraphQL theo cấu hình của gói.
@@ -12,14 +12,20 @@ config_schema: catalog.schema.json
 example: examples/catalog.example.yaml
 capabilities:
   - Danh sách dạng bảng; cột nào hiện, tên cột và thứ tự cột theo fields và list.columns.
+  - Danh sách ngoài cùng có công tắc Bảng/Thẻ (mặc định Bảng, ADR 0050). Ở dạng thẻ mỗi dòng một thẻ, giá trị cột đầu là
+    liên kết tới màn hình chi tiết như ở bảng, các cột sau là cặp nhãn, giá trị; ô "Sắp theo" chọn cột và chiều. Tìm,
+    lọc, phân trang như dạng bảng; dạng thẻ nằm trên đường dẫn. Bảng đối tượng con luôn ở dạng bảng.
   - Tìm theo chữ, không phân biệt hoa thường, trên các trường kiểu text khai trong list.search.
   - Lọc theo một giá trị của mỗi trường có choices khai trong list.filters.
   - Sắp xếp tăng hoặc giảm theo một cột khi bấm tiêu đề cột; thứ tự lúc mới mở theo list.sort. Dòng chưa có giá
     trị ở cột sắp xếp đứng cuối.
   - Phân trang theo list.page_size, có nút trang trước và trang sau.
   - Tìm, lọc, thứ tự và trang của danh sách nằm trên đường dẫn; mở lại đường dẫn là về đúng chỗ đang xem.
-  - Màn hình chi tiết của một dòng hiện mọi trường trong fields theo thứ tự khai.
-  - Giá trị hiện theo kiểu của trường (số, ngày, ngày giờ); trường có choices hiện chữ thay cho giá trị lưu.
+  - Màn hình chi tiết của một dòng hiện mọi trường trong fields theo thứ tự khai, mỗi trường một ô trong lưới (nhãn
+    trên, giá trị dưới).
+  - Giá trị hiện theo kiểu của trường (số, ngày, ngày giờ); trường có choices hiện chữ thay cho giá trị lưu; giá trị
+    trống hiện một gạch mờ. Lựa chọn có tone hiện thành nhãn màu theo bộ nghĩa chung, luôn kèm chữ, ở bảng, thẻ và màn
+    hình chi tiết (ADR 0050). Bảng rộng hơn màn hình cuộn ngang trong một vùng có nhãn, giữ mọi cột đã khai (ADR 0047).
   - Quan hệ cha–con nhiều cấp, khai lồng trong cùng tệp bằng detail.children. Màn hình chi tiết của cha có bảng của
     từng loại đối tượng con, tìm, lọc và phân trang được; màn hình chi tiết của con có đường về mọi cấp cha.
   - Màn hình chi tiết hiện được cột của bảng khác qua quan hệ một-một mà Hasura khai cho bảng, khai trong fields
@@ -31,10 +37,13 @@ capabilities:
   - Nút "Xuất" trên màn hình danh sách tải về tệp CSV, Excel (.xlsx) hay PDF gồm mọi dòng khớp tìm, lọc và thứ tự
     đang xem, đọc trong một truy vấn bằng quyền của người xuất; đầu tệp ghi tên danh sách, nguồn, đơn vị, thời điểm
     và múi giờ, người xuất, điều kiện và số dòng. CSV chặn công thức ở ô bắt đầu bằng = + - @, tab hay CR; Excel ghi
-    ô chữ là chữ (ADR 0038).
+    ô chữ là chữ (ADR 0052).
+  - Phần tài liệu đính kèm của dòng đang xem (detail.documents, ở mọi cấp cha–con) để xem, tải xuống, đính kèm tệp;
+    năng lực và giới hạn ở contracts/documents.component.yaml (ADR 0041).
   - Nơi gọi chỉ đưa cấu hình và địa chỉ gốc; thành phần không cần menu, bảng hay cấu hình nào khác của hệ thống.
 limits:
-  - Không thêm, sửa hay xóa dòng; việc ghi duy nhất là khởi tạo quy trình bằng nút gói khai.
+  - Không thêm, sửa hay xóa dòng của danh mục; việc ghi chỉ có khởi tạo quy trình bằng nút gói khai và đính kèm tệp ở
+    phần tài liệu (thêm một dòng vào bảng nối).
   - Mỗi danh sách đọc một bảng; không hiện cột của bảng khác, kể cả tên của đối tượng cha. Cột qua quan hệ chỉ hiện ở
     màn hình chi tiết, chỉ một cấp, không tìm, lọc hay sắp xếp được.
   - Nút chỉ mở quy trình của cùng gói, chỉ khởi tạo; không hiện trạng thái hồ sơ đã lập và không chặn hai hồ sơ cùng
@@ -44,6 +53,8 @@ limits:
   - Xuất chỉ ở danh sách ngoài cùng, tối đa 5.000 dòng một tệp; bảng đối tượng con không xuất. Lần xuất không được
     ghi nhật ký phía máy chủ.
   - Mỗi lúc chỉ sắp xếp theo một cột; thứ tự của chữ có dấu là thứ tự so sánh của CSDL.
+  - Màu của nhãn chỉ chọn được trong bộ nghĩa chung bad, warn, info, ok, neutral, theo từng lựa chọn của choices; trường
+    không có choices không thành nhãn. Thẻ không có ảnh, biểu tượng hay mô tả riêng của gói.
   - Ô tìm không dò trường số, trường ngày và trường có choices.
   - Không có kiểu đúng/sai riêng; cột đúng/sai hiện và lọc được khi khai choices với giá trị "true" và "false".
   - Đối tượng con trỏ về cha bằng một cột; không hỗ trợ khóa ghép. Đối tượng con chỉ mở được từ đối tượng cha.

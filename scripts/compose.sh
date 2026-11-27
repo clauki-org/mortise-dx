@@ -44,11 +44,25 @@ require_images() {
   done
 }
 
+# MORTISE_TRACING thành tên bộ lấy mẫu của cổng (`always_<giá trị>`, compose.yaml); giá trị lạ làm cổng từ chối mọi
+# API dưới /v1 với 503, nên dừng trước khi dựng (ADR 0038). Biến ở môi trường thắng .env như với compose.
+check_tracing() {
+  local value="${MORTISE_TRACING-$(sed -n 's/^MORTISE_TRACING=//p' .env 2>/dev/null | tail -1)}"
+  case "$value" in
+    on | off | "") ;;
+    *)
+      echo "MORTISE_TRACING chỉ nhận on hoặc off, đang là '$value'; sửa trong .env." >&2
+      exit 1
+      ;;
+  esac
+}
+
 main() {
   local action="${1:-}" profile service
   shift || true
   case "$action" in
     up)
+      check_tracing
       if no_build; then
         local services
         mapfile -t services < <(built_services)

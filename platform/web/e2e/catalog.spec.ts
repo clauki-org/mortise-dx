@@ -9,7 +9,7 @@
 
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { readSheet } from "read-excel-file/node";
-import { graphql, signIn, subOf, uniqueTitle } from "./support.ts";
+import { graphql, openMenuItem, signIn, subOf, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
 const PREFIX = "app_facilities_commune";
@@ -91,7 +91,7 @@ test("cán bộ xã A mở danh mục cơ sở từ menu của gói, chỉ thấ
 
     await page.goto("/");
     await signIn(page, "user.a");
-    await page.getByRole("link", { name: "Cơ sở nhà, đất" }).click();
+    await openMenuItem(page, "Cơ sở nhà, đất");
     await expect(page.getByRole("heading", { level: 1, name: "Cơ sở nhà, đất" })).toBeVisible();
 
     await page.getByRole("textbox", { name: "Tìm" }).fill(code);
@@ -198,7 +198,7 @@ test("cán bộ xã A xuất danh mục cơ sở ra CSV, Excel và PDF: mọi d�
 
     await page.goto("/");
     await signIn(page, "user.a");
-    await page.getByRole("link", { name: "Cơ sở nhà, đất" }).click();
+    await openMenuItem(page, "Cơ sở nhà, đất");
     await page.getByRole("textbox", { name: "Tìm" }).fill(code);
     await page.getByRole("button", { name: "Tìm" }).click();
     await expect(page.getByRole("link", { name: `${code}-a01` })).toBeVisible();
@@ -233,9 +233,12 @@ test("cán bộ xã A xuất danh mục cơ sở ra CSV, Excel và PDF: mọi d�
     expect(data.map((line) => line[0])).toEqual(rows.map((row) => row.code));
     expect(data).toHaveLength(count);
 
-    // Trang đầu trên màn hình khớp từng ô với 20 dòng đầu của tệp; riêng tên bắt đầu bằng "=" có thêm dấu '.
+    // Trang đầu trên màn hình khớp từng ô với 20 dòng đầu của tệp; riêng tên bắt đầu bằng "=" có thêm dấu '. Ô trống
+    // trên màn hình là gạch mờ kèm chữ ẩn "Chưa có" cho trình đọc màn hình (TableScroll.tsx), trong tệp là ô rỗng.
     expect(screen).toHaveLength(20);
-    const shown = screen.map((cells) => cells.map((cell) => (/^[=+\-@]/.test(cell) ? `'${cell}` : cell)));
+    const shown = screen.map((cells) =>
+      cells.map((cell) => (cell === "—Chưa có" ? "" : /^[=+\-@]/.test(cell) ? `'${cell}` : cell)),
+    );
     expect(data.slice(0, 20)).toEqual(shown);
     expect(data.some((line) => line[1]?.startsWith("'=Trụ sở kiểm thử, "))).toBe(true);
 

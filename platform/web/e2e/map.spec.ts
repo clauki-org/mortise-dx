@@ -8,7 +8,7 @@
 // (`make app-install APP=facilities-commune`); bài tự tạo và tự dọn dữ liệu nên không cần `make seed-demo`.
 
 import { type APIRequestContext, type BrowserContext, expect, type Page, test } from "@playwright/test";
-import { graphql, signIn, subOf, uniqueTitle } from "./support.ts";
+import { graphql, openMenuItem, signIn, subOf, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
 const PREFIX = "app_facilities_commune";
@@ -72,7 +72,7 @@ function watch(page: Page) {
 async function openMap(page: Page, username: string) {
   await page.goto("/");
   await signIn(page, username);
-  await page.getByRole("link", { name: MAP }).click();
+  await openMenuItem(page, MAP);
   await expect(page.getByRole("heading", { level: 1, name: MAP })).toBeVisible();
 }
 

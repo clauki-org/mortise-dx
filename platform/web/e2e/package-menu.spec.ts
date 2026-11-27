@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Menu của mọi gói đã cài trên trình duyệt: với mỗi mục menu mà cán bộ xã A thấy qua GraphQL, nhãn của mục có trên
-// menu, bấm vào thì mở đúng trang của mục, trang biểu mẫu và bảng điều hành hiện tiêu đề theo cấu hình (bảng điều
-// hành đọc được số liệu của mọi khối hiện ra), và trang danh mục hiện tiêu đề, cột theo cấu hình của gói, tải được
-// dữ liệu; có dòng thì mở chi tiết dòng đầu cùng các bảng con. Bài đọc mục và cấu hình từ platform_menu_items nên không
-// biết gói nào hay từ ngữ của lĩnh vực nào: gói mới cài vào được kiểm mà không phải sửa bài. Bài không kiểm một gói
-// cụ thể có mục menu; việc đó thuộc smoke của từng gói. Cần ít nhất một gói có mục menu đã cài (`make app-install`).
+// menu, bấm vào thì mở đúng trang của mục, trang biểu mẫu và bảng điều hành hiện tiêu đề theo cấu hình (bảng điều hành
+// đọc được số liệu của mọi khối hiện ra), và trang danh mục hiện tiêu đề, cột theo cấu hình của gói, tải được dữ liệu,
+// chuyển được sang dạng thẻ và về; có dòng thì mở chi tiết dòng đầu, thấy mọi trường thành ô, cùng các bảng con. Bài
+// đọc mục và cấu hình từ platform_menu_items nên không biết gói nào hay từ ngữ của lĩnh vực nào: gói mới cài vào được
+// kiểm mà không phải sửa bài. Bài không kiểm một gói cụ thể có mục menu; việc đó thuộc smoke của từng gói. Cần ít nhất
+// một gói có mục menu đã cài (`make app-install`).
 
 import { expect, test } from "@playwright/test";
-import { graphql, signIn } from "./support.ts";
+import { graphql, openMenuItem, signIn } from "./support.ts";
 
 type Field = { name: string; label: string };
 type CatalogConfig = {
@@ -28,6 +29,10 @@ type MenuItem = {
 };
 
 const USER = "user.a";
+
+/** Thoát ký tự đặc biệt của biểu thức chính quy trong nhãn của gói (nhãn có thể chứa ngoặc, như "(m²)"). */
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // Vai trò realm của tài khoản cán bộ demo; mục chỉ dành cho vai trò khác thì giao diện không hiện, bài bỏ qua.
 const ROLE = "user";
 
@@ -43,7 +48,7 @@ test("mỗi mục menu của gói đã cài hiện trên menu và mở được 
   await signIn(page, USER);
   for (const entry of items) {
     await test.step(`${entry.app} / ${entry.item}`, async () => {
-      await page.getByRole("link", { name: entry.label, exact: true }).click();
+      await openMenuItem(page, entry.label);
       // Danh sách giữ tìm, lọc, trang trên chuỗi truy vấn, nên chỉ so phần đường dẫn.
       await expect(page).toHaveURL(new RegExp(`/apps/${entry.app}/${entry.item}(\\?.*)?$`));
       // Mọi mục phải mở được thành phần của nó, không rơi vào thông báo giao diện chưa có thành phần.
@@ -79,10 +84,25 @@ test("mỗi mục menu của gói đã cài hiện trên menu và mở được 
         const label = config.fields.find((field) => field.name === column)?.label ?? column;
         await expect(table.getByRole("columnheader", { name: label })).toBeVisible();
       }
+      // Công tắc Bảng/Thẻ (ADR 0050): dạng thẻ hiện cùng liên kết của dòng đầu, rồi về dạng bảng mặc định.
+      const first = (await table.getByRole("link").first().textContent()) ?? "";
+      const views = page.getByRole("radiogroup", { name: "Kiểu hiển thị" });
+      await views.getByText("Thẻ", { exact: true }).click();
+      await expect(page).toHaveURL(/view=cards/);
+      await expect(table).toHaveCount(0);
+      await expect(page.getByRole("listitem").getByRole("link", { name: first, exact: true })).toBeVisible();
+      await views.getByText("Bảng", { exact: true }).click();
+      await expect(table).toBeVisible();
       // Dòng đầu mở màn hình chi tiết: khóa của dòng và cột nối về cha do cấu hình chọn (có thể là cột chữ thay vì
       // id), nên chi tiết và từng bảng con phải đọc được dữ liệu, không báo lỗi hay "không tìm thấy".
       await table.getByRole("link").first().click();
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      // Mọi trường thành một ô nhãn, giá trị của lưới chi tiết (dt trong dl).
+      for (const field of config.fields) {
+        await expect(
+          page.locator("dl > div > dt").filter({ hasText: new RegExp(`^${escapeRegExp(field.label)}$`) }),
+        ).toHaveCount(1);
+      }
       for (const child of config.detail?.children ?? []) {
         await expect(page.getByRole("heading", { level: 2, name: child.label })).toBeVisible();
       }
