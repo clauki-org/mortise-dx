@@ -402,12 +402,14 @@ if ((loaded > 0)); then
   check "Dữ liệu demo xã C: 460 m² đang dùng, 250 m² dôi dư" "$(totals "$admin_c")" "in_use=460 surplus=250"
   check "Dữ liệu demo: $user_a phụ trách mọi cơ sở demo của xã A" "$(gql "$token_a" "$demo_codes" |
     jq '.data.app_facilities_commune_facilities | length')" 2
-  # Tỉnh thấy đúng số của xã, lấy từ cùng area_summary nên không lệch với số xã tự thấy.
+  # Tỉnh thấy đúng số của xã, lấy từ cùng area_summary nên không lệch với số xã tự thấy. area_rollup không có phần
+  # trăm (vòng đo chỉ ở bảng của xã), nên bỏ nó khỏi số của xã trước khi so.
   check "Tỉnh thấy số liệu ba xã khớp số của từng xã" \
     "$(gql "$leader" "$rollup" "{}" rollup_reader | jq -r '.data.app_facilities_commune_area_rollup[] |
       "\(.tenant_id) allowed=\(.allowed_m2 | tonumber + 0) in_use=\(.in_use_m2 | tonumber + 0)"
       + " surplus=\(.surplus_m2 | tonumber + 0) excess=\(.excess_m2 | tonumber + 0)"' | paste -sd ';')" \
-    "$(for access in "$token_a" "$token_b" "$(token user.c)"; do summary "$access"; done | paste -sd ';')"
+    "$(for access in "$token_a" "$token_b" "$(token user.c)"; do summary "$access"; done | sed 's/ percent=[0-9]*//' |
+      paste -sd ';')"
   # View của bảng điều hành (ADR 0033) so với số tính lại cùng lúc từ bảng gốc, đọc bằng quản trị xã (thấy mọi cơ
   # sở, tòa, phòng, phân công của xã), không so với số demo cố định: CSDL dùng lâu có thể còn cơ sở do bài kiểm khác
   # để lại. Mỗi xã có dòng cho mọi trạng thái, loại diện tích dù chưa có cơ sở nào. Diện tích làm tròn hai chữ số vì
