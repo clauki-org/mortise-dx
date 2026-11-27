@@ -8,6 +8,7 @@ import { AppShell, Burger, Button, Group, NavLink, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Link, Outlet, useLocation } from "react-router";
 import { userManager } from "./auth";
+import { Brand } from "./Brand";
 import { itemPath } from "./menu";
 import { usePackageMenu } from "./PackagePage";
 import { addPasskey, canAddPasskey } from "./passkey";
@@ -46,7 +47,7 @@ export function Shell() {
             />
             {/* Tên hệ thống không phải tiêu đề của trang; mỗi màn hình có tiêu đề cấp 1 của nó. */}
             <Text fw={700} size="lg" style={{ whiteSpace: "nowrap" }}>
-              Mortise DX
+              <Brand compact />
             </Text>
           </Group>
           <Group wrap="nowrap">

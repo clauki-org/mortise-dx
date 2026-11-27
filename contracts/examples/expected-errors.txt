@@ -112,3 +112,6 @@ assistant.documents-and-data.yaml	$	{'intro': 'Hỏi về quy chế đặt phòn
 cases.duplicate-process.yaml	$.processes	['core-approval', 'core-approval'] has non-unique elements
 cases.no-processes.yaml	$.processes	[] should be non-empty
 cases.process-not-slug.yaml	$.processes[0]	'core-approval&state=all' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
+branding.logo-other-origin.json	$.logo	'https://cdn.example.org/logo.svg' does not match '^/brand/[A-Za-z0-9][A-Za-z0-9._-]*\\\\.(svg|png|webp)$'
+branding.low-contrast-color.json	$.color	'teal' is not one of ['blue', 'indigo', 'violet', 'grape', 'pink', 'dark']
+branding.missing-short-name.json	$	'short_name' is a required property

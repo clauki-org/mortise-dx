@@ -12,6 +12,7 @@ import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 import { Provider } from "urql";
 import { ApiError } from "./api";
 import { CALLBACK_PATH, userManager } from "./auth";
+import { Brand } from "./Brand";
 import { NotFound, RouteError } from "./Errors";
 import { createGraphqlClient } from "./graphql";
 import { PackagePage } from "./PackagePage";
@@ -94,7 +95,7 @@ export function App() {
         <Gate>
           <div>
             <Title order={1} size="h2">
-              Mortise DX
+              <Brand />
             </Title>
             <Text c="dimmed" size="sm">
               Đăng nhập bằng tài khoản do đơn vị cấp để xem và xử lý việc.

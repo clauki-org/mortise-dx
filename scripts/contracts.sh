@@ -113,6 +113,18 @@ print(described["component"]); print(described["config_schema"]); print(describe
   done
 done
 "${checker[@]}" --schemafile contracts/device-message.schema.json contracts/examples/device-message.example.json
+# Thương hiệu mặc định trong image cũng là giá trị dự phòng của giao diện (platform/web/src/branding.ts), nên phải
+# đúng hợp đồng như ví dụ. Danh sách màu của schema và của giao diện phải trùng: theme.test.ts chỉ kiểm tương phản
+# của màu trong BRAND_COLORS, một màu thêm vào schema mà quên ở đó sẽ qua mà chưa ai đo.
+"${checker[@]}" --schemafile contracts/branding.schema.json contracts/examples/branding.example.json \
+  platform/web/brand/branding.json
+schema_colors=$(jq -c '.properties.color.enum' contracts/branding.schema.json)
+web_colors=$(sed -n 's/^export const BRAND_COLORS = \(\[.*\]\) as const;$/\1/p' platform/web/src/branding.ts | jq -c .)
+if [[ "$schema_colors" != "$web_colors" ]]; then
+  echo "Màu của contracts/branding.schema.json ($schema_colors) khác BRAND_COLORS trong platform/web/src/branding.ts" \
+    "(${web_colors:-không đọc được})." >&2
+  exit 1
+fi
 "${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml \
   --steps contracts/examples/workflow.example.yaml core/workflow/fixtures/*.yaml \
   --authorities contracts/examples/authority.example.yaml --rules contracts/examples/threshold-rule.example.yaml
@@ -262,16 +274,18 @@ reject contracts/authority.schema.json contracts/examples/invalid/authority.*.ya
 reject contracts/seed.schema.json contracts/examples/invalid/seed.*.yaml
 reject contracts/component.schema.json contracts/examples/invalid/component.*.yaml
 reject contracts/device-message.schema.json contracts/examples/invalid/device-message.*.json
+reject contracts/branding.schema.json contracts/examples/invalid/branding.*.json
 # Các mẫu tên ở trên quyết định tệp nào được kiểm. Tệp đặt sai tên sẽ nằm trong invalid/
 # mà chưa từng bị kiểm, nên phải báo lỗi thay vì bỏ qua.
 for file in contracts/examples/invalid/*; do
   case "${file##*/}" in
     token-claims.*.json | service-token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | \
-    documents.*.yaml | component.*.yaml | \
+    documents.*.yaml | component.*.yaml | branding.*.json | \
     threshold-rule.*.yaml | authority.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml | map.*.yaml | form.*.yaml | \
     cases.*.yaml | dashboard.*.yaml) ;;
     *)
-      echo "$file không được kiểm: tên phải theo mẫu <token-claims|service-token-claims|device-message>.<lỗi>.json hoặc" \
+      echo "$file không được kiểm: tên phải theo mẫu" \
+        "<token-claims|service-token-claims|device-message|branding>.<lỗi>.json hoặc" \
         "<app|workflow|catalog|documents|map|form|cases|dashboard|component|threshold-rule|authority|assistant|knowledge|seed>.<lỗi>.yaml." >&2
       exit 1
       ;;

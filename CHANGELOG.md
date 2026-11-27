@@ -27,6 +27,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Đăng nhập bằng Passkey cho tenant được bật (`make tenant-login TENANT=<tenant> POLICY=passkey`): nút "Thêm Passkey"
   trên giao diện, trang đăng nhập có lựa chọn Passkey thay mật khẩu, ai phải nhập OTP vẫn nhập; tenant demo `xa-c`
   (ADR 0042).
+- Giao diện dùng chung một bộ cỡ chữ, khoảng cách, màu đạt tương phản WCAG AA (màu chính mặc định đổi sang xanh
+  dương); tên, logo, màu theo bản cài trong `branding.json`, ghi đè bằng `MORTISE_BRANDING_DIR` không cần dựng lại
+  image ([ADR 0043](docs/adr/0043-design-tokens-and-install-branding.md)).
 
 ### Removed
 
