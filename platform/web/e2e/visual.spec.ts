@@ -6,8 +6,8 @@
 // gắn vào kết quả của Playwright (thư mục test-results), không commit làm ảnh mẫu. Lỗi trợ năng mức critical, serious
 // theo WCAG 2.1 A, AA làm bài hỏng (#194); báo cáo vẫn ghi mọi lỗi, kể cả mức nhẹ hơn và quy tắc ngoài WCAG, để đọc.
 // Chạy ở cỡ laptop 1440×900 (dự án chromium) và cỡ điện thoại (dự án mobile, Pixel 7). Bài cuối đếm
-// số lần bấm để cán bộ xã A lập một hồ sơ rà soát từ cơ sở, đi qua menu như người dùng, rồi số lần bấm để người duyệt
-// xã A mở hồ sơ đó từ trang mở đầu và trả lại kèm ý kiến (#203); bài tự tạo và tự dọn dữ liệu.
+// số lần bấm để cán bộ xã A lập một hồ sơ rà soát từ cơ sở, đi từ lối tắt trên trang chủ như người dùng, rồi số lần
+// bấm để người duyệt xã A mở hồ sơ đó từ trang chủ và trả lại kèm ý kiến (#203, ADR 0051); bài tự tạo và tự dọn dữ liệu.
 
 import { writeFile } from "node:fs/promises";
 import AxeBuilder from "@axe-core/playwright";
@@ -93,6 +93,7 @@ async function facilityId(request: APIRequestContext, code: string): Promise<str
 
 // Các trang cán bộ xã A (user.a) mở trong kịch bản demo; đường dẫn là /apps/<gói>/<mục menu> (menu.ts).
 const PAGES: { name: string; path: (request: APIRequestContext) => Promise<string> | string }[] = [
+  { name: "home", path: () => "/" },
   { name: "dashboard", path: () => "/apps/facilities-commune/dashboard" },
   { name: "facilities", path: () => "/apps/facilities-commune/facilities" },
   { name: "facilities-cards", path: () => "/apps/facilities-commune/facilities?view=cards" },
@@ -171,10 +172,12 @@ test("đếm số lần bấm để cán bộ xã A lập và người duyệt x
       steps.push(label);
       await target.click();
     };
-    // Trên điện thoại menu gập lại sau nút mở menu; nút đó cũng là một lần bấm.
-    const burger = page.getByRole("button", { name: /^Mở menu/ });
-    if (await burger.isVisible()) await click(burger, "Mở menu");
-    await click(page.getByRole("link", { name: "Cơ sở nhà, đất", exact: true }), "Menu: Cơ sở nhà, đất");
+    // Lối tắt trong ô của gói trên trang chủ, cùng nhãn với mục menu nên tìm trong vùng nội dung; trên điện thoại
+    // không phải mở menu trước.
+    await click(
+      page.getByRole("main").getByRole("link", { name: "Cơ sở nhà, đất", exact: true }),
+      "Trang chủ: Cơ sở nhà, đất",
+    );
     await click(page.getByRole("link", { name: code, exact: true }), "Dòng cơ sở trên danh sách");
     await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
     await click(page.getByRole("button", { name: "Lập hồ sơ rà soát" }), "Nút Lập hồ sơ rà soát");
@@ -195,7 +198,7 @@ test("đếm số lần bấm để cán bộ xã A lập và người duyệt x
       login: 2,
     });
 
-    // Người duyệt mở hồ sơ từ trang mở đầu sau khi đăng nhập, như record.spec.ts, ghi ý kiến rồi trả lại: trả lại kết
+    // Người duyệt mở hồ sơ từ trang chủ sau khi đăng nhập, như record.spec.ts, ghi ý kiến rồi trả lại: trả lại kết
     // thúc quy trình nên không để hồ sơ thử chờ ở bước sau; nút Duyệt và Trả lại cùng một số lần bấm. Phiên trình duyệt
     // riêng vì phiên của cán bộ vẫn còn trong trang cũ.
     const { baseURL, locale, viewport, userAgent, isMobile, hasTouch, deviceScaleFactor } = testInfo.project.use;
@@ -206,20 +209,22 @@ test("đếm số lần bấm để cán bộ xã A lập và người duyệt x
     try {
       await reviewer.goto("/");
       await signIn(reviewer, "manager.a");
-      await expect(reviewer.getByRole("heading", { level: 1 }).first()).toBeVisible();
+      await settle(reviewer);
+      // Trang chủ của người duyệt, có việc đang chờ: chụp ở đây để không tốn thêm một lần đăng nhập (mã OTP).
+      await capture(reviewer, testInfo, "home-manager");
       const reviewSteps: string[] = [];
       const reviewClick = async (target: Locator, label: string) => {
         reviewSteps.push(label);
         await target.click();
       };
-      await reviewClick(reviewer.getByRole("link", { name, exact: true }), "Việc trên trang mở đầu");
+      await reviewClick(reviewer.getByRole("link", { name, exact: true }), "Việc trên trang chủ");
       await expect(reviewer.getByRole("heading", { level: 1, name })).toBeVisible();
       await reviewer.getByLabel(/Ý kiến/).fill("Trả lại để kiểm thử số lần bấm");
       await reviewClick(reviewer.getByRole("button", { name: "Trả lại" }), "Nút Trả lại");
       await expect(reviewer.getByText("Đã gửi")).toBeVisible();
 
       await attachJson(testInfo, `${sizeOf(testInfo)}-review-click-count.json`, {
-        scenario: "người duyệt xã A mở hồ sơ rà soát từ trang mở đầu và trả lại kèm ý kiến",
+        scenario: "người duyệt xã A mở hồ sơ rà soát từ trang chủ và trả lại kèm ý kiến",
         clicks: reviewSteps.length,
         steps: reviewSteps,
         // Gõ một ô Ý kiến; đăng nhập gồm mật khẩu và mã OTP, không tính vào clicks.

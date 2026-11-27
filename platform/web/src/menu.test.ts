@@ -131,6 +131,12 @@ describe("mục đang mở", () => {
     expect(isActive("/apps/a/items/42", "/apps/a/items")).toBe(true);
     expect(isActive("/apps/a/items-old", "/apps/a/items")).toBe(false);
   });
+
+  it("trang chủ (/) chỉ là mục đang mở khi ở đúng /, không phải ở mọi trang", () => {
+    expect(isActive("/", "/")).toBe(true);
+    expect(isActive("/tasks", "/")).toBe(false);
+    expect(isActive("/apps/a/items", "/")).toBe(false);
+  });
 });
 
 describe("biểu tượng", () => {

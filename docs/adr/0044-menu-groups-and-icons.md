@@ -34,6 +34,7 @@ Trình duyệt chỉ đọc được bảng `platform.menu_items` qua GraphQL, k
 - Mục menu trong `app.yaml` có `icon` tùy chọn, là một ý nghĩa trong danh mục của `contracts/app.schema.json`:
   `list` (danh sách), `form` (biểu mẫu), `map` (bản đồ), `chart` (biểu đồ, số liệu), `chat` (hỏi đáp), `inbox`
   (hộp việc), `document` (giấy tờ), `folder` (hồ sơ), `settings` (cài đặt). Danh mục không có từ của lĩnh vực nào.
+  Được sửa theo [ADR 0051](0051-home-page.md): thêm `home` (trang chủ) vào đầu danh mục.
   `platform/web/src/menuIcons.tsx` gán mỗi ý nghĩa một hình của Tabler Icons (`@tabler/icons-react`, MIT), nhập tĩnh
   từng hình; không tra hình theo tên lúc chạy. Hình chỉ để nhìn nhanh, có `aria-hidden`, tên của liên kết vẫn là
   nhãn. Giá trị lạ đọc từ CSDL thì mục chỉ có nhãn.
@@ -44,7 +45,8 @@ Trình duyệt chỉ đọc được bảng `platform.menu_items` qua GraphQL, k
 - Mục mẫu của lõi (`scripts/core-menu.yaml`, lõi không có `app.yaml`) lấy tên nhóm từ `name` của chính tệp đó
   ("Mẫu thử"); bộ nạp từ chối tệp thiếu `name`.
 - Thanh bên gom mục theo gói (`menuGroups` trong `menu.ts`), giữ thứ tự gói và thứ tự mục của câu truy vấn. Nhóm
-  đầu là màn hình dùng chung ("Chung": "Việc của tôi"); nhóm của chủ sở hữu `core` (mục mẫu) đứng cuối, thu gọn sau
+  đầu là màn hình dùng chung ("Chung": "Việc của tôi"; được sửa theo [ADR 0051](0051-home-page.md): "Trang chủ" rồi
+  "Việc của tôi"); nhóm của chủ sở hữu `core` (mục mẫu) đứng cuối, thu gọn sau
   một nút có `aria-expanded`, mở sẵn khi trang đang mở thuộc nhóm đó. Dòng chưa có `app_name` dùng mã gói làm tên
   nhóm.
 - Thanh trên ghi đơn vị và tên đăng nhập ở mọi bề rộng, chữ màu đạt tương phản WCAG AA trên nền trắng. Vùng nội dung

@@ -41,8 +41,8 @@ function matches(task: Task, filter: Filter, now: number): boolean {
   }
 }
 
-// Có hạn trước, hạn sớm trước; không hạn xếp cuối. Cùng hạn thì việc đến trước đứng trước.
-function byDue(a: Task, b: Task): number {
+// Có hạn trước, hạn sớm trước; không hạn xếp cuối. Cùng hạn thì việc đến trước đứng trước. Trang chủ xếp cùng cách.
+export function byDue(a: Task, b: Task): number {
   const dueA = a.due === null ? Number.POSITIVE_INFINITY : Date.parse(a.due);
   const dueB = b.due === null ? Number.POSITIVE_INFINITY : Date.parse(b.due);
   return dueA - dueB || Date.parse(a.created) - Date.parse(b.created);

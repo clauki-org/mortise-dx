@@ -136,7 +136,7 @@ test("cán bộ xã A lập đề nghị trên web; người duyệt xã A thấ
     expect(found[0]?.variables).not.toHaveProperty("approved");
     expect(await requestsOf(request, "manager.b", title)).toEqual([]);
 
-    // Người duyệt xã A mở hồ sơ trên bảng việc và thấy các giá trị người lập điền. Phiên trình duyệt riêng: phiên
+    // Người duyệt xã A mở hồ sơ trên trang chủ và thấy các giá trị người lập điền. Phiên trình duyệt riêng: phiên
     // đăng nhập của cán bộ vẫn còn trong trang cũ.
     const { baseURL, locale } = test.info().project.use;
     const reviewer = await (await browser.newContext({ baseURL, locale })).newPage();

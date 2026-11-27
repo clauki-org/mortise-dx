@@ -52,7 +52,18 @@ export const findItem = (items: MenuItem[], app: string, item: string) =>
 export const isActive = (pathname: string, to: string) => pathname === to || pathname.startsWith(`${to}/`);
 
 // Cùng danh mục với `icon` trong contracts/app.schema.json; menu.test.ts so hai danh sách để không lệch nhau.
-export const MENU_ICONS = ["list", "form", "map", "chart", "chat", "inbox", "document", "folder", "settings"] as const;
+export const MENU_ICONS = [
+  "home",
+  "list",
+  "form",
+  "map",
+  "chart",
+  "chat",
+  "inbox",
+  "document",
+  "folder",
+  "settings",
+] as const;
 export type MenuIcon = (typeof MENU_ICONS)[number];
 
 /** Giá trị đọc từ CSDL không có trong danh mục (bản giao diện cũ hơn dữ liệu) thì mục chỉ có nhãn, không vỡ menu. */
@@ -68,10 +79,11 @@ export type MenuGroup = { id: string; label: string; links: MenuLink[]; collapsi
 export const SAMPLE_OWNER = "core";
 
 /**
- * Gom mục theo gói, giữ thứ tự gói và thứ tự mục như câu truy vấn trả về; `first` (màn hình dùng chung) đứng đầu,
- * nhóm mẫu của lõi đứng cuối. Tên nhóm là tên gói; dòng chưa có tên (nạp trước ADR 0044) dùng mã gói.
+ * Gom mục theo gói, giữ thứ tự gói và thứ tự mục như câu truy vấn trả về. Tên nhóm là tên gói; dòng chưa có tên (nạp
+ * trước ADR 0044) dùng mã gói. Thanh bên (menuGroups) và trang chủ (Home.tsx) cùng đọc từ đây nên ô của trang chủ
+ * luôn khớp nhóm trên menu.
  */
-export function menuGroups(first: MenuGroup, items: MenuItem[]): MenuGroup[] {
+export function packageGroups(items: MenuItem[]): MenuGroup[] {
   const groups = new Map<string, MenuGroup>();
   for (const entry of items) {
     let group = groups.get(entry.app);
@@ -82,6 +94,11 @@ export function menuGroups(first: MenuGroup, items: MenuItem[]): MenuGroup[] {
     }
     group.links.push({ to: itemPath(entry), label: entry.label, icon: menuIcon(entry.icon) });
   }
-  const all = [...groups.values()];
+  return [...groups.values()];
+}
+
+/** Nhóm của thanh bên: `first` (màn hình dùng chung) đứng đầu, rồi nhóm của các gói, nhóm mẫu của lõi đứng cuối. */
+export function menuGroups(first: MenuGroup, items: MenuItem[]): MenuGroup[] {
+  const all = packageGroups(items);
   return [first, ...all.filter((group) => !group.collapsible), ...all.filter((group) => group.collapsible)];
 }
