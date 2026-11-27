@@ -91,11 +91,13 @@ describe("nhóm xử lý", () => {
 describe("đường tới hồ sơ vừa lập", () => {
   const menu = (app: string, component: string, config: unknown): MenuItem => ({
     app,
+    app_name: null,
     item: `${component}-item`,
     label: "x",
     component,
     config,
     roles: null,
+    icon: null,
   });
 
   it("chỉ mục cases của cùng gói liệt kê quy trình đó", () => {

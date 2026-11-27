@@ -31,27 +31,32 @@ menu:
     label: Cơ sở nhà, đất
     component: catalog
     config: catalog/facilities.yaml
+    icon: list
   # Trụ sở trên bản đồ, tô theo phần vượt của xã; tỉnh thấy trụ sở của các xã con qua lớp có vai trò rollup_reader
   # (ADR 0020, ADR 0024).
   - id: map
     label: Bản đồ trụ sở
     component: map
     config: map-layers/facilities.yaml
+    icon: map
   # Trợ lý hỏi dữ liệu (ADR 0027): câu mẫu chạy câu GraphQL chỉ đọc trên diện tích của xã và cơ sở được phân công,
   # bằng token người hỏi; kết quả là bảng kèm câu truy vấn đã chạy.
   - id: ask-data
     label: Hỏi dữ liệu cơ sở
     component: assistant
     config: assistant/ask-data.yaml
+    icon: chat
   # Cán bộ theo dõi hồ sơ rà soát mình đã lập (ADR 0032). Không gồm hồ sơ kiểm tra kho lưu trữ: hồ sơ đó do tài khoản
   # dịch vụ mở, không có người lập nào.
   - id: reviews
     label: Hồ sơ rà soát đã lập
     component: cases
     config: cases/reviews.yaml
+    icon: folder
   # Số của cả xã và tổng hợp của tỉnh (ADR 0033): số diện tích, cơ sở là cột của view do migration của gói tính; số hồ
   # sơ do workflow-api đếm, số đo thiết bị do context-api trả (ADR 0035). Mỗi số kèm cách tính và nguồn đã gửi.
   - id: dashboard
     label: Bảng điều hành
     component: dashboard
     config: dashboards/overview.yaml
+    icon: chart

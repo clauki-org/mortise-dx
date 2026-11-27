@@ -64,6 +64,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0041](0041-documents-on-catalog-records.md) | Tài liệu đính kèm là phần `detail.documents` của màn hình chi tiết danh mục: bảng nối của gói quyết định ai thấy tệp nào, tệp tải lên, tải xuống qua `/v1/files`; tải xuống theo tenant và mã tệp, không theo bản ghi; check-fast kiểm theo quyền của gói | Chấp nhận |
 | [0042](0042-passkey-login.md) | Đăng nhập bằng Passkey theo tenant: bước WebAuthn riêng ngang ô mật khẩu ghi amr `hwk`, từ chối khi thiếu vai trò `passkey_allowed` gán cho group của tenant; Passkey thay mật khẩu, không thay OTP | Chấp nhận |
 | [0043](0043-design-tokens-and-install-branding.md) | Bộ quy ước giao diện đạt AA và thương hiệu theo bản cài | Chấp nhận |
+| [0044](0044-menu-groups-and-icons.md) | Menu chia nhóm theo gói, biểu tượng theo ý nghĩa, tên gói lưu cùng mục menu | Chấp nhận |
 
 ## Quyết định còn mở
 

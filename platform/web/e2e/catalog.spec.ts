@@ -8,7 +8,7 @@
 // `make seed-demo`.
 
 import { type APIRequestContext, expect, test } from "@playwright/test";
-import { graphql, signIn, subOf, uniqueTitle } from "./support.ts";
+import { graphql, openMenuItem, signIn, subOf, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
 const PREFIX = "app_facilities_commune";
@@ -90,7 +90,7 @@ test("cán bộ xã A mở danh mục cơ sở từ menu của gói, chỉ thấ
 
     await page.goto("/");
     await signIn(page, "user.a");
-    await page.getByRole("link", { name: "Cơ sở nhà, đất" }).click();
+    await openMenuItem(page, "Cơ sở nhà, đất");
     await expect(page.getByRole("heading", { level: 1, name: "Cơ sở nhà, đất" })).toBeVisible();
 
     await page.getByRole("textbox", { name: "Tìm" }).fill(code);

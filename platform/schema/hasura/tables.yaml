@@ -15,7 +15,7 @@
   select_permissions:
     - role: user
       permission:
-        columns: [tenant_id, app, item, position, label, component, config, roles]
+        columns: [tenant_id, app, app_name, item, position, label, component, config, roles, icon]
         filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
 
 # Văn bản cho trợ lý hỏi văn bản (ADR 0021): trợ lý đọc bằng token người hỏi, nên quyền ở đây quyết định đoạn nào được

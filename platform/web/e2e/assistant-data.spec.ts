@@ -7,12 +7,12 @@
 // được, độ đúng đo bằng bộ câu hỏi riêng); chưa có mô hình thì hiện thông điệp chỉ cách bật. Cần `make seed`.
 
 import { expect, test } from "@playwright/test";
-import { signIn } from "./support.ts";
+import { openMenuItem, signIn } from "./support.ts";
 
 test("câu mẫu chạy ngay, hiện bảng văn bản mẫu và câu truy vấn đã chạy", async ({ page }) => {
   await page.goto("/");
   await signIn(page, "user.a");
-  await page.getByRole("link", { name: "Hỏi dữ liệu mẫu" }).click();
+  await openMenuItem(page, "Hỏi dữ liệu mẫu");
   await expect(page.getByRole("heading", { level: 1, name: "Hỏi dữ liệu" })).toBeVisible();
 
   await page.getByRole("button", { name: "Đơn vị mình có những văn bản mẫu nào?" }).click();
@@ -29,7 +29,7 @@ test("câu hỏi gõ tự do: mô hình viết câu truy vấn, hay thông đi�
   test.setTimeout(200_000);
   await page.goto("/");
   await signIn(page, "user.a");
-  await page.getByRole("link", { name: "Hỏi dữ liệu mẫu" }).click();
+  await openMenuItem(page, "Hỏi dữ liệu mẫu");
 
   await page.getByLabel("Câu hỏi").fill("Đơn vị mình có bao nhiêu văn bản mẫu?");
   await page.getByRole("button", { name: "Hỏi", exact: true }).click();

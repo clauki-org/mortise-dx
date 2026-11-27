@@ -12,7 +12,7 @@
       "$ref": "#/$defs/slug",
       "maxLength": 63
     },
-    "name": { "description": "Tên hiển thị", "$ref": "#/$defs/text" },
+    "name": { "description": "Tên hiển thị; khung giao diện dùng làm tên nhóm của các mục menu của gói (ADR 0044)", "$ref": "#/$defs/text" },
     "version": {
       "description": "Phiên bản của gói, Semantic Versioning: ba số, không có số 0 đứng đầu",
       "type": "string",
@@ -88,6 +88,10 @@
             "enum": ["catalog", "form", "map", "tasks", "dashboard", "rules", "assistant", "cases"]
           },
           "config": { "description": "Tệp cấu hình của thành phần", "$ref": "#/$defs/path" },
+          "icon": {
+            "description": "Ý nghĩa của biểu tượng đứng trước nhãn trên menu: danh sách, biểu mẫu, bản đồ, biểu đồ, hỏi đáp, hộp việc, giấy tờ, hồ sơ, cài đặt. Khung giao diện chọn hình theo ý nghĩa này (ADR 0044); bỏ trống thì mục chỉ có nhãn.",
+            "enum": ["list", "form", "map", "chart", "chat", "inbox", "document", "folder", "settings"]
+          },
           "roles": {
             "description": "Vai trò thấy mục này",
             "type": "array",

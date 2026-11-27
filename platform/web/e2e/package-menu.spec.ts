@@ -9,7 +9,7 @@
 // cụ thể có mục menu; việc đó thuộc smoke của từng gói. Cần ít nhất một gói có mục menu đã cài (`make app-install`).
 
 import { expect, test } from "@playwright/test";
-import { graphql, signIn } from "./support.ts";
+import { graphql, openMenuItem, signIn } from "./support.ts";
 
 type Field = { name: string; label: string };
 type CatalogConfig = {
@@ -43,7 +43,7 @@ test("mỗi mục menu của gói đã cài hiện trên menu và mở được 
   await signIn(page, USER);
   for (const entry of items) {
     await test.step(`${entry.app} / ${entry.item}`, async () => {
-      await page.getByRole("link", { name: entry.label, exact: true }).click();
+      await openMenuItem(page, entry.label);
       // Danh sách giữ tìm, lọc, trang trên chuỗi truy vấn, nên chỉ so phần đường dẫn.
       await expect(page).toHaveURL(new RegExp(`/apps/${entry.app}/${entry.item}(\\?.*)?$`));
       // Mọi mục phải mở được thành phần của nó, không rơi vào thông báo giao diện chưa có thành phần.

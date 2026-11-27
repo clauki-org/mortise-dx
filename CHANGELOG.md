@@ -30,6 +30,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Giao diện dùng chung một bộ cỡ chữ, khoảng cách, màu đạt tương phản WCAG AA (màu chính mặc định đổi sang xanh
   dương); tên, logo, màu theo bản cài trong `branding.json`, ghi đè bằng `MORTISE_BRANDING_DIR` không cần dựng lại
   image ([ADR 0043](docs/adr/0043-design-tokens-and-install-branding.md)).
+- Menu bên chia nhóm theo gói, mỗi mục có biểu tượng, nhóm mẫu thử của lõi thu gọn ở cuối; thanh trên ghi đơn vị và
+  người dùng; dùng được trên điện thoại. Bản cài cũ chạy `make seed` và cài lại các gói để menu có tên nhóm và biểu
+  tượng ([ADR 0044](docs/adr/0044-menu-groups-and-icons.md)).
 
 ### Removed
 

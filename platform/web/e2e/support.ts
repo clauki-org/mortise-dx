@@ -146,3 +146,21 @@ export async function outcome(request: APIRequestContext, username: string, inst
 
 /** Tên hồ sơ không trùng giữa các lần chạy, để bài kiểm tìm đúng dòng của mình trên bảng việc. */
 export const uniqueTitle = (label: string) => `${label} ${Date.now().toString(36)}`;
+
+/**
+ * Mở một mục menu theo đúng nhãn, như người dùng: trên màn hình hẹp thì mở nút menu trước, mục nằm trong nhóm đang
+ * thu gọn (ADR 0044) thì mở nhóm đó. Chờ menu của gói tải xong bằng cách chờ liên kết có trong trang, kể cả khi ẩn.
+ */
+export async function openMenuItem(page: Page, label: string) {
+  const nav = page.getByRole("navigation", { name: "Menu chính" });
+  const burger = page.getByRole("button", { name: "Mở menu" });
+  if (await burger.isVisible()) await burger.click();
+  // Tạo từ page chứ không từ nav: locator trong `has` được tìm bên trong từng nhóm, nên không được bắt đầu bằng nav.
+  const anyLink = page.getByRole("link", { name: label, exact: true, includeHidden: true });
+  await nav.getByRole("link", { name: label, exact: true, includeHidden: true }).waitFor({ state: "attached" });
+  const link = nav.getByRole("link", { name: label, exact: true });
+  if (!(await link.isVisible())) {
+    await nav.getByRole("group").filter({ has: anyLink }).getByRole("button", { expanded: false }).click();
+  }
+  await link.click();
+}

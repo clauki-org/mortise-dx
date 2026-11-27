@@ -20,16 +20,20 @@ menu:
     label: Kho vật tư
     component: catalog
     config: catalog/stores.yaml
+    icon: list
   - id: supply-request
     label: Lập đề nghị cấp vật tư
     component: form
     config: forms/supply-request.yaml
+    icon: form
   - id: item
     label: Thêm vật tư vào kho
     component: form
     config: forms/item.yaml
+    icon: form
     roles: [tenant_admin]
   - id: my-requests
     label: Đề nghị đã lập
     component: cases
     config: cases/supply-requests.yaml
+    icon: folder

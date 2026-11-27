@@ -8,7 +8,7 @@
 // sơ (báo cáo hay công khai) tùy phần vượt của xã A lúc chạy, nên bài không khẳng định bước nào.
 
 import { type APIRequestContext, expect, type Request, test } from "@playwright/test";
-import { complete, graphql, signIn, subOf, token, uniqueTitle } from "./support.ts";
+import { complete, graphql, openMenuItem, signIn, subOf, token, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
 const PREFIX = "app_facilities_commune";
@@ -62,7 +62,7 @@ test("cán bộ xã A lập hồ sơ rà soát từ cơ sở; người duyệt x
 
     await page.goto("/");
     await signIn(page, "user.a");
-    await page.getByRole("link", { name: "Cơ sở nhà, đất" }).click();
+    await openMenuItem(page, "Cơ sở nhà, đất");
     await page.getByRole("textbox", { name: "Tìm" }).fill(code);
     await page.getByRole("button", { name: "Tìm" }).click();
     await page.getByRole("link", { name: code }).click();

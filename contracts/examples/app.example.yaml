@@ -26,12 +26,15 @@ menu:
     label: Danh mục
     component: catalog
     config: catalog/items.yaml
+    icon: list
   - id: reports
     label: Báo cáo
     component: dashboard
     config: dashboards/summary.yaml
+    icon: chart
     roles: [manager]
   - id: ask
     label: Hỏi văn bản
     component: assistant
     config: assistant/ask.yaml
+    icon: chat
