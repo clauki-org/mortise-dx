@@ -6,7 +6,8 @@
 // gắn vào kết quả của Playwright (thư mục test-results), không commit làm ảnh mẫu. Lỗi trợ năng mức critical, serious
 // theo WCAG 2.1 A, AA làm bài hỏng (#194); báo cáo vẫn ghi mọi lỗi, kể cả mức nhẹ hơn và quy tắc ngoài WCAG, để đọc.
 // Chạy ở cỡ laptop 1440×900 (dự án chromium) và cỡ điện thoại (dự án mobile, Pixel 7). Bài cuối đếm
-// số lần bấm để cán bộ xã A lập một hồ sơ rà soát từ cơ sở, đi qua menu như người dùng; bài tự tạo và tự dọn dữ liệu.
+// số lần bấm để cán bộ xã A lập một hồ sơ rà soát từ cơ sở, đi qua menu như người dùng, rồi số lần bấm để người duyệt
+// xã A mở hồ sơ đó từ trang mở đầu và trả lại kèm ý kiến (#203); bài tự tạo và tự dọn dữ liệu.
 
 import { writeFile } from "node:fs/promises";
 import AxeBuilder from "@axe-core/playwright";
@@ -134,7 +135,11 @@ async function reviewsOf(request: APIRequestContext, id: string): Promise<Task[]
   return tasks.filter((task) => task.process === "facilities-review" && task.variables.facilityId === id);
 }
 
-test("đếm số lần bấm để cán bộ xã A lập một hồ sơ rà soát từ cơ sở", async ({ page, request }, testInfo) => {
+test("đếm số lần bấm để cán bộ xã A lập và người duyệt xử lý một hồ sơ rà soát", async ({
+  browser,
+  page,
+  request,
+}, testInfo) => {
   // Cơ sở riêng của bài, phân công cho user.a, để không để lại hồ sơ trên trụ sở demo.
   const code = uniqueTitle("e2e-bam").replaceAll(" ", "-");
   const name = `Trụ sở đếm bấm ${code}`;
@@ -188,6 +193,41 @@ test("đếm số lần bấm để cán bộ xã A lập một hồ sơ rà so�
       typing: 0,
       login: 2,
     });
+
+    // Người duyệt mở hồ sơ từ trang mở đầu sau khi đăng nhập, như record.spec.ts, ghi ý kiến rồi trả lại: trả lại kết
+    // thúc quy trình nên không để hồ sơ thử chờ ở bước sau; nút Duyệt và Trả lại cùng một số lần bấm. Phiên trình duyệt
+    // riêng vì phiên của cán bộ vẫn còn trong trang cũ.
+    const { baseURL, locale, viewport, userAgent, isMobile, hasTouch, deviceScaleFactor } = testInfo.project.use;
+    const reviewer = await (
+      await browser.newContext({ baseURL, locale, viewport, userAgent, isMobile, hasTouch, deviceScaleFactor })
+    ).newPage();
+    if (testInfo.project.name !== MOBILE) await reviewer.setViewportSize({ width: 1440, height: 900 });
+    try {
+      await reviewer.goto("/");
+      await signIn(reviewer, "manager.a");
+      await expect(reviewer.getByRole("heading", { level: 1 }).first()).toBeVisible();
+      const reviewSteps: string[] = [];
+      const reviewClick = async (target: Locator, label: string) => {
+        reviewSteps.push(label);
+        await target.click();
+      };
+      await reviewClick(reviewer.getByRole("link", { name, exact: true }), "Việc trên trang mở đầu");
+      await expect(reviewer.getByRole("heading", { level: 1, name })).toBeVisible();
+      await reviewer.getByLabel(/Ý kiến/).fill("Trả lại để kiểm thử số lần bấm");
+      await reviewClick(reviewer.getByRole("button", { name: "Trả lại" }), "Nút Trả lại");
+      await expect(reviewer.getByText("Đã gửi")).toBeVisible();
+
+      await attachJson(testInfo, `${sizeOf(testInfo)}-review-click-count.json`, {
+        scenario: "người duyệt xã A mở hồ sơ rà soát từ trang mở đầu và trả lại kèm ý kiến",
+        clicks: reviewSteps.length,
+        steps: reviewSteps,
+        // Gõ một ô Ý kiến; đăng nhập gồm mật khẩu và mã OTP, không tính vào clicks.
+        typing: 1,
+        login: 3,
+      });
+    } finally {
+      await reviewer.context().close();
+    }
   } finally {
     // Người duyệt trả lại hồ sơ vừa lập rồi xóa cơ sở (phân công đi theo, CASCADE), như record.spec.ts.
     // Lỗi khi trả hồ sơ không được bỏ qua bước xóa cơ sở, kẻo cơ sở thử nằm lại trên danh mục demo.
