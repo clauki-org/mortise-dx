@@ -13,11 +13,21 @@ import pytest
 from simulate import KINDS, load, message, parse_override
 
 DEVICES = str(Path(__file__).resolve().parent.parent / "devices.yaml")
+COMPANY = str(Path(__file__).resolve().parent.parent / "dien-mat-troi.yaml")
 
 
-def test_demo_devices_only_use_known_measurements():
-    devices = load(DEVICES)
+@pytest.mark.parametrize("path", [DEVICES, COMPANY])
+def test_demo_devices_only_use_known_measurements(path):
+    devices = load(path)
     assert devices and all(set(d.measurements) <= KINDS.keys() for d in devices)
+
+
+def test_power_stays_above_low_output_threshold_unless_forced():
+    device = next(d for d in load(COMPANY) if "power" in d.measurements)
+    readings = [json.loads(message(device, {}))["measurements"]["power"] for _ in range(500)]
+    assert min(readings) >= 2.5
+    topic, name, value = parse_override(f"{device.tenant}/{device.device}:power=0.2")
+    assert json.loads(message(device, {(topic, name): value}))["measurements"]["power"] == 0.2
 
 
 def test_message_has_only_contract_fields_and_values():

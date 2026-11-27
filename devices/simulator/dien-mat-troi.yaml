@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Thiết bị demo của "Công ty Điện mặt trời Mẫu" (tenant `dmt`, hư cấu), cùng định dạng với devices.yaml. Tách khỏi
+# devices.yaml vì tenant `dmt` chỉ có trên bản cài của mẫu cài `dien-mat-troi`: `make seed` chỉ cấp tài khoản MQTT cho
+# thiết bị ở tệp này khi tenant đã có trong core.tenants, bộ giả lập chỉ gửi cho chúng khi được gọi với tệp này
+# (`make simulate ARGS="--devices /srv/devices/dien-mat-troi.yaml"`). Tên thiết bị khớp cột device_name trong
+# apps/field-ops/seed/dien-mat-troi.yaml. power là công suất phát tức thời (kW), energy là điện năng cộng dồn (kWh).
+
+- tenant: dmt
+  device: meter-d01
+  measurements: [power, energy]
+- tenant: dmt
+  device: meter-d02
+  measurements: [power, energy]
+- tenant: dmt
+  device: meter-d03
+  measurements: [power, energy]

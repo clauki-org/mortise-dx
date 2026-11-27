@@ -215,3 +215,21 @@ for entry in yaml.safe_load(open(sys.argv[1], encoding="utf-8")):
 ' devices/simulator/devices.yaml | while read -r tenant device; do
   scripts/device.sh add "$tenant" "$device" "$DEMO_DEVICE_PASSWORD" | sed 's/^/mosquitto: /'
 done
+# Danh sách thiết bị khác trong devices/simulator/ thuộc tenant của một mẫu cài (ví dụ dien-mat-troi.yaml cho `dmt`):
+# chỉ cấp khi tenant đã có, vì bản cài không áp mẫu đó thì không có tenant, và device.sh dừng khi gặp tenant lạ.
+for list in devices/simulator/*.yaml; do
+  [[ "$list" == devices/simulator/devices.yaml ]] && continue
+  uv run --quiet --no-project --with pyyaml==6.0.3 python -c '
+import sys, yaml
+for entry in yaml.safe_load(open(sys.argv[1], encoding="utf-8")):
+    print(entry["tenant"], entry["device"])
+' "$list" | while read -r tenant device; do
+    known=$(docker compose exec -T postgres psql -qAtX -U postgres -d mortise -v t="$tenant" \
+      <<<"SELECT count(*) FROM core.tenants WHERE id = :'t'")
+    if [[ "$known" == 1 ]]; then
+      scripts/device.sh add "$tenant" "$device" "$DEMO_DEVICE_PASSWORD" | sed 's/^/mosquitto: /'
+    else
+      echo "mosquitto: bỏ qua $device của $list, bản cài chưa có tenant $tenant"
+    fi
+  done
+done

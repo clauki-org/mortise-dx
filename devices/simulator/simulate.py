@@ -8,6 +8,7 @@
 #   --once                 gửi một lượt rồi thoát (make smoke)
 #   --interval GIÂY        gửi lặp lại (make simulate)
 #   --set T/D:SỐ_ĐO=GIÁ_TRỊ  ép một số đo, ví dụ xa-a/archive-01:humidity=78 để thử vượt ngưỡng
+#   --devices TỆP          danh sách thiết bị khác devices.yaml, ví dụ dien-mat-troi.yaml của tenant dmt
 
 import argparse
 import json
@@ -48,6 +49,9 @@ KINDS = {
     "humidity": (65.0, lambda v: _walk(v, 1.5, 40, 90)),  # %
     "occupied": (False, lambda v: random.random() < 0.3),  # có người trong phòng
     "energy": (0.0, lambda v: round(v + random.uniform(0.01, 0.05), 3)),  # kWh cộng dồn
+    # kW phát tức thời; sàn 2,5 kW để số đo giả không bao giờ tự xuống dưới ngưỡng sản lượng thấp của gói
+    # apps/field-ops (1 kW), chỉ --set mới đưa xuống được.
+    "power": (4.0, lambda v: _walk(v, 0.3, 2.5, 6.0)),
 }
 
 

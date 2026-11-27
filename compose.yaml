@@ -552,9 +552,10 @@ services:
     profiles: [simulator]
     environment:
       DEMO_DEVICE_PASSWORD: ${DEMO_DEVICE_PASSWORD:?run make env}
-      SIMULATOR_DEVICES: /srv/devices.yaml
+      SIMULATOR_DEVICES: /srv/devices/devices.yaml
+    # Cả thư mục, để danh sách thiết bị của một mẫu cài (ví dụ dien-mat-troi.yaml) chọn được bằng --devices.
     volumes:
-      - ./devices/simulator/devices.yaml:/srv/devices.yaml:ro
+      - ./devices/simulator:/srv/devices:ro
     networks: [ot]
     depends_on:
       mosquitto:
