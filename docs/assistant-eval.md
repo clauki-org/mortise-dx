@@ -76,4 +76,10 @@ vector, trước khi có đường ống này; không so trực tiếp được 
 Chỉ ghi lượt đủ bộ câu, sau khi lệnh chạy thật; không ghi ước lượng. Mỗi dòng trỏ tới tệp kết quả đã commit trong
 `docs/assistant-eval/`.
 
-Chưa có lượt đo đủ bộ.
+| Ngày | Mô hình | Trích đúng | Câu hỏi số | Từ chối đúng | Độ trễ (câu gọi mô hình) | Tệp |
+|---|---|---|---|---|---|---|
+| 2026-11-28 | qwen3.5:4b (Ollama tại chỗ, CPU Intel Core 7 240H, 30 GiB RAM) | 15/28 | 6/11 | 6/6 | trung vị 17,6 s, p90 57,6 s | [2026-11-28-qwen3.5-4b](assistant-eval/2026-11-28-qwen3.5-4b.md) |
+
+Lượt 2026-11-28: 7 câu có đáp án bị từ chối ở bước tìm đoạn, gồm cả 6 câu dùng từ thường ngày (ví dụ "công khai" thay
+cho "đăng tải" trong văn bản) và câu hỏi khoản đã bị bãi bỏ; 4 câu hỏng ở bước sinh (502, 504) vì mô hình hết lượt sinh;
+2 câu bị bỏ ở bước kiểm số. Các câu ngoài phạm vi đều được từ chối đúng.
