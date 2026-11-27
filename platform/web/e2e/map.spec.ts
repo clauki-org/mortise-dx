@@ -15,8 +15,8 @@ const ADMIN = "tenant_admin";
 const PREFIX = "app_facilities_commune";
 const MAP = "Bản đồ trụ sở";
 
-// Tọa độ của cơ sở thử nằm trong vùng nền bản đồ ghim (platform/web/basemap.pins), để khi bản cài có nền thì bài
-// cũng đi qua phần đọc tile.
+// Tọa độ của cơ sở thử nằm trong ranh giới tự vẽ của đúng xã (map-layers/facilities.yaml của gói), trên vùng nền bản
+// đồ ghim (platform/web/basemap.pins), để khi bản cài có nền thì bài cũng đi qua phần đọc tile.
 type At = { latitude: number; longitude: number };
 
 /** Quản trị xã tạo một cơ sở có tọa độ, mặc định đang dùng; trả id. */
@@ -94,11 +94,11 @@ test("xã A thấy trụ sở của mình tô theo phần vượt; tỉnh thấy
   let province: BrowserContext | undefined;
   let passed = false;
   try {
-    const idA = await facility(request, "admin.a", `${code}-a`, nameA, { latitude: 20.445, longitude: 106.405 });
+    const idA = await facility(request, "admin.a", `${code}-a`, nameA, { latitude: 20.44, longitude: 106.39 });
     created.push({ admin: "admin.a", id: idA });
-    const atB = { latitude: 20.43, longitude: 106.44 };
+    const atB = { latitude: 20.445, longitude: 106.415 };
     created.push({ admin: "admin.b", id: await facility(request, "admin.b", `${code}-b`, nameB, atB) });
-    const atSurplus = { latitude: 20.44, longitude: 106.415 };
+    const atSurplus = { latitude: 20.43, longitude: 106.388 };
     const idSurplus = await facility(request, "admin.a", `${code}-s`, nameSurplus, atSurplus, "surplus");
     created.push({ admin: "admin.a", id: idSurplus });
     const userA = await subOf(request, "user.a");
@@ -124,6 +124,9 @@ test("xã A thấy trụ sở của mình tô theo phần vượt; tỉnh thấy
     await expect(page.getByText(nameB)).toHaveCount(0);
     await expect(page.getByRole("heading", { level: 2, name: "Trụ sở đang dùng của các xã" })).toHaveCount(0);
     expect(commune.roles, "user.a không gửi vai trò nào ngoài mặc định").not.toContain("rollup_reader");
+    // Ranh giới và vị trí là hư cấu; trang luôn nói rõ điều đó và đọc được tên các xã dưới bản đồ.
+    await expect(page.getByText(/Ranh giới, tên xã và vị trí trụ sở là hư cấu/)).toBeVisible();
+    await expect(page.getByText("Ranh giới xã (hư cấu): Xã A, Xã B, Xã C")).toBeVisible();
     // Bản cài chưa chạy make basemap thì nginx trả 404 và bản đồ vẽ nền trơn, không có dòng ghi nguồn; có nền thì dòng
     // ghi nguồn ODbL phải luôn hiện.
     if ((await request.get("/basemap/basemap.json")).ok()) {

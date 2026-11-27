@@ -284,9 +284,10 @@ dụng chung khi nhiều cơ quan chung một trụ sở (Điều 6 khoản 2 đ
 phụ lục có ghi thẳng chức danh (STT 9 chuyên viên chính 20 m², STT 10 chuyên viên 15 m²); kết quả: xã A được phép
 580 m², vượt 420 m²; xã B được phép 600 m², vượt 130 m²; xã C được phép 480 m², không vượt. `make seed-demo` nạp qua
 cổng bằng tài khoản quản trị của từng xã (`admin.*`, `seed/load.py`) rồi phân công `user.*` phụ trách mọi cơ sở của
-xã mình; chạy lại không tạo bản trùng; smoke của gói kiểm các số này khi đã nạp. Tọa độ của các cơ sở cũng hư
-cấu, nằm trong vài km quanh điểm vĩ độ 0, kinh độ 0, giữa biển, để không trỏ vào địa điểm có thật; chạy lại
-`make seed-demo` thì cơ sở đã nạp từ trước nhận tọa độ.
+xã mình; chạy lại không tạo bản trùng; smoke của gói kiểm các số này khi đã nạp. Vị trí của các cơ sở cũng hư
+cấu: nằm trong ranh giới tự vẽ của xã mình, trên nền bản đồ của một vùng nông thôn có thật, ở chỗ trống ven đường
+([ADR 0020](../../docs/adr/0020-facility-locations.md)); chạy lại `make seed-demo` thì cơ sở đã nạp từ trước nhận tọa
+độ mới.
 
 Mục `menu` `facilities` trong `app.yaml` khai cấu hình danh mục, được `make check-fast` kiểm theo schema. Cài gói
 thì mục "Cơ sở nhà, đất" hiện trên menu của giao diện và mở danh sách cơ sở → tòa → phòng dựng từ
@@ -294,7 +295,9 @@ thì mục "Cơ sở nhà, đất" hiện trên menu của giao diện và mở 
 chọn vai trò khác `user`, nên quản trị xã và lãnh đạo xã trên giao diện cũng chỉ thấy như cán bộ.
 
 Mục `menu` `map` mở bản đồ trụ sở dựng từ `map-layers/facilities.yaml` ([ADR 0024](../../docs/adr/0024-map-component.md)),
-trên nền trơn, không tải tile:
+trên nền bản đồ của bản cài (`make basemap`, [ADR 0056](../../docs/adr/0056-self-hosted-osm-basemap.md)), chưa có thì
+nền trơn. Ranh giới và tên ba xã tô nhạt dưới các điểm; khung tự căn để thấy trọn xã có trụ sở của người xem. Dưới bản
+đồ luôn có dòng ghi ranh giới, tên xã và vị trí là hư cấu.
 
 - Lớp "Trụ sở đang dùng": cơ sở cán bộ thấy được, tô theo phần vượt của xã (quan hệ `summary`): xanh khi không vượt,
   đỏ khi vượt.

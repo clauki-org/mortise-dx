@@ -67,6 +67,8 @@ knowledge.passage-id-not-slug.yaml	$.passages[0].id	'No Such Passage' does not m
 knowledge.sha256-not-hex.yaml	$.source.sha256	'no-such-hash' does not match '^[0-9a-f]{64}$'
 knowledge.superseded-without-passage.yaml	$.passages[0].superseded_by	'passage' is a required property
 knowledge.unknown-key.yaml	$.passages[0]	Additional properties are not allowed ('no_such_key' was unexpected)
+map.area-latitude-first.yaml	$.areas.items[0].outline[1][1]	105.82 is greater than the maximum of 90
+map.area-two-vertices.yaml	$.areas.items[0].outline	[[105.8, 21.0], [105.82, 21.0]] is too short
 map.first-step-above.yaml	$.layers[0].color	{'by': 'score', 'label': 'Điểm', 'steps': [{'above': 0, 'color': 'red', 'label': 'Cao'}]} is not valid under any of the given schemas
 map.free-color.yaml	$.layers[0].color	{'fixed': '#ff0000'} is not valid under any of the given schemas
 map.limit-too-large.yaml	$.layers[0].limit	1001 is greater than the maximum of 1000

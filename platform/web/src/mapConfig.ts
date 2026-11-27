@@ -30,7 +30,15 @@ export type Layer = {
   limit?: number;
 };
 
-export type MapConfig = { title: string; layers: Layer[] };
+/** [kinh độ, vĩ độ] theo WGS 84, cùng thứ tự với GeoJSON và MapLibre. */
+export type Position = [number, number];
+
+export type Area = { name: string; outline: Position[] };
+
+/** Các vùng cố định của cấu hình (ranh giới...), vẽ dưới điểm; mapAreas.ts dựng hình và tìm vùng chứa điểm. */
+export type Areas = { label: string; color: Swatch; items: Area[] };
+
+export type MapConfig = { title: string; layers: Layer[]; areas?: Areas; note?: string };
 
 export type Row = Record<string, unknown>;
 
@@ -81,6 +89,11 @@ export function mapProblems(config: MapConfig): string[] {
   const ids = config.layers.map((layer) => layer.id);
   for (const id of new Set(ids.filter((id, index) => ids.indexOf(id) !== index))) {
     problems.push(`hai lớp cùng tên ngắn "${id}"`);
+  }
+  // Tên vùng là nhãn trên bản đồ và mục trong chú giải; hai vùng cùng tên thì người xem không biết vùng nào là vùng nào.
+  const areaNames = (config.areas?.items ?? []).map((area) => area.name);
+  for (const name of new Set(areaNames.filter((name, index) => areaNames.indexOf(name) !== index))) {
+    problems.push(`hai vùng cùng tên "${name}"`);
   }
   for (const layer of config.layers) {
     const names: [string, RegExp][] = [

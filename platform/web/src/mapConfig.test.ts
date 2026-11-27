@@ -92,6 +92,21 @@ describe("mapProblems", () => {
     ]);
   });
 
+  it("chặn hai vùng cùng tên", () => {
+    const outline: [number, number][] = [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+    ];
+    const items = [
+      { name: "Vùng 1", outline },
+      { name: "Vùng 1", outline },
+    ];
+    expect(mapProblems({ ...config, areas: { label: "Ranh giới", color: "indigo", items } })).toEqual([
+      'hai vùng cùng tên "Vùng 1"',
+    ]);
+  });
+
   it("bậc màu phải tăng dần, bậc đầu không có ngưỡng", () => {
     const steps = [
       { color: "teal", label: "a" },
