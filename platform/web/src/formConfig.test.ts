@@ -71,7 +71,7 @@ describe("lỗi cấu hình", () => {
     const both = { ...group, choices: [{ value: "a", label: "A" }] };
     expect(formProblems({ ...config, fields: [both], submit: { label: "Gửi" } })).toEqual([
       'trường "Nhóm": trường chọn cần đúng một trong choices và source',
-      "submit cần đúng một trong process và insert",
+      "submit cần đúng một trong process, insert và update",
     ]);
   });
 

@@ -3,13 +3,13 @@
 #
 # Đọc quyền Hasura của gói (hasura/*.yaml, cùng định dạng core/hasura/tables.yaml) cho
 # scripts/check-form-config.py và scripts/check-dashboard-config.py: bảng theo trường gốc GraphQL, quyền
-# của một vai trò, và cột mà quyền gắn với tenant của token. Tách khỏi tệp kiểm để luật của biểu mẫu, bảng
-# điều hành không lẫn với việc kiểm dạng tệp quyền.
+# đọc, thêm, sửa của một vai trò, và cột mà quyền gắn với tenant của token. Tách khỏi tệp kiểm để luật
+# của biểu mẫu, bảng điều hành không lẫn với việc kiểm dạng tệp quyền.
 
 import yaml
 
 TENANT = "x-hasura-tenant-id"
-KINDS = ("select_permissions", "insert_permissions")
+KINDS = ("select_permissions", "insert_permissions", "update_permissions")
 
 
 def _rule_problem(kind: str, rule: object) -> str | None:
@@ -78,9 +78,9 @@ def _is_tenant(value: object) -> bool:
 
 
 def tenant_columns(allowed: dict) -> set[str]:
-    """Cột của chính bảng mà quyền thêm dòng gắn với tenant của token: cột `set` đặt từ biến tenant, và cột
-    mà `check` so `_eq` với biến đó ở cấp đầu hay trong `_and`. Điều kiện đi qua quan hệ nói về cột của bảng
-    khác nên không tính; `_or`, `_not` không chắc chắn giới hạn tenant nên cũng không tính.
+    """Cột của chính bảng mà quyền thêm hay sửa dòng gắn với tenant của token: cột `set` đặt từ biến tenant,
+    và cột mà `check` so `_eq` với biến đó ở cấp đầu hay trong `_and`. Điều kiện đi qua quan hệ nói về cột
+    của bảng khác nên không tính; `_or`, `_not` không chắc chắn giới hạn tenant nên cũng không tính.
     """
     columns = {name for name, value in (allowed.get("set") or {}).items() if _is_tenant(value)}
     pending = [allowed.get("check") or {}]

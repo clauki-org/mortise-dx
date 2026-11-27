@@ -35,7 +35,8 @@
   select_permissions:
     - role: user
       permission:
-        columns: &facility_columns [id, tenant_id, code, name, address, status, latitude, longitude, created_at]
+        columns: &facility_columns [id, tenant_id, code, name, address, status, latitude, longitude, created_at,
+                                    updated_at]
         filter: &facility_assigned
           _and:
             - &tenant { tenant_id: { _eq: X-Hasura-Tenant-Id } }
@@ -75,7 +76,7 @@
   select_permissions:
     - role: user
       permission:
-        columns: &building_columns [id, tenant_id, facility_id, code, name, floors, created_at]
+        columns: &building_columns [id, tenant_id, facility_id, code, name, floors, created_at, updated_at]
         filter: { _and: [*tenant, { facility: *facility_assigned }] }
     - role: manager
       permission: { columns: *building_columns, filter: *tenant }
@@ -110,7 +111,8 @@
   select_permissions:
     - role: user
       permission:
-        columns: &room_columns [id, tenant_id, building_id, code, name, floor, area_type, clear_area_m2, created_at]
+        columns: &room_columns [id, tenant_id, building_id, code, name, floor, area_type, clear_area_m2, created_at,
+                                updated_at]
         filter: { _and: [*tenant, { building: { facility: *facility_assigned } }] }
     - role: manager
       permission: { columns: *room_columns, filter: *tenant }

@@ -62,6 +62,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Gói cơ sở vật chất xã có mục "Hỏi văn bản": trả lời về rà soát trụ sở bằng câu trích nguyên văn Điều 3 NĐ 155/2025
   và Điều 3a, 3b do NĐ 369/2026 bổ sung; khoản đã sửa hay bãi bỏ không được trích ([ADR
   0021](docs/adr/0021-document-assistant.md)).
+- Sửa cơ sở, tòa, phòng và thêm tòa, phòng ngay trên màn hình danh mục; hai người sửa cùng lúc thì người lưu sau được
+  báo, không ghi đè ([ADR 0054](docs/adr/0054-edit-and-add-child-from-catalog.md)).
 
 ### Removed
 

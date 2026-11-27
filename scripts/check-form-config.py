@@ -6,10 +6,12 @@
 # trùng biến mà bước của quy trình ghi; bước lấy tên hồ sơ từ một biến thì biểu mẫu có trường đó; bảng, cột
 # của lệnh thêm dòng và của danh sách chọn thuộc gói và nằm trong quyền Hasura của vai trò (đọc qua
 # scripts/form_permissions.py), không trường nào là cột tenant; mục menu sau khi gửi có trong app.yaml.
-# Thiếu bước này, lỗi chỉ lộ ra khi người dùng bấm Gửi. Thành phần kiểm lại luật tên lúc chạy. Gọi từ
-# scripts/contracts.sh: --app <app.yaml>; mặc định đọc BPMN, khai báo bước, quyền Hasura và mọi biểu mẫu
-# trên menu theo app.yaml, còn --bpmn, --steps, --hasura, --form thay từng phần để kiểm một biểu
-# mẫu với tệp mẫu.
+# Biểu mẫu mở từ danh mục (detail.edit, add của đối tượng con, ADR 0054) cũng được kiểm: biểu mẫu sửa chỉ
+# sửa cột trong quyền update của vai trò, đọc được khóa, cột version và mọi trường để điền sẵn; biểu mẫu
+# thêm dòng con ghi được cột nối về cha. Thiếu bước này, lỗi chỉ lộ ra khi người dùng bấm Gửi. Thành phần
+# kiểm lại luật tên lúc chạy. Gọi từ scripts/contracts.sh: --app <app.yaml>; mặc định đọc BPMN, khai báo
+# bước, quyền Hasura, mọi biểu mẫu trên menu và mọi biểu mẫu trong danh mục theo app.yaml, còn --bpmn,
+# --steps, --hasura, --form, --catalog thay từng phần để kiểm với tệp mẫu.
 
 import argparse
 import glob
@@ -119,6 +121,48 @@ def insert_problems(form: dict, names: list[str], role: str, tables: dict) -> li
     return errors
 
 
+def update_problems(form: dict, names: list[str], role: str, tables: dict, key: str) -> list[str]:
+    target, version = form["submit"]["update"], form["submit"]["version"]
+    if target not in tables:
+        return [f"submit.update '{target}' không phải bảng trong quyền Hasura của gói"]
+    allowed = permission(tables[target], "update_permissions", role)
+    if allowed is None:
+        return [f"vai trò '{role}' không có quyền sửa dòng của '{target}'; sửa role hoặc quyền của gói"]
+    readable = permission(tables[target], "select_permissions", role)
+    if readable is None:
+        return [f"vai trò '{role}' không đọc được '{target}'; biểu mẫu sửa đọc lại dòng trước khi điền sẵn"]
+    errors = []
+    tenant = tenant_columns(allowed) | {"tenant_id"}
+    writable = allowed.get("columns", [])
+    for name in names:
+        if name in (allowed.get("set") or {}) or name in tenant:
+            errors.append(f"cột '{name}' của '{target}' gắn với tenant hay do Hasura đặt; bỏ trường này")
+        elif name == version:
+            errors.append(f"cột '{version}' là cột version do CSDL đặt; bỏ trường này khỏi biểu mẫu")
+        elif writable != "*" and name not in writable:
+            errors.append(f"vai trò '{role}' không được sửa cột '{name}' của '{target}'")
+    # Hasura chỉ cho where của lệnh sửa dùng cột mà vai trò đọc được; thiếu thì mọi lần lưu đều bị từ chối.
+    for column in dict.fromkeys([key, version, *names]):
+        if readable.get("columns") != "*" and column not in readable.get("columns", []):
+            errors.append(f"vai trò '{role}' không đọc được cột '{column}' của '{target}'")
+    # Người dùng ghi được cột version thì giữ được giá trị cũ khi sửa, và lần sửa sau của người khác ghi đè.
+    if writable == "*" or version in writable:
+        errors.append(f"cột '{version}' nằm trong quyền update của vai trò '{role}'; bỏ khỏi columns")
+    return errors
+
+
+def via_problems(form: dict, via: str, role: str, tables: dict) -> list[str]:
+    target = form["submit"]["insert"]
+    allowed = permission(tables.get(target, {}), "insert_permissions", role)
+    if allowed is None:
+        return []
+    if via in tenant_columns(allowed) or via in (allowed.get("set") or {}):
+        return [f"cột nối về cha '{via}' gắn với tenant hay do Hasura đặt, không nhận khóa của dòng cha"]
+    if allowed.get("columns") != "*" and via not in allowed.get("columns", []):
+        return [f"vai trò '{role}' không ghi được cột nối về cha '{via}' của '{target}'"]
+    return []
+
+
 def source_problems(field: dict, earlier: list[str], role: str, tables: dict) -> list[str]:
     source, label = field["source"], f"trường '{field['name']}'"
     where = source.get("where")
@@ -136,7 +180,8 @@ def source_problems(field: dict, earlier: list[str], role: str, tables: dict) ->
     return errors
 
 
-def form_problems(form: dict, entry: dict | None, context: dict) -> list[str]:
+def form_problems(form: dict, entry: dict | None, context: dict, key: str | None = None) -> list[str]:
+    """Lỗi của một biểu mẫu. key là khóa của loại đối tượng khi biểu mẫu mở từ danh mục để sửa dòng."""
     names = [field["name"] for field in form["fields"]]
     role = form.get("role", "user")
     errors = [
@@ -149,6 +194,11 @@ def form_problems(form: dict, entry: dict | None, context: dict) -> list[str]:
             errors += source_problems(field, names[:index], role, context["tables"])
     if "process" in form["submit"]:
         errors += process_problems(form, names, context)
+    elif "update" in form["submit"]:
+        if key is None:
+            errors.append("submit.update chỉ dùng cho biểu mẫu mở từ danh mục (detail.edit)")
+        else:
+            errors += update_problems(form, names, role, context["tables"], key)
     else:
         errors += insert_problems(form, names, role, context["tables"])
     menu = form["done"].get("menu")
@@ -163,6 +213,37 @@ def form_problems(form: dict, entry: dict | None, context: dict) -> list[str]:
     return errors
 
 
+def catalog_problems(node: dict, context: dict, where: str = "") -> list[str]:
+    """Biểu mẫu trong danh mục: đích đúng bảng của danh sách, done.menu không dùng (hộp thoại tự đóng)."""
+    detail = node.get("detail") or {}
+    errors = []
+    edit = detail.get("edit")
+    if edit:
+        at, form = f"{where}nút '{edit['label']}'", edit["form"]
+        if form["submit"].get("update") != node["source"]:
+            errors.append(f"{at}: biểu mẫu phải sửa bảng '{node['source']}' (submit.update)")
+        else:
+            errors += [f"{at}: {e}" for e in form_problems(form, None, context, node.get("key", "id"))]
+        if "menu" in form["done"]:
+            errors.append(f"{at}: done.menu không dùng cho biểu mẫu mở từ danh mục")
+    for child in detail.get("children", []):
+        add, inner = child.get("add"), f"{where}{child['id']}: "
+        if add:
+            at, form = f"{inner}nút '{add['label']}'", add["form"]
+            role = form.get("role", "user")
+            if form["submit"].get("insert") != child["source"]:
+                errors.append(f"{at}: biểu mẫu phải thêm dòng vào '{child['source']}' (submit.insert)")
+            else:
+                errors += [f"{at}: {e}" for e in form_problems(form, None, context)]
+                errors += [f"{at}: {e}" for e in via_problems(form, child["via"], role, context["tables"])]
+            if child["via"] in [field["name"] for field in form["fields"]]:
+                errors.append(f"{at}: cột '{child['via']}' nhận khóa của dòng cha, không khai thành trường")
+            if "menu" in form["done"]:
+                errors.append(f"{at}: done.menu không dùng cho biểu mẫu mở từ danh mục")
+        errors += catalog_problems(child, context, inner)
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--app", required=True)
@@ -170,6 +251,7 @@ def main() -> int:
     parser.add_argument("--steps", nargs="*")
     parser.add_argument("--hasura", nargs="*")
     parser.add_argument("--form")
+    parser.add_argument("--catalog")
     args = parser.parse_args()
     directory = os.path.dirname(args.app)
     try:
@@ -182,14 +264,18 @@ def main() -> int:
             "menu": {entry["id"] for entry in app.get("menu", [])},
             "decision_variables": load_decisions(),
         }
-        if args.form:
-            forms = [(args.form, None)]
+        menu = app.get("menu", [])
+        if args.form or args.catalog:
+            forms = [(args.form, None)] if args.form else []
+            catalogs = [args.catalog] if args.catalog else []
         else:
-            entries = [e for e in app.get("menu", []) if e["component"] == "form"]
-            forms = [(os.path.join(directory, e["config"]), e) for e in entries]
+            forms = [(os.path.join(directory, e["config"]), e) for e in menu if e["component"] == "form"]
+            catalogs = [os.path.join(directory, e["config"]) for e in menu if e["component"] == "catalog"]
         errors = []
         for path, entry in forms:
             errors += [f"{path}: {error}" for error in form_problems(read_yaml(path), entry, context)]
+        for path in catalogs:
+            errors += [f"{path}: {error}" for error in catalog_problems(read_yaml(path), context)]
     except (ET.ParseError, OSError, ValueError, yaml.YAMLError) as error:
         errors = [f"không đọc được tệp: {error}"]
     for error in errors:

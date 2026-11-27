@@ -119,6 +119,16 @@
           "type": "array",
           "items": { "$ref": "#/$defs/action" }
         },
+        "edit": {
+          "description": "Nút sửa dòng đang xem (ADR 0054): mở biểu mẫu có submit.update trỏ tới bảng của loại đối tượng này, điền sẵn giá trị đọc lại từ máy chủ lúc mở. Nút chỉ hiện khi token có vai trò form.role (bỏ trống là user); Hasura vẫn quyết định ai sửa được dòng nào.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["label", "form"],
+          "properties": {
+            "label": { "description": "Chữ trên nút", "$ref": "#/$defs/text" },
+            "form": { "$ref": "form.schema.json" }
+          }
+        },
         "documents": {
           "description": "Phần tài liệu đính kèm của dòng đang xem (ADR 0041). Schema nằm ở tệp riêng vì phần này là một thành phần có bản mô tả riêng (contracts/documents.component.yaml); scripts/contracts.sh kiểm với --base-uri để tên tệp dưới đây trỏ về contracts/ thay vì địa chỉ trong $id.",
           "$ref": "documents.schema.json"
@@ -179,7 +189,21 @@
         "key": { "$ref": "#/$defs/key" },
         "fields": { "$ref": "#/$defs/fields" },
         "list": { "$ref": "#/$defs/list" },
-        "detail": { "$ref": "#/$defs/detail" }
+        "detail": { "$ref": "#/$defs/detail" },
+        "add": {
+          "description": "Nút thêm một dòng con cạnh tiêu đề bảng đối tượng con (ADR 0054): mở biểu mẫu có submit.insert trỏ tới bảng của loại con. Cột via nhận khóa của dòng cha, không phải trường của biểu mẫu và không sửa được; biểu mẫu hiện một ô chỉ đọc mang giá trị của dòng cha. Nút chỉ hiện khi token có vai trò form.role (bỏ trống là user); Hasura vẫn quyết định ai thêm được.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["label", "form"],
+          "properties": {
+            "label": { "description": "Chữ trên nút", "$ref": "#/$defs/text" },
+            "parent": {
+              "description": "Trường của dòng cha hiện trong ô chỉ đọc, nhãn của ô là tên bảng cha. Bỏ trống là trường tiêu đề của dòng cha.",
+              "$ref": "#/$defs/field_path"
+            },
+            "form": { "$ref": "form.schema.json" }
+          }
+        }
       }
     },
     "names": {

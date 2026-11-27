@@ -74,6 +74,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0051](0051-home-page.md) | Trang chủ: ô lối tắt theo gói và việc đang chờ | Chấp nhận |
 | [0052](0052-catalog-export.md) | Xuất danh sách của danh mục ra CSV, Excel và PDF ngay trong trình duyệt, bằng quyền của người xuất | Chấp nhận |
 | [0053](0053-case-seals-and-timer-deadlines.md) | Niêm phong hồ sơ đã kết thúc bằng băm nối vào nhật ký, và ghi hạn của bước chờ hẹn giờ | Chấp nhận |
+| [0054](0054-edit-and-add-child-from-catalog.md) | Sửa dòng và thêm dòng con từ màn hình danh mục, so cột version để không ghi đè | Chấp nhận |
 
 ## Quyết định còn mở
 

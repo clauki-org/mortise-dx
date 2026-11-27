@@ -6,6 +6,10 @@
 # hasura/tables.yaml (<lược đồ>_<bảng>); cột khai ở đây phải nằm trong quyền đọc của vai trò `user` ở tệp đó.
 # Khóa của cơ sở và tòa là id vì bảng con nối về cha bằng uuid (facility_id, building_id). Nút "Lập hồ sơ rà soát"
 # mở quy trình bpmn/facilities-review.bpmn20.xml cho cơ sở đang xem (ADR 0026).
+# Nút "Sửa" và "Thêm tòa", "Thêm phòng" mở biểu mẫu khai ngay trong tệp này (ADR 0054), gửi bằng vai trò user: quyền
+# insert, update của vai trò đó ở hasura/tables.yaml chỉ cho cán bộ phụ trách (custodian) của cơ sở ghi, nên người
+# duyệt cũng thấy nút nhưng lệnh của họ không khớp dòng nào và được báo. updated_at do trigger của
+# 20261127180000_row_updated_at.sql đặt; biểu mẫu sửa so cột này để không ghi đè lần sửa của người khác.
 
 title: Cơ sở nhà, đất
 source: app_facilities_commune_facilities
@@ -42,6 +46,32 @@ detail:
         title: name
         facilityId: id
         excessM2: summary.excess_m2
+  edit:
+    label: Sửa
+    form:
+      title: Sửa cơ sở
+      role: user
+      fields:
+        - { name: code, label: Mã, type: string, required: true, max_length: 50 }
+        - { name: name, label: Tên cơ sở, type: string, required: true, max_length: 200 }
+        - { name: address, label: Địa chỉ, type: string, max_length: 500 }
+        - name: status
+          label: Tình trạng
+          type: choice
+          required: true
+          choices:
+            - { value: in_use, label: Đang sử dụng }
+            - { value: surplus, label: Dôi dư }
+        # Bảng buộc tọa độ có đủ cả hai hoặc trống cả hai (facilities_location_pair).
+        - name: latitude
+          label: Vĩ độ
+          type: number
+          min: -90
+          max: 90
+          help: Nhập cả vĩ độ và kinh độ, hoặc để trống cả hai.
+        - { name: longitude, label: Kinh độ, type: number, min: -180, max: 180 }
+      submit: { label: Lưu, update: app_facilities_commune_facilities, version: updated_at }
+      done: { message: Đã lưu cơ sở. }
   # Giấy tờ đính kèm cơ sở (ADR 0041): bảng nối facility_documents ở hasura/tables.yaml. Ai thấy cơ sở thì thấy giấy
   # tờ của nó; nút đính kèm hiện cho mọi người thấy cơ sở, nhưng chỉ cán bộ phụ trách (custodian) gắn được tệp.
   documents:
@@ -69,8 +99,29 @@ detail:
       list:
         columns: [code, name, floors]
         search: [code, name]
+      # Mã cơ sở hiện chỉ đọc; facility_id nhận khóa của cơ sở đang xem, không có ô để đổi.
+      add:
+        label: Thêm tòa
+        parent: code
+        form:
+          title: Thêm tòa nhà
+          role: user
+          fields: &building_fields
+            - { name: code, label: Mã tòa, type: string, required: true, max_length: 50 }
+            - { name: name, label: Tên tòa, type: string, required: true, max_length: 200 }
+            - { name: floors, label: Số tầng, type: integer, min: 1, max: 100 }
+          submit: { label: Thêm, insert: app_facilities_commune_buildings }
+          done: { message: Đã thêm tòa nhà. }
       detail:
         title: name
+        edit:
+          label: Sửa
+          form:
+            title: Sửa tòa nhà
+            role: user
+            fields: *building_fields
+            submit: { label: Lưu, update: app_facilities_commune_buildings, version: updated_at }
+            done: { message: Đã lưu tòa nhà. }
         children:
           - id: rooms
             label: Phòng
@@ -93,5 +144,40 @@ detail:
               columns: [code, name, floor, area_type, clear_area_m2]
               search: [code, name]
               filters: [area_type]
+            add:
+              label: Thêm phòng
+              parent: code
+              form:
+                title: Thêm phòng
+                role: user
+                fields: &room_fields
+                  - { name: code, label: Mã phòng, type: string, required: true, max_length: 50 }
+                  - { name: name, label: Tên phòng, type: string, required: true, max_length: 200 }
+                  - { name: floor, label: Tầng, type: integer, min: -10, max: 100 }
+                  - name: area_type
+                    label: Loại diện tích
+                    type: choice
+                    required: true
+                    choices:
+                      - { value: working, label: Làm việc }
+                      - { value: shared, label: Sử dụng chung }
+                      - { value: specialized, label: Chuyên dùng }
+                  - name: clear_area_m2
+                    label: Diện tích thông thủy (m²)
+                    type: number
+                    required: true
+                    min: 0.01
+                    max: 99999999.99
+                    help: Đo lọt lòng tường, đơn vị m², tối đa hai chữ số thập phân.
+                submit: { label: Thêm, insert: app_facilities_commune_rooms }
+                done: { message: Đã thêm phòng. }
             detail:
               title: name
+              edit:
+                label: Sửa
+                form:
+                  title: Sửa phòng
+                  role: user
+                  fields: *room_fields
+                  submit: { label: Lưu, update: app_facilities_commune_rooms, version: updated_at }
+                  done: { message: Đã lưu phòng. }
