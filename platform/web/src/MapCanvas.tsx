@@ -1,21 +1,36 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Khung bản đồ của thành phần bản đồ: MapLibre GL JS vẽ nền trơn, không tải ảnh nền từ máy chủ nào (ADR 0024), mỗi
-// điểm là một nút HTML đặt theo tọa độ. Nút HTML thay cho lớp vẽ trên canvas để trình đọc màn hình đọc được tên và
+// Khung bản đồ của thành phần bản đồ: MapLibre GL JS vẽ nền của bản cài (tệp PMTiles cùng origin, basemap.ts, ADR
+// 0056), không có thì nền trơn (ADR 0024); mỗi điểm là một nút HTML đặt theo tọa độ. Nút HTML thay cho lớp vẽ trên canvas để trình đọc màn hình đọc được tên và
 // màu của từng điểm và bấm được bằng bàn phím. MapPanel.tsx nạp tệp này khi cần, để trang khác không tải MapLibre.
 
-import { Text } from "@mantine/core";
-import { LngLatBounds, Map as MapLibre, Marker, NavigationControl, setWorkerUrl } from "maplibre-gl";
+import { Anchor, Box, Text } from "@mantine/core";
+import {
+  addProtocol,
+  LngLatBounds,
+  Map as MapLibre,
+  Marker,
+  NavigationControl,
+  type StyleSpecification,
+  setWorkerUrl,
+} from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+import { Protocol } from "pmtiles";
 import { useEffect, useRef, useState } from "react";
+import { inExtent, type LoadedBasemap, loadBasemap } from "./basemap";
 import type { Point } from "./mapConfig";
-import { ErrorNotice } from "./States";
+import { ErrorNotice, Loading } from "./States";
 
 // Mặc định MapLibre tìm tệp worker cạnh mã của nó trong node_modules; sau khi build, mã nằm trong assets/ nên phải
 // chỉ đường tới bản worker do Vite build ra, cùng origin để Content-Security-Policy (worker-src 'self') cho chạy.
 setWorkerUrl(workerUrl);
+
+// Giao thức pmtiles:// đọc tile bằng yêu cầu Range tới tệp cùng origin (connect-src 'self'). Đăng ký một lần cho cả
+// trang: đăng ký lại mỗi lần vẽ bản đồ sẽ bỏ phần đầu tệp đã đọc và tải lại.
+const protocol = new Protocol();
+addProtocol("pmtiles", protocol.tile);
 
 type Props = {
   points: Point[];
@@ -26,6 +41,25 @@ type Props = {
 // Màu nền lấy từ theme đang dùng: MapLibre cần một màu cụ thể, không đọc được biến CSS.
 const background = () =>
   getComputedStyle(document.documentElement).getPropertyValue("--mantine-color-gray-1").trim() || "white";
+
+const plainStyle = (): StyleSpecification => ({
+  version: 8,
+  sources: {},
+  layers: [{ id: "background", type: "background", paint: { "background-color": background() } }],
+});
+
+/** Nền của bản cài: undefined khi đang đọc, null khi không có và vẽ nền trơn. */
+function useBasemap() {
+  const [basemap, setBasemap] = useState<LoadedBasemap | null>();
+  useEffect(() => {
+    let current = true;
+    loadBasemap(protocol).then((loaded) => current && setBasemap(loaded));
+    return () => {
+      current = false;
+    };
+  }, []);
+  return basemap;
+}
 
 function markerElement(point: Point, onSelect: (key: string) => void): HTMLButtonElement {
   const element = document.createElement("button");
@@ -51,20 +85,20 @@ export default function MapCanvas({ points, selected, onSelect }: Props) {
   const container = useRef<HTMLElement>(null);
   const [map, setMap] = useState<MapLibre>();
   const [failure, setFailure] = useState<unknown>();
+  const basemap = useBasemap();
 
   useEffect(() => {
-    if (!container.current) return;
+    if (!container.current || basemap === undefined) return;
     let created: MapLibre;
     try {
       created = new MapLibre({
         container: container.current,
-        style: {
-          version: 8,
-          sources: {},
-          layers: [{ id: "background", type: "background", paint: { "background-color": background() } }],
-        },
-        center: [0, 0],
-        zoom: 1,
+        style: basemap?.style ?? plainStyle(),
+        center: basemap?.center ?? [0, 0],
+        // Không cho thu nhỏ quá mức thấp nhất có trong tệp nền: thu nhỏ hơn thì nền trống, và người xem không còn
+        // thấy vùng nào quanh các điểm.
+        minZoom: basemap?.minZoom ?? 0,
+        zoom: basemap?.minZoom ?? 1,
         attributionControl: false,
         // Nút phóng to, thu nhỏ cho người không dùng chuột; nhãn mặc định của MapLibre là tiếng Anh.
         locale: { "NavigationControl.ZoomIn": "Phóng to", "NavigationControl.ZoomOut": "Thu nhỏ" },
@@ -84,7 +118,7 @@ export default function MapCanvas({ points, selected, onSelect }: Props) {
       observer.disconnect();
       created.remove();
     };
-  }, []);
+  }, [basemap]);
 
   useEffect(() => {
     if (!map) return;
@@ -98,13 +132,17 @@ export default function MapCanvas({ points, selected, onSelect }: Props) {
     };
   }, [map, points, selected, onSelect]);
 
-  // Chỉ căn khung khi tập điểm đổi, không căn lại khi người xem chọn một điểm sau khi đã kéo, phóng bản đồ.
+  // Chỉ căn khung khi tập điểm đổi, không căn lại khi người xem chọn một điểm sau khi đã kéo, phóng bản đồ. Có nền thì
+  // chỉ căn theo điểm trong vùng đã cắt: bản đồ không thu nhỏ được dưới mức thấp nhất của nền, nên căn cả một điểm ở xa
+  // sẽ đặt khung vào chỗ trống, không thấy điểm nào. Điểm ngoài vùng vẫn có trong danh sách điểm.
   useEffect(() => {
     if (!map || points.length === 0) return;
+    const extent = basemap?.extent;
+    const inside = extent ? points.filter((point) => inExtent(extent, point.longitude, point.latitude)) : points;
     const bounds = new LngLatBounds();
-    for (const point of points) bounds.extend([point.longitude, point.latitude]);
+    for (const point of inside.length > 0 ? inside : points) bounds.extend([point.longitude, point.latitude]);
     map.fitBounds(bounds, { padding: 48, maxZoom: 14, animate: false });
-  }, [map, points]);
+  }, [map, points, basemap]);
 
   if (failure !== undefined) {
     return (
@@ -113,5 +151,42 @@ export default function MapCanvas({ points, selected, onSelect }: Props) {
       </ErrorNotice>
     );
   }
-  return <section ref={container} aria-label="Bản đồ" style={{ height: 420, borderRadius: 8 }} />;
+  if (basemap === undefined) return <Loading what="nền bản đồ" />;
+  return (
+    <Box pos="relative">
+      <section ref={container} aria-label="Bản đồ" style={{ height: 420, borderRadius: 8 }} />
+      {basemap && <Attribution />}
+    </Box>
+  );
+}
+
+/**
+ * Dòng ghi nguồn mà ODbL đòi khi dùng dữ liệu OpenStreetMap. Là chữ của trang chứ không phải nút ghi nguồn của
+ * MapLibre: nút đó thu thành một biểu tượng ở màn hình hẹp, nên dòng ghi nguồn không còn luôn hiện.
+ */
+function Attribution() {
+  return (
+    <Text
+      size="xs"
+      pos="absolute"
+      right={0}
+      bottom={0}
+      px={6}
+      py={2}
+      bg="var(--mantine-color-body)"
+      style={{ borderTopLeftRadius: 4 }}
+    >
+      ©{" "}
+      <Anchor
+        href="https://www.openstreetmap.org/copyright"
+        target="_blank"
+        rel="noreferrer"
+        underline="always"
+        inherit
+      >
+        OpenStreetMap
+      </Anchor>{" "}
+      (ODbL)
+    </Text>
+  );
 }

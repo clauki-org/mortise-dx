@@ -6,7 +6,7 @@
 # thử trên giao diện; đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
 
 component: map
-summary: Các lớp điểm đọc qua GraphQL theo cấu hình của gói, đặt lên nền bản đồ trơn và tô màu theo một giá trị, kèm chú giải và danh sách điểm.
+summary: Các lớp điểm đọc qua GraphQL theo cấu hình của gói, đặt lên nền bản đồ của bản cài (hay nền trơn khi chưa có) và tô màu theo một giá trị, kèm chú giải và danh sách điểm.
 config_schema: map.schema.json
 example: examples/map.example.yaml
 capabilities:
@@ -19,9 +19,14 @@ capabilities:
   - Chú giải màu và danh sách điểm của từng lớp với các trường trong fields; số dòng chưa có tọa độ được báo riêng.
   - Khung bản đồ tự căn để thấy mọi điểm; kéo, phóng to, thu nhỏ được bằng chuột và bằng nút "Phóng to", "Thu nhỏ".
   - Trình duyệt không vẽ được bản đồ (thiếu WebGL) thì báo lý do, danh sách điểm vẫn hiện.
+  - Nền là tệp PMTiles mà `make basemap` cắt từ OpenStreetMap, đọc cùng origin ở /basemap/ (ADR 0056); kiểu vẽ có đường, sông, mặt nước, đất sử dụng, khu dân cư, không có khối nhà, ranh giới hành chính hay điểm quan tâm.
+  - Mặc định không có chữ nào trên nền; bản cài chạy `make basemap LABELS=on` thì hiện tên địa danh, tên đường.
+  - Có nền thì góc bản đồ luôn ghi "© OpenStreetMap (ODbL)", kể cả ở màn hình hẹp; không thu nhỏ được dưới mức phóng thấp nhất của tệp nền.
+  - Bản cài chưa có nền, hay tệp nền hỏng, thì vẽ nền trơn một màu lấy từ theme.
 limits:
   - Chỉ đọc; không thêm, sửa hay di chuyển điểm.
-  - Nền trơn, không có ảnh nền, đường, địa danh hay ranh giới hành chính.
+  - Nền chỉ có vùng mà bản cài đã cắt; ngoài vùng đó là nền trống. Cấu hình của gói không chọn hay đổi nền.
+  - Có nền thì khung chỉ căn theo các điểm nằm trong vùng đã cắt; điểm ở ngoài vẫn có trong danh sách nhưng có thể nằm ngoài khung. Không thu nhỏ được dưới mức phóng thấp nhất của nền, nên màn hình hẹp có thể không thấy hết mọi điểm cùng lúc.
   - Chỉ có điểm; không vẽ đường, vùng hay cụm điểm.
   - Mỗi lớp tối đa limit dòng (mặc định 200, trần 1000); lớp nhiều dòng hơn chỉ hiện các dòng đầu theo thứ tự tên (title) rồi các cột còn lại, và báo ra.
   - Lọc chỉ theo một cột bằng một giá trị; không có ô lọc hay tìm cho người xem.

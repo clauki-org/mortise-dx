@@ -57,12 +57,20 @@ check_tracing() {
   esac
 }
 
+# Thư mục nền bản đồ mà web gắn vào (compose.yaml, ADR 0056). Thiếu thì Docker tự tạo, thuộc root, và `make basemap`
+# chạy bằng người dùng thường không ghi vào được; nên tạo trước, trống cũng được (bản đồ vẽ nền trơn).
+ensure_basemap_dir() {
+  local dir="${MORTISE_BASEMAP_DIR-$(sed -n 's/^MORTISE_BASEMAP_DIR=//p' .env 2>/dev/null | tail -1)}"
+  mkdir -p "${dir:-$HOME/.cache/mortise-dx/basemap}"
+}
+
 main() {
   local action="${1:-}" profile service
   shift || true
   case "$action" in
     up)
       check_tracing
+      ensure_basemap_dir
       if no_build; then
         local services
         mapfile -t services < <(built_services)

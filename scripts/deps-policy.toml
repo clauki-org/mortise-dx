@@ -82,6 +82,7 @@ giấy phép BSD ba điều khoản của Google (Copyright 2008 Google Inc.).""
 "tecnativa/docker-socket-proxy" = "docker-socket-proxy (Tecnativa)"
 "prom/blackbox-exporter" = "Blackbox exporter"
 "jaegertracing/jaeger" = "Jaeger"
+"protomaps/go-pmtiles" = "go-pmtiles"
 
 # Image mà phiên bản trong tag có ít hơn ba số (chính, phụ, vá) vẫn được coi là đã ghim, kèm lý do. Kiểm tag trên
 # registry ngày 2026-11-25.

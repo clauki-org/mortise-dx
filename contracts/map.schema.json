@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/clauki-org/mortise-dx/contracts/map.schema.json",
   "title": "Cấu hình thành phần bản đồ (component: map)",
-  "description": "Tệp cấu hình mà gói viết cho thành phần bản đồ. Mỗi lớp đọc một bảng qua GraphQL, vẽ mỗi dòng có tọa độ thành một điểm và tô màu điểm theo một giá trị. Nền bản đồ trơn, không tải ảnh nền từ máy chủ nào (ADR 0024). Quyền đọc không khai ở đây: Hasura lọc theo token của người gọi. Thứ tự lớp là thứ tự vẽ và thứ tự trong chú giải.",
+  "description": "Tệp cấu hình mà gói viết cho thành phần bản đồ. Mỗi lớp đọc một bảng qua GraphQL, vẽ mỗi dòng có tọa độ thành một điểm và tô màu điểm theo một giá trị. Nền là tệp nền bản đồ của bản cài, cùng origin (ADR 0056); bản cài chưa có thì nền trơn (ADR 0024). Cấu hình của gói không chọn nền. Quyền đọc không khai ở đây: Hasura lọc theo token của người gọi. Thứ tự lớp là thứ tự vẽ và thứ tự trong chú giải.",
   "type": "object",
   "additionalProperties": false,
   "required": ["title", "layers"],

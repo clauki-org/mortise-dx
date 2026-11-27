@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Nguồn của nền bản đồ mà `make basemap` (scripts/basemap.sh) tải lúc cài, ADR 0056. Mỗi dòng TÊN=giá trị.
+# - SOURCE: bản dựng theo ngày của Protomaps (dữ liệu OpenStreetMap, ODbL), chỉ đọc phần của vùng bằng yêu cầu Range.
+# - BBOX, MINZOOM, MAXZOOM: vùng và mức phóng mặc định, là vùng mà dữ liệu demo dùng (#226). Bản cài thật đặt vùng
+#   của mình bằng BBOX=... khi gọi lệnh.
+# - SHA256: băm của tệp cắt ra với đúng SOURCE, BBOX, MINZOOM, MAXZOOM và image go-pmtiles trong compose.yaml; cắt hai
+#   lần ra cùng một tệp (thử ngày 2026-11-27). Đổi một trong các giá trị đó thì băm đổi, phải ghi lại.
+# - FONTS, FONTS_SHA256: phông chữ dạng glyph PBF (Noto Sans, OFL-1.1) cho bản cài bật chữ địa danh (LABELS=on); gói
+#   mã nguồn của kho basemaps-assets tại một commit cố định.
+SOURCE=https://build.protomaps.com/20260811.pmtiles
+BBOX=106.37,20.405,106.46,20.475
+MINZOOM=12
+MAXZOOM=15
+SHA256=dda1013a66c50b360a1fb32ae6b8b63151a6fb11375fff1ea11f068cb275ae1d
+FONTS=https://github.com/protomaps/basemaps-assets/archive/028c18f713baecad011301ff7a69acc39bcc2ae7.tar.gz
+FONTS_SHA256=57e40e8c512bd8042d0a3a251f19d0d1c8523ad963c666c3c6643bada4dc92d0
