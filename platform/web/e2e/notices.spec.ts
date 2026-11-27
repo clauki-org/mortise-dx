@@ -144,7 +144,7 @@ test("xã B đăng ký nhận trong thời hạn công khai; người trình ch�
   const reviewer = await (await browser.newContext({ baseURL, locale })).newPage();
   await reviewer.goto(`/tasks/${submit?.id}`);
   await signIn(reviewer, "manager.a");
-  await reviewer.getByLabel(/^Đơn vị đề nghị nhận/).click();
+  await reviewer.getByRole("combobox", { name: /^Đơn vị đề nghị nhận/ }).click();
   const options = reviewer.getByRole("option");
   await expect(options).toHaveCount(2);
   await expect(options.nth(0)).toContainText("1. Trường mầm non xã A");

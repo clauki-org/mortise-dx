@@ -17,7 +17,7 @@ type CatalogConfig = {
   title: string;
   fields: Field[];
   list: { columns: string[] };
-  detail?: { children?: { label: string }[] };
+  detail?: { children?: { label: string }[]; text?: { field: string; title: string } };
 };
 type MenuItem = {
   app: string;
@@ -102,15 +102,19 @@ test("mỗi mục menu của gói đã cài hiện trên menu và mở được 
       await views.getByText("Thẻ", { exact: true }).click();
       await expect(page).toHaveURL(/view=cards/);
       await expect(table).toHaveCount(0);
-      await expect(page.getByRole("listitem").getByRole("link", { name: first, exact: true })).toBeVisible();
+      // Cột đầu không nhất thiết duy nhất (danh sách đọc chéo đơn vị có thể mở đầu bằng tên đơn vị), nên chỉ đòi thẻ đầu.
+      await expect(page.getByRole("listitem").getByRole("link", { name: first, exact: true }).first()).toBeVisible();
       await views.getByText("Bảng", { exact: true }).click();
       await expect(table).toBeVisible();
       // Dòng đầu mở màn hình chi tiết: khóa của dòng và cột nối về cha do cấu hình chọn (có thể là cột chữ thay vì
       // id), nên chi tiết và từng bảng con phải đọc được dữ liệu, không báo lỗi hay "không tìm thấy".
       await table.getByRole("link").first().click();
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-      // Mọi trường thành một ô nhãn, giá trị của lưới chi tiết (dt trong dl).
-      for (const field of config.fields) {
+      // Mọi trường thành một ô nhãn, giá trị của lưới chi tiết (dt trong dl), trừ trường của detail.text: trường đó
+      // hiện thành khối riêng có tiêu đề và không lặp lại trong lưới.
+      const text = config.detail?.text;
+      if (text) await expect(page.getByRole("region", { name: text.title })).toBeVisible();
+      for (const field of config.fields.filter((f) => f.name !== text?.field)) {
         await expect(
           page.locator("dl > div > dt").filter({ hasText: new RegExp(`^${escapeRegExp(field.label)}$`) }),
         ).toHaveCount(1);

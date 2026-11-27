@@ -10,8 +10,9 @@ import { type APIRequestContext, expect, type Page } from "@playwright/test";
 
 const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
 
-// Tài khoản người duyệt demo (vai trò manager) phải nhập mã OTP khi đăng nhập (ADR 0011).
-const isApprover = (username: string) => username.startsWith("manager.");
+// Tài khoản phải nhập mã OTP khi đăng nhập: người duyệt demo (vai trò manager, ADR 0011) và mọi tài khoản của tenant
+// tinh-khac, tenant có chính sách bắt buộc OTP (ADR 0040; scripts/seed.sh gắn khóa OTP demo cho user.k).
+const needsOtp = (username: string) => username.startsWith("manager.") || username.endsWith(".k");
 
 /** Mã OTP chưa dùng: Keycloak từ chối mã đã dùng, nên scripts/otp.py nhớ mã đã cấp và chờ khung mới khi cần. */
 export function otp(username: string): string {
@@ -32,7 +33,7 @@ export async function signIn(page: Page, username: string) {
   await page.locator("#username").fill(username);
   await page.locator("#password").fill(password());
   await page.locator("#kc-login").click();
-  if (isApprover(username)) {
+  if (needsOtp(username)) {
     // Không thấy ô nhập mã thì báo rõ, thay vì chờ hết giờ: thường là chưa chạy `make seed` sau khi đổi realm.
     await expect(page.locator("#otp"), `${username} phải được hỏi mã OTP (ADR 0011)`).toBeVisible();
     await page.locator("#otp").fill(otp(username));
@@ -53,7 +54,7 @@ export async function token(request: APIRequestContext, username: string): Promi
     username,
     password: password(),
   };
-  if (isApprover(username)) form.totp = otp(username);
+  if (needsOtp(username)) form.totp = otp(username);
   const response = await request.post("/auth/realms/mortise/protocol/openid-connect/token", { form });
   expect(response.ok(), `lấy token cho ${username}`).toBeTruthy();
   const body: { access_token: string; expires_in: number } = await response.json();

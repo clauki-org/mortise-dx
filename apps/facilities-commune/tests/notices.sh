@@ -148,7 +148,7 @@ check "Xã A đăng ký cho đơn vị thuộc xã" "$(gql "$user_a" user "$regi
   "$(request '{"unit_name": "Trường mầm non xã A", "purpose": "Lớp học", "requested_m2": 100}')" |
   jq -r '.data.insert_app_facilities_commune_receive_requests.affected_rows // .errors[0].message')" 1
 check "Tỉnh khác đăng ký bị từ chối" "$(gql "$user_k" user "$register" \
-  "$(request '{"purpose": "Kho", "requested_m2": 50}')" | outcome | cut -c1-60)" \
+  "$(request '{"purpose": "Kho", "requested_m2": 50}')" | outcome | jq -Rr '.[0:61]')" \
   "Check constraint violation. Chỉ đơn vị trong cùng tỉnh với xã"
 
 # shellcheck disable=SC2016
@@ -203,7 +203,7 @@ check "Bước trình: chọn đăng ký đứng đầu danh sách" "$(api "$man
   tail -1)" 204
 decide=$(api "$manager_a" GET /tasks | sed '$d' |
   jq -r --arg i "$case_id" '[.[] | select(.processInstanceId == $i and .step == "decide")][0]')
-check "Bước quyết định thấy đơn vị đã chọn" "$(jq -r '.variables.recipient' <<<"$decide" | cut -c1-20)" \
+check "Bước quyết định thấy đơn vị đã chọn" "$(jq -r '.variables.recipient[0:19]' <<<"$decide")" \
   "1. Xã B (Tỉnh Mẫu):"
 check "Ghi nhận quyết định: hồ sơ kết thúc và được niêm phong" \
   "$(api "$manager_a" POST "/tasks/$(jq -r .id <<<"$decide")/complete" \
