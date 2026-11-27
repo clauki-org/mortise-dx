@@ -6,7 +6,8 @@
 # token của tài khoản khai trong tệp, kiểm token đúng tenant, rồi ghi bằng GraphQL với vai trò tenant_admin.
 # tenant_id do Hasura gán từ token, nhật ký thay đổi ghi đúng người nạp. Dòng đã có (trùng các cột `key`)
 # giữ nguyên, nên chạy lại không tạo bản trùng. `make seed-demo` gọi cho mỗi gói có seed/demo.yaml mà không
-# có seed/load.py; `make check-fast` đã kiểm tệp theo schema.
+# có seed/load.py; `make check-fast` đã kiểm tệp theo schema. Tham số thứ hai là tệp dữ liệu khác cùng
+# định dạng, ví dụ dữ liệu demo của một mẫu cài cho tenant của mẫu (scripts/install.sh, ADR 0058).
 
 import base64
 import json
@@ -80,7 +81,7 @@ def load_table(access: str, schema: str, spec: dict, app: str) -> int:
         missing = [column for column in key if column not in row]
         if missing:
             columns = ", ".join(missing)
-            raise SystemExit(f"seed/demo.yaml: dòng {row} của {spec['table']} thiếu cột khóa {columns}.")
+            raise SystemExit(f"Dữ liệu demo: dòng {row} của {spec['table']} thiếu cột khóa {columns}.")
     have = existing(access, root, key, rows, app)
     new = [row for row in rows if tuple(row[column] for column in key) not in have]
     if new:
@@ -95,7 +96,7 @@ def load_tenant(app: str, schema: str, tenant: str, spec: dict) -> None:
     # Tài khoản ghi nhầm tenant trong tệp thì dừng, thay vì nạp dữ liệu demo vào tenant khác.
     actual = tenant_of(access)
     if actual != tenant:
-        raise SystemExit(f"seed/demo.yaml: tài khoản {spec['account']} thuộc {actual}, không phải {tenant}.")
+        raise SystemExit(f"Dữ liệu demo: tài khoản {spec['account']} thuộc {actual}, không phải {tenant}.")
     added = {table["table"]: load_table(access, schema, table, app) for table in spec["tables"]}
     summary = ", ".join(f"{table} {count}" for table, count in added.items())
     print(f"{app} / {tenant}: thêm {summary} dòng; dòng đã có giữ nguyên")
@@ -109,13 +110,14 @@ def read_yaml(path: Path) -> dict:
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        raise SystemExit("Cách dùng: app-seed.py apps/<gói>; gọi qua `make seed-demo`.")
+    if len(sys.argv) not in (2, 3):
+        raise SystemExit("Cách dùng: app-seed.py apps/<gói> [<tệp dữ liệu>]; gọi qua `make seed-demo`.")
     if not PASSWORD:
         raise SystemExit("Thiếu DEMO_USER_PASSWORD; chạy qua `make seed-demo`, lệnh này đọc .env.")
     directory = Path(sys.argv[1])
     app = read_yaml(directory / "app.yaml")
-    for tenant, spec in read_yaml(directory / "seed" / "demo.yaml").items():
+    data = Path(sys.argv[2]) if len(sys.argv) == 3 else directory / "seed" / "demo.yaml"
+    for tenant, spec in read_yaml(data).items():
         load_tenant(app["id"], app["database"]["schema"], tenant, spec)
     return 0
 

@@ -48,6 +48,7 @@ platform/             TẦNG 2: thành phần dùng chung, không chứa từ ng
   schema/             lược đồ CSDL của Tầng 2 (migration dbmate riêng) và quyền Hasura (`schema/hasura/`)
 apps/<gói>/           TẦNG 3: gói nghiệp vụ; `app.yaml` khai báo gói, phần còn lại ưu tiên là khai
                       báo (schema/, hasura/, bpmn/, forms/, rules/, map-layers/, dashboards/, knowledge/, seed/, tests/)
+presets/<mẫu>/        mẫu cài của một org: `preset.yaml` (gói, thương hiệu, tenant demo), brand/, seed/ (ADR 0058)
 devices/              thiết bị: bộ giả lập và danh sách thiết bị demo (simulator/); firmware là kế hoạch
 deploy/               triển khai lên máy chủ demo: script kéo tag phát hành mới, unit systemd (ADR 0036)
 scripts/              lệnh hỗ trợ, gọi từ Makefile

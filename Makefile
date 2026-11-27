@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast deps-check web-check overrides-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-check app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up assistant-eval basemap \
+  check-fast deps-check web-check overrides-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-check app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up assistant-eval basemap install \
   obs-up obs-down obs-check tenant-login
 
 help: ## Liệt kê các lệnh
@@ -36,6 +36,9 @@ ps: ## Trạng thái các dịch vụ
 
 logs: ## Theo dõi log
 	docker compose logs -f --tail=100
+
+install: ## Dựng bản cài theo mẫu presets/<mẫu>: env, up, seed, cài gói, dữ liệu demo, thương hiệu: make install PRESET=<mẫu> [CONFIRM=yes]
+	@CONFIRM="$(CONFIRM)" scripts/install.sh "$(PRESET)"
 
 seed: env ## Nạp tài khoản demo, metadata Hasura và quy trình mẫu
 	@scripts/seed.sh
@@ -179,7 +182,8 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	uvx --from shellcheck-py==0.11.0.1 shellcheck scripts/*.sh scripts/pre-push core/postgres/init/*.sh core/postgres/roles.sh \
 	  core/mosquitto/start.sh deploy/*.sh \
 	  apps/*/tests/*.sh
-	uvx yamllint==1.38.0 -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps deploy .github
+	uvx yamllint==1.38.0 -d '{extends: relaxed, rules: {line-length: {max: 120}}}' compose.yaml core contracts apps presets deploy \
+	  .github
 	uvx ruff==0.17.6 check --no-cache core/workflow-api core/files-api core/context-api core/iot-bridge core/cold-archive \
 	  platform/services/assistant devices/simulator
 	uvx ruff==0.17.6 format --no-cache --check core/workflow-api core/files-api core/context-api core/iot-bridge \
@@ -187,6 +191,7 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	uvx ruff==0.17.6 check --no-cache --config core/workflow-api/pyproject.toml scripts apps
 	uvx ruff==0.17.6 format --no-cache --check --config core/workflow-api/pyproject.toml scripts apps
 	@scripts/contracts.sh check
+	@scripts/check-make-env.sh
 	uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py lint
 	uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/assistant-eval.py --check apps/*/tests/assistant-questions.yaml
 	$(if $(DECLARATIVE_APPS),@scripts/check-declarative.sh $(DECLARATIVE_APPS))

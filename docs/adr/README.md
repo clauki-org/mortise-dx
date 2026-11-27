@@ -85,6 +85,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0062](0062-shared-warehouse-package.md) | Gói kho dùng chung, luật trên nhiều dòng qua hàm của nền tảng | Chấp nhận |
 | [0067](0067-field-operations-package.md) | Gói vận hành hiện trường: cột sửa cuối qua hàm của nền tảng, việc sửa chữa do luật mở là hồ sơ | Chấp nhận |
 | [0064](0064-import-child-rows-from-file.md) | Nạp dòng con từ tệp Excel hay CSV, xem trước lỗi theo dòng, thêm trong một lệnh | Chấp nhận |
+| [0058](0058-two-installs-and-install-presets.md) | Hai bản cài trên một máy và mẫu cài | Chấp nhận |
 
 ## Quyết định còn mở
 

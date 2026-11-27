@@ -65,22 +65,27 @@ check "Đường API không tồn tại trả 404" "$(curl -s -o /dev/null -w '%
 # Đăng nhập như trình duyệt (Authorization Code + PKCE) đi trọn qua cổng: trang đăng nhập và tài nguyên của nó,
 # gửi form, đổi mã lấy token. Bài này hỏng khi danh sách đường mở ở cổng thiếu một trong các bước đó.
 pkce_login() {
-  local jar verifier challenge page action assets asset location code
-  jar=$(mktemp)
+  local headers cookies verifier challenge page action assets asset location code
+  headers=$(mktemp)
   verifier=$(openssl rand -hex 32)
   challenge=$(printf '%s' "$verifier" | openssl dgst -sha256 -binary | openssl base64 -A | tr '+/' '-_' | tr -d '=')
-  page=$(curl -s -c "$jar" -b "$jar" "$base/auth/realms/mortise/protocol/openid-connect/auth?client_id=mortise-web\
+  page=$(curl -s -D "$headers" "$base/auth/realms/mortise/protocol/openid-connect/auth?client_id=mortise-web\
 &response_type=code&scope=openid&redirect_uri=$base/callback&code_challenge=$challenge&code_challenge_method=S256")
   action=$(grep -o 'action="[^"]*"' <<<"$page" | head -1 | sed -e 's/^action="//' -e 's/"$//' -e 's/&amp;/\&/g')
+  # Cookie phiên của Keycloak gửi lại bằng header như trình duyệt, không qua bộ nhớ cookie của curl: cookie mang cờ
+  # Secure, trình duyệt coi http://*.localhost là ngữ cảnh an toàn nên vẫn nhận và gửi, còn curl chỉ ngoại lệ cho đúng
+  # tên localhost và bỏ cookie đó, nên ở bản cài chạy dưới tên như dmt.localhost (ADR 0058) form đăng nhập về không có
+  # phiên và Keycloak không chuyển hướng. Cấu hình Keycloak không đổi.
+  cookies=$(sed -n 's/^[Ss]et-[Cc]ookie: *\([^;]*\).*/\1/p' "$headers" | tr -d '\r' | paste -sd ';' - | sed 's/;/; /g')
+  rm -f "$headers"
   # Thiếu tài nguyên (CSS, JS) thì trình duyệt thấy trang đăng nhập vỡ dù form vẫn gửi được.
   assets=$(grep -oE '"/auth/resources/[^"]+\.(css|js)"' <<<"$page" | tr -d '"' || true)
-  [[ -n "$assets" ]] || { rm -f "$jar"; return 0; }
+  [[ -n "$assets" ]] || return 0
   for asset in $assets; do
-    [[ "$(curl -s -o /dev/null -w '%{http_code}' "$base$asset")" == 200 ]] || { rm -f "$jar"; return 0; }
+    [[ "$(curl -s -o /dev/null -w '%{http_code}' "$base$asset")" == 200 ]] || return 0
   done
-  location=$(curl -s -o /dev/null -c "$jar" -b "$jar" -w '%{redirect_url}' --data-urlencode "username=$1" \
+  location=$(curl -s -o /dev/null -H "Cookie: $cookies" -w '%{redirect_url}' --data-urlencode "username=$1" \
     --data-urlencode "password=$DEMO_USER_PASSWORD" "$action")
-  rm -f "$jar"
   code=$(sed -n 's/.*[?&]code=\([^&]*\).*/\1/p' <<<"$location")
   curl -s "$base/auth/realms/mortise/protocol/openid-connect/token" -d grant_type=authorization_code \
     -d client_id=mortise-web -d "code=$code" -d "redirect_uri=$base/callback" -d "code_verifier=$verifier" |

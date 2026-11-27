@@ -62,6 +62,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   0064](docs/adr/0064-import-child-rows-from-file.md)).
 - `make assistant-eval` đo trợ lý hỏi văn bản trên bộ câu hỏi có đáp án của gói: trích đúng, từ chối đúng, độ trễ;
   lượt đầu 2026-11-28 ghi ở [docs/assistant-eval.md](docs/assistant-eval.md).
+- Chạy hai bản cài độc lập trên một máy (tên dự án, cổng, tên máy trong `.env`) và dựng một org bằng `make install
+  PRESET=chinh-quyen|dien-mat-troi` ([ADR 0058](docs/adr/0058-two-installs-and-install-presets.md)).
 
 ### Changed
 
@@ -109,6 +111,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   không còn nhận Tab. `make e2e` chặn lỗi trợ năng mức nghiêm trọng trên các trang của kịch bản demo và có bài đi kịch
   bản bằng bàn phím.
 - Nút bỏ tệp đã chọn ở ô chọn tệp (đính kèm giấy tờ, nạp từ tệp) có tên cho trình đọc màn hình.
+- `make env` lấy đủ mọi biến của `.env.example`: trước đây biến có chữ số trong tên (`S3_PORT`, `S3_ACCESS_KEY`,
+  `S3_SECRET_KEY`) bị chép nguyên giá trị mẫu, nên khóa S3 của `.env` tạo trước bản này vẫn là `change-me` và cần đổi
+  tay.
 
 ## [0.1.0] - 2026-11-25
 

@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Mẫu cài tối thiểu của "Công ty Điện mặt trời Mẫu" (doanh nghiệp hư cấu), chạy trên bản cài riêng cạnh bản cài của
+# chính quyền (ADR 0058): một tenant gốc `dmt` với ba tài khoản demo, gói Kho dùng chung và gói vận hành hiện trường,
+# dữ liệu demo hư cấu của công ty do chính hai gói mang theo (seed/dien-mat-troi.yaml của từng gói).
+# `make install PRESET=dien-mat-troi` đọc tệp này (contracts/preset.schema.json). Tài khoản demo của lõi vẫn được tạo
+# vì `make smoke` đăng nhập bằng chúng.
+
+name: dien-mat-troi
+title: Công ty Điện mặt trời Mẫu (hư cấu)
+branding: brand
+tenants:
+  - id: dmt
+    name: Công ty Điện mặt trời Mẫu
+    accounts:
+      - { username: admin.dmt, role: tenant_admin }
+      - { username: manager.dmt, role: manager }
+      - { username: user.dmt }
+packages:
+  - supplies-commune
+  - field-ops
+demo:
+  - { package: supplies-commune, from: package, data: seed/dien-mat-troi.yaml }
+  - { package: field-ops, from: package, data: seed/dien-mat-troi.yaml }

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Tầng 1 – lõi headless của DX-OS. Chỉ APISIX mở ra ngoài (cổng 9080);
+# Tầng 1 – lõi headless của DX-OS. Chỉ APISIX mở ra ngoài (cổng MORTISE_PORT, mặc định 9080);
 # các cổng còn lại chỉ bind 127.0.0.1 để quản trị khi phát triển.
 #
 # Dịch vụ tự viết có cả `build` và `image` (ADR 0036). Máy phát triển dựng từ mã nguồn, image mang tên
@@ -10,7 +10,9 @@
 # MORTISE_NO_BUILD=1 trong .env để chạy đúng image CI đã đẩy lên GHCR cho tag; `up`, `run` của chúng đi qua
 # scripts/compose.sh.
 
-name: mortise
+# Tên dự án, mọi cổng mở ra máy chủ và URL công khai đến từ .env, nên hai checkout với hai .env chạy được hai bản cài
+# độc lập trên một máy: container, mạng, volume mang tiền tố tên dự án (ADR 0058). Mặc định giữ đúng bản cài một máy.
+name: ${COMPOSE_PROJECT_NAME:-mortise}
 
 # Biến truy vết chung của dịch vụ FastAPI tự viết (ADR 0038). MORTISE_TRACING=on thì Dockerfile chạy dịch vụ dưới
 # opentelemetry-instrument, các biến OTEL_* dưới đây mới có tác dụng; off thì không gói OpenTelemetry nào được nạp.
@@ -329,7 +331,7 @@ services:
       - ./core/apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro
       - ./core/apisix/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
     ports:
-      - "${MORTISE_BIND:-127.0.0.1}:9080:9080"
+      - "${MORTISE_BIND:-127.0.0.1}:${MORTISE_PORT:-9080}:9080"
     depends_on:
       keycloak:
         condition: service_healthy
@@ -761,6 +763,10 @@ services:
     image: grafana/alloy:v1.22.0
     profiles: [observability]
     restart: unless-stopped
+    environment:
+      # config.alloy chỉ thu log của container mang nhãn dự án này, để bản cài thứ hai trên cùng máy không đọc log của
+      # bản kia (ADR 0058).
+      MORTISE_COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-mortise}
     command:
       - run
       - /etc/alloy/config.alloy
