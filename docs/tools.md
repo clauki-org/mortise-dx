@@ -376,6 +376,11 @@ mở cổng, và chỉ ở `127.0.0.1`.
     trong `assets/` cùng origin, không nhúng `data:` vì CSP, văn bản giấy phép đi kèm ở
     `licenses/be-vietnam-pro-OFL-1.1.txt`; chưa tải được thì dùng phông của hệ điều hành
     ([ADR 0048](adr/0048-bento-tokens-status-tones-font.md)).
+  - Thương hiệu của bản cài đọc từ `/branding.json` trước đăng nhập (`contracts/branding.schema.json`): tên, logo, màu
+    chính, màu phụ (bảng màu có tên hay mười sắc độ tự khai), bo góc 4, 6 hay 8px, phông Be Vietnam Pro hay phông hệ
+    điều hành, nền trang xám, trắng hay sắc nhạt của màu chính. Tệp có cặp màu dưới AA bị bỏ, dùng thương hiệu mặc
+    định và ghi cảnh báo trên console; `make web-check` đo mọi tổ hợp trong danh sách
+    ([ADR 0043](adr/0043-design-tokens-and-install-branding.md), [ADR 0063](adr/0063-install-theme-tokens.md)).
   - Bản đồ vẽ bằng MapLibre GL JS 6.18.0; mã của nó chỉ tải khi mở trang bản đồ, worker chạy từ tệp cùng origin nên
     CSP không mở `blob:`. Nền là tệp PMTiles cắt từ OpenStreetMap lúc cài (`make basemap`), nginx phục vụ ở
     `/basemap/` cùng origin, đọc bằng thư viện `pmtiles` 4.5.0 (BSD-3-Clause) qua yêu cầu Range; kiểu vẽ lấy từ

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mortise.invalid/contracts/branding.schema.json",
   "title": "Thương hiệu của bản cài",
-  "description": "Tệp /branding.json mà giao diện đọc trước lần vẽ đầu (ADR 0043): tên, tên ngắn, logo, màu chính của đơn vị cài đặt. Bản mặc định là platform/web/brand/branding.json; người vận hành ghi đè bằng thư mục MORTISE_BRANDING_DIR. Tệp sai thì giao diện bỏ cả tệp và dùng bản mặc định. Trang đăng nhập của Keycloak không đọc tệp này.",
+  "description": "Tệp /branding.json mà giao diện đọc trước lần vẽ đầu (ADR 0043, bộ biến giao diện của ADR 0063): tên, tên ngắn, logo, màu chính, màu phụ, bo góc, phông, nền trang của đơn vị cài đặt. Bản mặc định là platform/web/brand/branding.json; người vận hành ghi đè bằng thư mục MORTISE_BRANDING_DIR. Schema chỉ kiểm dạng; tương phản của sắc độ tự khai đo khi giao diện đọc tệp (platform/web/src/themeContrast.ts). Tệp sai hay dưới AA thì giao diện bỏ cả tệp và dùng bản mặc định. Trang đăng nhập của Keycloak không đọc tệp này.",
   "type": "object",
   "required": ["name", "short_name", "color"],
   "additionalProperties": false,
@@ -27,8 +27,52 @@
       "pattern": "^/brand/[A-Za-z0-9][A-Za-z0-9._-]*\\.(svg|png|webp)$"
     },
     "color": {
-      "description": "Tên bảng màu Mantine làm màu chính. Chỉ các bảng mà chữ trắng trên nền màu và chữ màu trên nền trắng, nền nhạt đều đạt WCAG AA ở sắc độ giao diện dùng (platform/web/src/theme.test.tsx).",
+      "description": "Màu chính (nút chính, liên kết, chữ màu): tên một bảng màu Mantine đạt WCAG AA ở sắc độ giao diện dùng (platform/web/src/theme.test.tsx, themeTokens.test.ts), hoặc mười sắc độ tự khai.",
+      "$ref": "#/$defs/color"
+    },
+    "secondary_color": {
+      "description": "Màu phụ (nút phụ light, subtle không ghi màu và mục menu đang chọn). Không ghi thì các chỗ đó dùng màu chính.",
+      "$ref": "#/$defs/color"
+    },
+    "radius": {
+      "description": "Bo góc của nút, ô nhập, nhãn (px); thẻ và khung gấp đôi. Không ghi là 6.",
+      "enum": [6, 4, 8]
+    },
+    "font": {
+      "description": "Phông: Be Vietnam Pro đóng gói cùng giao diện, hay phông của hệ điều hành. Không ghi là be-vietnam-pro.",
+      "enum": ["be-vietnam-pro", "system"]
+    },
+    "background": {
+      "description": "Nền trang: xám nhạt, trắng, hay sắc 0 của màu chính (tint). Thẻ, khung, hộp thoại luôn trắng. Không ghi là gray.",
+      "enum": ["gray", "white", "tint"]
+    }
+  },
+  "$defs": {
+    "palette": {
+      "description": "Bảng màu Mantine đạt AA ở sắc 8. red đạt sát mức và đã mang nghĩa lỗi nên không có. Phải trùng BRAND_COLORS của platform/web/src/branding.ts.",
       "enum": ["blue", "indigo", "violet", "grape", "pink", "dark"]
+    },
+    "shades": {
+      "description": "Mười mã màu #rrggbb, sắc 0 sáng nhất tới sắc 9 tối nhất, như một bảng màu Mantine. Nút chính dùng sắc 8, di chuột sắc 9; giao diện bỏ tệp khi một cặp chữ, nền dưới AA.",
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "type": "string",
+        "pattern": "^#[0-9a-fA-F]{6}$"
+      }
+    },
+    "color": {
+      "description": "Chuỗi là tên bảng màu, còn lại phải là mười sắc độ; if/then/else thay cho oneOf để lỗi nêu đúng luật bị phạm.",
+      "if": {
+        "type": "string"
+      },
+      "then": {
+        "$ref": "#/$defs/palette"
+      },
+      "else": {
+        "$ref": "#/$defs/shades"
+      }
     }
   }
 }

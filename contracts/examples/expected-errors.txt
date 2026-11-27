@@ -127,9 +127,14 @@ assistant.documents-and-data.yaml	$	{'intro': 'Hỏi về quy chế đặt phòn
 cases.duplicate-process.yaml	$.processes	['core-approval', 'core-approval'] has non-unique elements
 cases.no-processes.yaml	$.processes	[] should be non-empty
 cases.process-not-slug.yaml	$.processes[0]	'core-approval&state=all' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
+branding.background-not-allowed.json	$.background	'#ffffff' is not one of ['gray', 'white', 'tint']
 branding.logo-other-origin.json	$.logo	'https://cdn.example.org/logo.svg' does not match '^/brand/[A-Za-z0-9][A-Za-z0-9._-]*\\\\.(svg|png|webp)$'
 branding.low-contrast-color.json	$.color	'teal' is not one of ['blue', 'indigo', 'violet', 'grape', 'pink', 'dark']
 branding.missing-short-name.json	$	'short_name' is a required property
+branding.nine-shades.json	$.color	['#fff8f0', '#ffecd6', '#ffd6ad', '#ffbd80', '#ffa154', '#f78731', '#e8701c', '#cc5a0e', '#ad4708'] is too short
+branding.radius-not-allowed.json	$.radius	5 is not one of [6, 4, 8]
+branding.shade-not-hex.json	$.secondary_color[9]	'orange' does not match '^#[0-9a-fA-F]{6}$'
+branding.unknown-font.json	$.font	'Comic Sans MS' is not one of ['be-vietnam-pro', 'system']
 catalog.add-form-unknown-field-type.yaml	$.detail.children[0].add.form.fields[0].type	'no-such-type' is not one of ['string', 'number', 'integer', 'boolean', 'date', 'choice']
 catalog.edit-missing-label.yaml	$.detail.edit	'label' is a required property
 catalog.unknown-variant.yaml	$.variant	'timeline' is not one of ['table', 'cards', 'kanban', 'calendar']
