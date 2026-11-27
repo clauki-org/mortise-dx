@@ -47,6 +47,10 @@ jobs:
           node-version: 26.13.1
       - name: Biome, types, build, dependency licenses
         run: make web-check
+      # Bộ kiểm chung của gói chạy bằng uv; hàm trộn phần chỉnh là mã của giao diện, chạy bằng Node (ADR 0060).
+      - uses: astral-sh/setup-uv@v6
+      - name: Generated overrides on every package config
+        run: make overrides-check
 
   changes:
     name: Detect changed areas
@@ -82,7 +86,9 @@ jobs:
           echo "core=$core" >> "$GITHUB_OUTPUT"
           echo "backup=$restore" >> "$GITHUB_OUTPUT"
           web=false
-          if printf '%s\n' "$files" | grep -Eq '(^platform/web/|^Makefile$|^\.github/workflows/)'; then web=true; fi
+          # apps/, contracts/, scripts/: cấu hình gói, schema hay bộ kiểm đổi thì bài phần chỉnh × cấu hình gói chạy lại.
+          web_paths='(^platform/web/|^apps/|^contracts/|^scripts/|^Makefile$|^\.github/workflows/)'
+          if printf '%s\n' "$files" | grep -Eq "$web_paths"; then web=true; fi
           echo "web=$web" >> "$GITHUB_OUTPUT"
 
   e2e:

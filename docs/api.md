@@ -65,6 +65,17 @@ curl -fsS -X POST http://localhost:9080/v1/graphql \
   -d '{"query":"{ platform_menu_items(order_by: {position: asc}) { app app_name item label component config roles icon } }"}'
 ```
 
+Phần chỉnh cấu hình của org ([ADR 0060](adr/0060-config-overrides.md)) đọc ở `platform_config_overrides_by_tenant`:
+mọi tenant thấy phần chỉnh của tenant gốc của mình; giao diện trộn vào `config` của mục rồi kiểm lại. Chỉ
+`tenant_admin` của tenant không có cha ghi (`insert_platform_config_overrides_one`, kèm `on_conflict` để sửa giá trị)
+và xóa (`delete_platform_config_overrides`, "Về mặc định"); CSDL từ chối đích không có trong cấu hình gốc.
+
+```bash
+curl -fsS -X POST http://localhost:9080/v1/graphql \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H 'X-Hasura-Role: tenant_admin' -H 'Content-Type: application/json' \
+  -d '{"query":"mutation { insert_platform_config_overrides_one(object: {app: \"core\", item: \"ask-example\", kind: \"label\", target: \"\", value: \"Hỏi thử\"}, on_conflict: {constraint: config_overrides_pkey, update_columns: [value]}) { value } }"}'
+```
+
 ```bash
 curl -fsS -X POST http://localhost:9080/v1/graphql \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \

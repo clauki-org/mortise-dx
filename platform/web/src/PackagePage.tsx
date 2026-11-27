@@ -6,7 +6,7 @@
 // trang. Menu đọc qua usePackageMenu, dùng chung với Shell nên urql chỉ gửi một truy vấn.
 
 import { Alert } from "@mantine/core";
-import { Fragment, type ReactNode, useMemo } from "react";
+import { Fragment, type ReactNode, useEffect, useMemo } from "react";
 import { useParams } from "react-router";
 import { useQuery } from "urql";
 import { Assistant } from "./Assistant";
@@ -16,6 +16,8 @@ import { Cases } from "./CasesPanel";
 import { Catalog } from "./Catalog";
 import type { CasesConfig } from "./cases";
 import type { CatalogConfig } from "./catalog";
+import { applyOverrides } from "./configEffective";
+import type { ItemOverride } from "./configOverrides";
 import { DashboardPanel } from "./DashboardPanel";
 import type { DashboardConfig } from "./dashboardConfig";
 import { NotFound } from "./Errors";
@@ -23,16 +25,45 @@ import { FormPanel } from "./FormPanel";
 import type { FormConfig } from "./formConfig";
 import { MapPanel } from "./MapPanel";
 import type { MapConfig } from "./mapConfig";
-import { findItem, itemPath, MENU_QUERY, type MenuData, rolesOf, visibleItems } from "./menu";
+import { findItem, itemPath, MENU_QUERY, type MenuData, OVERRIDES_QUERY, rolesOf, visibleItems } from "./menu";
 import { ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
 
-/** Menu của gói mà người dùng thấy, đã lọc theo vai trò trong token. */
+// Mutation trên bảng phần chỉnh trả kiểu khác kiểu của view; khai ở đây để urql đọc lại phần chỉnh sau mỗi lần ghi
+// hay xóa (chế độ Chỉnh sửa), không phải tải lại trang.
+const OVERRIDES_CONTEXT = {
+  additionalTypenames: ["platform_config_overrides", "platform_config_overrides_mutation_response"],
+};
+
+const warn = (message: string) => console.warn(message);
+
+type OverridesData = { platform_config_overrides_by_tenant: ItemOverride[] };
+
+/**
+ * Menu của gói mà người dùng thấy, đã lọc theo vai trò trong token và áp phần chỉnh của org (ADR 0060). `baseItems`
+ * là menu theo cấu hình gốc của gói, `overrides` là phần chỉnh đọc được: chế độ Chỉnh sửa cần cả hai để hiện lại mục
+ * đã ẩn và "Về mặc định". Không đọc được phần chỉnh thì dùng cấu hình gốc.
+ */
 export function usePackageMenu() {
   const { getToken } = useSession();
   const [{ data, fetching, error }] = useQuery<MenuData>({ query: MENU_QUERY });
-  const items = useMemo(() => visibleItems(data?.platform_menu_items ?? [], rolesOf(getToken())), [data, getToken]);
-  return { items, loaded: data !== undefined, fetching, error };
+  const [overridden] = useQuery<OverridesData>({ query: OVERRIDES_QUERY, context: OVERRIDES_CONTEXT });
+  const baseItems = useMemo(() => visibleItems(data?.platform_menu_items ?? [], rolesOf(getToken())), [data, getToken]);
+  const overrides = useMemo(() => overridden.data?.platform_config_overrides_by_tenant ?? [], [overridden.data]);
+  useEffect(() => {
+    if (overridden.error) warn(`Không đọc được phần chỉnh cấu hình, dùng cấu hình gốc: ${overridden.error.message}`);
+  }, [overridden.error]);
+  const items = useMemo(() => applyOverrides(baseItems, overrides, warn), [baseItems, overrides]);
+  // Chờ cả phần chỉnh để menu không hiện nhãn gốc rồi đổi ngay sau đó.
+  const settled = overridden.data !== undefined || overridden.error !== undefined;
+  return {
+    items,
+    baseItems,
+    overrides,
+    loaded: data !== undefined && settled,
+    fetching: fetching || overridden.fetching,
+    error,
+  };
 }
 
 // `app` là gói của mục: thành phần cần nó khi dữ liệu nó đọc thuộc về gói (văn bản của trợ lý) hay khi trỏ tới mục
