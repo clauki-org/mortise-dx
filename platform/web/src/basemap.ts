@@ -46,8 +46,14 @@ const sourceLayerOf = (layer: LayerSpecification) =>
  * (điểm quan tâm, biển số đường, mũi tên một chiều): bản cài không có bộ ảnh biểu tượng (sprite).
  */
 export function basemapLayers(labels: boolean): LayerSpecification[] {
-  const all = layers(SOURCE, namedFlavor("light"), labels ? { lang: "vi" } : undefined) as LayerSpecification[];
-  return all.filter((layer) => {
+  const flavor = namedFlavor("light");
+  const all = layers(SOURCE, flavor, labels ? { lang: "vi" } : undefined) as LayerSpecification[];
+  // Ngoài vùng đã cắt không có tile nào, chỉ còn lớp nền; tô lớp nền cùng màu đất liền để mép vùng không thành một
+  // dải xám khác màu khi khung bản đồ rộng hơn vùng.
+  const seamless = all.map((layer) =>
+    layer.type === "background" ? { ...layer, paint: { "background-color": flavor.earth } } : layer,
+  );
+  return seamless.filter((layer) => {
     const sourceLayer = sourceLayerOf(layer);
     if (sourceLayer && HIDDEN_SOURCE_LAYERS.has(sourceLayer)) return false;
     if (layer.type !== "symbol") return true;

@@ -5,6 +5,7 @@
 // lớp chữ, khối nhà hay ranh giới và không cần tệp phông; bật chữ thì chỉ thêm tên, không thêm lớp cần ảnh biểu tượng;
 // mọi kiểu thiếu hay hỏng của basemap.json đều rơi về nền trơn thay vì ném lỗi.
 
+import { namedFlavor } from "@protomaps/basemaps";
 import type { Protocol } from "pmtiles";
 import { describe, expect, it, vi } from "vitest";
 import { basemapLayers, basemapStyle, loadBasemap, parseBasemap } from "./basemap";
@@ -13,6 +14,7 @@ const respond = (body: string, contentType: string, status = 200): typeof fetch 
   vi.fn(async () => new Response(body, { status, headers: { "content-type": contentType } }));
 
 const protocol = { add: vi.fn() } as unknown as Protocol;
+const earth = namedFlavor("light").earth;
 
 describe("parseBasemap", () => {
   it("đọc tệp đúng, chữ mặc định tắt", () => {
@@ -43,6 +45,7 @@ describe("basemapStyle", () => {
     for (const hidden of ["buildings", "boundaries", "pois", "places"])
       expect(sourceLayers(false)).not.toContain(hidden);
     for (const kept of ["earth", "landuse", "water", "roads"]) expect(sourceLayers(false)).toContain(kept);
+    expect(style.layers[0]).toMatchObject({ type: "background", paint: { "background-color": earth } });
     expect(style).not.toHaveProperty("glyphs");
     expect(style).not.toHaveProperty("sprite");
     expect(style.sources).toEqual({
