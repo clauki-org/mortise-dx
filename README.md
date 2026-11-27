@@ -203,6 +203,11 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Phục vụ giao diện | nginx | 1.30.6 | BSD-2-Clause |
 | Giao diện Tầng 2 (tự viết) | React, Mantine, oidc-client-ts, urql, React Router, TanStack Query, rjsf, Tabler Icons (`@tabler/icons-react`) ([ADR 0006](docs/adr/0006-frontend-stack.md)) | khóa trong `platform/web/package-lock.json` | MIT / Apache-2.0 |
 | Vẽ bản đồ trong giao diện ([ADR 0024](docs/adr/0024-map-component.md)) | MapLibre GL JS | 6.18.0 | BSD-3-Clause |
+| Đọc nền bản đồ PMTiles trong giao diện ([ADR 0056](docs/adr/0056-self-hosted-osm-basemap.md)) | pmtiles | 4.5.0 | BSD-3-Clause |
+| Kiểu vẽ nền bản đồ (bỏ chữ, khối nhà, ranh giới) | `@protomaps/basemaps` | 5.7.2 | BSD-3-Clause |
+| Cắt nền bản đồ lúc cài, chỉ chạy khi `make basemap` | go-pmtiles | 1.31.2 | BSD-3-Clause |
+| Dữ liệu nền bản đồ, tải khi `make basemap`, không nằm trong repo | OpenStreetMap qua bản dựng Protomaps | bản dựng ghim trong `platform/web/basemap.pins` | ODbL-1.0 (ghi nguồn trên bản đồ; tệp cắt ra là cơ sở dữ liệu phái sinh, chia sẻ lại thì theo ODbL) |
+| Phông chữ nền bản đồ, chỉ khi `make basemap LABELS=on` | Noto Sans (glyph PBF của basemaps-assets) | commit ghim trong `platform/web/basemap.pins` | OFL-1.1 |
 | Phông chữ của giao diện, đóng gói cùng tệp tĩnh ([ADR 0048](docs/adr/0048-bento-tokens-status-tones-font.md)) | Be Vietnam Pro (`@fontsource/be-vietnam-pro`) | 5.3.0 | OFL-1.1 |
 | Ghi tệp Excel khi xuất danh sách ([ADR 0052](docs/adr/0052-catalog-export.md)) | write-excel-file | 4.1.1 | MIT |
 | Dựng tệp PDF khi xuất danh sách, kèm font Roboto ([ADR 0052](docs/adr/0052-catalog-export.md)) | pdfmake | 0.3.14 | MIT (font Roboto: Apache-2.0; sax: BlueOak-1.0.0) |

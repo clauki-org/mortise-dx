@@ -4,7 +4,8 @@
 // Bản đồ trụ sở trên trình duyệt (ADR 0024): cán bộ xã A mở mục menu do gói cơ sở vật chất xã khai, thấy trụ sở mình
 // phụ trách tô theo phần vượt của xã A và cơ sở dôi dư mình phụ trách ở lớp màu xám, không thấy trụ sở của xã B và
 // không truy vấn lớp của tỉnh; tỉnh thấy trụ sở đang dùng của cả hai xã qua view facility_rollup, truy vấn lớp đó với
-// vai trò rollup_reader. Trang không vi phạm Content-Security-Policy, kể cả worker của MapLibre. Cần gói đã cài
+// vai trò rollup_reader. Trang không vi phạm Content-Security-Policy, kể cả worker của MapLibre và nền bản đồ đọc bằng
+// yêu cầu Range; bản cài đã chạy `make basemap` thì bản đồ ghi nguồn OpenStreetMap (ADR 0056). Cần gói đã cài
 // (`make app-install APP=facilities-commune`); bài tự tạo và tự dọn dữ liệu nên không cần `make seed-demo`.
 
 import { type APIRequestContext, type BrowserContext, expect, type Page, test } from "@playwright/test";
@@ -14,20 +15,24 @@ const ADMIN = "tenant_admin";
 const PREFIX = "app_facilities_commune";
 const MAP = "Bản đồ trụ sở";
 
+// Tọa độ của cơ sở thử nằm trong vùng nền bản đồ ghim (platform/web/basemap.pins), để khi bản cài có nền thì bài
+// cũng đi qua phần đọc tile.
+type At = { latitude: number; longitude: number };
+
 /** Quản trị xã tạo một cơ sở có tọa độ, mặc định đang dùng; trả id. */
 async function facility(
   request: APIRequestContext,
   admin: string,
   code: string,
   name: string,
-  at: number,
+  at: At,
   status: "in_use" | "surplus" = "in_use",
 ) {
   const data = await graphql<{ row: { id: string } }>(
     request,
     admin,
     `mutation($row: ${PREFIX}_facilities_insert_input!) { row: insert_${PREFIX}_facilities_one(object: $row) { id } }`,
-    { row: { code, name, status, latitude: at, longitude: at } },
+    { row: { code, name, status, ...at } },
     ADMIN,
   );
   return data.row.id;
@@ -89,10 +94,12 @@ test("xã A thấy trụ sở của mình tô theo phần vượt; tỉnh thấy
   let province: BrowserContext | undefined;
   let passed = false;
   try {
-    const idA = await facility(request, "admin.a", `${code}-a`, nameA, 0.6);
+    const idA = await facility(request, "admin.a", `${code}-a`, nameA, { latitude: 20.445, longitude: 106.405 });
     created.push({ admin: "admin.a", id: idA });
-    created.push({ admin: "admin.b", id: await facility(request, "admin.b", `${code}-b`, nameB, -0.6) });
-    const idSurplus = await facility(request, "admin.a", `${code}-s`, nameSurplus, 0.5, "surplus");
+    const atB = { latitude: 20.43, longitude: 106.44 };
+    created.push({ admin: "admin.b", id: await facility(request, "admin.b", `${code}-b`, nameB, atB) });
+    const atSurplus = { latitude: 20.44, longitude: 106.415 };
+    const idSurplus = await facility(request, "admin.a", `${code}-s`, nameSurplus, atSurplus, "surplus");
     created.push({ admin: "admin.a", id: idSurplus });
     const userA = await subOf(request, "user.a");
     await assign(request, idA, userA);
@@ -117,6 +124,11 @@ test("xã A thấy trụ sở của mình tô theo phần vượt; tỉnh thấy
     await expect(page.getByText(nameB)).toHaveCount(0);
     await expect(page.getByRole("heading", { level: 2, name: "Trụ sở đang dùng của các xã" })).toHaveCount(0);
     expect(commune.roles, "user.a không gửi vai trò nào ngoài mặc định").not.toContain("rollup_reader");
+    // Bản cài chưa chạy make basemap thì nginx trả 404 và bản đồ vẽ nền trơn, không có dòng ghi nguồn; có nền thì dòng
+    // ghi nguồn ODbL phải luôn hiện.
+    if ((await request.get("/basemap/basemap.json")).ok()) {
+      await expect(page.getByRole("link", { name: "OpenStreetMap" })).toBeVisible();
+    }
     expect(commune.violations, "vi phạm CSP").toEqual([]);
 
     // Ngữ cảnh trình duyệt riêng cho tỉnh: cùng ngữ cảnh thì cookie đăng nhập một lần của Keycloak đưa thẳng vào phiên

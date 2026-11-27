@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast deps-check web-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up \
+  check-fast deps-check web-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up basemap \
   obs-up obs-down obs-check tenant-login
 
 help: ## Liệt kê các lệnh
@@ -78,6 +78,9 @@ simulate: ## Chạy bộ giả lập thiết bị demo, gửi số đo mỗi 5 g
 
 ai-up: env ## Chạy Ollama (profile ai), tải mô hình ghim trong core/ollama/models.txt và kiểm digest; lần đầu cần mạng
 	@scripts/ai.sh
+
+basemap: env ## Cắt nền bản đồ OpenStreetMap của vùng ghim (hay BBOX=...), kiểm SHA-256, đặt cho web; LABELS=on hiện chữ; lần đầu cần mạng
+	@BBOX="$(BBOX)" MINZOOM="$(MINZOOM)" MAXZOOM="$(MAXZOOM)" SHA256="$(SHA256)" LABELS="$(LABELS)" scripts/basemap.sh
 
 # Dịch vụ của profile `observability` (ADR 0037); obs-down chỉ gỡ chúng, lõi vẫn chạy.
 OBS_SERVICES := grafana prometheus loki alloy docker-socket-proxy blackbox jaeger

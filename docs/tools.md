@@ -376,8 +376,17 @@ mở cổng, và chỉ ở `127.0.0.1`.
     trong `assets/` cùng origin, không nhúng `data:` vì CSP, văn bản giấy phép đi kèm ở
     `licenses/be-vietnam-pro-OFL-1.1.txt`; chưa tải được thì dùng phông của hệ điều hành
     ([ADR 0048](adr/0048-bento-tokens-status-tones-font.md)).
-  - Bản đồ vẽ bằng MapLibre GL JS 6.18.0 trên nền trơn, không tải tile từ máy chủ nào; mã của nó chỉ tải khi mở
-    trang bản đồ, worker chạy từ tệp cùng origin nên CSP không mở `blob:`.
+  - Bản đồ vẽ bằng MapLibre GL JS 6.18.0; mã của nó chỉ tải khi mở trang bản đồ, worker chạy từ tệp cùng origin nên
+    CSP không mở `blob:`. Nền là tệp PMTiles cắt từ OpenStreetMap lúc cài (`make basemap`), nginx phục vụ ở
+    `/basemap/` cùng origin, đọc bằng thư viện `pmtiles` 4.5.0 (BSD-3-Clause) qua yêu cầu Range; kiểu vẽ lấy từ
+    `@protomaps/basemaps` 5.7.2 (BSD-3-Clause), bỏ khối nhà, ranh giới và mặc định bỏ mọi chữ. Bản đồ luôn ghi
+    "© OpenStreetMap (ODbL)" khi có nền; bản cài chưa chạy `make basemap` thì vẽ nền trơn
+    ([ADR 0056](adr/0056-self-hosted-osm-basemap.md)).
+  - `make basemap` chạy image chính thức `protomaps/go-pmtiles` 1.31.2 (BSD-3-Clause, ghim theo digest, profile
+    `tools`) để đọc phần của vùng từ bản dựng ghim trong `platform/web/basemap.pins`, kiểm SHA-256 rồi đặt tệp vào
+    `MORTISE_BASEMAP_DIR` (mặc định `~/.cache/mortise-dx/basemap`). Vùng khác: `make basemap BBOX=... SHA256=...`;
+    lần đầu bỏ `SHA256` để lệnh in băm. `LABELS=on` tải thêm phông Noto Sans (OFL-1.1) đã ghim và hiện tên địa danh,
+    tên đường.
   - Biểu đồ của bảng điều hành là thanh vẽ bằng CSS theo biến màu của Mantine, không thêm thư viện biểu đồ; mỗi biểu
     đồ kèm bảng số liệu.
   - REST tới `/v1/workflow` bằng TanStack Query (bộ nhớ đệm, tự tải lại khi quay lại tab); điều hướng giữa các màn

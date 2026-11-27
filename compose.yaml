@@ -309,6 +309,10 @@ services:
     # sẽ giữ tệp cũ tới khi dựng lại container.
     volumes:
       - ${MORTISE_BRANDING_DIR:-./platform/web/brand}:/usr/share/nginx/html/brand:ro
+      # Nền bản đồ do `make basemap` ghi (ADR 0056), ngoài repo vì là dữ liệu tải về. Thư mục trống thì bản đồ vẽ nền
+      # trơn. scripts/compose.sh tạo thư mục trước khi dựng: để Docker tự tạo thì thư mục thuộc root và make basemap
+      # không ghi vào được.
+      - ${MORTISE_BASEMAP_DIR:-${HOME}/.cache/mortise-dx/basemap}:/usr/share/nginx/html/basemap:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
       interval: 5s
@@ -657,6 +661,15 @@ services:
         condition: service_healthy
       seaweedfs:
         condition: service_healthy
+
+  basemap:
+    # Công cụ cắt nền bản đồ lúc cài (ADR 0056): `make basemap` gọi `pmtiles extract` để đọc đúng phần của vùng từ
+    # bản dựng OpenStreetMap đã ghim (yêu cầu Range qua HTTPS), ghi vào thư mục mà web phục vụ ở /basemap/. Image
+    # chính thức ghim cả tag lẫn digest. Chỉ chạy khi gọi; không cần lõi đang chạy.
+    image: protomaps/go-pmtiles:v1.31.2@sha256:06574f01f55a78f78f887bc7ebf729a5c093c0d6e17d9876300cfcb0758b59d3
+    profiles: [tools]
+    volumes:
+      - ${MORTISE_BASEMAP_DIR:-${HOME}/.cache/mortise-dx/basemap}:/basemap
 
   # Profile `observability` (ADR 0037): số liệu, log và sức khỏe của lõi trên một trang Grafana cho người vận hành.
   # Chỉ chạy khi gọi `make obs-up`; lõi chạy đủ khi không có nó. Chỉ Grafana mở cổng, và chỉ ở 127.0.0.1.
