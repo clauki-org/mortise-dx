@@ -426,7 +426,7 @@ echo "ok -- cấu hình theo dõi hồ sơ trỏ tới quy trình ngoài gói b�
 dashboard_tables='- table: { schema: app_example, name: totals }
   select_permissions:
     - role: user
-      permission: { columns: [tenant_id, item_count, score], filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } } }
+      permission: { columns: [tenant_id, item_count, score, target, score_percent], filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } } }
 - table: { schema: app_example, name: rollup }
   select_permissions:
     - role: rollup_reader
@@ -615,6 +615,40 @@ panels:
     role: manager
     workflow: { process: core-approval, counts: tenant }
     cards: [{ column: open, label: Còn mở, description: Hồ sơ còn mở. }]
+YAML
+# Vòng đo (ADR 0049): số gốc của nó phải là cột của một thẻ, cột phần trăm nằm trong quyền đọc, chữ mức độ của thẻ
+# cũng là chữ người xem thấy.
+dashboard_rejects "khối 't': gauge.limit 'target' không phải cột của thẻ nào trong khối" <<'YAML'
+title: Tổng quan
+panels:
+  - id: t
+    title: Tổng
+    description: Điểm so với chỉ tiêu.
+    graphql: { field: app_example_totals }
+    gauge: { value: score, limit: target, percent: score_percent, label: Điểm so với chỉ tiêu }
+    cards: [{ column: score, label: Điểm, description: Tổng điểm. }]
+YAML
+dashboard_rejects "khối 't': vai trò 'user' không đọc được cột 'ratio' của 'app_example_totals'" <<'YAML'
+title: Tổng quan
+panels:
+  - id: t
+    title: Tổng
+    description: Điểm so với chỉ tiêu.
+    graphql: { field: app_example_totals }
+    gauge: { value: score, limit: target, percent: ratio, label: Điểm so với chỉ tiêu }
+    cards:
+      - { column: score, label: Điểm, description: Tổng điểm. }
+      - { column: target, label: Chỉ tiêu, description: Chỉ tiêu. }
+YAML
+dashboard_rejects "khối 't': cards[0].tone.bad_when.label có tên kỹ thuật 'score'; viết bằng lời của người xem, ghi \
+chú kỹ thuật đưa vào method" <<'YAML'
+title: Tổng quan
+panels:
+  - id: t
+    title: Tổng
+    description: Tổng điểm của đơn vị.
+    graphql: { field: app_example_totals }
+    cards: [{ column: score, label: Điểm, description: Tổng điểm., tone: { bad_when: { lt: 1, label: score thấp } } }]
 YAML
 # Cấu hình sai dạng (lệnh chạy riêng với --dashboard, chưa qua schema) phải thành một dòng lỗi, không traceback.
 dashboard_rejects "cần panels là danh sách khối không rỗng; sửa theo contracts/dashboard.schema.json" <<'YAML'

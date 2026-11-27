@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/dashboard.schema.json từ chối: mức độ của thẻ không có chữ. Nếu lọt, màu là tín hiệu
+# duy nhất của mức độ, người không phân biệt được màu không biết số đang xấu.
+
+title: Tổng quan
+panels:
+  - id: totals
+    title: Tổng
+    description: Số của đơn vị.
+    graphql: { field: app_example_totals }
+    cards: [{ column: score, label: Điểm, description: Tổng điểm., tone: { bad_when: { lt: 10 } } }]

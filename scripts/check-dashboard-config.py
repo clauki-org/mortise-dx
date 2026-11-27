@@ -5,9 +5,10 @@
 # diễn đạt được (ADR 0033, ADR 0035): nguồn graphql đọc bảng thuộc gói, vai trò của khối (bỏ trống là user) có
 # quyền đọc bảng đó và mọi cột khối nhắc tới (đọc qua scripts/form_permissions.py); nguồn workflow đếm quy
 # trình của BPMN của chính gói; thẻ và biểu đồ của nguồn workflow, context chỉ nhắc giá trị mà nguồn trả; link
-# trỏ tới mục menu khác của gói; không trùng tên khối, không trùng cột số của biểu đồ; chữ người xem thấy
-# (tiêu đề, mô tả, nhãn) không chứa tên bảng, view, cột, vai trò, giá trị mã mà cấu hình dùng hay tên dạng
-# snake_case, vì những tên đó chỉ thuộc về method và mục "Xem cách tính" (ADR 0045). Thiếu bước này, lỗi chỉ
+# trỏ tới mục menu khác của gói; không trùng tên khối, không trùng cột số của biểu đồ; value, limit của vòng
+# đo là cột của một thẻ trong khối (ADR 0049); chữ người xem thấy (tiêu đề, mô tả, nhãn, chữ mức độ, nhãn
+# vòng đo) không chứa tên bảng, view, cột, vai trò, giá trị mã mà cấu hình dùng hay tên dạng snake_case, vì
+# những tên đó chỉ thuộc về method và mục "Xem cách tính" (ADR 0045). Thiếu bước này, lỗi chỉ
 # lộ ra khi người xem mở trang. Thành phần kiểm lại luật tên lúc chạy (dashboardConfig.ts,
 # dashboardSources.ts). Gọi từ scripts/contracts.sh: --app <app.yaml>; mặc định đọc quyền Hasura, BPMN và mọi
 # bảng điều hành trên menu theo app.yaml, còn --hasura, --bpmn, --dashboard thay từng phần để kiểm một cấu
@@ -30,6 +31,8 @@ NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 # Tên ghép bằng gạch dưới (area_summary, in_use, rollup_reader) không phải lời của người xem, dù cấu hình có
 # dùng nó hay không.
 SNAKE = re.compile(r"(?<!\w)[A-Za-z0-9]+(?:_[A-Za-z0-9]+)+(?!\w)")
+GAUGE = ("value", "limit", "percent")
+LEVELS = ("warn_when", "bad_when")
 
 
 def read_yaml(path: str):
@@ -41,6 +44,8 @@ def columns_of(panel: dict) -> list[str]:
     """Mọi cột mà câu truy vấn của khối đọc, lọc hay xếp theo, theo thứ tự khai."""
     source = panel["graphql"]
     names = [card["column"] for card in panel.get("cards", [])]
+    gauge = panel.get("gauge") or {}
+    names += [gauge[key] for key in GAUGE if key in gauge]
     chart = panel.get("chart")
     if chart:
         names += [chart["x"]["column"], *(y["column"] for y in chart["y"])]
@@ -133,7 +138,13 @@ def technical_names(panel: dict, tables: dict) -> set[str]:
 def shown_texts(panel: dict) -> list[tuple[str, object]]:
     """Chữ của khối người xem thấy ngay, không cần mở "Xem cách tính", kèm chỗ của nó trong cấu hình."""
     texts = [("title", panel.get("title")), ("description", panel.get("description"))]
-    texts += [(f"cards[{i}].label", card.get("label")) for i, card in enumerate(panel.get("cards", []))]
+    for i, card in enumerate(panel.get("cards", [])):
+        texts.append((f"cards[{i}].label", card.get("label")))
+        tone = card.get("tone") if isinstance(card.get("tone"), dict) else {}
+        levels = [(key, tone[key]) for key in LEVELS if isinstance(tone.get(key), dict)]
+        texts += [(f"cards[{i}].tone.{key}.label", level.get("label")) for key, level in levels]
+    if panel.get("gauge"):
+        texts.append(("gauge.label", panel["gauge"].get("label")))
     chart = panel.get("chart") or {}
     if chart:
         texts.append(("chart.x.label", chart["x"].get("label")))
@@ -180,6 +191,14 @@ def panel_problems(panel: dict, own: str | None, context: dict) -> list[str]:
         f"{label}: cột '{name}' khai hai lần trong chart.y"
         for name in sorted({n for n in series if series.count(n) > 1})
     ]
+    shown = {card["column"] for card in panel.get("cards", [])}
+    # Vòng đo chỉ vẽ phần trăm; số gốc của nó phải hiện bằng chữ trên thẻ, nếu không người xem không đối chiếu
+    # được.
+    errors += [
+        f"{label}: gauge.{key} '{panel['gauge'][key]}' không phải cột của thẻ nào trong khối"
+        for key in ("value", "limit")
+        if panel.get("gauge") and panel["gauge"][key] not in shown
+    ]
     menu = (panel.get("link") or {}).get("menu")
     # Mục của chính trang này dẫn người xem về chỗ đang đứng; mục không có thì đường dẫn không bao giờ hiện.
     if menu and (menu not in context["menu"] or menu == own):
@@ -216,6 +235,10 @@ def _source_shape(panel: dict) -> str | None:
 def _display_shape(panel: dict) -> str | None:
     if ("cards" in panel) == ("chart" in panel):
         return "cần đúng một trong cards, chart"
+    gauge = panel.get("gauge")
+    named = isinstance(gauge, dict) and all(isinstance(gauge.get(key), str) for key in GAUGE)
+    if gauge is not None and not named:
+        return "gauge cần { value, limit, percent, label }"
     if "cards" in panel:
         return None if _named(panel["cards"]) else "cards cần là danh sách { column, label, description }"
     chart = panel["chart"]

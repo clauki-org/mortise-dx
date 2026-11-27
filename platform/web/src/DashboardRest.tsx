@@ -62,7 +62,7 @@ async function loadContext(token: string | undefined, panel: Panel, source: Cont
   return { rows, notes, more: entities.length > limit };
 }
 
-export function RestBody({ panel, link }: { panel: Panel; link: ReactNode }) {
+export function RestBody({ panel, link, columns }: { panel: Panel; link: ReactNode; columns?: number }) {
   const { getToken } = useSession();
   const path = restPath(panel);
   // Khóa gồm quy trình: khối "mine" của các quy trình khác nhau gửi cùng đường dẫn mà ra dòng khác nhau. gcTime 0: mở
@@ -89,7 +89,9 @@ export function RestBody({ panel, link }: { panel: Panel; link: ReactNode }) {
         />
       )}
       {result.isPending && <Loader size="sm" aria-label={`Đang tải ${panel.title}`} />}
-      {data && panel.cards && <CardsView cards={panel.cards} rows={data.rows} empty={empty} large={panel.primary} />}
+      {data && panel.cards && (
+        <CardsView cards={panel.cards} rows={data.rows} empty={empty} large={panel.primary} columns={columns} />
+      )}
       {data && panel.chart && (
         <ChartView
           chart={panel.chart}

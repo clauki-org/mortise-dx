@@ -1,19 +1,23 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Phần vẽ của bảng điều hành, nhận dòng đã đọc làm tham số, không gọi mạng: thẻ số (cỡ lớn ở khối chính), biểu đồ
-// cột ngang có số trên từng thanh và thang chung, bảng số liệu thu gọn, và mục "Xem cách tính" gồm cách tính cùng
-// nguyên văn câu truy vấn đã gửi (ADR 0033, ADR 0045). Tách khỏi DashboardPanel.tsx (đọc dữ liệu) để kiểm thử được
+// Phần vẽ của bảng điều hành, nhận dòng đã đọc làm tham số, không gọi mạng: thẻ số (cỡ lớn ở khối chính, màu và chữ
+// mức độ theo khai báo của gói, vòng đo ở DashboardGauge.tsx), biểu đồ cột ngang có số trên từng thanh và thang chung,
+// bảng số liệu thu gọn, và mục "Xem cách tính" gồm cách tính cùng nguyên văn câu truy vấn đã gửi (ADR 0033, 0045,
+// 0049). Tách khỏi DashboardPanel.tsx (đọc dữ liệu) để kiểm thử được
 // cách vẽ bằng react-dom/server. Ở đây không có tên bảng hay chữ của một lĩnh vực nào.
 
-import { Alert, Box, Code, Group, Paper, SimpleGrid, Stack, Table, Text } from "@mantine/core";
+import { Alert, Box, Code, Flex, Group, Paper, SimpleGrid, Stack, Table, Text } from "@mantine/core";
 import type { ReactNode } from "react";
+import { GaugeView } from "./DashboardGauge";
+import { cardLevel } from "./dashboardBento";
 import {
   barMarks,
   type Card,
   type Chart,
   categoryText,
   columnsOf,
+  type Gauge,
   NO_DATA,
   numberText,
   type Panel,
@@ -24,6 +28,8 @@ import {
   sentText,
   sourceKind,
 } from "./dashboardConfig";
+import { StatusBadge } from "./StatusBadge";
+import { TONE_COLOR } from "./tones";
 
 const swatch = (color: string) => `var(--mantine-color-${color}-6)`;
 
@@ -53,17 +59,29 @@ function Disclosure({ label, children }: { label: string; children: ReactNode })
   );
 }
 
-// Chữ của thẻ là nhãn, rồi số liền đơn vị trong một phần tử: tìm "1.234 m²" trên trang thì khớp đúng một số.
+// Chữ của thẻ là nhãn, rồi số liền đơn vị trong một phần tử: tìm "1.234 m²" trên trang thì khớp đúng một số. Thẻ có
+// mức độ thì viền và số mang màu của nghĩa (tones.ts, chữ màu đó đạt AA trên nền trắng theo theme.test.tsx) và luôn có
+// chữ của mức đó, nên màu không là tín hiệu duy nhất.
 function CardBox({ card, row, large }: { card: Card; row: Row; large: boolean }) {
   const text = numberText(row[card.column], card.format);
+  const level = cardLevel(card, row[card.column]);
+  const color = level && `var(--mantine-color-${TONE_COLOR[level.tone]}-light-color)`;
   return (
-    <Paper withBorder radius="md" p="md" role="group" aria-label={card.label}>
-      <Stack gap={4}>
+    <Paper
+      withBorder
+      radius="md"
+      p="md"
+      role="group"
+      aria-label={card.label}
+      style={color ? { borderColor: color } : undefined}
+    >
+      <Stack gap={4} align="flex-start">
         <Text size="sm">{card.label}</Text>
-        <Text fz={large ? "h1" : "xl"} fw={700} lh={1.2}>
+        <Text fz={large ? "h1" : "xl"} fw={800} lh={1.2} c={color}>
           {text}
           {card.unit && text !== NO_DATA ? ` ${card.unit}` : ""}
         </Text>
+        {level && <StatusBadge tone={level.tone}>{level.label}</StatusBadge>}
       </Stack>
     </Paper>
   );
@@ -71,18 +89,23 @@ function CardBox({ card, row, large }: { card: Card; row: Row; large: boolean })
 
 /**
  * Thẻ số cần đúng một dòng: không dòng là chưa có số liệu (`empty`); nhiều dòng là cấu hình sai, không chọn đại một
- * dòng. `large` là thẻ của khối chính.
+ * dòng. `large` là thẻ của khối chính; `columns` là số cột thẻ trên màn hình rộng, theo bề rộng của khối chứ không
+ * theo màn hình, để khối một phần tư hàng không chia thẻ thành cột hẹp. Có `gauge` thì vòng đo đứng trước các thẻ.
  */
 export function CardsView({
   cards,
   rows,
   empty = NO_DATA,
   large = false,
+  columns = Math.min(cards.length, 4),
+  gauge,
 }: {
   cards: Card[];
   rows: Row[];
   empty?: string;
   large?: boolean;
+  columns?: number;
+  gauge?: Gauge;
 }) {
   const [row] = rows;
   if (!row) return <Text>{empty}.</Text>;
@@ -94,12 +117,19 @@ export function CardsView({
       </Alert>
     );
   }
-  return (
-    <SimpleGrid cols={{ base: 1, xs: 2, md: Math.min(cards.length, 4) }}>
+  const grid = (
+    <SimpleGrid cols={{ base: 1, xs: Math.min(columns, 2), lg: columns }} style={{ flex: "1 1 16rem", minWidth: 0 }}>
       {cards.map((card) => (
         <CardBox key={card.column + card.label} card={card} row={row} large={large} />
       ))}
     </SimpleGrid>
+  );
+  if (!gauge) return grid;
+  return (
+    <Flex gap="md" wrap="wrap" align="center" justify="center">
+      <GaugeView gauge={gauge} cards={cards} row={row} />
+      {grid}
+    </Flex>
   );
 }
 

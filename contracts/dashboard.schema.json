@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/clauki-org/mortise-dx/contracts/dashboard.schema.json",
   "title": "Cấu hình thành phần bảng điều hành (component: dashboard)",
-  "description": "Tệp cấu hình mà gói viết cho thành phần bảng điều hành. Mỗi khối đọc một nguồn và hiện thẻ số hoặc biểu đồ cột ngang kèm bảng số liệu. Nguồn graphql: mọi con số là cột do gói tính sẵn (thường là view trong migration của gói), thành phần không cộng, không đếm (ADR 0033). Nguồn workflow: số hồ sơ do workflow-api đếm, hoặc số việc đang chờ chính người xem đếm trên trình duyệt; nguồn context: số đo thiết bị từ context-api (ADR 0035). Quyền đọc không khai ở đây: Hasura, workflow-api, context-api lọc theo token của người xem.",
+  "description": "Tệp cấu hình mà gói viết cho thành phần bảng điều hành. Mỗi khối đọc một nguồn và hiện thẻ số (có thể kèm vòng đo và mức độ theo hằng số của gói) hoặc biểu đồ cột ngang kèm bảng số liệu, xếp trên lưới bốn cột theo thứ tự khai (ADR 0049). Nguồn graphql: mọi con số là cột do gói tính sẵn (thường là view trong migration của gói), thành phần không cộng, không đếm (ADR 0033). Nguồn workflow: số hồ sơ do workflow-api đếm, hoặc số việc đang chờ chính người xem đếm trên trình duyệt; nguồn context: số đo thiết bị từ context-api (ADR 0035). Quyền đọc không khai ở đây: Hasura, workflow-api, context-api lọc theo token của người xem.",
   "type": "object",
   "additionalProperties": false,
   "required": ["title", "panels"],
@@ -10,13 +10,16 @@
     "title": { "description": "Tiêu đề của trang", "$ref": "#/$defs/text" },
     "description": { "description": "Đoạn giới thiệu dưới tiêu đề", "$ref": "#/$defs/text" },
     "panels": {
-      "description": "Các khối theo thứ tự hiện; khối chính (primary) luôn lên đầu",
+      "description": "Các khối theo đúng thứ tự hiện trên lưới bốn cột, cũng là thứ tự Tab; chỉ khối đầu tiên được là khối chính (primary)",
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/panel" },
-      "contains": { "required": ["primary"], "properties": { "primary": { "const": true } } },
-      "minContains": 0,
-      "maxContains": 1
+      "prefixItems": [{ "$ref": "#/$defs/panel" }],
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/panel" },
+          { "description": "Khối chính chỉ đứng đầu trang", "properties": { "primary": { "const": false } } }
+        ]
+      }
     }
   },
   "$defs": {
@@ -31,9 +34,14 @@
         },
         { "description": "Đúng một cách hiện", "oneOf": [{ "required": ["cards"] }, { "required": ["chart"] }] },
         {
-          "description": "Khối chính là thẻ số và luôn rộng cả hàng",
+          "description": "Khối chính là thẻ số, rộng nửa hàng hay cả hàng",
           "if": { "required": ["primary"], "properties": { "primary": { "const": true } } },
-          "then": { "required": ["cards"], "properties": { "size": { "const": "full" } } }
+          "then": { "required": ["cards"], "properties": { "size": { "enum": ["half", "full"] } } }
+        },
+        {
+          "description": "Vòng đo đọc cột của đúng một dòng như thẻ số, nên cần nguồn graphql và thẻ số; cần chỗ nên không ở khối một phần tư hàng",
+          "if": { "required": ["gauge"] },
+          "then": { "required": ["graphql", "cards"], "properties": { "size": { "enum": ["half", "full"] } } }
         }
       ],
       "properties": {
@@ -48,13 +56,14 @@
           "$ref": "#/$defs/text"
         },
         "primary": {
-          "description": "Khối chính của trang: hiện đầu tiên, rộng cả hàng, số lớn. Tối đa một khối, phải là thẻ số.",
+          "description": "Khối chính của trang: số lớn, tiêu đề lớn hơn. Chỉ khối đầu tiên của panels, phải là thẻ số, không khai size quarter.",
           "type": "boolean"
         },
         "size": {
-          "description": "Bề rộng của khối trên màn hình rộng: full là cả hàng, half là nửa hàng. Bỏ trống là full; màn hình hẹp luôn cả hàng.",
-          "enum": ["half", "full"]
+          "description": "Bề rộng của khối trên lưới bốn cột của màn hình rộng: quarter một cột, half hai cột, full cả hàng. Bỏ trống là full. Màn hình vừa có hai cột (quarter một cột, half và full cả hàng), màn hình hẹp một cột. Khối cuối của một hàng chưa đầy được nới ra tới hết hàng, nên khối bị ẩn theo role không để lại ô trống.",
+          "enum": ["quarter", "half", "full"]
         },
+        "gauge": { "$ref": "#/$defs/gauge" },
         "role": {
           "description": "Vai trò của khối, bỏ trống là user. Token của người xem không có vai trò này thì khối không được truy vấn và không hiện. Với nguồn graphql, vai trò còn được gửi kèm truy vấn (header X-Hasura-Role); nguồn workflow, context không gửi vai trò, dịch vụ đọc vai trò từ token. Khai vai trò không cấp quyền gì.",
           "type": "string",
@@ -167,7 +176,42 @@
         "description": {
           "description": "Cách tính của số này; hiện trong mục \"Xem cách tính\" của khối, không hiện trên thẻ",
           "$ref": "#/$defs/text"
-        }
+        },
+        "tone": { "$ref": "#/$defs/tone" }
+      }
+    },
+    "tone": {
+      "description": "Mức độ của số trên thẻ, so số với hằng số của gói: bad_when (xấu, đỏ) thắng warn_when (cần để ý, cam); không khớp mức nào thì thẻ không tô màu. Mỗi mức có chữ riêng hiện cạnh số, để màu không là tín hiệu duy nhất.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": { "warn_when": { "$ref": "#/$defs/level" }, "bad_when": { "$ref": "#/$defs/level" } }
+    },
+    "level": {
+      "description": "Một phép so của số trên thẻ với hằng số (gt lớn hơn, gte lớn hơn hay bằng, lt nhỏ hơn, lte nhỏ hơn hay bằng), đúng một phép, kèm label là chữ mức độ hiện cạnh số khi khớp",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label"],
+      "anyOf": [{ "required": ["gt"] }, { "required": ["gte"] }, { "required": ["lt"] }, { "required": ["lte"] }],
+      "maxProperties": 2,
+      "properties": {
+        "gt": { "type": "number" },
+        "gte": { "type": "number" },
+        "lt": { "type": "number" },
+        "lte": { "type": "number" },
+        "label": { "$ref": "#/$defs/text" }
+      }
+    },
+    "gauge": {
+      "description": "Vòng đo của khối thẻ số: một vòng đầy là limit, phần trên 100% vẽ thành vòng thứ hai bên trong. Cả ba là cột của cùng dòng mà thẻ số đọc; percent do gói tính sẵn, trình duyệt không chia value cho limit. value và limit phải là cột của một thẻ trong khối, để số gốc luôn hiện bằng chữ.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "limit", "percent", "label"],
+      "properties": {
+        "value": { "description": "Cột của số đang đo, là cột của một thẻ", "$ref": "#/$defs/identifier" },
+        "limit": { "description": "Cột của mức một vòng đầy, là cột của một thẻ", "$ref": "#/$defs/identifier" },
+        "percent": { "description": "Cột phần trăm value so với limit, tính sẵn trong view", "$ref": "#/$defs/identifier" },
+        "label": { "description": "Vòng đo cho biết điều gì; hiện dưới vòng và là tên đọc được của nó", "$ref": "#/$defs/text" }
       }
     },
     "chart": {
@@ -177,6 +221,11 @@
       "required": ["type", "x", "y"],
       "properties": {
         "type": { "const": "bar" },
+        "max": {
+          "description": "Trần của thang: thanh dài hết khi bằng max, giá trị lớn hơn vẫn ghi đúng số nhưng thanh không dài thêm. Bỏ trống là số lớn nhất trong khối. Dùng cho số có trần tự nhiên như phần trăm.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
         "x": {
           "description": "Cột làm nhãn của mỗi nhóm cột",
           "type": "object",

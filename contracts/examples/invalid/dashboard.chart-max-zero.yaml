@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/dashboard.schema.json từ chối: trần thang bằng 0. Nếu lọt, mọi thanh dài hết khung dù
+# số khác nhau, hoặc độ dài thanh chia cho 0.
+
+title: Tổng quan
+panels:
+  - id: children
+    title: Đơn vị con
+    description: Điểm của đơn vị con.
+    role: rollup_reader
+    graphql: { field: app_example_rollup }
+    chart: { type: bar, max: 0, x: { column: unit_name, label: Đơn vị }, y: [{ column: score, label: Điểm, color: teal }] }
