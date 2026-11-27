@@ -201,7 +201,8 @@ def main() -> int:
         bpmn = [os.path.join(directory, path) for path in app.get("workflows", [])]
         context = {"tables": tables, "fields": step_fields(args.bpmn if args.bpmn is not None else bpmn)}
         items = {entry["id"]: entry for entry in entries(app)}
-        paths = {name: os.path.join(args.configs or directory, entry["config"]) for name, entry in items.items()}
+        base = args.configs or directory
+        paths = {name: os.path.join(base, entry["config"]) for name, entry in items.items()}
         paths |= dict(override.split("=", 1) for override in args.config)
         # Chỉ đọc tệp có thật: ví dụ của hợp đồng khai tệp không tồn tại cho mục không được --config thay.
         configs = {name: read_yaml(path) for name, path in paths.items() if os.path.exists(path)}
