@@ -15,8 +15,19 @@ import { CatalogRecord } from "./CatalogRecord";
 import { CatalogTable } from "./CatalogTable";
 import { type CatalogConfig, configProblems, problemText, resolvePath } from "./catalog";
 import { emptyState, readState, writeState } from "./catalogQuery";
+import { viewOf, viewProblems, viewsOf } from "./catalogViews";
 import { PageHeader } from "./PageHeader";
-import { variantOf } from "./page";
+
+/** Kiểu của danh sách ngoài cùng: kiểu vẽ được và kiểu mặc định; Kanban, Lịch thiếu mục cấu hình thì về bảng. */
+const listViews = (config: CatalogConfig) => {
+  const views = viewsOf(config);
+  return {
+    views,
+    defaultView: viewOf(views, config.variant, undefined),
+    kanban: config.kanban,
+    calendar: config.calendar,
+  };
+};
 
 type Props = {
   config: CatalogConfig;
@@ -39,8 +50,7 @@ function BlockList({ config, basePath }: Props) {
         path={basePath}
         state={state}
         onChange={setState}
-        views
-        defaultView={variantOf("catalog", config.variant)}
+        {...listViews(config)}
       />
     </Stack>
   );
@@ -50,7 +60,7 @@ export function Catalog({ config, basePath }: Props) {
   const { pathname } = useLocation();
   const [params, setParams] = useSearchParams();
   const block = useBlock();
-  const problems = configProblems(config);
+  const problems = [...configProblems(config), ...viewProblems(config)];
   if (problems.length > 0) {
     return (
       <Alert color="red" title="Cấu hình danh mục sai">
@@ -74,8 +84,7 @@ export function Catalog({ config, basePath }: Props) {
           path={basePath}
           state={state}
           onChange={(next) => setParams(writeState(next))}
-          views
-          defaultView={variantOf("catalog", config.variant)}
+          {...listViews(config)}
         />
       </Stack>
     );

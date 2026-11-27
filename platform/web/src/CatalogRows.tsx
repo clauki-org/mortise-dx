@@ -20,6 +20,7 @@ import {
 } from "@mantine/core";
 import { Link } from "react-router";
 import { type CatalogNode, display, type Field, keyOf, type Row, type Sort, toneOf } from "./catalog";
+import { VIEW_LABELS, type View } from "./catalogViews";
 import { StatusBadge } from "./StatusBadge";
 import { Blank, keepTogether, TableScroll } from "./TableScroll";
 
@@ -41,7 +42,7 @@ type RowsProps = {
 };
 
 /** Chữ của liên kết ở cột đầu; giá trị trống thì dùng khóa để dòng vẫn mở được. */
-function linkText(config: CatalogNode, field: Field, row: Row): { key: string; text: string } {
+export function linkText(config: CatalogNode, field: Field, row: Row): { key: string; text: string } {
   const key = String(row[keyOf(config)]);
   return { key, text: display(field, row[field.name]) || key };
 }
@@ -151,24 +152,26 @@ export function RowsCards({ config, columns, rows, path }: RowsProps) {
 
 type ControlsProps = {
   columns: Field[];
-  cards: boolean;
+  /** Kiểu vẽ được, theo thứ tự hiện; bảng và thẻ luôn có, Kanban và Lịch khi cấu hình khai (ADR 0066) */
+  views: View[];
+  view: View;
   sort: Required<Sort>;
-  onView: (cards: boolean) => void;
+  onView: (view: View) => void;
   onSort: (sort: Sort) => void;
 };
 
 /**
- * Công tắc Bảng/Thẻ và ô "Sắp theo". Ô sắp xếp chỉ hiện ở dạng thẻ, vì dạng bảng sắp bằng tiêu đề cột; cả hai đổi
- * cùng một thứ tự của trạng thái danh sách, nên thứ tự do máy chủ xếp và giữ nguyên khi chuyển dạng.
+ * Nút chọn kiểu và ô "Sắp theo". Ô sắp xếp chỉ hiện ở dạng thẻ và Kanban, vì dạng bảng sắp bằng tiêu đề cột và lịch
+ * xếp theo ngày; cùng một thứ tự của trạng thái danh sách, nên thứ tự do máy chủ xếp và giữ nguyên khi chuyển dạng.
  */
-export function ViewControls({ columns, cards, sort, onView, onSort }: ControlsProps) {
+export function ViewControls({ columns, views, view, sort, onView, onSort }: ControlsProps) {
   const options = columns.flatMap((field) => [
     { value: field.name, label: `${field.label}, tăng dần` },
     { value: `-${field.name}`, label: `${field.label}, giảm dần` },
   ]);
   return (
     <Group gap="sm" align="flex-end" ml="auto">
-      {cards && (
+      {(view === "cards" || view === "kanban") && (
         <Select
           label="Sắp theo"
           data={options}
@@ -182,12 +185,9 @@ export function ViewControls({ columns, cards, sort, onView, onSort }: ControlsP
       {/* Nhóm nút chọn một (radiogroup): một điểm dừng Tab, phím mũi tên đổi lựa chọn, tên nhóm đọc được. */}
       <SegmentedControl
         aria-label="Kiểu hiển thị"
-        data={[
-          { value: "table", label: "Bảng" },
-          { value: "cards", label: "Thẻ" },
-        ]}
-        value={cards ? "cards" : "table"}
-        onChange={(value) => onView(value === "cards")}
+        data={views.map((value) => ({ value, label: VIEW_LABELS[value] }))}
+        value={view}
+        onChange={(value) => onView(views.find((candidate) => candidate === value) ?? "table")}
       />
     </Group>
   );

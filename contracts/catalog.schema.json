@@ -9,16 +9,81 @@
   "properties": {
     "title": { "description": "Tiêu đề màn hình danh sách", "$ref": "#/$defs/text" },
     "variant": {
-      "description": "Kiểu trình bày của danh sách ngoài cùng (ADR 0061): bảng hay thẻ (ADR 0050). Người xem vẫn đổi được bằng nút chọn kiểu; trang (page) chọn kiểu riêng cho khối. Bỏ trống là table; giá trị giao diện không biết cũng là table.",
-      "enum": ["table", "cards"]
+      "description": "Kiểu trình bày của danh sách ngoài cùng (ADR 0061, ADR 0066): bảng, thẻ (ADR 0050), bảng Kanban theo một trường có choices, hay lịch theo một trường ngày. Kiểu kanban cần mục kanban, kiểu calendar cần mục calendar. Người xem vẫn đổi được bằng nút chọn kiểu; trang (page) chọn kiểu riêng cho khối. Bỏ trống là table; giá trị giao diện không biết, hay kiểu thiếu mục cấu hình của nó, cũng là table.",
+      "enum": ["table", "cards", "kanban", "calendar"]
     },
     "source": { "$ref": "#/$defs/source" },
     "key": { "$ref": "#/$defs/key" },
     "fields": { "$ref": "#/$defs/fields" },
     "list": { "$ref": "#/$defs/list" },
-    "detail": { "$ref": "#/$defs/detail" }
+    "detail": { "$ref": "#/$defs/detail" },
+    "kanban": { "$ref": "#/$defs/kanban" },
+    "calendar": { "$ref": "#/$defs/calendar" }
   },
+  "allOf": [
+    {
+      "description": "Kiểu kanban cần mục kanban: thiếu thì giao diện vẽ bảng mà gói tưởng đã chọn Kanban.",
+      "if": { "required": ["variant"], "properties": { "variant": { "const": "kanban" } } },
+      "then": { "required": ["kanban"] }
+    },
+    {
+      "description": "Kiểu calendar cần mục calendar, cùng lý do.",
+      "if": { "required": ["variant"], "properties": { "variant": { "const": "calendar" } } },
+      "then": { "required": ["calendar"] }
+    }
+  ],
   "$defs": {
+    "kanban": {
+      "description": "Kiểu Kanban của danh sách ngoài cùng (ADR 0066): mỗi lựa chọn của trường field là một cột, theo thứ tự khai trong choices; dòng có giá trị trống hay ngoài choices vào cột cuối \"Chưa xếp cột\", cột này chỉ hiện khi có dòng. Tìm, lọc, thứ tự áp cho mọi cột; mỗi cột hiện tối đa list.page_size thẻ.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field"],
+      "properties": {
+        "field": {
+          "description": "Trường có choices, là cột của chính bảng và đã khai trong fields",
+          "$ref": "#/$defs/identifier"
+        },
+        "move": {
+          "description": "Cho chuyển thẻ sang cột khác bằng kéo thả hay nút \"Chuyển sang\" trên thẻ: lệnh update của Hasura ghi đúng cột field, kèm điều kiện cột version còn bằng giá trị lúc bảng tải, như biểu mẫu sửa (submit.update, ADR 0054). Bỏ trống thì bảng chỉ đọc: trường do quy trình đặt thì không khai move. Nút chỉ hiện khi token có vai trò role; `make check-fast` kiểm quyền update và quyền đọc của vai trò đó.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version"],
+          "properties": {
+            "role": {
+              "description": "Vai trò Hasura của lệnh chuyển. Bỏ trống là user.",
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "version": {
+              "description": "Cột thời điểm sửa cuối do CSDL đặt (ADR 0054)",
+              "$ref": "#/$defs/identifier"
+            }
+          }
+        },
+        "locked": {
+          "description": "Giá trị của field chỉ quy trình được đặt: thẻ ở cột đó không chuyển đi được, và không thẻ nào được chuyển tay vào cột đó",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "calendar": {
+      "description": "Kiểu lịch của danh sách ngoài cùng (ADR 0066): mỗi dòng hiện ở ngày của trường field, xem theo tháng hay theo tuần. Tìm, lọc áp như danh sách; lịch chỉ đọc dòng trong khoảng ngày đang xem.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field"],
+      "properties": {
+        "field": {
+          "description": "Trường kiểu date hay datetime, là cột của chính bảng và đã khai trong fields",
+          "$ref": "#/$defs/identifier"
+        },
+        "title": {
+          "description": "Trường hiện trên lịch thành liên kết tới màn hình chi tiết. Bỏ trống là cột đầu của list.columns.",
+          "$ref": "#/$defs/identifier"
+        }
+      }
+    },
     "source": {
       "description": "Trường gốc GraphQL của bảng trong Hasura: <lược đồ>_<bảng>",
       "$ref": "#/$defs/identifier"

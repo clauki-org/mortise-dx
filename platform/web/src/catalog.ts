@@ -6,6 +6,7 @@
 // ở catalogQuery.ts; phần hiển thị ở Catalog.tsx, CatalogRecord.tsx và CatalogTable.tsx. Không có React ở đây để
 // kiểm thử được bằng hàm thuần.
 
+import type { CalendarConfig, KanbanConfig } from "./catalogViews";
 import { type DocumentsConfig, documentsProblems } from "./documents";
 import { formatDate, formatDateTime, formatNumber } from "./format";
 import { type FormConfig, formProblems } from "./formConfig";
@@ -49,8 +50,13 @@ export type Action = { id: string; label: string; process: string; variables: Re
 /** Loại đối tượng con: khai như cha, thêm tên ngắn dùng trong đường dẫn và cột chứa khóa của cha. */
 export type Child = CatalogNode & { id: string; label: string; via: string; add?: Add };
 
-/** Cấu hình gói đưa cho thành phần: loại đối tượng ngoài cùng, kèm tiêu đề của danh sách. */
-export type CatalogConfig = CatalogNode & { title: string; variant?: string };
+/** Cấu hình gói đưa cho thành phần: loại đối tượng ngoài cùng, kèm tiêu đề, kiểu và mục của Kanban, Lịch (ADR 0066). */
+export type CatalogConfig = CatalogNode & {
+  title: string;
+  variant?: string;
+  kanban?: KanbanConfig;
+  calendar?: CalendarConfig;
+};
 
 export type Sort = { field: string; direction?: "asc" | "desc" };
 

@@ -206,7 +206,8 @@ esac
 "${checker[@]}" --schemafile contracts/dashboard.schema.json contracts/examples/dashboard.example.yaml
 "${checker[@]}" --schemafile contracts/page.schema.json contracts/examples/page.example.yaml
 # Trang mẫu trỏ tới mục và khối của gói mẫu: mục có thật, không phải trang, kiểu có trong schema của thành phần (ADR 0061).
-"${yaml[@]}" scripts/check-page-config.py --app contracts/examples/app.example.yaml --page contracts/examples/page.example.yaml
+"${yaml[@]}" scripts/check-page-config.py --app contracts/examples/app.example.yaml --examples \
+  --page contracts/examples/page.example.yaml
 "${checker[@]}" --schemafile contracts/assistant.schema.json contracts/examples/assistant.example.yaml \
   contracts/examples/assistant-data.example.yaml
 "${data_check[@]}" --owner core contracts/examples/assistant-data.example.yaml
@@ -469,9 +470,10 @@ YAML
 echo "ok -- 7 biểu mẫu và tệp quyền sai bị check-form-config.py từ chối đúng luật"
 # Luật của scripts/check-page-config.py (ADR 0061) cũng phải chặn được thật: mỗi trang sai đọc từ stdin, đối chiếu với
 # gói mẫu, phạm đúng một luật và lỗi đúng từng ký tự.
-page_rejects() { # LỖI_MONG_ĐỢI, trang ở stdin
-  local result
-  result=$("${yaml[@]}" scripts/check-page-config.py --app contracts/examples/app.example.yaml --page /dev/stdin 2>&1) &&
+page_rejects() { # LỖI_MONG_ĐỢI, trang ở stdin; page_app đặt thì đối chiếu với gói đó thay vì gói mẫu
+  local result app=(--app contracts/examples/app.example.yaml --examples)
+  [[ -n "${page_app:-}" ]] && app=(--app "$page_app")
+  result=$("${yaml[@]}" scripts/check-page-config.py "${app[@]}" --page /dev/stdin 2>&1) &&
     result="không bị từ chối"
   if [[ "$result" != "/dev/stdin: $1" ]]; then
     echo "check-page-config.py phải báo đúng lỗi: $1" >&2
@@ -487,15 +489,21 @@ page_rejects "khối 1: mục 'overview' là một trang; trang không chứa tr
 title: Tổng quan
 blocks: [{ item: overview }]
 YAML
-page_rejects "khối 1: catalog không có kiểu 'kanban' (table, cards)" <<'YAML'
+page_rejects "khối 1: catalog không có kiểu 'timeline' (table, cards, kanban, calendar)" <<'YAML'
 title: Tổng quan
-blocks: [{ item: items, variant: kanban }]
+blocks: [{ item: items, variant: timeline }]
 YAML
 page_rejects "khối 1: assistant không có kiểu 'compact' (thành phần này chưa có kiểu nào, bỏ variant)" <<'YAML'
 title: Tổng quan
 blocks: [{ item: ask, variant: compact }]
 YAML
-echo "ok -- 4 trang sai bị check-page-config.py từ chối đúng luật"
+# Kiểu Kanban trên danh mục không khai kanban (ADR 0066): danh mục kho vật tư không có trường chia cột.
+page_app=apps/supplies-commune/app.yaml \
+  page_rejects "khối 1: kiểu 'kanban' cần mục kanban trong cấu hình của 'stores'" <<'YAML'
+title: Tổng quan
+blocks: [{ item: stores, variant: kanban }]
+YAML
+echo "ok -- 5 trang sai bị check-page-config.py từ chối đúng luật"
 # Biểu mẫu khai trong danh mục (ADR 0054): danh mục mẫu của hợp đồng phải qua với bảng quyền mẫu dưới đây; mỗi danh mục
 # sai đọc từ stdin phạm đúng một luật của quyền update hay của cột nối về cha, lỗi đúng từng ký tự.
 catalog_form_tables='- table: { schema: app_example, name: items }
@@ -612,7 +620,16 @@ detail:
       submit: { label: Lưu, update: app_example_parts, version: updated_at }
       done: { message: Đã lưu }
 YAML
-echo "ok -- 5 danh mục có biểu mẫu sai bị check-form-config.py từ chối đúng luật"
+# Chuyển thẻ của Kanban ghi cột của trường chia cột (ADR 0066): vai trò không sửa được cột đó thì mọi lần kéo đều bị
+# từ chối, nên báo ngay lúc kiểm.
+catalog_form_rejects "kanban.move: vai trò 'user' không được sửa cột 'created_at' của 'app_example_items'" <<'YAML'
+title: Danh mục
+source: app_example_items
+fields: [{ name: created_at, label: Ngày tạo, choices: [{ value: a, label: A }] }]
+list: { columns: [created_at] }
+kanban: { field: created_at, move: { version: updated_at } }
+YAML
+echo "ok -- 6 danh mục có biểu mẫu sai bị check-form-config.py từ chối đúng luật"
 # Luật của scripts/check-documents-config.py, như của biểu mẫu ở trên: danh mục mẫu của hợp đồng phải qua với bảng quyền
 # mẫu dưới đây, và mỗi danh mục sai đọc từ stdin phạm đúng một luật, lỗi đúng từng ký tự.
 documents_tables='- table: { schema: app_example, name: item_documents }

@@ -5,7 +5,8 @@
 # Đây là tệp catalog/items.yaml mà mục menu `items` trong app.example.yaml trỏ tới. Đối tượng con
 # khai lồng trong đối tượng cha: mỗi danh mục có các thành phần, mỗi thành phần có các lần kiểm. Nút trên màn hình
 # chi tiết mở quy trình approval của gói (bpmn/approval.bpmn20.xml trong app.example.yaml) cho dòng đang xem. Nút
-# "Sửa" và "Thêm thành phần" mở biểu mẫu theo contracts/form.schema.json khai ngay trong tệp (ADR 0054).
+# "Sửa" và "Thêm thành phần" mở biểu mẫu theo contracts/form.schema.json khai ngay trong tệp (ADR 0054). Kiểu Kanban và
+# Lịch của danh sách ở mục kanban, calendar (ADR 0066).
 # Gói thật đặt tệp trong thư mục của gói.
 
 title: Danh mục
@@ -43,6 +44,14 @@ list:
     field: code
     direction: asc
   page_size: 20
+# Kiểu Kanban và Lịch (ADR 0066), chọn bằng variant hay nút "Kiểu hiển thị". Mỗi lựa chọn của status là một cột; move
+# cho chuyển thẻ, ghi status kèm điều kiện updated_at như biểu mẫu sửa. Giá trị chỉ quy trình được đặt thì khai locked.
+kanban:
+  field: status
+  move: { role: user, version: updated_at }
+calendar:
+  field: created_at
+  title: name
 detail:
   title: name
   actions:

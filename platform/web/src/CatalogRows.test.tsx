@@ -73,7 +73,9 @@ describe("ViewControls", () => {
   const sort = { field: "status", direction: "desc" as const };
 
   it("công tắc là nhóm chọn một có tên, đánh dấu đúng dạng đang xem; dạng bảng không có ô sắp xếp", () => {
-    const html = render(<ViewControls columns={fields} cards={false} sort={sort} onView={noop} onSort={noop} />);
+    const html = render(
+      <ViewControls columns={fields} views={["table", "cards"]} view="table" sort={sort} onView={noop} onSort={noop} />,
+    );
     expect(html).toMatch(
       /role="radiogroup"[^>]*aria-label="Kiểu hiển thị"|aria-label="Kiểu hiển thị"[^>]*role="radiogroup"/,
     );
@@ -82,9 +84,27 @@ describe("ViewControls", () => {
   });
 
   it("dạng thẻ có ô Sắp theo mang thứ tự đang áp, mỗi cột tăng và giảm", () => {
-    const html = render(<ViewControls columns={fields} cards sort={sort} onView={noop} onSort={noop} />);
+    const html = render(
+      <ViewControls columns={fields} views={["table", "cards"]} view="cards" sort={sort} onView={noop} onSort={noop} />,
+    );
     expect(checkedRadio(html)).toBe("cards");
     expect(html).toContain("Sắp theo");
     expect(html).toMatch(/value="Tình trạng, giảm dần"/);
+    expect(html).not.toContain("Kanban");
+  });
+
+  it("chỉ có Kanban, Lịch khi được đưa vào; Kanban có ô Sắp theo, lịch thì không", () => {
+    const views = ["table", "cards", "kanban", "calendar"] as const;
+    const kanban = render(
+      <ViewControls columns={fields} views={[...views]} view="kanban" sort={sort} onView={noop} onSort={noop} />,
+    );
+    expect(checkedRadio(kanban)).toBe("kanban");
+    expect(kanban).toContain("Sắp theo");
+    expect(kanban).toContain(">Lịch<");
+    const calendar = render(
+      <ViewControls columns={fields} views={[...views]} view="calendar" sort={sort} onView={noop} onSort={noop} />,
+    );
+    expect(checkedRadio(calendar)).toBe("calendar");
+    expect(calendar).not.toContain("Sắp theo");
   });
 });

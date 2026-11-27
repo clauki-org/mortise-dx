@@ -34,6 +34,14 @@ list:
   columns: [code, name, address, status]
   search: [code, name, address]
   filters: [status]
+# Kiểu Kanban và Lịch của danh sách (ADR 0066), chọn bằng nút "Kiểu hiển thị". Tình trạng không do quy trình nào đặt,
+# nên cán bộ phụ trách chuyển được thẻ giữa hai cột; lệnh chuyển dùng cùng quyền update và cột updated_at như nút "Sửa".
+kanban:
+  field: status
+  move: { role: user, version: updated_at }
+calendar:
+  field: created_at
+  title: name
 detail:
   title: name
   # Biến theo workflows/facilities-review.yaml: title hiện trên bảng việc, facilityId để mở lại cơ sở, excessM2 chọn
