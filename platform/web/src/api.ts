@@ -2,22 +2,26 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Gọi API REST của lõi qua cổng (/v1/...) bằng access token hiện tại. Lỗi của cổng và của workflow-api đều có dạng
-// {"error": "..."} (ErrorBody trong contracts/workflow-api.openapi.json), nên lý do được đưa thẳng lên giao diện.
+// {"error": "..."} (ErrorBody trong contracts/workflow-api.openapi.json), viết bằng lời cho người dùng, nên lý do được
+// đưa thẳng lên giao diện; lỗi không mang lý do đó thì errorText.ts đổi mã HTTP thành lời.
 
 export class ApiError extends Error {
   readonly status: number;
+  /** Thông điệp là lời viết cho người dùng (lý do của máy chủ hay của api.ts), không phải chữ dựng từ mã HTTP. */
+  readonly readable: boolean;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, readable = true) {
     super(message);
     this.status = status;
+    this.readable = readable;
   }
 }
 
-function errorReason(body: unknown, status: number): string {
+function serverReason(body: unknown): string | undefined {
   if (typeof body === "object" && body !== null && "error" in body && typeof body.error === "string") {
     return body.error;
   }
-  return `Máy chủ trả lỗi ${status}`;
+  return undefined;
 }
 
 /** Gửi yêu cầu kèm token; lỗi mạng thành ApiError mã 0 để nơi gọi báo một kiểu lỗi duy nhất. */
@@ -36,7 +40,10 @@ async function send(path: string, token: string | undefined, init: RequestInit, 
 async function jsonOf<T>(response: Response): Promise<T> {
   // Cổng hay nginx có thể trả lỗi không phải JSON (413 của proxy, trang lỗi); khi đó lý do là mã HTTP.
   const body: unknown = await response.json().catch(() => undefined);
-  if (!response.ok) throw new ApiError(response.status, errorReason(body, response.status));
+  if (!response.ok) {
+    const reason = serverReason(body);
+    throw new ApiError(response.status, reason ?? `Máy chủ trả lỗi ${response.status}`, reason !== undefined);
+  }
   // Cổng lệch cấu hình có thể để nginx trả index.html với mã 200; coi đó là lỗi thay vì đưa dữ liệu rỗng cho màn hình.
   if (body === undefined) throw new ApiError(response.status, "Máy chủ trả dữ liệu không đọc được; báo người quản trị");
   return body as T;

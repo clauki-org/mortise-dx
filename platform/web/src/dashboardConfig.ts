@@ -186,10 +186,9 @@ const CONFIG_ERRORS = ["validation-failed", "data-exception"];
  * không hợp kiểu của cột: giá trị đó luôn gửi dạng chữ và make check-fast không biết kiểu cột (ADR 0033). Người xem
  * không tự sửa được, nên lời báo dẫn tới người quản trị kèm chỗ cần sửa, không bảo tải lại trang.
  */
-export function queryErrorText(panel: Panel, codes: string[], message: string): string {
-  if (!codes.some((code) => CONFIG_ERRORS.includes(code))) {
-    return `${message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.`;
-  }
+// Trả null với lỗi không do cấu hình của gói (mạng, phiên hết hạn…): nơi gọi hiện ErrorNotice dùng chung (ADR 0046).
+export function queryErrorText(panel: Panel, codes: string[], message: string): string | null {
+  if (!codes.some((code) => CONFIG_ERRORS.includes(code))) return null;
   const where = panel.graphql?.where;
   const typed = where ? `, hoặc where.equals "${where.equals}" không hợp kiểu của cột ${where.field}` : "";
   return (

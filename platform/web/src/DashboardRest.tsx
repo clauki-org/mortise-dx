@@ -6,7 +6,7 @@
 // dashboardSources.ts, vẽ bằng DashboardView.tsx như khối graphql. Ở đây không có tên quy trình hay chữ của một lĩnh
 // vực nào.
 
-import { Alert, Loader, Text } from "@mantine/core";
+import { Loader, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { callApi } from "./api";
@@ -23,6 +23,7 @@ import {
   restPath,
   type WorkflowSource,
 } from "./dashboardSources";
+import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 import { dateTime } from "./steps";
 import type { Task } from "./workflow";
@@ -81,9 +82,11 @@ export function RestBody({ panel, link }: { panel: Panel; link: ReactNode }) {
     <>
       {panel.workflow?.counts === "mine" && <Text size="sm">{MINE}</Text>}
       {result.isError && (
-        <Alert color="red" title={`Không đọc được số liệu của khối "${panel.title}"`}>
-          {result.error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
-        </Alert>
+        <ErrorNotice
+          title={`Không đọc được số liệu của khối "${panel.title}"`}
+          error={result.error}
+          onRetry={() => void result.refetch()}
+        />
       )}
       {result.isPending && <Loader size="sm" aria-label={`Đang tải ${panel.title}`} />}
       {data && panel.cards && <CardsView cards={panel.cards} rows={data.rows} empty={empty} large={panel.primary} />}

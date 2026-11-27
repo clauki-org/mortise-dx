@@ -41,6 +41,7 @@ export function Catalog({ config, basePath }: Props) {
         </Title>
         <CatalogTable
           config={config}
+          label={config.title}
           path={basePath}
           state={readState(params)}
           onChange={(state) => setParams(writeState(state))}

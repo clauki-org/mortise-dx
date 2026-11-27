@@ -5,7 +5,7 @@
 // mà mục chỉ định với cấu hình của gói. Gói không có mã giao diện riêng: thêm một gói chỉ thêm dòng menu, không thêm
 // trang. Menu đọc qua usePackageMenu, dùng chung với Shell nên urql chỉ gửi một truy vấn.
 
-import { Alert, Center, Loader } from "@mantine/core";
+import { Alert } from "@mantine/core";
 import { Fragment, type ReactNode, useMemo } from "react";
 import { useParams } from "react-router";
 import { useQuery } from "urql";
@@ -24,6 +24,7 @@ import type { FormConfig } from "./formConfig";
 import { MapPanel } from "./MapPanel";
 import type { MapConfig } from "./mapConfig";
 import { findItem, itemPath, MENU_QUERY, type MenuData, rolesOf, visibleItems } from "./menu";
+import { ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
 
 /** Menu của gói mà người dùng thấy, đã lọc theo vai trò trong token. */
@@ -64,20 +65,8 @@ export function PackagePage() {
   const { items, loaded, fetching, error } = usePackageMenu();
   // Chờ menu tải xong mới kết luận không có trang: mở thẳng đường dẫn của một mục (từ dấu trang hay tin nhắn) thì
   // lúc đầu menu còn rỗng.
-  if (!loaded && fetching) {
-    return (
-      <Center p="xl">
-        <Loader aria-label="Đang tải" />
-      </Center>
-    );
-  }
-  if (error) {
-    return (
-      <Alert color="red" title="Không đọc được menu của đơn vị">
-        {error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
-      </Alert>
-    );
-  }
+  if (!loaded && fetching) return <Loading />;
+  if (error) return <ErrorNotice title="Không đọc được menu của đơn vị" error={error} />;
   const entry = findItem(items, app, item);
   // Gói đã gỡ, mục dành cho vai trò khác, hay đường dẫn gõ sai đều không có mục; không nói rõ lý do để không lộ menu
   // của người khác.

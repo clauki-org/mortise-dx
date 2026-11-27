@@ -66,6 +66,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0043](0043-design-tokens-and-install-branding.md) | Bộ quy ước giao diện đạt AA và thương hiệu theo bản cài | Chấp nhận |
 | [0044](0044-menu-groups-and-icons.md) | Menu chia nhóm theo gói, biểu tượng theo ý nghĩa, tên gói lưu cùng mục menu | Chấp nhận |
 | [0045](0045-readable-dashboard.md) | Bảng điều hành dễ đọc: số chính nổi bật, cách tính và nguồn thu gọn, biểu đồ có nhãn số | Chấp nhận |
+| [0046](0046-shared-ui-states.md) | Trạng thái đang tải, rỗng, lỗi dùng chung; lỗi đổi sang lời tiếng Việt theo mã | Chấp nhận |
 
 ## Quyết định còn mở
 

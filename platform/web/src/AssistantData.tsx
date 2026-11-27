@@ -23,6 +23,7 @@ import {
   queryModelLine,
   runDataQuery,
 } from "./assistant";
+import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 
 type Props = { config: DataAssistantConfig; app: string; item: string };
@@ -94,11 +95,7 @@ export function AssistantData({ config, app, item }: Props) {
           <Text>{writing ? "Mô hình đang viết câu truy vấn; có thể mất một lúc." : "Đang chạy câu truy vấn."}</Text>
         </Group>
       )}
-      {running.isError && (
-        <Alert color="red" title="Chưa chạy được">
-          {running.error.message}
-        </Alert>
-      )}
+      {running.isError && <ErrorNotice title="Chưa chạy được" error={running.error} />}
       {running.data && <DataResult answer={running.data} />}
     </Stack>
   );

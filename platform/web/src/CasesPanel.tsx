@@ -5,7 +5,7 @@
 // quy trình trong cấu hình, và màn hình một hồ sơ bên dưới địa chỉ của mục (CaseScreen.tsx). workflow-api chỉ trả hồ sơ
 // của chính người gọi, nên ở đây không lọc theo người. Không có tên quy trình hay chữ của một lĩnh vực nào.
 
-import { Alert, Anchor, Button, Group, Loader, SegmentedControl, Stack, Table, Text, Title } from "@mantine/core";
+import { Alert, Anchor, Button, Group, SegmentedControl, Stack, Table, Text, Title } from "@mantine/core";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
@@ -20,6 +20,7 @@ import {
   PAGE_SIZE,
   processSteps,
 } from "./cases";
+import { Empty, ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
 import { dateTime, useSteps } from "./steps";
 import { DueBadge } from "./TaskList";
@@ -53,13 +54,11 @@ function CaseList({ config, basePath }: { config: CasesConfig; basePath: string 
         aria-label="Lọc hồ sơ theo trạng thái"
         w="fit-content"
       />
-      {cases.isPending && <Loader aria-label="Đang tải hồ sơ" />}
+      {cases.isPending && <Loading what="hồ sơ" />}
       {cases.isError && (
-        <Alert color="red" title="Không tải được hồ sơ">
-          {cases.error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
-        </Alert>
+        <ErrorNotice title="Không tải được hồ sơ" error={cases.error} onRetry={() => cases.refetch()} />
       )}
-      {cases.data?.items.length === 0 && <Text c="dimmed">Chưa có hồ sơ nào.</Text>}
+      {cases.data?.items.length === 0 && <Empty title="Chưa có hồ sơ nào." />}
       {cases.data && cases.data.items.length > 0 && (
         <Table.ScrollContainer minWidth={560}>
           <Table striped>

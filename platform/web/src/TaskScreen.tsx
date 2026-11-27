@@ -6,7 +6,7 @@
 // biểu mẫu: bên trái trên màn hình rộng, bên trên trên màn hình hẹp. Bấm nút thì dữ liệu biểu mẫu cùng biến của nút
 // được gửi khi hoàn thành task; workflow-api từ chối (ví dụ quy tắc bốn mắt) thì hiện lý do của nó.
 
-import { Alert, Anchor, Button, Grid, Group, Loader, Paper, Stack, Table, Text, Title } from "@mantine/core";
+import { Alert, Anchor, Button, Grid, Group, Paper, Stack, Table, Text, Title } from "@mantine/core";
 import type Form from "@rjsf/core";
 import { Form as MantineForm } from "@rjsf/mantine";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { formValidator } from "./formValidator";
+import { ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
 import { dateTime, detailRows, recordTitle, stepOf, useSteps } from "./steps";
 import { DelegatedBadge, DueBadge } from "./TaskList";
@@ -117,11 +118,7 @@ function Decision({ task, step }: { task: Task; step: StepConfig }) {
           noHtml5Validate
         />
       )}
-      {complete.isError && (
-        <Alert color="red" title="Không gửi được">
-          {complete.error.message}
-        </Alert>
-      )}
+      {complete.isError && <ErrorNotice title="Không gửi được" error={complete.error} />}
       <Group>
         {step.actions.map((action, index) => (
           <Button
@@ -150,14 +147,8 @@ function StepPanel({
   fetching: boolean;
   error?: Error;
 }) {
-  if (fetching) return <Loader aria-label="Đang tải khai báo của bước" />;
-  if (error) {
-    return (
-      <Alert color="red" title="Không đọc được khai báo của bước">
-        {error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
-      </Alert>
-    );
-  }
+  if (fetching) return <Loading what="khai báo của bước" inline />;
+  if (error) return <ErrorNotice title="Không đọc được khai báo của bước" error={error} />;
   // Khai báo đọc qua GraphQL không được kiểm lại lúc chạy; thiếu nút thì coi như chưa khai, thay vì để màn hình lỗi.
   if (!step || !Array.isArray(step.actions)) {
     return (
@@ -176,13 +167,9 @@ export function TaskScreen() {
   const tasks = useQuery({ queryKey: ["tasks"], queryFn: () => fetchTasks(getToken()) });
   const { steps, fetching, error } = useSteps();
 
-  if (tasks.isPending) return <Loader aria-label="Đang tải việc" />;
+  if (tasks.isPending) return <Loading what="việc" />;
   if (tasks.isError) {
-    return (
-      <Alert color="red" title="Không tải được việc">
-        {tasks.error.message}
-      </Alert>
-    );
+    return <ErrorNotice title="Không tải được việc" error={tasks.error} onRetry={() => tasks.refetch()} />;
   }
   const task = tasks.data.find((candidate) => candidate.id === taskId);
   if (!task) {

@@ -10,6 +10,7 @@ import { Alert, Blockquote, Button, Group, Loader, Stack, Text, Textarea, Title 
 import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { type Answer, type AssistantConfig, ask, configProblems, modelLine } from "./assistant";
+import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 
 type Props = { config: AssistantConfig; app: string };
@@ -76,11 +77,7 @@ export function Assistant({ config, app }: Props) {
           <Text>Đang tìm trong văn bản và trả lời; có thể mất một lúc.</Text>
         </Group>
       )}
-      {asking.isError && (
-        <Alert color="red" title="Chưa hỏi được">
-          {asking.error.message}
-        </Alert>
-      )}
+      {asking.isError && <ErrorNotice title="Chưa hỏi được" error={asking.error} />}
       {asking.data && <Result answer={asking.data} />}
     </Stack>
   );

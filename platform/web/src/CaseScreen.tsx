@@ -5,7 +5,7 @@
 // `details` của các bước, các bước đã qua và đang chờ theo thời gian, kết quả. workflow-api trả 404 như nhau cho hồ sơ
 // không có, của đơn vị khác hay của người khác, nên màn hình cũng chỉ có một câu không tìm thấy.
 
-import { Alert, Anchor, Badge, Group, Loader, Paper, Stack, Table, Text, Timeline, Title } from "@mantine/core";
+import { Alert, Anchor, Badge, Group, Paper, Stack, Table, Text, Timeline, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { ApiError } from "./api";
@@ -19,6 +19,7 @@ import {
   groupLabel,
   processSteps,
 } from "./cases";
+import { ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
 import { dateTime, useSteps } from "./steps";
 import { DueBadge } from "./TaskList";
@@ -109,16 +110,14 @@ export function CaseScreen({ id, basePath, title }: { id: string; basePath: stri
       <Anchor component={Link} to={basePath} size="sm">
         {title}
       </Anchor>
-      {found.isPending && <Loader aria-label="Đang tải hồ sơ" />}
+      {found.isPending && <Loading what="hồ sơ" />}
       {found.isError &&
         (found.error instanceof ApiError && found.error.status === 404 ? (
           <Alert color="yellow" title="Không tìm thấy hồ sơ">
             Hồ sơ không có, hoặc không phải hồ sơ bạn đã lập.
           </Alert>
         ) : (
-          <Alert color="red" title="Không tải được hồ sơ">
-            {found.error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
-          </Alert>
+          <ErrorNotice title="Không tải được hồ sơ" error={found.error} onRetry={() => found.refetch()} />
         ))}
       {found.data && <Body found={found.data} />}
     </Stack>

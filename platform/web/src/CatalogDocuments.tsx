@@ -24,7 +24,9 @@ import {
   uploadError,
   uploadRole,
 } from "./documents";
+import { errorText, ReadableError } from "./errorText";
 import { rolesOf } from "./menu";
+import { Empty, ErrorNotice } from "./States";
 import { useSession } from "./session";
 
 type Props = { config: DocumentsConfig; recordKey: unknown };
@@ -47,11 +49,7 @@ function FileCell({ info, failed, id }: { info?: FileInfo; failed: boolean; id: 
           {formatSize(info.size)}, {info.contentType}
         </Text>
       </Group>
-      {download.error && (
-        <Text size="sm" c="red">
-          Không tải được tệp: {download.error.message}. Thử lại; nếu vẫn lỗi, báo người quản trị.
-        </Text>
-      )}
+      {download.error && <ErrorNotice title="Không tải được tệp" error={download.error} />}
     </Stack>
   );
 }
@@ -69,12 +67,14 @@ function Upload({ config, recordKey, onDone }: Props & { onDone: () => void }) {
       try {
         stored = await uploadFile<FileInfo>(getToken(), chosen);
       } catch (error) {
-        throw new Error(error instanceof ApiError ? uploadError(error.status, error.message) : String(error));
+        throw new ReadableError(
+          error instanceof ApiError ? uploadError(error.status, error.message) : errorText(error).text,
+        );
       }
       const context = { role: uploadRole(config), additionalTypenames: [config.source] };
       const object = linkObject(config, recordKey, stored.id, note);
       const result = await client.mutation(insertMutation(config), { object }, context).toPromise();
-      if (result.error) throw new Error(linkError(result.error));
+      if (result.error) throw new ReadableError(linkError(result.error));
       return stored.name;
     },
     onSuccess: (name) => {
@@ -107,11 +107,7 @@ function Upload({ config, recordKey, onDone }: Props & { onDone: () => void }) {
           {config.upload?.label ?? "Đính kèm"}
         </Button>
       </Group>
-      {attach.error && (
-        <Alert color="red" title="Chưa đính kèm được tệp">
-          {attach.error.message}
-        </Alert>
-      )}
+      {attach.error && <ErrorNotice title="Chưa đính kèm được tệp" error={attach.error} />}
       {done && (
         <Alert
           color="green"
@@ -157,11 +153,17 @@ export function CatalogDocuments({ config, recordKey }: Props) {
         {config.title}
       </Title>
       {error && (
-        <Alert color="red" title="Không tải được danh sách tệp">
-          {error.message}. Tải lại trang; nếu vẫn lỗi, báo người quản trị kiểm cấu hình và quyền của bảng nối.
-        </Alert>
+        <ErrorNotice
+          title="Không tải được danh sách tệp"
+          error={error}
+          onRetry={() => reload({ requestPolicy: "network-only" })}
+        />
       )}
-      {!error && !fetching && shown.length === 0 && <Text c="dimmed">Chưa có tệp nào.</Text>}
+      {!error && !fetching && shown.length === 0 && (
+        <Paper withBorder radius="md">
+          <Empty title="Chưa có tệp nào." />
+        </Paper>
+      )}
       {shown.length > 0 && (
         <Paper withBorder radius="md">
           <Table verticalSpacing="sm" horizontalSpacing="md">

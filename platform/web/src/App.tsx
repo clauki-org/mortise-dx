@@ -4,7 +4,7 @@
 // Điểm vào sau khi khởi động: chưa đăng nhập thì mời đăng nhập qua Keycloak; đã đăng nhập thì dựng các màn hình
 // theo đường dẫn (React Router) trong khung trang, với client GraphQL và bộ nhớ đệm REST dùng chung.
 
-import { Alert, Button, Center, Loader, Paper, Stack, Text, Title } from "@mantine/core";
+import { Button, Center, Loader, Paper, Stack, Text, Title } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { User } from "oidc-client-ts";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -17,6 +17,7 @@ import { NotFound, RouteError } from "./Errors";
 import { createGraphqlClient } from "./graphql";
 import { PackagePage } from "./PackagePage";
 import { Shell } from "./Shell";
+import { ErrorNotice } from "./States";
 import { type Session, SessionContext } from "./session";
 import { TaskList } from "./TaskList";
 import { TaskScreen } from "./TaskScreen";
@@ -84,9 +85,9 @@ export function App() {
     case "error":
       return (
         <Gate>
-          <Alert color="red" title="Không đăng nhập được">
-            {auth.message}. Thử lại sau ít phút; nếu vẫn lỗi, báo người quản trị.
-          </Alert>
+          <ErrorNotice title="Không đăng nhập được" error={new Error(auth.message)}>
+            Thử lại sau ít phút; nếu vẫn lỗi, báo người quản trị.
+          </ErrorNotice>
           <Button onClick={signIn}>Đăng nhập lại</Button>
         </Gate>
       );
