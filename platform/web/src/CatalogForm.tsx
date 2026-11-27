@@ -89,7 +89,7 @@ function InsertBody({ form, target, onDone, onCancel }: BodyProps & { target: Ex
     once((release) => save.mutate(data, { onSuccess: () => onDone(form.done.message), onSettled: release }));
   return (
     <Stack gap="sm">
-      <TextInput label={target.shown.label} value={target.shown.text} readOnly disabled />
+      <TextInput label={target.shown.label} value={target.shown.text} readOnly />
       <FormFields config={form} values={values} onValues={setValues} onSubmit={send}>
         {save.isError && <ErrorNotice title="Chưa thêm được" error={save.error} />}
         <Actions form={form} pending={save.isPending} onCancel={onCancel} />
@@ -161,7 +161,9 @@ function UpdateBody(props: BodyProps & { target: Extract<Target, { kind: "update
   const { form, target } = props;
   const table = form.submit.update ?? "";
   const version = form.submit.version ?? "";
-  const [conflict, setConflict] = useState(false);
+  // Số lần lệnh sửa không khớp dòng nào: mỗi lần là một lần điền lại, kể cả khi dòng đọc lại mang cùng version (mất
+  // quyền sửa chứ không phải có người sửa), để lời báo "đã tải lại" luôn đúng.
+  const [conflicts, setConflicts] = useState(0);
   const context = useMemo(() => ({ role: formRole(form) }), [form]);
   const [{ data, fetching, error }, reload] = useQuery<{ rows: Values[] }>({
     query: rowQuery(table, readColumns(form, target.key)),
@@ -193,11 +195,11 @@ function UpdateBody(props: BodyProps & { target: Extract<Target, { kind: "update
     <UpdateEditor
       {...props}
       // Dòng đọc lại mang version mới thì biểu mẫu bắt đầu lại từ giá trị mới; giữ giá trị cũ là ghi đè người kia.
-      key={String(loaded.version)}
+      key={`${String(loaded.version)}-${conflicts}`}
       loaded={loaded}
-      conflict={conflict}
+      conflict={conflicts > 0}
       onConflict={() => {
-        setConflict(true);
+        setConflicts((count) => count + 1);
         reload({ requestPolicy: "network-only" });
       }}
     />

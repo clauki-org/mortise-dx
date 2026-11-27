@@ -149,6 +149,8 @@ export function CatalogRecord({ config, basePath, steps }: Props) {
                 form={node.detail.edit.form}
                 target={{ kind: "update", key: keyOf(node), keyValue: row[keyOf(node)] }}
                 onSaved={() => reload({ requestPolicy: "network-only" })}
+                // Nút đầu của màn hình chi tiết là nút chính (ADR 0047): không có nút quy trình nào thì là nút sửa.
+                primary={(node.detail?.actions ?? []).length === 0}
               />
             )}
           </Group>

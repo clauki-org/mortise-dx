@@ -50,6 +50,7 @@ detail:
     label: Sửa
     form:
       title: Sửa cơ sở
+      role: user
       fields:
         - { name: code, label: Mã, type: string, required: true, max_length: 50 }
         - { name: name, label: Tên cơ sở, type: string, required: true, max_length: 200 }
@@ -104,6 +105,7 @@ detail:
         parent: code
         form:
           title: Thêm tòa nhà
+          role: user
           fields: &building_fields
             - { name: code, label: Mã tòa, type: string, required: true, max_length: 50 }
             - { name: name, label: Tên tòa, type: string, required: true, max_length: 200 }
@@ -116,6 +118,7 @@ detail:
           label: Sửa
           form:
             title: Sửa tòa nhà
+            role: user
             fields: *building_fields
             submit: { label: Lưu, update: app_facilities_commune_buildings, version: updated_at }
             done: { message: Đã lưu tòa nhà. }
@@ -146,6 +149,7 @@ detail:
               parent: code
               form:
                 title: Thêm phòng
+                role: user
                 fields: &room_fields
                   - { name: code, label: Mã phòng, type: string, required: true, max_length: 50 }
                   - { name: name, label: Tên phòng, type: string, required: true, max_length: 200 }
@@ -173,6 +177,7 @@ detail:
                 label: Sửa
                 form:
                   title: Sửa phòng
+                  role: user
                   fields: *room_fields
                   submit: { label: Lưu, update: app_facilities_commune_rooms, version: updated_at }
                   done: { message: Đã lưu phòng. }

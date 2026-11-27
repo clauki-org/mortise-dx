@@ -58,6 +58,7 @@ detail:
     label: Sửa
     form:
       title: Sửa danh mục
+      role: user
       fields:
         - { name: code, label: Mã, type: string, required: true, max_length: 50 }
         - { name: name, label: Tên, type: string, required: true, max_length: 200 }
@@ -95,6 +96,7 @@ detail:
         parent: code
         form:
           title: Thêm thành phần
+          role: user
           fields:
             - { name: name, label: Tên, type: string, required: true }
             - { name: installed_on, label: Ngày lắp, type: date }

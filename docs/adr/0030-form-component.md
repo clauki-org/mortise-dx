@@ -36,7 +36,9 @@ Các lựa chọn đã xét:
   nhóm xử lý của bước theo bảng phân cấp thẩm quyền. Thành phần dựng JSON Schema, uiSchema từ các khóa đã biết, vẽ
   bằng rjsf với bộ kiểm `formValidator` như bảng việc ([ADR 0006](0006-frontend-stack.md)); không có đường truyền
   uiSchema của gói.
-- **Hai đích gửi, đúng một.** `submit.process` khởi tạo quy trình của gói với biến là các trường đã điền, trường
+- **Hai đích gửi, đúng một.** Được sửa theo [ADR 0054](0054-edit-and-add-child-from-catalog.md): có thêm đích thứ
+  ba `submit.update`, chỉ mở từ màn hình chi tiết của danh mục.
+  `submit.process` khởi tạo quy trình của gói với biến là các trường đã điền, trường
   trống không gửi. Mã Idempotency-Key mới khi mở trang và sau mỗi lần gửi được; trước mỗi lần gửi, dữ liệu được so
   với dữ liệu lần cuối dùng mã đó, khác thì lấy mã mới. `submit.insert` thêm một dòng bằng
   `insert_<bảng>(objects: [$object])`, tên trường là tên cột; `tenant_id` do quyền thêm dòng của gói đặt từ token

@@ -101,7 +101,7 @@ test("cán bộ xã A sửa cơ sở, sửa đồng thời bị báo không ghi 
     dialog = page.getByRole("dialog", { name: "Thêm tòa nhà" });
     const parent = dialog.getByRole("textbox", { name: "Cơ sở nhà, đất" });
     await expect(parent).toHaveValue(code);
-    await expect(parent).toBeDisabled();
+    await expect(parent).not.toBeEditable();
     await dialog.getByRole("textbox", { name: "Mã tòa" }).fill("E2E");
     await dialog.getByRole("textbox", { name: "Tên tòa" }).fill("Nhà thử");
     await dialog.getByRole("button", { name: "Thêm", exact: true }).click();
