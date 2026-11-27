@@ -317,3 +317,102 @@
       permission:
         columns: [parent_tenant_id, tenant_id, tenant_name, code, name, latitude, longitude, excess_m2]
         filter: { parent_tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+# Tin công khai và đăng ký nhận (ADR 0069). Người duyệt của xã (manager) đăng tin cho hồ sơ đang công khai và sửa
+# tin của xã mình; trigger trong migration từ chối hồ sơ không ở bước công khai của xã, hay đã quá hạn. Đọc chéo xã
+# chỉ qua hai view có cột reader_tenant_id; bảng gốc chỉ cho tenant sở hữu dòng.
+- table: { schema: app_facilities_commune, name: notices }
+  select_permissions:
+    - role: manager
+      permission:
+        columns: [case_id, tenant_id, facility_id, address, usage, offered_m2, layout, other_info, portal_url,
+                  opened_at, due_at, created_by, created_at, updated_at]
+        filter: *tenant
+  insert_permissions:
+    - role: manager
+      permission:
+        columns: [case_id, facility_id, usage, offered_m2, layout, other_info, portal_url]
+        check: *tenant
+        set: &notice_from_token { tenant_id: X-Hasura-Tenant-Id, created_by: X-Hasura-User-Id }
+  update_permissions:
+    - role: manager
+      permission:
+        columns: [usage, offered_m2, layout, other_info, portal_url]
+        filter: *tenant
+        check: *tenant
+
+# Mỗi tin một dòng cho xã đăng tin, các xã cùng tỉnh và tỉnh; tỉnh khác không có dòng nào.
+- table: { schema: app_facilities_commune, name: notice_board }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &notice_board_columns [reader_tenant_id, case_id, tenant_id, tenant_name, facility_code,
+                                       facility_name, address, usage, offered_m2, layout, other_info, portal_url,
+                                       opened_at, due_at, status, notice_text]
+        filter: &reader { reader_tenant_id: { _eq: X-Hasura-Tenant-Id } }
+    - role: manager
+      permission: { columns: *notice_board_columns, filter: *reader }
+    - role: tenant_admin
+      permission: { columns: *notice_board_columns, filter: *reader }
+
+# Đơn vị đăng ký thấy đăng ký của chính mình; đọc thứ tự và đăng ký của đơn vị khác chỉ qua request_board. Cán bộ
+# (user) và người duyệt đều đăng ký được; không ai sửa hay xóa đăng ký đã gửi.
+- table: { schema: app_facilities_commune, name: receive_requests }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &request_columns [id, case_id, owner_tenant_id, tenant_id, unit_name, purpose, requested_m2,
+                                   standard_m2, explanation, created_by, created_at]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *request_columns, filter: *tenant }
+  insert_permissions:
+    - role: user
+      permission:
+        columns: &request_input [case_id, unit_name, purpose, requested_m2, standard_m2, explanation]
+        check: *tenant
+        set: &request_from_token { tenant_id: X-Hasura-Tenant-Id, created_by: X-Hasura-User-Id }
+    - role: manager
+      permission: { columns: *request_input, check: *tenant, set: *request_from_token }
+
+# Xã đăng tin và tỉnh thấy mọi đăng ký kèm thứ tự, đánh giá; đơn vị đăng ký khác chỉ thấy dòng của mình, không thứ tự.
+- table: { schema: app_facilities_commune, name: request_board }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &request_board_columns [reader_tenant_id, id, case_id, owner_tenant_id, tenant_id, tenant_name, unit,
+                                         unit_name, purpose, requested_m2, offered_m2, usage, standard_m2,
+                                         explanation, created_at, tier, tier_label, rank, purpose_fit, area_fit,
+                                         assessment_note, areas, choice]
+        filter: *reader
+    - role: manager
+      permission: { columns: *request_board_columns, filter: *reader }
+    - role: tenant_admin
+      permission: { columns: *request_board_columns, filter: *reader }
+
+# Tiêu chí thứ nhất do người duyệt của xã đăng tin ghi; trigger từ chối đánh giá cho đăng ký vào tin của xã khác.
+- table: { schema: app_facilities_commune, name: request_assessments }
+  select_permissions:
+    - role: manager
+      permission:
+        columns: [request_id, tenant_id, purpose_fit, area_fit, note, assessed_by, created_at, updated_at]
+        filter: *tenant
+  insert_permissions:
+    - role: manager
+      permission:
+        columns: [request_id, purpose_fit, area_fit, note]
+        check: *tenant
+        set: { tenant_id: X-Hasura-Tenant-Id, assessed_by: X-Hasura-User-Id }
+  update_permissions:
+    - role: manager
+      permission:
+        columns: [purpose_fit, area_fit, note]
+        filter: *tenant
+        check: *tenant
+        set: { assessed_by: X-Hasura-User-Id }
+
+# Hồ sơ của xã đang công khai mà chưa có tin, cho ô chọn của biểu mẫu đăng tin.
+- table: { schema: app_facilities_commune, name: publication_cases }
+  select_permissions:
+    - role: manager
+      permission: { columns: [tenant_id, case_id, due_at, label], filter: *tenant }

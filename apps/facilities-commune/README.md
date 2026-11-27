@@ -16,7 +16,9 @@ app.yaml             khai báo gói theo contracts/app.schema.json: lược đ�
                      settings (ngưỡng, thời hạn) và menu
 schema/migrations/   migration dbmate của gói; bảng theo dõi public.facilities_commune_schema_migrations (ADR 0005)
 hasura/tables.yaml   bảng đăng ký, quan hệ và quyền theo tenant và phân công, cùng định dạng với core/hasura/
-catalog/             cấu hình thành phần danh mục (cơ sở → tòa → phòng) theo contracts/catalog.schema.json
+catalog/             cấu hình thành phần danh mục (cơ sở → tòa → phòng; tin công khai → đăng ký nhận) theo
+                     contracts/catalog.schema.json
+forms/               biểu mẫu đăng tin công khai theo contracts/form.schema.json
 map-layers/          cấu hình thành phần bản đồ (trụ sở tô theo phần vượt) theo contracts/map.schema.json
 dashboards/          cấu hình bảng điều hành (diện tích, hồ sơ, độ ẩm của xã, tổng hợp cho tỉnh) theo
                       contracts/dashboard.schema.json
@@ -30,7 +32,8 @@ authorities/         bảng phân cấp mặc định của bước quyết đ�
 rules/               luật ngưỡng của số đo thiết bị theo contracts/threshold-rule.schema.json
 tests/smoke.sh       kiểm qua cổng: cách ly tenant, tenant lấy từ token, phân công, khóa ngoại ghép, RESTRICT,
                      nhật ký, phần vượt, tọa độ, tổng hợp cho tỉnh, trợ lý hỏi dữ liệu; mở việc kiểm tra kho khi độ ẩm vượt ngưỡng
-                     (số đo gửi qua MQTT); gọi tests/workflow.sh kiểm quy trình rà soát
+                     (số đo gửi qua MQTT); gọi tests/workflow.sh kiểm quy trình rà soát, tests/notices.sh kiểm tin
+                     công khai và đăng ký nhận
 ```
 
 ## Dữ liệu
@@ -52,6 +55,11 @@ Lược đồ `app_facilities_commune`.
 | `facility_coverage` (view) | Mỗi xã một dòng: số cơ sở, số cơ sở chưa có người phụ trách, chưa có người duyệt | Chỉ đọc; `manager`, `tenant_admin` |
 | `facility_assignments` | Phân công: `user_id` (`sub` của cán bộ trong token) phụ trách (`custodian`) hay duyệt (`approver`) một cơ sở | Khóa ngoại ghép `(tenant_id, facility_id)`, `ON DELETE CASCADE`; `UNIQUE (tenant_id, facility_id, user_id, duty)` |
 | `area_rollup` (view) | Mỗi xã có tenant cha một dòng, lấy nguyên số của `area_summary`, kèm `parent_tenant_id` và tên xã | Chỉ đọc; chỉ vai trò `rollup_reader` của tenant cha đọc ([ADR 0016](../../docs/adr/0016-parent-tenant-rollup.md)) |
+| `notices` | Tin công khai của một hồ sơ rà soát đang công khai: cơ sở, địa chỉ (chép lúc đăng), công năng, diện tích dự kiến bố trí, sơ đồ hay tài liệu hiện trạng, thông tin khác, đường dẫn tin trên cổng tỉnh, thời hạn chép từ `core.case_deadlines` ([ADR 0069](../../docs/adr/0069-public-notices-and-receive-requests.md)) | Khóa `case_id`; khóa ngoại ghép `(tenant_id, facility_id)`; trigger chỉ nhận hồ sơ đang ở bước công khai của chính xã, trước hạn |
+| `receive_requests` | Đăng ký nhận: đơn vị đăng ký (`tenant_id`, từ token), xã đăng tin (`owner_tenant_id`, trigger đặt), tên đơn vị thuộc xã, mục đích, diện tích đề nghị và theo tiêu chuẩn, thuyết minh | Trigger từ chối sau hạn, từ tỉnh khác, và đăng ký từ chính xã đăng tin mà không ghi tên đơn vị; không sửa, không xóa |
+| `request_assessments` | Tiêu chí thứ nhất của điểm c (phù hợp công năng, diện tích) do xã đăng tin ghi | Trigger chỉ nhận xã đăng tin của đăng ký đó |
+| `priority_tiers` | Bậc ưu tiên theo quan hệ với xã đăng tin, kèm trích dẫn; dữ liệu chung, không đăng ký trong Hasura | Khóa `relation` |
+| `notice_board`, `request_board`, `publication_cases` (view) | Tin cho xã đăng tin, xã cùng tỉnh và tỉnh, kèm mẫu tin; đăng ký xếp theo thứ tự ưu tiên cho xã đăng tin và tỉnh, đơn vị khác chỉ thấy dòng của mình; hồ sơ đang công khai chưa có tin | Chỉ đọc; lọc theo `reader_tenant_id` |
 | `facility_rollup` (view) | Mỗi cơ sở đang dùng của xã có tenant cha một dòng: mã, tên, tọa độ, phần vượt của cả xã | Chỉ đọc; chỉ vai trò `rollup_reader` của tenant cha đọc ([ADR 0020](../../docs/adr/0020-facility-locations.md)) |
 
 Khóa ngoại ghép kèm `tenant_id` làm CSDL tự chặn việc nối tòa, phòng hay phân công vào cơ sở của xã khác, dù lớp
@@ -159,7 +167,8 @@ sửa bởi NĐ 369/2026/NĐ-CP, mục trên), không tính riêng từng cơ s�
 
 - **Phần vượt từ ngưỡng trở xuống** (`review_report`): duyệt xong là kết thúc ở "báo cáo để tiếp tục sử dụng".
 - **Phần vượt trên ngưỡng** (`review_publish`): duyệt xong thì công khai trong thời hạn, không có bước nào cho người
-  dùng. Hết hạn thì `manager` của xã làm bước `submit`, trình người có thẩm quyền kèm đơn vị đề nghị nhận; rồi người
+  dùng. Hết hạn thì `manager` của xã làm bước `submit`, trình người có thẩm quyền kèm đơn vị đề nghị nhận chọn từ các
+  đăng ký nhận (mục dưới); rồi người
   có thẩm quyền theo bảng phân cấp làm bước `decide`, ghi nhận quyết định, và hồ sơ kết thúc ở "đã có quyết định".
 - **Phần vượt thiếu hay âm:** đi nhánh công khai.
 - **Phần vượt không đọc được thành số:** không lập được hồ sơ, API quy trình trả 502.
@@ -172,6 +181,22 @@ lập hồ sơ ─┬─ vượt ≤ ngưỡng ─ review_report ─┬─ duy�
            └─ vượt > ngưỡng, ── review_publish ─┬─ duyệt ─── công khai (hẹn giờ) ─ submit ─ decide ─ đã có quyết định
               thiếu hay âm                      └─ trả lại ─ trả lại
 ```
+
+### Tin công khai và đăng ký nhận
+
+Trong thời hạn công khai ([ADR 0069](../../docs/adr/0069-public-notices-and-receive-requests.md)), người duyệt của xã
+đăng tin ở mục "Đăng tin công khai" (`forms/notice.yaml`) với các nội dung của NĐ 155/2025/NĐ-CP Điều 3a khoản 3 điểm a.
+Mục "Tin công khai" (`catalog/notices.yaml`) là bản sao của tin trên Cổng thông tin điện tử của UBND tỉnh, nơi công
+khai theo luật: xã đăng tin, các xã cùng tỉnh và tỉnh thấy tin; mẫu tin sinh từ dữ liệu, tải về được thành tệp `.txt`.
+Đơn vị cùng tỉnh đăng ký nhận trên tin; đơn vị thuộc chính xã đăng tin đăng ký từ tenant của xã, ghi tên đơn vị. CSDL
+so `now()` với hạn workflow-api ghi cho bước `publication`, nên đăng ký sau hạn bị từ chối dù trình duyệt gửi gì.
+
+Ở bước `submit`, ô "Đơn vị đề nghị nhận" liệt kê đăng ký của hồ sơ theo thứ tự ưu tiên của điểm c: đăng ký người
+duyệt ghi phù hợp cả công năng lẫn diện tích, rồi chưa ghi, rồi không phù hợp; trong cùng mức, đơn vị thuộc xã (bậc 2)
+trước đơn vị thuộc phạm vi của tỉnh (bậc 3), rồi đăng ký sớm hơn. Tiêu chí thứ nhất do người ghi trên đăng ký, hai diện
+tích hiện cạnh nhau; không đăng ký nào bị tự loại. Nhãn của đăng ký được chọn ghi vào biến `recipient` và hiện ở bước
+`decide`. Đơn vị tỉnh khác (thứ tự thứ năm) cần đề nghị của Chủ tịch UBND tỉnh, chưa hỗ trợ. `tests/notices.sh` kiểm
+cả luồng khi thời hạn công khai ngắn.
 
 Bước `decide` chỉ có một nút, "Ghi nhận quyết định", với nội dung quyết định ở trường `decision`; sau bước này không
 có cổng rẽ nhánh. Người lập không tự quyết định hồ sơ của mình (bốn mắt). Mỗi bước khai trong BPMN trường nó ghi

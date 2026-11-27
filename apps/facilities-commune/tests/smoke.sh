@@ -545,4 +545,7 @@ apps/facilities-commune/tests/custom-fields.sh || fail=1
 # Quy trình rà soát (ngưỡng, công khai có hẹn giờ, trình) ở tệp riêng; thời hạn công khai dài thì bỏ qua phần chờ.
 apps/facilities-commune/tests/workflow.sh || fail=1
 
+# Tin công khai, đăng ký nhận, thứ tự ưu tiên và chọn đơn vị nhận (ADR 0069); cũng chỉ chạy với thời hạn ngắn.
+apps/facilities-commune/tests/notices.sh || fail=1
+
 exit $fail

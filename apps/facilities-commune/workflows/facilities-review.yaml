@@ -41,21 +41,36 @@ steps:
     ui: *review_ui
     actions: *review_actions
     record: *review_record
+  # Đơn vị nhận chọn từ các đăng ký nhận của chính hồ sơ (ADR 0069), đã xếp theo thứ tự ưu tiên của NĐ 155/2025/NĐ-CP
+  # Điều 3a khoản 3 điểm c trong view request_board; nhãn mang thứ tự, bậc, hai diện tích và tiêu chí thứ nhất, và
+  # chính nhãn đó ghi vào hồ sơ (biến recipient) nên người quyết định đọc được mà không mở CSDL. Không bắt buộc: hết
+  # hạn mà không đơn vị nào đăng ký thì vẫn trình được.
   submit:
     title: title
     form:
       type: object
-      required: [recipient]
       properties:
         recipient:
           type: string
           title: Đơn vị đề nghị nhận (theo thứ tự ưu tiên)
+          description: >-
+            Ghi tiêu chí phù hợp công năng, diện tích ở mục "Tin công khai" trước khi chọn. Bỏ trống nếu không đơn vị
+            nào đăng ký.
         comment:
           type: string
           title: Ý kiến
     ui:
       comment:
         ui:widget: textarea
+    sources:
+      recipient:
+        table: app_facilities_commune_request_board
+        value: choice
+        label: choice
+        case: case_id
+        order: rank
+        role: manager
+        empty: Không có đơn vị nào đăng ký nhận trong thời hạn công khai; bỏ trống ô này rồi trình.
     actions:
       - id: submit
         label: Trình
@@ -71,6 +86,8 @@ steps:
   # 0031); required chỉ do giao diện ép, vì workflow-api không kiểm biểu mẫu.
   decide:
     title: title
+    details:
+      - { variable: recipient, label: Đơn vị đề nghị nhận }
     form:
       type: object
       required: [decision]

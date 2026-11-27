@@ -1,0 +1,48 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Biểu mẫu đăng tin công khai cho hồ sơ rà soát đang ở bước công khai (ADR 0069), theo contracts/form.schema.json;
+# app.yaml trỏ tới tệp này ở mục menu `notice-new`. Gửi thì thêm một dòng vào bảng notices bằng vai trò manager:
+# tenant_id và người đăng lấy từ token, trigger của gói (schema/migrations/20261128100000_receive_requests.sql) từ chối
+# hồ sơ không ở bước công khai của xã hay đã quá hạn, và chép địa chỉ của cơ sở. Các trường là nội dung tin mà NĐ
+# 155/2025/NĐ-CP Điều 3a khoản 3 điểm a đòi; tin chính thức đăng trên Cổng thông tin điện tử của UBND tỉnh.
+
+title: Đăng tin công khai
+description: >-
+  Tin ở đây là bản sao để các xã cùng tỉnh đăng ký nhận trong thời hạn công khai; nơi công khai theo luật là Cổng thông
+  tin điện tử của UBND tỉnh. Chỉ hồ sơ đang công khai mà chưa có tin mới hiện trong danh sách.
+role: manager
+fields:
+  - name: case_id
+    label: Hồ sơ rà soát đang công khai
+    type: choice
+    required: true
+    source: { table: app_facilities_commune_publication_cases, value: case_id, label: label }
+  - name: facility_id
+    label: Cơ sở
+    type: choice
+    required: true
+    source: { table: app_facilities_commune_facilities, value: id, label: name }
+  - { name: usage, label: Công năng sử dụng, type: string, required: true, max_length: 500 }
+  - name: offered_m2
+    label: Phần diện tích dự kiến bố trí (m²)
+    type: number
+    required: true
+    min: 0.01
+    max: 9999999999.99
+    help: Phần vượt tiêu chuẩn, định mức mà xã dự kiến bố trí cho đơn vị có nhu cầu tiếp nhận.
+  - name: layout
+    label: Sơ đồ mặt bằng hoặc tài liệu thể hiện hiện trạng
+    type: string
+    required: true
+    multiline: true
+    max_length: 2000
+    help: Mô tả hoặc tên tài liệu đã đính kèm ở giấy tờ của cơ sở.
+  - { name: other_info, label: Thông tin khác, type: string, multiline: true, max_length: 2000 }
+  - name: portal_url
+    label: Đường dẫn tin trên cổng thông tin của tỉnh
+    type: string
+    max_length: 1000
+    help: Bắt đầu bằng http:// hoặc https://; điền sau ở mục "Tin công khai" nếu chưa đăng trên cổng tỉnh.
+submit: { label: Đăng tin, insert: app_facilities_commune_notices }
+done: { message: Đã đăng tin. Các xã cùng tỉnh thấy tin ở mục "Tin công khai"., menu: notices }

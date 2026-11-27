@@ -1,0 +1,166 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Tin công khai và đăng ký nhận (ADR 0069), theo contracts/catalog.schema.json; app.yaml trỏ tới tệp này ở mục menu
+# `notices`. Danh sách đọc view notice_board: mỗi người thấy tin của xã mình, của các xã cùng tỉnh, và tỉnh thấy tin của
+# các xã con; tỉnh khác không thấy tin nào. Bảng con đọc view request_board: xã đăng tin và tỉnh thấy mọi đăng ký đã xếp
+# theo thứ tự ưu tiên, đơn vị đăng ký khác chỉ thấy đăng ký của mình. Thứ tự, bậc, hai diện tích và mẫu tin do view
+# tính (schema/migrations/20261128100100_notice_board.sql). Nút sửa, đăng ký, ghi tiêu chí hiện theo vai trò; trigger
+# của gói vẫn từ chối người không phải xã đăng tin, đăng ký sau hạn hay đăng ký từ tỉnh khác.
+
+title: Tin công khai
+description: >-
+  Bản sao của tin đăng trên Cổng thông tin điện tử của UBND tỉnh, nơi công khai theo luật (NĐ 155/2025/NĐ-CP Điều 3a
+  khoản 3). Đơn vị cùng tỉnh đăng ký nhận ở đây trong thời hạn công khai; sau hạn, hệ thống không nhận đăng ký.
+source: app_facilities_commune_notice_board
+key: case_id
+# Biểu mẫu sửa tin ghi vào bảng gốc; view chỉ để đọc chéo xã.
+writes: app_facilities_commune_notices
+fields:
+  - { name: tenant_name, label: Đơn vị đăng tin }
+  - { name: facility_name, label: Cơ sở }
+  - { name: address, label: Địa chỉ }
+  - { name: usage, label: Công năng sử dụng }
+  - { name: offered_m2, label: Diện tích dự kiến bố trí (m²), type: number }
+  - { name: layout, label: "Sơ đồ mặt bằng, tài liệu hiện trạng" }
+  - { name: other_info, label: Thông tin khác }
+  - { name: portal_url, label: Tin trên cổng tỉnh }
+  - { name: opened_at, label: Bắt đầu công khai, type: datetime }
+  - { name: due_at, label: Hạn đăng ký, type: datetime }
+  - name: status
+    label: Tình trạng
+    choices:
+      - { value: open, label: Đang nhận đăng ký, tone: info }
+      - { value: closed, label: Đã hết hạn, tone: neutral }
+  - { name: notice_text, label: Mẫu tin công khai }
+list:
+  columns: [tenant_name, facility_name, offered_m2, due_at, status]
+  search: [tenant_name, facility_name]
+  filters: [status]
+  sort: { field: due_at, direction: desc }
+detail:
+  title: facility_name
+  text: { field: notice_text, title: Mẫu tin công khai, download: tin-cong-khai }
+  edit:
+    label: Sửa tin
+    form:
+      title: Sửa tin công khai
+      role: manager
+      fields:
+        - { name: usage, label: Công năng sử dụng, type: string, required: true, max_length: 500 }
+        - { name: offered_m2, label: Phần diện tích dự kiến bố trí (m²), type: number, required: true, min: 0.01,
+            max: 9999999999.99 }
+        - { name: layout, label: Sơ đồ mặt bằng hoặc tài liệu thể hiện hiện trạng, type: string, required: true,
+            multiline: true, max_length: 2000 }
+        - { name: other_info, label: Thông tin khác, type: string, multiline: true, max_length: 2000 }
+        - name: portal_url
+          label: Đường dẫn tin trên cổng thông tin của tỉnh
+          type: string
+          max_length: 1000
+          help: Bắt đầu bằng http:// hoặc https://.
+      submit: { label: Lưu, update: app_facilities_commune_notices, version: updated_at }
+      done: { message: Đã lưu tin. }
+  children:
+    - id: requests
+      label: Đăng ký nhận
+      via: case_id
+      source: app_facilities_commune_request_board
+      writes: app_facilities_commune_receive_requests
+      fields:
+        - { name: rank, label: Thứ tự, type: number }
+        - { name: unit, label: Đơn vị có nhu cầu }
+        - { name: tenant_name, label: Đăng ký từ }
+        - { name: tier, label: Bậc ưu tiên, type: number }
+        - { name: tier_label, label: Quan hệ với xã đăng tin }
+        - { name: purpose, label: Mục đích sử dụng }
+        # Hai diện tích cạnh nhau để người ghi tiêu chí thứ nhất so được; không tính trên trình duyệt.
+        - { name: requested_m2, label: Diện tích đề nghị (m²), type: number }
+        - { name: offered_m2, label: Diện tích dự kiến bố trí (m²), type: number }
+        - { name: standard_m2, label: "Diện tích theo tiêu chuẩn, định mức (m²)", type: number }
+        - { name: explanation, label: Thuyết minh sự phù hợp }
+        - name: purpose_fit
+          label: Phù hợp công năng
+          choices: &fit
+            - { value: fit, label: Phù hợp, tone: ok }
+            - { value: unfit, label: Không phù hợp, tone: warn }
+        - { name: area_fit, label: Phù hợp diện tích, choices: *fit }
+        - { name: assessment_note, label: Ghi chú đánh giá }
+        - { name: areas, label: Hai diện tích }
+        - { name: created_at, label: Ngày đăng ký, type: datetime }
+      list:
+        columns: [rank, unit, tenant_name, purpose, requested_m2, offered_m2, purpose_fit, area_fit]
+        sort: { field: rank }
+      add:
+        label: Đăng ký nhận
+        parent: facility_name
+        form:
+          title: Đăng ký nhận diện tích
+          role: user
+          fields:
+            - name: unit_name
+              label: Tên đơn vị thuộc xã
+              type: string
+              max_length: 200
+              help: Chỉ điền khi đăng ký cho một đơn vị thuộc chính xã đăng tin; xã khác để trống.
+            - { name: purpose, label: Mục đích sử dụng, type: string, required: true, max_length: 500 }
+            - { name: requested_m2, label: Diện tích đề nghị tiếp nhận (m²), type: number, required: true, min: 0.01,
+                max: 9999999999.99 }
+            - { name: standard_m2, label: "Diện tích theo tiêu chuẩn, định mức của đơn vị (m²)", type: number,
+                min: 0.01, max: 9999999999.99 }
+            - name: explanation
+              label: Thuyết minh sự phù hợp
+              type: string
+              required: true
+              multiline: true
+              max_length: 4000
+              help: Sự phù hợp giữa diện tích đề nghị tiếp nhận với diện tích dự kiến bố trí.
+          submit: { label: Gửi đăng ký, insert: app_facilities_commune_receive_requests }
+          done: { message: Đã gửi đăng ký. }
+      detail:
+        title: unit
+        children:
+          # Tiêu chí thứ nhất của điểm c do người duyệt của xã đăng tin ghi; dòng nối về đăng ký bằng request_id.
+          - id: assessment
+            label: Tiêu chí phù hợp công năng, diện tích
+            via: request_id
+            source: app_facilities_commune_request_assessments
+            key: request_id
+            fields:
+              - { name: purpose_fit, label: Phù hợp công năng, choices: *fit }
+              - { name: area_fit, label: Phù hợp diện tích, choices: *fit }
+              - { name: note, label: Ghi chú }
+              - { name: updated_at, label: Ghi lúc, type: datetime }
+            list:
+              columns: [purpose_fit, area_fit, note, updated_at]
+            add:
+              label: Ghi tiêu chí
+              parent: areas
+              form:
+                title: Ghi tiêu chí phù hợp
+                role: manager
+                fields: &assessment_fields
+                  - name: purpose_fit
+                    label: Mục đích sử dụng phù hợp công năng
+                    type: choice
+                    required: true
+                    choices: &fit_choices
+                      - { value: fit, label: Phù hợp }
+                      - { value: unfit, label: Không phù hợp }
+                  - name: area_fit
+                    label: Diện tích đề nghị phù hợp diện tích dự kiến bố trí
+                    type: choice
+                    required: true
+                    choices: *fit_choices
+                  - { name: note, label: Ghi chú, type: string, multiline: true, max_length: 2000 }
+                submit: { label: Lưu, insert: app_facilities_commune_request_assessments }
+                done: { message: Đã ghi tiêu chí. }
+            detail:
+              title: purpose_fit
+              edit:
+                label: Sửa
+                form:
+                  title: Sửa tiêu chí phù hợp
+                  role: manager
+                  fields: *assessment_fields
+                  submit: { label: Lưu, update: app_facilities_commune_request_assessments, version: updated_at }
+                  done: { message: Đã lưu tiêu chí. }
