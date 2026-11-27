@@ -123,13 +123,18 @@ const DENIED = new CombinedError({
   graphQLErrors: [{ message: "field 'x' not found in type: 'query_root'", extensions: { code: "validation-failed" } }],
 });
 
-/** Client giả: menu luôn trả `menu`; câu khác trả theo `state`, dựng từ chính câu truy vấn. */
+/** Client giả: menu luôn trả `menu`, ghi đè luôn rỗng; câu khác trả theo `state`, dựng từ chính câu truy vấn. */
 function fakeClient(menu: MenuItem[], state: DataState): Client {
   const answer = (operation: Operation) => {
     const definition = operation.query.definitions[0] as unknown as { selectionSet: SelectionSet };
     const roots = definition.selectionSet.selections.filter((field) => field.kind === "Field");
     if (roots.some((field) => field.name.value === "platform_menu_items")) {
       return fromValue({ operation, data: { platform_menu_items: menu }, stale: false, hasNext: false });
+    }
+    // Ghi đè cấu hình của org (ADR 0060) là một phần của menu: khung trang chờ nó, nên luôn trả rỗng, kể cả ở trạng
+    // thái "đang tải" của dữ liệu khối.
+    if (roots.some((field) => field.name.value === "platform_config_overrides_by_tenant")) {
+      return fromValue({ operation, data: { platform_config_overrides_by_tenant: [] }, stale: false, hasNext: false });
     }
     if (state === "loading") return never;
     if (state === "denied") return fromValue({ operation, error: DENIED, stale: false, hasNext: false });
