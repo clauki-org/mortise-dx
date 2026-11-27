@@ -6,7 +6,16 @@
 // chủ. Chạy trên quy trình mẫu core-approval của lõi; danh mục của gói ở catalog.spec.ts.
 
 import { expect, test } from "@playwright/test";
-import { complete, outcome, signIn, submitApproval, taskOf, uniqueTitle, visibleTenants } from "./support.ts";
+import {
+  complete,
+  dropInstance,
+  outcome,
+  signIn,
+  submitApproval,
+  taskOf,
+  uniqueTitle,
+  visibleTenants,
+} from "./support.ts";
 
 test("người duyệt của đơn vị A mở hồ sơ từ đường dẫn, duyệt trên web, quy trình kết thúc ở nhánh đã duyệt", async ({
   page,
@@ -38,15 +47,19 @@ test("người duyệt của đơn vị A mở hồ sơ từ đường dẫn, du
 test("người gửi không tự duyệt hồ sơ của mình (quy tắc bốn mắt)", async ({ page, request }) => {
   const title = uniqueTitle("Tự gửi tự duyệt");
   const instance = await submitApproval(request, "manager.a", title);
+  try {
+    await page.goto("/");
+    await signIn(page, "manager.a");
+    await page.getByRole("link", { name: title }).click();
+    await page.getByLabel(/Ý kiến/).fill("Tự duyệt");
+    await page.getByRole("button", { name: "Duyệt" }).click();
 
-  await page.goto("/");
-  await signIn(page, "manager.a");
-  await page.getByRole("link", { name: title }).click();
-  await page.getByLabel(/Ý kiến/).fill("Tự duyệt");
-  await page.getByRole("button", { name: "Duyệt" }).click();
-
-  await expect(page.getByRole("alert")).toContainText("Quy tắc bốn mắt");
-  expect(await outcome(request, "manager.a", instance)).toMatchObject({ ended: false });
+    await expect(page.getByRole("alert")).toContainText("Quy tắc bốn mắt");
+    expect(await outcome(request, "manager.a", instance)).toMatchObject({ ended: false });
+  } finally {
+    // Xã không còn người duyệt nào khác manager.a nên hồ sơ này không bao giờ đóng; dọn cả khi bài hỏng giữa chừng.
+    await dropInstance(request, instance);
+  }
 });
 
 test("người duyệt của đơn vị B không thấy, không mở, không duyệt được việc của đơn vị A", async ({ page, request }) => {

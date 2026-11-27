@@ -140,6 +140,21 @@ export async function graphql<T>(
   return body.data as T;
 }
 
+/**
+ * Xóa một quy trình thử thẳng ở Flowable trong máy chủ: workflow-api không có lệnh hủy, mà hồ sơ người duyệt tự lập
+ * (bài bốn mắt) thì không ai trong xã đóng được. Không xóa thì bảng việc demo tích hồ sơ sau mỗi lần chạy.
+ */
+export async function dropInstance(request: APIRequestContext, instance: string) {
+  const secret = process.env.FLOWABLE_ADMIN_PASSWORD;
+  if (!secret) throw new Error("Thiếu FLOWABLE_ADMIN_PASSWORD: chạy qua `make e2e`, lệnh này nạp .env");
+  const port = process.env.FLOWABLE_PORT || "8083";
+  const response = await request.delete(
+    `http://127.0.0.1:${port}/flowable-rest/service/runtime/process-instances/${encodeURIComponent(instance)}`,
+    { headers: { Authorization: `Basic ${Buffer.from(`rest-admin:${secret}`).toString("base64")}` } },
+  );
+  expect(response.status(), `xóa quy trình thử ${instance} ở Flowable`).toBe(204);
+}
+
 export async function outcome(request: APIRequestContext, username: string, instance: string) {
   return workflow(request, username, "GET", `/instances/${instance}`);
 }

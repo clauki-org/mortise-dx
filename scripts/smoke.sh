@@ -410,6 +410,12 @@ check "user.a khởi tạo quy trình duyệt" "$status" 201
 instance=$(jq -r .id <<<"$body")
 
 task_of() { api GET "$1" /tasks | cut -f2 | jq -r --arg p "$instance" '.[] | select(.processInstanceId == $p) | .id'; }
+# Xóa quy trình thử thẳng ở Flowable trong máy chủ (workflow-api không có lệnh hủy). Dùng cho hồ sơ mà bài kiểm không
+# đóng được hay không cần đóng, để bảng việc demo của người duyệt không tích hồ sơ do smoke để lại.
+drop_instance() {
+  curl -fsS -o /dev/null -X DELETE -u "rest-admin:$FLOWABLE_ADMIN_PASSWORD" \
+    "http://127.0.0.1:${FLOWABLE_PORT:-8083}/flowable-rest/service/runtime/process-instances/$1"
+}
 
 check "manager.b (tenant khác, cùng vai trò) không thấy task" "$(task_of "$manager_b")" ""
 task=$(task_of "$manager_a")
@@ -436,6 +442,8 @@ instance=$(jq -r .id <<<"$body")
 IFS=$'\t' read -r status body < <(api POST "$manager_a" "/tasks/$(task_of "$manager_a")/complete" \
   '{"variables":{"approved":true}}')
 check "Quy tắc bốn mắt: người gửi không tự duyệt được" "$status" 403
+# Xã không còn người duyệt nào khác manager.a nên hồ sơ này không bao giờ đóng.
+drop_instance "$instance"
 
 IFS=$'\t' read -r status _ < <(api POST "$user_a" /processes/core-approval/instances \
   '{"variables":{"initiator":"gia-mao"}}')
@@ -489,6 +497,9 @@ check "Gửi lại sau đó với cùng mã vẫn trả quy trình cũ" "$(start
 other=$(start_once "$manager_a")
 check "Người khác dùng trùng mã được quy trình của riêng mình" \
   "$([[ "$other" =~ ^[0-9a-f-]+$ && "$other" != "$created" ]] && echo yes)" yes
+for started in "$created" "$other"; do
+  if [[ "$started" =~ ^[0-9a-f-]+$ ]]; then drop_instance "$started"; fi
+done
 
 # Tài khoản dịch vụ (ADR 0017): mở quy trình thay cho tenant ghi ở header, ngoài ra không làm được gì.
 token_url="$base/auth/realms/mortise/protocol/openid-connect/token"
