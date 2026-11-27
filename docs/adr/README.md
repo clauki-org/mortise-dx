@@ -75,6 +75,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0052](0052-catalog-export.md) | Xuất danh sách của danh mục ra CSV, Excel và PDF ngay trong trình duyệt, bằng quyền của người xuất | Chấp nhận |
 | [0053](0053-case-seals-and-timer-deadlines.md) | Niêm phong hồ sơ đã kết thúc bằng băm nối vào nhật ký, và ghi hạn của bước chờ hẹn giờ | Chấp nhận |
 | [0054](0054-edit-and-add-child-from-catalog.md) | Sửa dòng và thêm dòng con từ màn hình danh mục, so cột version để không ghi đè | Chấp nhận |
+| [0056](0056-self-hosted-osm-basemap.md) | Nền bản đồ OpenStreetMap tự lưu trữ dạng PMTiles, mặc định không chữ | Chấp nhận |
 
 ## Quyết định còn mở
 

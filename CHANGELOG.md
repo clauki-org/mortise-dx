@@ -64,6 +64,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   0021](docs/adr/0021-document-assistant.md)).
 - Sửa cơ sở, tòa, phòng và thêm tòa, phòng ngay trên màn hình danh mục; hai người sửa cùng lúc thì người lưu sau được
   báo, không ghi đè ([ADR 0054](docs/adr/0054-edit-and-add-child-from-catalog.md)).
+- Bản đồ có nền OpenStreetMap tự lưu trữ (`make basemap`), mặc định không chữ, luôn ghi nguồn ODbL; chưa có tệp nền
+  thì nền trơn ([ADR 0056](docs/adr/0056-self-hosted-osm-basemap.md)).
 
 ### Removed
 
