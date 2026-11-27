@@ -126,3 +126,6 @@ cases.process-not-slug.yaml	$.processes[0]	'core-approval&state=all' does not ma
 branding.logo-other-origin.json	$.logo	'https://cdn.example.org/logo.svg' does not match '^/brand/[A-Za-z0-9][A-Za-z0-9._-]*\\\\.(svg|png|webp)$'
 branding.low-contrast-color.json	$.color	'teal' is not one of ['blue', 'indigo', 'violet', 'grape', 'pink', 'dark']
 branding.missing-short-name.json	$	'short_name' is a required property
+catalog.add-form-unknown-field-type.yaml	$.detail.children[0].add.form.fields[0].type	'no-such-type' is not one of ['string', 'number', 'integer', 'boolean', 'date', 'choice']
+catalog.edit-missing-label.yaml	$.detail.edit	'label' is a required property
+form.update-without-version.yaml	$.submit	'version' is a dependency of 'update'

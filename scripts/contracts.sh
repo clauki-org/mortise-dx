@@ -163,10 +163,6 @@ for item in app.get("menu", []):
       if [[ "$component" == assistant ]]; then
         "${data_check[@]}" --owner "${app%/}" "${configs[@]}"
       fi
-      # Biểu mẫu chỉ gửi tới quy trình hay bảng của chính gói này (ADR 0030); tệp lấy theo app.yaml như ở trên.
-      if [[ "$component" == form ]]; then
-        "${yaml[@]}" scripts/check-form-config.py --app "${app}app.yaml"
-      fi
       # Trang theo dõi hồ sơ chỉ liệt kê quy trình của chính gói này (ADR 0032).
       if [[ "$component" == cases ]]; then
         "${yaml[@]}" scripts/check-cases-config.py --bpmn "$app"**/*.bpmn20.xml --cases "${configs[@]}"
@@ -177,6 +173,10 @@ for item in app.get("menu", []):
       fi
     fi
   done
+  # Biểu mẫu chỉ gửi tới quy trình hay bảng của chính gói này (ADR 0030), kể cả biểu mẫu khai trong danh mục để sửa
+  # dòng, thêm dòng con (ADR 0054); tệp lấy theo app.yaml như ở trên. Chạy một lần cho cả hai loại mục menu, ngoài vòng
+  # theo thành phần, để gói có cả biểu mẫu lẫn danh mục không bị báo một lỗi hai lần.
+  "${yaml[@]}" scripts/check-form-config.py --app "${app}app.yaml"
   # Luật ngưỡng (mục `rules`), văn bản cho trợ lý (mục `knowledge`) và bảng phân cấp (mục `authorities`) cũng nằm ở
   # đường dẫn do app.yaml khai.
   for entry in rules:threshold-rule knowledge:knowledge authorities:authority; do
@@ -360,7 +360,130 @@ if [[ "$result" != *": mục 1: một mục của insert_permissions thiếu rol
   echo "check-form-config.py phải báo tệp quyền sai dạng bằng một dòng lỗi. Đang nhận: $result" >&2
   exit 1
 fi
-echo "ok -- 6 biểu mẫu và tệp quyền sai bị check-form-config.py từ chối đúng luật"
+form_rejects "submit.update chỉ dùng cho biểu mẫu mở từ danh mục (detail.edit)" <<'YAML'
+title: Sửa
+fields: [{ name: code, label: Mã, type: string }]
+submit: { label: Lưu, update: app_example_items, version: updated_at }
+done: { message: Đã lưu }
+YAML
+echo "ok -- 7 biểu mẫu và tệp quyền sai bị check-form-config.py từ chối đúng luật"
+# Biểu mẫu khai trong danh mục (ADR 0054): danh mục mẫu của hợp đồng phải qua với bảng quyền mẫu dưới đây; mỗi danh mục
+# sai đọc từ stdin phạm đúng một luật của quyền update hay của cột nối về cha, lỗi đúng từng ký tự.
+catalog_form_tables='- table: { schema: app_example, name: items }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [id, code, name, status, created_at, updated_at]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+  update_permissions:
+    - role: user
+      permission:
+        columns: [code, name, status]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+- table: { schema: app_example, name: parts }
+  insert_permissions:
+    - role: user
+      permission:
+        columns: [item_id, name, installed_on]
+        check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+        set: { tenant_id: X-Hasura-Tenant-Id }'
+catalog_forms() { # TỆP_DANH_MỤC
+  "${yaml[@]}" scripts/check-form-config.py --app contracts/examples/app.example.yaml \
+    --bpmn core/workflow/fixtures/core-approval.bpmn20.xml --steps contracts/examples/workflow.example.yaml \
+    --hasura <(printf '%s\n' "${tables:-$catalog_form_tables}") --catalog "$1" 2>&1
+}
+catalog_forms contracts/examples/catalog.example.yaml
+catalog_form_rejects() { # LỖI_MONG_ĐỢI, danh mục ở stdin
+  local result
+  result=$(catalog_forms /dev/stdin) && result="không bị từ chối"
+  if [[ "$result" != "/dev/stdin: $1" ]]; then
+    echo "check-form-config.py phải báo đúng lỗi của biểu mẫu trong danh mục: $1" >&2
+    echo "Đang nhận: $result" >&2
+    exit 1
+  fi
+}
+catalog_form_rejects "nút 'Sửa': vai trò 'user' không được sửa cột 'created_at' của 'app_example_items'" <<'YAML'
+title: Danh mục
+source: app_example_items
+fields: [{ name: name, label: Tên }]
+list: { columns: [name] }
+detail:
+  edit:
+    label: Sửa
+    form:
+      title: Sửa
+      fields: [{ name: created_at, label: Ngày tạo, type: date }]
+      submit: { label: Lưu, update: app_example_items, version: updated_at }
+      done: { message: Đã lưu }
+YAML
+# Cột version mà người dùng ghi được thì lệnh sửa giữ giá trị cũ, và người sửa sau không được báo.
+tables="${catalog_form_tables/columns: \[code, name, status\]/columns: [code, name, status, updated_at]}" \
+  catalog_form_rejects "nút 'Sửa': cột 'updated_at' nằm trong quyền update của vai trò 'user'; bỏ khỏi columns" <<'YAML'
+title: Danh mục
+source: app_example_items
+fields: [{ name: name, label: Tên }]
+list: { columns: [name] }
+detail:
+  edit:
+    label: Sửa
+    form:
+      title: Sửa
+      fields: [{ name: name, label: Tên, type: string }]
+      submit: { label: Lưu, update: app_example_items, version: updated_at }
+      done: { message: Đã lưu }
+YAML
+catalog_form_rejects "nút 'Sửa': vai trò 'user' không đọc được cột 'changed_at' của 'app_example_items'" <<'YAML'
+title: Danh mục
+source: app_example_items
+fields: [{ name: name, label: Tên }]
+list: { columns: [name] }
+detail:
+  edit:
+    label: Sửa
+    form:
+      title: Sửa
+      fields: [{ name: name, label: Tên, type: string }]
+      submit: { label: Lưu, update: app_example_items, version: changed_at }
+      done: { message: Đã lưu }
+YAML
+catalog_form_rejects "parts: nút 'Thêm': vai trò 'user' không ghi được cột nối về cha 'item_no' của \
+'app_example_parts'" <<'YAML'
+title: Danh mục
+source: app_example_items
+fields: [{ name: name, label: Tên }]
+list: { columns: [name] }
+detail:
+  children:
+    - id: parts
+      label: Thành phần
+      via: item_no
+      source: app_example_parts
+      fields: [{ name: name, label: Tên }]
+      list: { columns: [name] }
+      add:
+        label: Thêm
+        form:
+          title: Thêm
+          fields: [{ name: name, label: Tên, type: string }]
+          submit: { label: Thêm, insert: app_example_parts }
+          done: { message: Đã thêm }
+YAML
+catalog_form_rejects "nút 'Sửa': biểu mẫu phải sửa bảng 'app_example_items' (submit.update)" <<'YAML'
+title: Danh mục
+source: app_example_items
+fields: [{ name: name, label: Tên }]
+list: { columns: [name] }
+detail:
+  edit:
+    label: Sửa
+    form:
+      title: Sửa
+      fields: [{ name: name, label: Tên, type: string }]
+      submit: { label: Lưu, update: app_example_parts, version: updated_at }
+      done: { message: Đã lưu }
+YAML
+echo "ok -- 5 danh mục có biểu mẫu sai bị check-form-config.py từ chối đúng luật"
 # Luật của scripts/check-documents-config.py, như của biểu mẫu ở trên: danh mục mẫu của hợp đồng phải qua với bảng quyền
 # mẫu dưới đây, và mỗi danh mục sai đọc từ stdin phạm đúng một luật, lỗi đúng từng ký tự.
 documents_tables='- table: { schema: app_example, name: item_documents }

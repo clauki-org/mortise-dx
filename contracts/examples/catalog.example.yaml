@@ -4,7 +4,8 @@
 # Ví dụ cấu hình danh mục hợp lệ theo contracts/catalog.schema.json; `make check-fast` kiểm tệp này.
 # Đây là tệp catalog/items.yaml mà mục menu `items` trong app.example.yaml trỏ tới. Đối tượng con
 # khai lồng trong đối tượng cha: mỗi danh mục có các thành phần, mỗi thành phần có các lần kiểm. Nút trên màn hình
-# chi tiết mở quy trình approval của gói (bpmn/approval.bpmn20.xml trong app.example.yaml) cho dòng đang xem.
+# chi tiết mở quy trình approval của gói (bpmn/approval.bpmn20.xml trong app.example.yaml) cho dòng đang xem. Nút
+# "Sửa" và "Thêm thành phần" mở biểu mẫu theo contracts/form.schema.json khai ngay trong tệp (ADR 0054).
 # Gói thật đặt tệp trong thư mục của gói.
 
 title: Danh mục
@@ -52,6 +53,22 @@ detail:
         itemId: id
         title: name
         quantity: quantity
+  # Sửa dòng đang xem: chỉ gửi cột đã đổi, kèm điều kiện updated_at bằng giá trị đọc lúc mở.
+  edit:
+    label: Sửa
+    form:
+      title: Sửa danh mục
+      fields:
+        - { name: code, label: Mã, type: string, required: true, max_length: 50 }
+        - { name: name, label: Tên, type: string, required: true, max_length: 200 }
+        - name: status
+          label: Tình trạng
+          type: choice
+          choices:
+            - { value: active, label: Đang dùng }
+            - { value: retired, label: Ngừng dùng }
+      submit: { label: Lưu, update: app_example_items, version: updated_at }
+      done: { message: Đã lưu. }
   # Giấy tờ đính kèm của danh mục đang xem (contracts/documents.schema.json, ADR 0041).
   documents:
     title: Giấy tờ đính kèm
@@ -72,6 +89,17 @@ detail:
           type: date
       list:
         columns: [name, installed_on]
+      # item_id nhận khóa của dòng cha; ô chỉ đọc hiện mã của dòng cha.
+      add:
+        label: Thêm thành phần
+        parent: code
+        form:
+          title: Thêm thành phần
+          fields:
+            - { name: name, label: Tên, type: string, required: true }
+            - { name: installed_on, label: Ngày lắp, type: date }
+          submit: { label: Thêm, insert: app_example_parts }
+          done: { message: Đã thêm thành phần. }
       detail:
         children:
           - id: checks

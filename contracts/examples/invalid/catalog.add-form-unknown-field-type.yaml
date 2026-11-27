@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị từ chối: biểu mẫu của nút thêm dòng con được kiểm theo contracts/form.schema.json, kiểu trường lạ bị từ chối.
+title: Danh mục
+source: app_example_items
+fields: [{ name: name, label: Tên }]
+list: { columns: [name] }
+detail:
+  children:
+    - id: parts
+      label: Thành phần
+      via: item_id
+      source: app_example_parts
+      fields: [{ name: name, label: Tên }]
+      list: { columns: [name] }
+      add:
+        label: Thêm
+        form:
+          title: Thêm
+          fields: [{ name: name, label: Tên, type: no-such-type }]
+          submit: { label: Thêm, insert: app_example_parts }
+          done: { message: Đã thêm }

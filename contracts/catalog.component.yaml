@@ -3,8 +3,9 @@
 #
 # Bản mô tả thành phần danh mục theo contracts/component.schema.json; `make check-fast` kiểm tệp này.
 # Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, CatalogRows.tsx,
-# CatalogActions.tsx, catalog.ts, catalogQuery.ts; phần tài liệu ở CatalogDocuments.tsx). Mỗi dòng dưới đây đã được chạy thử trên giao
-# diện; đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
+# CatalogActions.tsx, catalog.ts, catalogQuery.ts; phần tài liệu ở CatalogDocuments.tsx; nút sửa và thêm dòng con ở
+# CatalogForm.tsx). Mỗi dòng dưới đây đã được chạy thử trên giao diện, trừ nút sửa và thêm dòng con (ADR 0054, mục
+# Chưa kiểm); đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
 
 component: catalog
 summary: Danh sách và màn hình chi tiết của một loại đối tượng cùng các đối tượng con của nó, đọc qua GraphQL theo cấu hình của gói.
@@ -38,12 +39,20 @@ capabilities:
     đang xem, đọc trong một truy vấn bằng quyền của người xuất; đầu tệp ghi tên danh sách, nguồn, đơn vị, thời điểm
     và múi giờ, người xuất, điều kiện và số dòng. CSV chặn công thức ở ô bắt đầu bằng = + - @, tab hay CR; Excel ghi
     ô chữ là chữ (ADR 0052).
+  - Nút sửa dòng đang xem (detail.edit, ở mọi cấp cha–con) mở biểu mẫu có submit.update trong hộp thoại, điền sẵn giá
+    trị đọc lại từ máy chủ lúc mở bằng vai trò của biểu mẫu; nút thêm dòng con (add của đối tượng con) đứng cạnh
+    tiêu đề bảng con, mở biểu mẫu có submit.insert với cột via mang khóa của dòng cha, hiện một ô chỉ đọc mang giá trị
+    của dòng cha (add.parent, bỏ trống là tiêu đề). Biểu mẫu theo contracts/form.schema.json, khai ngay trong cấu
+    hình danh mục. Nút chỉ hiện khi token có vai trò form.role (bỏ trống là user). Lưu được thì hộp đóng, hiện
+    done.message và đọc lại dòng hay bảng con (ADR 0054).
   - Phần tài liệu đính kèm của dòng đang xem (detail.documents, ở mọi cấp cha–con) để xem, tải xuống, đính kèm tệp;
     năng lực và giới hạn ở contracts/documents.component.yaml (ADR 0041).
   - Nơi gọi chỉ đưa cấu hình và địa chỉ gốc; thành phần không cần menu, bảng hay cấu hình nào khác của hệ thống.
 limits:
-  - Không thêm, sửa hay xóa dòng của danh mục; việc ghi chỉ có khởi tạo quy trình bằng nút gói khai và đính kèm tệp ở
-    phần tài liệu (thêm một dòng vào bảng nối).
+  - Không xóa dòng. Chỉ sửa dòng đang xem và thêm dòng con của dòng đang xem; danh sách ngoài cùng không có nút thêm
+    dòng. Việc ghi khác là khởi tạo quy trình bằng nút gói khai và đính kèm tệp ở phần tài liệu.
+  - Nút sửa, nút thêm hiện cho mọi token có vai trò của biểu mẫu, kể cả người mà quyền theo dòng của Hasura không cho
+    ghi dòng đó; lần lưu của họ không khớp dòng nào hay bị từ chối, và được báo bằng lời.
   - Mỗi danh sách đọc một bảng; không hiện cột của bảng khác, kể cả tên của đối tượng cha. Cột qua quan hệ chỉ hiện ở
     màn hình chi tiết, chỉ một cấp, không tìm, lọc hay sắp xếp được.
   - Nút chỉ mở quy trình của cùng gói, chỉ khởi tạo; không hiện trạng thái hồ sơ đã lập và không chặn hai hồ sơ cùng

@@ -7,39 +7,21 @@
 // vẫn quyết định. Ở đây không có tên bảng hay chữ của một lĩnh vực nào.
 
 import { Alert, Anchor, Button, Group, Paper, Stack } from "@mantine/core";
-import { Form as MantineForm } from "@rjsf/mantine";
-import type { RJSFValidationError } from "@rjsf/utils";
 import { useMutation } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router";
 import { useClient } from "urql";
 import { casesPathFor } from "./cases";
 import { ReadableError } from "./errorText";
-import {
-  clearDependents,
-  type FormConfig,
-  formProblems,
-  formRole,
-  formSchema,
-  type KeyState,
-  keyFor,
-  payloadOf,
-  type Values,
-} from "./formConfig";
+import { FormFields } from "./FormFields";
+import { type FormConfig, formProblems, formRole, type KeyState, keyFor, payloadOf, type Values } from "./formConfig";
 import { insertError, insertMutation } from "./formInsert";
-import { formValidator } from "./formValidator";
 import { findItem, itemPath, rolesOf } from "./menu";
 import { usePackageMenu } from "./PackagePage";
 import { PageHeader } from "./PageHeader";
-import { type FormContext, SourceChoice } from "./SourceChoice";
 import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 import { idempotencyKey, startProcess } from "./workflow";
-
-// Ô nhập của Mantine đã tự hiện lỗi dưới ô; danh sách lỗi riêng của rjsf dưới mỗi trường sẽ lặp lại cùng lỗi đó.
-const NoFieldErrorList = () => null;
-const TEMPLATES = { FieldErrorTemplate: NoFieldErrorList };
-const WIDGETS = { sourceChoice: SourceChoice };
 
 const freshKey = (): KeyState => ({ key: idempotencyKey() });
 
@@ -100,7 +82,6 @@ function Done({ config, app, started, onAgain }: DoneProps) {
 }
 
 function FormBody({ config, app }: { config: FormConfig; app: string }) {
-  const { schema, uiSchema } = useMemo(() => formSchema(config), [config]);
   const [values, setValues] = useState<Values>({});
   // undefined: chưa gửi xong; chuỗi: mã hồ sơ vừa lập, rỗng khi biểu mẫu thêm dòng.
   const [done, setDone] = useState<string>();
@@ -109,7 +90,6 @@ function FormBody({ config, app }: { config: FormConfig; app: string }) {
   // gọi onSubmit. Lệnh thêm dòng không có Idempotency-Key, nên chặn ở đây.
   const sending = useRef(false);
   const submit = useSubmit(config);
-  const context: FormContext = { values, role: formRole(config) };
 
   const send = (data: Values) => {
     if (sending.current) return;
@@ -134,26 +114,9 @@ function FormBody({ config, app }: { config: FormConfig; app: string }) {
     setValues({});
     setDone(undefined);
   };
-  // Ô đánh dấu bắt buộc mang luật const: true; thông điệp chung "Giá trị không đúng" không nói phải làm gì.
-  const transformErrors = (errors: RJSFValidationError[]) =>
-    errors.map((error) => (error.name === "const" ? { ...error, message: "Cần đánh dấu ô này" } : error));
-
   if (done !== undefined) return <Done config={config} app={app} started={done} onAgain={again} />;
   return (
-    <MantineForm
-      schema={schema}
-      uiSchema={uiSchema}
-      formData={values}
-      formContext={context}
-      validator={formValidator}
-      widgets={WIDGETS}
-      templates={TEMPLATES}
-      transformErrors={transformErrors}
-      onChange={(event) => setValues((previous) => clearDependents(config, previous, event.formData ?? {}))}
-      onSubmit={(event) => send(event.formData ?? {})}
-      showErrorList={false}
-      noHtml5Validate
-    >
+    <FormFields config={config} values={values} onValues={setValues} onSubmit={send}>
       <Stack mt="md" gap="sm">
         {submit.isError && <ErrorNotice title="Chưa gửi được" error={submit.error} />}
         <Group>
@@ -162,13 +125,16 @@ function FormBody({ config, app }: { config: FormConfig; app: string }) {
           </Button>
         </Group>
       </Stack>
-    </MantineForm>
+    </FormFields>
   );
 }
 
 export function FormPanel({ config, app }: { config: FormConfig; app: string }) {
   const { getToken } = useSession();
   const problems = formProblems(config);
+  // Lệnh sửa cần một dòng cụ thể mà trang trên menu không có; chỉ màn hình chi tiết của danh mục mở được (ADR 0054).
+  if (config.submit?.update !== undefined)
+    problems.push("biểu mẫu sửa dòng chỉ mở được từ màn hình chi tiết của danh mục");
   if (problems.length > 0) {
     return (
       <Alert color="red" title="Cấu hình biểu mẫu sai">

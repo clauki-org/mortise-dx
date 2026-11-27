@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị từ chối: nút sửa thiếu chữ trên nút.
+title: Danh mục
+source: app_example_items
+fields: [{ name: name, label: Tên }]
+list: { columns: [name] }
+detail:
+  edit:
+    form:
+      title: Sửa
+      fields: [{ name: name, label: Tên, type: string }]
+      submit: { label: Lưu, update: app_example_items, version: updated_at }
+      done: { message: Đã lưu }

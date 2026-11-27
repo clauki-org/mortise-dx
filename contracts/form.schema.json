@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/clauki-org/mortise-dx/contracts/form.schema.json",
   "title": "Cấu hình thành phần biểu mẫu nhập liệu (component: form)",
-  "description": "Tệp cấu hình mà gói viết cho thành phần biểu mẫu. Người dùng điền các trường rồi gửi; biểu mẫu khởi tạo một quy trình của gói qua workflow-api (submit.process) hoặc thêm một dòng vào một bảng của gói qua GraphQL (submit.insert), bằng token của người dùng. Trình duyệt kiểm các luật khai ở đây; workflow-api và Hasura vẫn là nơi quyết định. Quyền không khai ở đây: role chỉ chọn vai trò gửi kèm truy vấn (ADR 0030).",
+  "description": "Tệp cấu hình mà gói viết cho thành phần biểu mẫu. Người dùng điền các trường rồi gửi; biểu mẫu khởi tạo một quy trình của gói qua workflow-api (submit.process) hoặc thêm một dòng vào một bảng của gói qua GraphQL (submit.insert), hay sửa một dòng mở từ màn hình chi tiết của danh mục (submit.update), bằng token của người dùng. Trình duyệt kiểm các luật khai ở đây; workflow-api và Hasura vẫn là nơi quyết định. Quyền không khai ở đây: role chỉ chọn vai trò gửi kèm truy vấn (ADR 0030).",
   "type": "object",
   "additionalProperties": false,
   "required": ["title", "fields", "submit", "done"],
@@ -10,7 +10,7 @@
     "title": { "description": "Tiêu đề của trang biểu mẫu", "$ref": "#/$defs/text" },
     "description": { "description": "Một đoạn hướng dẫn hiện dưới tiêu đề", "$ref": "#/$defs/text" },
     "role": {
-      "description": "Vai trò Hasura gửi kèm truy vấn danh mục chọn và lệnh thêm dòng (header X-Hasura-Role). Token của người dùng không có vai trò này thì biểu mẫu không hiện. Khai vai trò không cấp quyền gì: Hasura vẫn kiểm vai trò với token. Bỏ trống là user, vai trò `make check-fast` kiểm, và header vẫn được gửi để không rơi về vai trò mặc định của token.",
+      "description": "Vai trò Hasura gửi kèm truy vấn danh mục chọn, lệnh đọc dòng cần sửa và lệnh thêm hay sửa dòng (header X-Hasura-Role). Token của người dùng không có vai trò này thì biểu mẫu không hiện. Khai vai trò không cấp quyền gì: Hasura vẫn kiểm vai trò với token. Bỏ trống là user, vai trò `make check-fast` kiểm, và header vẫn được gửi để không rơi về vai trò mặc định của token.",
       "type": "string",
       "pattern": "^[a-z][a-z0-9_]*$"
     },
@@ -39,7 +39,7 @@
       "required": ["name", "label", "type"],
       "properties": {
         "name": {
-          "description": "Tên biến của quy trình (submit.process) hoặc tên cột (submit.insert)",
+          "description": "Tên biến của quy trình (submit.process) hoặc tên cột (submit.insert, submit.update)",
           "$ref": "#/$defs/name"
         },
         "label": { "$ref": "#/$defs/text" },
@@ -120,16 +120,25 @@
       }
     },
     "submit": {
-      "description": "Nút gửi và đích gửi: đúng một trong process (khóa quy trình của gói) và insert (bảng của gói)",
+      "description": "Nút gửi và đích gửi: đúng một trong process (khóa quy trình của gói), insert (thêm một dòng vào bảng của gói) và update (sửa một dòng của bảng, chỉ mở từ màn hình chi tiết của danh mục, ADR 0054)",
       "type": "object",
       "additionalProperties": false,
       "required": ["label"],
       "properties": {
         "label": { "$ref": "#/$defs/text" },
         "process": { "$ref": "#/$defs/slug" },
-        "insert": { "description": "Trường gốc GraphQL của bảng: <lược đồ>_<bảng>", "$ref": "#/$defs/identifier" }
+        "insert": { "description": "Trường gốc GraphQL của bảng: <lược đồ>_<bảng>", "$ref": "#/$defs/identifier" },
+        "update": {
+          "description": "Trường gốc GraphQL của bảng có dòng được sửa: <lược đồ>_<bảng>. Dòng chọn theo khóa của loại đối tượng trong danh mục; chỉ gửi cột đã đổi.",
+          "$ref": "#/$defs/identifier"
+        },
+        "version": {
+          "description": "Cột thời điểm sửa cuối do CSDL đặt ở mỗi lệnh UPDATE (trigger). Biểu mẫu đọc cột này lúc mở và đặt vào where của lệnh sửa: người khác đã sửa trước thì lệnh không khớp dòng nào, người sửa được báo và biểu mẫu tải lại, không ghi đè.",
+          "$ref": "#/$defs/identifier"
+        }
       },
-      "oneOf": [{ "required": ["process"] }, { "required": ["insert"] }]
+      "oneOf": [{ "required": ["process"] }, { "required": ["insert"] }, { "required": ["update"] }],
+      "dependentRequired": { "update": ["version"], "version": ["update"] }
     },
     "name": {
       "description": "Tên biến hay tên cột theo luật tên biến của quy trình; không trùng biến dành riêng mà lõi đặt (docs/api.md) và không bắt đầu bằng authority_, tiền tố lõi dành riêng cho biến chọn nhóm xử lý của bước theo bảng phân cấp thẩm quyền",

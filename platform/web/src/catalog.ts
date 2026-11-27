@@ -8,6 +8,7 @@
 
 import { type DocumentsConfig, documentsProblems } from "./documents";
 import { formatDate, formatDateTime, formatNumber } from "./format";
+import { type FormConfig, formProblems } from "./formConfig";
 import { TONES, type Tone } from "./tones";
 
 export type Field = {
@@ -33,14 +34,20 @@ export type CatalogNode = {
     sort?: Sort;
     page_size?: number;
   };
-  detail?: { title?: string; children?: Child[]; actions?: Action[]; documents?: DocumentsConfig };
+  detail?: { title?: string; children?: Child[]; actions?: Action[]; documents?: DocumentsConfig; edit?: Edit };
 };
+
+/** Nút sửa dòng đang xem: biểu mẫu có submit.update trỏ tới bảng của chính loại đối tượng này (ADR 0054). */
+export type Edit = { label: string; form: FormConfig };
+
+/** Nút thêm dòng con: biểu mẫu có submit.insert trỏ tới bảng của loại con; cột via nhận khóa của dòng cha. */
+export type Add = { label: string; parent?: string; form: FormConfig };
 
 /** Nút khởi tạo quy trình cho dòng đang xem: tên biến của quy trình -> khóa hoặc trường của dòng (ADR 0026). */
 export type Action = { id: string; label: string; process: string; variables: Record<string, string> };
 
 /** Loại đối tượng con: khai như cha, thêm tên ngắn dùng trong đường dẫn và cột chứa khóa của cha. */
-export type Child = CatalogNode & { id: string; label: string; via: string };
+export type Child = CatalogNode & { id: string; label: string; via: string; add?: Add };
 
 /** Cấu hình gói đưa cho thành phần: loại đối tượng ngoài cùng, kèm tiêu đề của danh sách. */
 export type CatalogConfig = CatalogNode & { title: string };
@@ -121,7 +128,46 @@ function nodeProblems(config: CatalogNode): string[] {
     }
   }
   const documents = config.detail?.documents;
-  return [...problems, ...actionProblems(config, names), ...(documents ? documentsProblems(documents) : [])];
+  return [
+    ...problems,
+    ...actionProblems(config, names),
+    ...(documents ? documentsProblems(documents) : []),
+    ...editProblems(config),
+  ];
+}
+
+/**
+ * Biểu mẫu mở từ danh mục ghi vào đúng bảng của danh sách nó đứng cạnh: trỏ sang bảng khác thì danh sách không đổi
+ * sau khi lưu, và khóa của dòng đang xem bị so với cột của một bảng khác.
+ */
+function editProblems(config: CatalogNode): string[] {
+  const edit = config.detail?.edit;
+  if (!edit) return [];
+  const at = `nút "${edit.label}"`;
+  const problems = formProblems(edit.form).map((problem) => `${at}: ${problem}`);
+  if (edit.form.submit?.update !== config.source) {
+    problems.push(`${at}: biểu mẫu phải sửa bảng ${config.source} của danh sách này (submit.update)`);
+  }
+  return problems;
+}
+
+/** Lỗi của nút thêm dòng con; cột via do danh mục đặt từ dòng cha nên không được là trường người dùng sửa. */
+function addProblems(parent: CatalogNode, child: Child): string[] {
+  const add = child.add;
+  if (!add) return [];
+  const at = `nút "${add.label}"`;
+  const problems = formProblems(add.form).map((problem) => `${at}: ${problem}`);
+  if (add.form.submit?.insert !== child.source) {
+    problems.push(`${at}: biểu mẫu phải thêm dòng vào bảng ${child.source} (submit.insert)`);
+  }
+  if (add.form.fields?.some((field) => field.name === child.via)) {
+    problems.push(`${at}: cột ${child.via} nhận khóa của dòng cha, không khai thành trường`);
+  }
+  const shown = add.parent;
+  if (shown !== undefined && shown !== keyOf(parent) && !fieldOf(parent, shown)) {
+    problems.push(`${at}: parent "${shown}" không phải khóa hay trường đã khai của dòng cha`);
+  }
+  return problems;
 }
 
 /** Nút trỏ tới trường chưa khai thì biến của quy trình nhận giá trị trống; báo ngay thay vì đợi người dùng bấm. */
@@ -157,7 +203,10 @@ export function configProblems(config: CatalogNode): string[] {
     // Tên ngắn nằm trong đường dẫn; hai loại con trùng tên thì đường dẫn tới loại thứ hai mở ra loại thứ nhất.
     if (ids.indexOf(id) !== ids.lastIndexOf(id)) problems.push(`hai loại đối tượng con cùng tên ngắn "${id}"`);
   }
-  return [...problems, ...children.flatMap((child) => configProblems(child).map((p) => `${child.label}: ${p}`))];
+  const nested = children.flatMap((child) =>
+    [...addProblems(config, child), ...configProblems(child)].map((p) => `${child.label}: ${p}`),
+  );
+  return [...problems, ...nested];
 }
 
 /** Câu báo lỗi cấu hình cho người dùng: họ không sửa được, nên câu nói rõ phải báo ai. */

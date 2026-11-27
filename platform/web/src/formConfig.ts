@@ -3,8 +3,9 @@
 //
 // Cấu hình của thành phần biểu mẫu (contracts/form.schema.json, ADR 0030): kiểu dữ liệu, lỗi cấu hình kiểm lại lúc
 // chạy, cách đổi cấu hình thành JSON Schema và uiSchema cho rjsf, dữ liệu gửi đi, mã Idempotency-Key và câu truy vấn
-// của danh sách chọn. Lệnh thêm dòng và lỗi của nó ở formInsert.ts; phần hiển thị ở FormPanel.tsx và
-// SourceChoice.tsx. Không có React ở đây để kiểm thử được bằng hàm thuần.
+// của danh sách chọn. Lệnh thêm dòng và lỗi của nó ở formInsert.ts, lệnh sửa dòng ở formUpdate.ts; phần hiển thị ở
+// FormFields.tsx, FormPanel.tsx, CatalogForm.tsx và SourceChoice.tsx. Không có React ở đây để kiểm thử được bằng hàm
+// thuần.
 
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 
@@ -36,7 +37,8 @@ export type FormConfig = {
   description?: string;
   role?: string;
   fields: FormField[];
-  submit: { label: string; process?: string; insert?: string };
+  /** Đúng một đích: process, insert, hay update kèm version (sửa một dòng mở từ danh mục, ADR 0054) */
+  submit: { label: string; process?: string; insert?: string; update?: string; version?: string };
   done: { message: string; menu?: string };
 };
 
@@ -103,10 +105,19 @@ export function formProblems(config: FormConfig): string[] {
   for (const name of new Set(names.filter((name, index) => names.indexOf(name) !== index))) {
     problems.push(`trường "${name}" được khai hai lần`);
   }
-  const { process, insert } = config.submit ?? {};
-  if ((process === undefined) === (insert === undefined)) problems.push("submit cần đúng một trong process và insert");
+  const { process, insert, update, version } = config.submit ?? {};
+  if ([process, insert, update].filter((target) => target !== undefined).length !== 1) {
+    problems.push("submit cần đúng một trong process, insert và update");
+  }
   if (process !== undefined && !SLUG.test(process)) problems.push(`khóa quy trình "${process}" không hợp lệ`);
-  if (insert !== undefined && !IDENTIFIER.test(insert)) problems.push(`bảng "${insert}" không hợp lệ`);
+  for (const table of [insert, update]) {
+    if (table !== undefined && !IDENTIFIER.test(table)) problems.push(`bảng "${table}" không hợp lệ`);
+  }
+  // Không có cột so thì lệnh sửa ghi đè lần sửa của người khác mà không ai biết; cột lạ thì đổi nghĩa câu truy vấn.
+  if (update !== undefined && (version === undefined || !IDENTIFIER.test(version))) {
+    problems.push("submit.update cần version là tên cột thời điểm sửa cuối");
+  }
+  if (version !== undefined && update === undefined) problems.push("submit.version chỉ dùng cùng submit.update");
   // Vai trò đi vào header của yêu cầu; một giá trị lạ có thể là header khác.
   if (config.role !== undefined && !ROLE.test(config.role)) problems.push(`vai trò "${config.role}" không hợp lệ`);
   return problems;
