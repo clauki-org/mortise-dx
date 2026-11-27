@@ -1,0 +1,8 @@
+{
+  "name": "Công ty Điện mặt trời Mẫu",
+  "short_name": "Điện mặt trời Mẫu",
+  "color": ["#fff3e3", "#ffe8cf", "#ffd6ad", "#ffbd80", "#ffa154", "#f78731", "#e8701c", "#cc5a0e", "#ad4708", "#8f3906"],
+  "secondary_color": "indigo",
+  "radius": 4,
+  "background": "tint"
+}

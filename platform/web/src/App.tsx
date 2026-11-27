@@ -67,10 +67,10 @@ const createRouter = () =>
 const retry = (failures: number, error: Error) =>
   failures < 3 && (!(error instanceof ApiError) || error.status === 0 || error.status >= 500);
 
-// Khung chung cho các màn hình trước khi đăng nhập: một thẻ giữa nền xám.
+// Khung chung cho các màn hình trước khi đăng nhập: một thẻ giữa nền trang của bản cài.
 function Gate({ children }: { children: ReactNode }) {
   return (
-    <Center mih="100vh" bg="gray.0" p="md">
+    <Center mih="100vh" bg="var(--mortise-page-background)" p="md">
       <Paper withBorder shadow="sm" radius="md" p="xl" w={400} maw="100%">
         <Stack>{children}</Stack>
       </Paper>

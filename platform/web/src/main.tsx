@@ -33,7 +33,7 @@ document.title = branding.name;
 createRoot(root).render(
   <StrictMode>
     <BrandingContext value={branding}>
-      <MantineProvider theme={createAppTheme(branding.color)} cssVariablesResolver={cssVariablesResolver}>
+      <MantineProvider theme={createAppTheme(branding.theme)} cssVariablesResolver={cssVariablesResolver}>
         <App />
       </MantineProvider>
     </BrandingContext>

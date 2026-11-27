@@ -113,9 +113,9 @@ export function Shell() {
           </Stack>
         </AppShell.Section>
       </AppShell.Navbar>
-      {/* Nền xám nhạt để các khung nội dung (Paper, nền trắng) tách khỏi nền trang. Giới hạn bề rộng để bảng và
-          biểu mẫu không giãn hết màn hình rộng, dòng chữ còn đọc được. */}
-      <AppShell.Main bg="gray.0">
+      {/* Nền trang của bản cài (mặc định xám nhạt, ADR 0063) để các khung nội dung (Paper, nền trắng) tách khỏi nền.
+          Giới hạn bề rộng để bảng và biểu mẫu không giãn hết màn hình rộng, dòng chữ còn đọc được. */}
+      <AppShell.Main bg="var(--mortise-page-background)">
         <Container size="xl" px={0}>
           <Outlet />
         </Container>

@@ -18,8 +18,11 @@ describe("parseBranding", () => {
       name: "Cổng số Tỉnh Mẫu",
       shortName: "Tỉnh Mẫu",
       logo: "/brand/logo.svg",
-      color: "indigo",
+      theme: { color: "indigo", radius: 6, font: "be-vietnam-pro", background: "gray" },
     });
+    expect(
+      parseBranding({ ...valid, secondary_color: "grape", radius: 4, font: "system", background: "white" })?.theme,
+    ).toEqual({ color: "indigo", secondaryColor: "grape", radius: 4, font: "system", background: "white" });
     const { logo: _, ...noLogo } = valid;
     expect(parseBranding(noLogo)).not.toHaveProperty("logo");
   });
@@ -33,6 +36,10 @@ describe("parseBranding", () => {
     ["thiếu tên ngắn", { name: valid.name, color: "blue" }],
     ["tên chỉ có khoảng trắng", { ...valid, name: "   " }],
     ["trường lạ", { ...valid, theme: "dark" }],
+    ["bo góc ngoài danh sách", { ...valid, radius: 5 }],
+    ["phông không đóng gói", { ...valid, font: "Comic Sans MS" }],
+    ["nền là mã màu", { ...valid, background: "#ffffff" }],
+    ["màu phụ không đạt tương phản", { ...valid, secondary_color: "teal" }],
     ["không phải đối tượng", ["Mortise"]],
     ["null", null],
   ])("bỏ cả tệp khi %s", (_, value) => {
@@ -46,7 +53,7 @@ describe("loadBranding", () => {
   it("dùng tệp của bản cài khi đúng", async () => {
     const branding = await loadBranding(respond(JSON.stringify(valid), "application/json"));
     expect(branding.name).toBe("Cổng số Tỉnh Mẫu");
-    expect(branding.color).toBe("indigo");
+    expect(branding.theme.color).toBe("indigo");
   });
 
   it("thương hiệu mặc định đọc từ brand/branding.json", () => {

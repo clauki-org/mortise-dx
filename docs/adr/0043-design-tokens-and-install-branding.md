@@ -70,7 +70,9 @@ Các cách giữ màu chính đạt AA đã xét:
   (không bắt buộc), `color`.
 - `color` là tên bảng màu Mantine trong danh sách đạt AA ở sắc 8: `blue`, `indigo`, `violet`, `grape`, `pink`,
   `dark`. `red` đạt sát mức (4,51:1) và đã mang nghĩa lỗi nên không có trong danh sách. Danh sách nằm ở schema và ở
-  `BRAND_COLORS` của `platform/web/src/branding.ts`; `make check-fast` báo lỗi khi hai nơi khác nhau.
+  `BRAND_COLORS` của `platform/web/src/branding.ts`; `make check-fast` báo lỗi khi hai nơi khác nhau. Được sửa theo
+  [ADR 0063](0063-install-theme-tokens.md): thêm màu phụ, bo góc, phông, nền trang; màu chính và màu phụ nhận thêm
+  mười sắc độ tự khai, đo tương phản khi đọc tệp.
 - `logo` là `/brand/<tệp>` (`.svg`, `.png`, `.webp`): CSP của giao diện chỉ cho ảnh cùng origin, và `/brand/` là thư
   mục duy nhất người vận hành gắn vào được.
 - Image `web` có `platform/web/brand/branding.json` ở `/brand/`; nginx trả nó tại `/branding.json` và mọi tệp trong

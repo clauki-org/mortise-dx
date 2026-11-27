@@ -18,7 +18,8 @@ import {
 } from "@mantine/core";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { BRAND_COLORS } from "./branding";
+import { BRAND_COLORS, type BrandColor, DEFAULT_BRANDING } from "./branding";
+import { contrast } from "./contrast";
 import { createAppTheme, cssVariablesResolver } from "./theme";
 import themeCss from "./theme.css?raw";
 import { TONE_COLOR, TONES } from "./tones";
@@ -28,28 +29,6 @@ const AA = 4.5;
 const NON_TEXT = 3;
 const WHITE = "#ffffff";
 
-// Kênh màu 0–255 của #rgb, #rrggbb hay rgba(r, g, b, a) (dạng darken của Mantine trả về).
-function channelsOf(color: string): number[] {
-  const rgba = /^rgba?\((\d+), (\d+), (\d+)/.exec(color);
-  if (rgba) return rgba.slice(1, 4).map(Number);
-  if (/^#[0-9a-f]{3}$/i.test(color)) return [1, 2, 3].map((i) => Number.parseInt(`${color[i]}${color[i]}`, 16));
-  if (/^#[0-9a-f]{6}$/i.test(color))
-    return [1, 3, 5].map((start) => Number.parseInt(color.slice(start, start + 2), 16));
-  throw new Error(`Không đọc được màu ${color}`);
-}
-
-// Độ chói tương đối của một màu sRGB (WCAG 2.2, định nghĩa "relative luminance").
-function luminance(color: string): number {
-  const channels = channelsOf(color).map((c) => c / 255);
-  const [r = 0, g = 0, b = 0] = channels.map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function contrast(a: string, b: string): number {
-  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
-  return (light + 0.05) / (dark + 0.05);
-}
-
 const shade = (color: string, index: number): string => {
   const value = DEFAULT_THEME.colors[color]?.[index];
   if (!value) throw new Error(`Mantine không có màu ${color}.${index}`);
@@ -58,14 +37,17 @@ const shade = (color: string, index: number): string => {
 
 // Biến CSS của nền sáng như trình duyệt thấy (biến chung và biến riêng của nền sáng): biến của Mantine, rồi biến của
 // theme.ts đè lên.
-function appTheme(color: (typeof BRAND_COLORS)[number]) {
-  const theme = mergeMantineTheme(DEFAULT_THEME, createAppTheme(color));
+// Bộ biến mặc định với một màu chính; tổ hợp với các biến khác đo ở themeTokens.test.tsx.
+const withColor = (color: BrandColor) => ({ ...DEFAULT_BRANDING.theme, color });
+
+function appTheme(color: BrandColor) {
+  const theme = mergeMantineTheme(DEFAULT_THEME, createAppTheme(withColor(color)));
   const mantine = defaultCssVariablesResolver(theme);
   const ours = cssVariablesResolver(theme);
   return { theme, variables: { ...mantine.variables, ...mantine.light, ...ours.variables, ...ours.light } };
 }
 
-const lightVariables = (color: (typeof BRAND_COLORS)[number]) => appTheme(color).variables;
+const lightVariables = (color: BrandColor) => appTheme(color).variables;
 
 // Đổi một giá trị (màu, hay var() trỏ qua vài biến khác) thành màu đọc được.
 function resolveValue(variables: Record<string, string>, value: string): string {
@@ -220,7 +202,7 @@ describe("Bento dịu", () => {
 
   it("theme thật vẽ nhãn bo 6px chữ 600, liên kết gạch chân, thẻ không bóng", () => {
     const html = renderToStaticMarkup(
-      <MantineProvider theme={createAppTheme("blue")}>
+      <MantineProvider theme={createAppTheme(withColor("blue"))}>
         <Badge>x</Badge>
         <Anchor href="/x">y</Anchor>
         <Card>z</Card>
@@ -248,7 +230,7 @@ describe("Bento dịu", () => {
 // thật), nên chỉ kiểm giá trị mặc định mà ModalHeader nhận từ theme.
 describe("đầu hộp thoại", () => {
   it("không là vùng banner thứ hai cạnh thanh trên của trang", () => {
-    const theme = mergeMantineTheme(DEFAULT_THEME, createAppTheme("blue"));
+    const theme = mergeMantineTheme(DEFAULT_THEME, createAppTheme(withColor("blue")));
     expect(theme.components.ModalHeader?.defaultProps).toMatchObject({ role: "none" });
   });
 });

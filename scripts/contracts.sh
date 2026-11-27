@@ -240,14 +240,22 @@ done
 # đúng hợp đồng như ví dụ. Danh sách màu của schema và của giao diện phải trùng: theme.test.ts chỉ kiểm tương phản
 # của màu trong BRAND_COLORS, một màu thêm vào schema mà quên ở đó sẽ qua mà chưa ai đo.
 "${checker[@]}" --schemafile contracts/branding.schema.json contracts/examples/branding.example.json \
-  platform/web/brand/branding.json
-schema_colors=$(jq -c '.properties.color.enum' contracts/branding.schema.json)
-web_colors=$(sed -n 's/^export const BRAND_COLORS = \(\[.*\]\) as const;$/\1/p' platform/web/src/branding.ts | jq -c .)
-if [[ "$schema_colors" != "$web_colors" ]]; then
-  echo "Màu của contracts/branding.schema.json ($schema_colors) khác BRAND_COLORS trong platform/web/src/branding.ts" \
-    "(${web_colors:-không đọc được})." >&2
-  exit 1
-fi
+  platform/web/brand/branding.json presets/dien-mat-troi/brand/branding.json
+# Mỗi danh sách giá trị của biến giao diện (ADR 0063) cũng phải trùng: themeTokens.test.tsx đo mọi tổ hợp của danh
+# sách trong branding.ts, giá trị chỉ có ở schema thì chưa ai đo.
+# $defs là tên khóa của JSON Schema, không phải biến shell.
+# shellcheck disable=SC2016
+for pair in 'BRAND_COLORS:."$defs".palette' BRAND_RADII:.properties.radius BRAND_FONTS:.properties.font \
+  BRAND_BACKGROUNDS:.properties.background; do
+  name=${pair%%:*}
+  schema_values=$(jq -c "${pair#*:}.enum" contracts/branding.schema.json)
+  web_values=$(sed -n "s/^export const $name = \(\[.*\]\) as const;$/\1/p" platform/web/src/branding.ts | jq -c .)
+  if [[ "$schema_values" != "$web_values" ]]; then
+    echo "Danh sách ${pair#*:} của contracts/branding.schema.json ($schema_values) khác $name trong" \
+      "platform/web/src/branding.ts (${web_values:-không đọc được})." >&2
+    exit 1
+  fi
+done
 "${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml \
   --steps contracts/examples/workflow.example.yaml core/workflow/fixtures/*.yaml \
   --authorities contracts/examples/authority.example.yaml --rules contracts/examples/threshold-rule.example.yaml
