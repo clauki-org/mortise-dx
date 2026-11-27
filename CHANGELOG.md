@@ -68,6 +68,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   thì nền trơn ([ADR 0056](docs/adr/0056-self-hosted-osm-basemap.md)).
 - Bản đồ trụ sở demo: ranh giới, tên ba xã tự vẽ trên nền bản đồ, trụ sở nằm trong ranh giới, ghi rõ là hư cấu ([ADR
   0020](docs/adr/0020-facility-locations.md)).
+- `make app-install` kiểm gói bằng đúng bộ kiểm của `make check-fast` (`scripts/contracts.sh package`) và dừng trước
+  khi đụng CSDL nếu cấu hình sai; `make app-check APP=<gói>` chỉ kiểm.
 
 ### Removed
 
