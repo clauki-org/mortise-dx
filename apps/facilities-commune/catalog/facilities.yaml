@@ -16,11 +16,12 @@ fields:
   # Tọa độ khai kiểu text: kiểu number làm tròn còn ba chữ số thập phân, lệch tới khoảng 55 m.
   - { name: latitude, label: Vĩ độ }
   - { name: longitude, label: Kinh độ }
+  # Dôi dư là cơ sở cần phương án xử lý khi sắp xếp, nên nhãn mang mức cần để ý; đang sử dụng là bình thường.
   - name: status
     label: Tình trạng
     choices:
-      - { value: in_use, label: Đang sử dụng }
-      - { value: surplus, label: Dôi dư }
+      - { value: in_use, label: Đang sử dụng, tone: ok }
+      - { value: surplus, label: Dôi dư, tone: warn }
   - { name: created_at, label: Ngày tạo, type: datetime }
   # Phần vượt tính trên tổng diện tích các trụ sở của cả xã (view area_summary, qua quan hệ summary ở
   # hasura/tables.yaml), không tính riêng từng cơ sở; hồ sơ rà soát của mọi cơ sở trong xã mang cùng số này.

@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Bản mô tả thành phần danh mục theo contracts/component.schema.json; `make check-fast` kiểm tệp này.
-# Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, CatalogActions.tsx,
-# catalog.ts, catalogQuery.ts; phần tài liệu ở CatalogDocuments.tsx). Mỗi dòng dưới đây đã được chạy thử trên giao
+# Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, CatalogRows.tsx,
+# CatalogActions.tsx, catalog.ts, catalogQuery.ts; phần tài liệu ở CatalogDocuments.tsx). Mỗi dòng dưới đây đã được chạy thử trên giao
 # diện; đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
 
 component: catalog
@@ -12,15 +12,20 @@ config_schema: catalog.schema.json
 example: examples/catalog.example.yaml
 capabilities:
   - Danh sách dạng bảng; cột nào hiện, tên cột và thứ tự cột theo fields và list.columns.
+  - Danh sách ngoài cùng có công tắc Bảng/Thẻ (mặc định Bảng, ADR 0050). Ở dạng thẻ mỗi dòng một thẻ, giá trị cột đầu là
+    liên kết tới màn hình chi tiết như ở bảng, các cột sau là cặp nhãn, giá trị; ô "Sắp theo" chọn cột và chiều. Tìm,
+    lọc, phân trang như dạng bảng; dạng thẻ nằm trên đường dẫn. Bảng đối tượng con luôn ở dạng bảng.
   - Tìm theo chữ, không phân biệt hoa thường, trên các trường kiểu text khai trong list.search.
   - Lọc theo một giá trị của mỗi trường có choices khai trong list.filters.
   - Sắp xếp tăng hoặc giảm theo một cột khi bấm tiêu đề cột; thứ tự lúc mới mở theo list.sort. Dòng chưa có giá
     trị ở cột sắp xếp đứng cuối.
   - Phân trang theo list.page_size, có nút trang trước và trang sau.
   - Tìm, lọc, thứ tự và trang của danh sách nằm trên đường dẫn; mở lại đường dẫn là về đúng chỗ đang xem.
-  - Màn hình chi tiết của một dòng hiện mọi trường trong fields theo thứ tự khai.
+  - Màn hình chi tiết của một dòng hiện mọi trường trong fields theo thứ tự khai, mỗi trường một ô trong lưới (nhãn
+    trên, giá trị dưới).
   - Giá trị hiện theo kiểu của trường (số, ngày, ngày giờ); trường có choices hiện chữ thay cho giá trị lưu; giá trị
-    trống hiện một gạch mờ. Bảng rộng hơn màn hình cuộn ngang trong một vùng có nhãn, giữ mọi cột đã khai (ADR 0047).
+    trống hiện một gạch mờ. Lựa chọn có tone hiện thành nhãn màu theo bộ nghĩa chung, luôn kèm chữ, ở bảng, thẻ và màn
+    hình chi tiết (ADR 0050). Bảng rộng hơn màn hình cuộn ngang trong một vùng có nhãn, giữ mọi cột đã khai (ADR 0047).
   - Quan hệ cha–con nhiều cấp, khai lồng trong cùng tệp bằng detail.children. Màn hình chi tiết của cha có bảng của
     từng loại đối tượng con, tìm, lọc và phân trang được; màn hình chi tiết của con có đường về mọi cấp cha.
   - Màn hình chi tiết hiện được cột của bảng khác qua quan hệ một-một mà Hasura khai cho bảng, khai trong fields
@@ -42,6 +47,8 @@ limits:
   - Giá trị gửi cho quy trình do trình duyệt đọc từ dòng lúc bấm; quy trình không tự đọc lại từ CSDL.
   - Không hiện tổng số dòng và tổng số trang.
   - Mỗi lúc chỉ sắp xếp theo một cột; thứ tự của chữ có dấu là thứ tự so sánh của CSDL.
+  - Màu của nhãn chỉ chọn được trong bộ nghĩa chung bad, warn, info, ok, neutral, theo từng lựa chọn của choices; trường
+    không có choices không thành nhãn. Thẻ không có ảnh, biểu tượng hay mô tả riêng của gói.
   - Ô tìm không dò trường số, trường ngày và trường có choices.
   - Không có kiểu đúng/sai riêng; cột đúng/sai hiện và lọc được khi khai choices với giá trị "true" và "false".
   - Đối tượng con trỏ về cha bằng một cột; không hỗ trợ khóa ghép. Đối tượng con chỉ mở được từ đối tượng cha.

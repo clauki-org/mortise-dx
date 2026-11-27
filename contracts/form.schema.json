@@ -43,6 +43,10 @@
           "$ref": "#/$defs/name"
         },
         "label": { "$ref": "#/$defs/text" },
+        "help": {
+          "description": "Một dòng gợi ý hiện dưới nhãn của trường, dạng chữ; trình đọc màn hình đọc nó cùng ô nhập (ADR 0050)",
+          "$ref": "#/$defs/text"
+        },
         "type": { "enum": ["string", "number", "integer", "boolean", "date", "choice"] },
         "required": {
           "description": "Bắt buộc nhập; với boolean là bắt buộc đánh dấu",

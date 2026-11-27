@@ -82,6 +82,11 @@ describe("lỗi cấu hình", () => {
     ]);
   });
 
+  it("help là một dòng chữ", () => {
+    const blank = { ...title, help: "  " };
+    expect(formProblems({ ...config, fields: [blank] })).toEqual(['trường "Tên": help phải là một dòng chữ']);
+  });
+
   it("không khai role thì mọi yêu cầu dùng vai trò user, đúng vai trò check-fast đã kiểm", () => {
     expect(formRole(config)).toBe("user");
     expect(formRole({ ...config, role: "tenant_admin" })).toBe("tenant_admin");
@@ -109,6 +114,17 @@ describe("schema cho rjsf", () => {
       "ui:options": { source: items, parentLabel: "Nhóm" },
     });
     expect(uiSchema.note).toEqual({ "ui:widget": "textarea" });
+  });
+
+  it("help thành ui:description của trường, kể cả ô nhiều dòng và danh sách đọc từ bảng; không khai thì không có khóa", () => {
+    const helped = formSchema({
+      ...config,
+      fields: config.fields.map((field) => ({ ...field, help: `Gợi ý ${field.name}` })),
+    }).uiSchema;
+    expect(helped.title).toEqual({ "ui:description": "Gợi ý title" });
+    expect(helped.note).toEqual({ "ui:widget": "textarea", "ui:description": "Gợi ý note" });
+    expect(helped.item).toMatchObject({ "ui:widget": "sourceChoice", "ui:description": "Gợi ý item" });
+    expect(uiSchema.title).toEqual({});
   });
 });
 

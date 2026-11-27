@@ -23,7 +23,12 @@ fields:
       value: code
       label: name
       where: { column: store_code, field: storeCode }
-  - { name: quantity, label: Số lượng, type: number, required: true, min: 1 }
+  - name: quantity
+    label: Số lượng
+    type: number
+    required: true
+    min: 1
+    help: Tính theo đơn vị của vật tư đã chọn, xem ở danh mục Kho vật tư.
   - { name: reason, label: Lý do, type: string, required: true, multiline: true, max_length: 1000 }
 submit:
   label: Gửi

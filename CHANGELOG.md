@@ -33,6 +33,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Menu bên chia nhóm theo gói, mỗi mục có biểu tượng, nhóm mẫu thử của lõi thu gọn ở cuối; thanh trên ghi đơn vị và
   người dùng; dùng được trên điện thoại. Bản cài cũ chạy `make seed` và cài lại các gói để menu có tên nhóm và biểu
   tượng ([ADR 0044](docs/adr/0044-menu-groups-and-icons.md)).
+- Danh mục có nhãn trạng thái màu theo `tone` của gói, công tắc Bảng/Thẻ và trang chi tiết dạng lưới ô; trường biểu
+  mẫu có dòng gợi ý `help` ([ADR 0050](docs/adr/0050-catalog-tones-cards-form-help.md)).
 
 ### Changed
 

@@ -78,4 +78,5 @@ chữ của nhãn đạt 4,5:1 trên nền nhạt của nhãn, nền trắng và
   sẽ đổi cùng thay đổi riêng của các trang đó.
 - Viền của ô đánh dấu, nút chọn một và công tắc chưa đổi, vẫn là mặc định của Mantine.
 - Kế hoạch: thẻ số của bảng điều hành và giá trị của danh mục dùng bộ nghĩa này qua khai báo của gói, quyết định ở ADR
-  riêng.
+  riêng. Giá trị của danh mục đã dùng, qua `tone` của từng lựa chọn
+  ([ADR 0050](0050-catalog-tones-cards-form-help.md)).

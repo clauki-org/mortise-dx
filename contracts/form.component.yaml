@@ -14,6 +14,8 @@ capabilities:
   - Trường choice chọn từ danh sách cố định (choices) hoặc từ một bảng của gói qua GraphQL (source), xếp theo nhãn, đọc lại từ máy chủ mỗi lần mở.
   - Danh sách source lọc được theo giá trị của một trường đứng trước (source.where); trường đó còn trống thì ô bị khóa, đổi trường đó thì giá trị đã chọn bị xóa.
   - Danh sách source dài hơn limit (mặc định 200, trần 500) thì chỉ hiện limit mục đầu và báo ra.
+  - help của trường hiện thành một dòng gợi ý dưới nhãn, gắn vào ô nhập bằng aria-describedby, ở mọi kiểu trường (ADR 0050).
+  - Các trường xếp một cột, rộng tối đa 640px.
   - Kiểm dữ liệu ở trình duyệt theo các luật trên, lỗi hiện cạnh từng ô bằng tiếng Việt; máy chủ vẫn là nơi quyết định.
   - submit.process khởi tạo quy trình của gói với biến là các trường đã điền (trường trống không gửi) kèm Idempotency-Key; bấm đúp hay gửi lại cùng dữ liệu chỉ tạo một hồ sơ, đổi dữ liệu rồi gửi là hồ sơ mới.
   - submit.insert thêm một dòng vào bảng của gói, tên trường là tên cột; tenant_id do quyền Hasura của gói đặt từ token, không gửi từ trình duyệt, và không cột nào gắn với tenant được làm trường; lỗi ràng buộc và quyền của Hasura được báo bằng tiếng Việt kèm cách sửa; thiếu cột bắt buộc mà biểu mẫu không có ô thì lời báo nêu tên cột và báo người quản trị thêm trường, vì người gửi không tự sửa được.

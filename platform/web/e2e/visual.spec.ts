@@ -95,6 +95,7 @@ async function facilityId(request: APIRequestContext, code: string): Promise<str
 const PAGES: { name: string; path: (request: APIRequestContext) => Promise<string> | string }[] = [
   { name: "dashboard", path: () => "/apps/facilities-commune/dashboard" },
   { name: "facilities", path: () => "/apps/facilities-commune/facilities" },
+  { name: "facilities-cards", path: () => "/apps/facilities-commune/facilities?view=cards" },
   {
     name: "facility-detail",
     path: async (request) => `/apps/facilities-commune/facilities/${await facilityId(request, "TS-A1")}`,

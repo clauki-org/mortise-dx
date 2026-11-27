@@ -15,13 +15,16 @@ fields:
     label: Mã
   - name: name
     label: Tên
+  # tone chọn nghĩa màu của nhãn trong bộ nghĩa chung (ADR 0050); lựa chọn không khai tone hiện chữ thường.
   - name: status
     label: Tình trạng
     choices:
       - value: active
         label: Đang dùng
+        tone: ok
       - value: retired
         label: Ngừng dùng
+        tone: neutral
   - name: quantity
     label: Số lượng
     type: number

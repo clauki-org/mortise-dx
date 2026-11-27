@@ -1,17 +1,18 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Màn hình chi tiết của thành phần danh mục: mọi trường của một dòng theo thứ tự gói khai, bảng của từng loại đối
-// tượng con (detail.children), nút khởi tạo quy trình (detail.actions), tài liệu đính kèm (detail.documents) và
-// đường về các đối tượng cha. Catalog.tsx mở màn hình này sau khi đã kiểm cấu hình và đọc đường dẫn thành các chặng
+// Màn hình chi tiết của thành phần danh mục: mọi trường của một dòng theo thứ tự gói khai, xếp thành lưới ô (ADR
+// 0050), bảng của từng loại đối tượng con (detail.children), nút khởi tạo quy trình (detail.actions), tài liệu đính
+// kèm (detail.documents) và đường về các đối tượng cha. Catalog.tsx mở màn hình này sau khi đã kiểm cấu hình và đọc đường dẫn thành các chặng
 // từ đối tượng ngoài cùng tới dòng đang xem.
 
-import { Alert, Anchor, Breadcrumbs, Paper, Stack, Table, Title } from "@mantine/core";
+import { Alert, Anchor, Box, Breadcrumbs, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { useState } from "react";
 import { Link } from "react-router";
 import { useQuery } from "urql";
 import { CatalogActions } from "./CatalogActions";
 import { CatalogDocuments } from "./CatalogDocuments";
+import { CellValue } from "./CatalogRows";
 import { CatalogTable } from "./CatalogTable";
 import {
   type CatalogConfig,
@@ -27,7 +28,6 @@ import {
 import { chainQuery, chainVariables, emptyState } from "./catalogQuery";
 import { PageHeader } from "./PageHeader";
 import { ErrorNotice, Loading } from "./States";
-import { Blank } from "./TableScroll";
 
 /** Tiêu đề của một dòng theo cấu hình; trường tiêu đề trống thì dùng giá trị khóa. */
 function titleOf(step: Step, row: Row): string {
@@ -115,18 +115,19 @@ export function CatalogRecord({ config, basePath, steps }: Props) {
         title={titleOf(current, row)}
         action={<CatalogActions node={node} row={row} />}
       />
-      <Paper withBorder radius="md">
-        <Table variant="vertical" layout="fixed" verticalSpacing="sm" horizontalSpacing="md">
-          <Table.Tbody>
-            {node.fields.map((field) => (
-              <Table.Tr key={field.name}>
-                <Table.Th w={240}>{field.label}</Table.Th>
-                <Table.Td>{display(field, fieldValue(row, field.name)) || <Blank />}</Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-      </Paper>
+      {/* Mỗi trường một ô (ADR 0050): danh sách định nghĩa để trình đọc màn hình đọc nhãn rồi giá trị như bảng dọc cũ. */}
+      <SimpleGrid component="dl" cols={{ base: 1, sm: 2, lg: 3 }} spacing="sm" m={0}>
+        {node.fields.map((field) => (
+          <Paper key={field.name} withBorder radius="md" px="md" py="sm">
+            <Text component="dt" size="sm" c="dimmed">
+              {field.label}
+            </Text>
+            <Box component="dd" m={0} mt={4} fw={600} style={{ overflowWrap: "anywhere" }}>
+              <CellValue field={field} value={fieldValue(row, field.name)} />
+            </Box>
+          </Paper>
+        ))}
+      </SimpleGrid>
       {node.detail?.documents && <CatalogDocuments config={node.detail.documents} recordKey={row[keyOf(node)]} />}
       {(node.detail?.children ?? []).map((child) => (
         <Children key={child.id} child={child} path={`${here}/${child.id}`} parentKey={row[keyOf(node)]} />

@@ -27,7 +27,8 @@ nên mã kỹ thuật chiếm chỗ ngang bảng.
   chọn màu: đỏ là quá hạn, xanh dương là đang diễn ra (còn hạn, đang chờ, đang xử lý), xanh lá là đã xong, xám là không
   có hạn hay đã dừng. Được sửa theo [ADR 0048](0048-bento-tokens-status-tones-font.md): nghĩa lấy từ bộ nghĩa chung `bad | warn | info | ok | neutral`
   (`tones.ts`); quá hạn là `bad`, đang diễn ra là `info`, đã xong là `ok`, không có hạn hay đã dừng là `neutral`. Cột trạng thái của danh mục vẫn là chữ theo `choices` của gói; hợp đồng danh mục không thêm trường
-  màu cho từng giá trị.
+  màu cho từng giá trị. Được sửa theo [ADR 0050](0050-catalog-tones-cards-form-help.md): lựa chọn của `choices` nhận
+  `tone` trong bộ nghĩa chung và hiện thành `StatusBadge` có chữ.
 - `format.ts` định dạng ngày giờ và số theo vi-VN cho các trang kể trên: năm bốn chữ số, ngày không giờ đọc theo UTC,
   chuỗi không đọc được hiện nguyên. Danh mục, bản đồ, bảng việc, hồ sơ, cỡ tệp đính kèm đọc từ đây; `steps.ts` đưa lại
   `dateTime` cho bảng điều hành. Số của bảng điều hành (`dashboardConfig.ts`, ba chữ số thập phân) chưa chuyển sang.
@@ -45,5 +46,5 @@ nên mã kỹ thuật chiếm chỗ ngang bảng.
 - e2e của trợ lý dữ liệu mở "Xem câu truy vấn" trước khi kiểm câu đã chạy.
 - Màu của trạng thái nghiệp vụ trong danh mục (ví dụ "Đang dùng") chưa thống nhất được vì Tầng 2 không biết nghĩa của
   giá trị; muốn có thì cần một trường mới trong hợp đồng danh mục, quyết định riêng. Trường đó sẽ chọn trong bộ nghĩa
-  chung của [ADR 0048](0048-bento-tokens-status-tones-font.md).
+  chung của [ADR 0048](0048-bento-tokens-status-tones-font.md). Đã làm ở [ADR 0050](0050-catalog-tones-cards-form-help.md) (`tone` của từng lựa chọn).
 - Khung trang và bảng điều hành chưa dùng `PageHeader`; chúng chuyển sang ở thay đổi sau.
