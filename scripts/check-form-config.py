@@ -216,7 +216,7 @@ def form_problems(form: dict, entry: dict | None, context: dict, key: str | None
 
 
 def move_problems(node: dict, context: dict) -> list[str]:
-    """Chuyển thẻ của Kanban (ADR 0066) là một lệnh sửa đúng một cột, nên kiểm như biểu mẫu sửa chỉ có trường đó."""
+    """Chuyển thẻ của Kanban (ADR 0066) là lệnh sửa đúng một cột: kiểm như biểu mẫu sửa chỉ có trường đó."""
     kanban = node.get("kanban") or {}
     move = kanban.get("move")
     if not move:

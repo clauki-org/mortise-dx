@@ -4,11 +4,11 @@
 # Kiểm cấu hình thành phần trang (contracts/page.schema.json) với gói chứa nó, luật JSON Schema không diễn đạt
 # được (ADR 0061): mỗi khối trỏ tới một mục có thật trong menu hay blocks của chính gói, không trỏ tới một
 # trang (trang lồng trang có thể tự chứa mình, vẽ không bao giờ xong), kiểu của khối là một giá trị trong
-# variant của schema thành phần mà mục đó dùng, và kiểu trùng tên một mục cấu hình của schema (kanban, calendar
-# của danh mục, ADR 0066) thì cấu hình của mục có mục đó. Thiếu bước này, khối có id gõ sai lặng lẽ biến khỏi trang
-# mà không ai biết vì sao, và kiểu thiếu cấu hình lặng lẽ thành kiểu mặc định. Gọi từ scripts/contracts.sh:
-# --app <app.yaml> [--page <tệp cấu hình trang>] [--examples: cấu hình của mục là
-# contracts/examples/<thành phần>.example.yaml, cho gói mẫu mà tệp cấu hình không có thật].
+# variant của schema thành phần mà mục đó dùng, và kiểu trùng tên một mục cấu hình của schema (kanban,
+# calendar của danh mục, ADR 0066) thì cấu hình của mục có mục đó. Thiếu bước này, khối có id gõ sai lặng lẽ
+# biến khỏi trang mà không ai biết vì sao, và kiểu thiếu cấu hình lặng lẽ thành kiểu mặc định. Gọi từ
+# scripts/contracts.sh: --app <app.yaml> [--page <tệp cấu hình trang>] [--examples: cấu hình của mục
+# là contracts/examples/<thành phần>.example.yaml, cho gói mẫu mà tệp cấu hình không có thật].
 
 import argparse
 import json
@@ -51,8 +51,8 @@ def page_problems(page: dict, items: dict[str, str], configs: dict[str, dict]) -
         if variant is not None and variant not in allowed:
             choice = ", ".join(allowed) if allowed else "thành phần này chưa có kiểu nào, bỏ variant"
             errors.append(f"khối {index}: {component} không có kiểu '{variant}' ({choice})")
-        # Kiểu cần cấu hình riêng (kanban cần trường chia cột): giao diện vẽ kiểu mặc định khi thiếu, như schema đòi
-        # với kiểu khai ngay trong cấu hình của mục.
+        # Kiểu cần cấu hình riêng (kanban cần trường chia cột): giao diện vẽ kiểu mặc định khi thiếu, như
+        # schema đòi với kiểu khai ngay trong cấu hình của mục.
         elif variant in properties_of(component) and variant not in (configs.get(name) or {}):
             errors.append(f"khối {index}: kiểu '{variant}' cần mục {variant} trong cấu hình của '{name}'")
     return errors
