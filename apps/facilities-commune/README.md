@@ -20,8 +20,9 @@ catalog/             cấu hình thành phần danh mục (cơ sở → tòa →
 map-layers/          cấu hình thành phần bản đồ (trụ sở tô theo phần vượt) theo contracts/map.schema.json
 dashboards/          cấu hình bảng điều hành (diện tích, hồ sơ, độ ẩm của xã, tổng hợp cho tỉnh) theo
                       contracts/dashboard.schema.json
-assistant/           cấu hình trợ lý hỏi dữ liệu (diện tích của xã, cơ sở được phân công) theo
+assistant/           cấu hình trợ lý hỏi dữ liệu (diện tích của xã, cơ sở được phân công) và hỏi văn bản theo
                      contracts/assistant.schema.json
+knowledge/           văn bản pháp luật cho trợ lý hỏi văn bản theo contracts/knowledge.schema.json
 cases/               trang hồ sơ rà soát đã lập theo contracts/cases.schema.json
 bpmn/                quy trình BPMN của gói, deploy cho từng tenant khi cài
 workflows/           khai báo bước của từng quy trình theo contracts/workflow.schema.json
@@ -81,6 +82,28 @@ có ba câu mẫu: phần vượt của xã, cơ sở mình phụ trách, cơ s�
 công; kết quả là bảng kèm câu truy vấn đã chạy. Tên cơ sở hiện nguyên văn trong ô, dù chứa chữ trông như lệnh. Smoke
 của gói kiểm cán bộ xã A hỏi đúng mã cơ sở của xã B không nhận dòng nào, câu xóa biên chế bị guard chặn, và nhật ký
 câu hỏi không chứa dòng dữ liệu.
+
+## Hỏi văn bản
+
+Mục menu "Hỏi văn bản" (`ask-documents`, `assistant/ask-documents.yaml`,
+[ADR 0021](../../docs/adr/0021-document-assistant.md)) trả lời bằng câu trích nguyên văn của hai văn bản ở
+`knowledge/`, mỗi đoạn là một khoản:
+
+| Tệp | Văn bản | Các đoạn |
+|---|---|---|
+| `nd-155-2025.yaml` | NĐ 155/2025/NĐ-CP | Điều 3 khoản 1 tới 5 |
+| `nd-369-2026.yaml` | NĐ 369/2026/NĐ-CP | Điều 2 khoản 1, 2 (sửa khoản 2, 3 Điều 3 NĐ 155); Điều 3 (Điều 3a khoản 1 tới 4 bổ sung vào NĐ 155); Điều 4 (Điều 3b khoản 1 tới 4); Điều 10 khoản 3; Điều 11 khoản 1 |
+
+Điều 3a, 3b chỉ có nguyên văn trong NĐ 369, nên nằm ở văn bản NĐ 369 cho khớp mã băm của tệp đó; nhãn đoạn ghi điều,
+khoản của NĐ 155 mà đoạn trở thành. Khoản 2, 3 Điều 3 NĐ 155 khai `superseded_by` trỏ tới Điều 2 khoản 1, 2 NĐ 369;
+khoản 5 bị bãi bỏ, không có đoạn nào viết lại, nên trỏ tới Điều 10 khoản 3 NĐ 369 là khoản bãi bỏ nó. Trợ lý không
+trích ba đoạn đó. Chưa nạp: phụ lục của hai nghị định, Điều 12 (chuyển tiếp) NĐ 369 và NĐ 186/2025.
+
+Nguồn là tệp PDF trên datafiles.chinhphu.vn ghi ở `source.url`, tải ngày 2026-11-27; `source.sha256` là SHA-256 của
+tệp tải về. Hai tệp là bản quét có chữ ký số, không có lớp chữ: chữ lấy bằng `pdftoppm` và `tesseract -l vie`, rồi
+soát từng dòng với ảnh trang 300 dpi (NĐ 155 trang 2, 3; NĐ 369 trang 1 tới 7, 12, 13), sửa lỗi dấu, số và ký hiệu
+của OCR theo ảnh. Phần sửa đổi trong bản gốc đặt trong ngoặc kép; `text` bỏ ngoặc kép bao ngoài và số khoản ở đầu
+(số nằm ở nhãn); "m" kèm số 2 viết trên được ghi là "m²".
 
 ## Bảng điều hành
 

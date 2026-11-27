@@ -20,6 +20,11 @@ rules:
 # Vai trò của bước quyết định trong quy trình rà soát, theo từng xã (ADR 0028); bộ cài chỉ thêm dòng chưa có.
 authorities:
   - authorities/facilities-review.yaml
+# Văn bản cho trợ lý hỏi văn bản (ADR 0021): Điều 3 NĐ 155/2025 và các điều của NĐ 369/2026 sửa, bổ sung điều đó;
+# nguồn, mã băm và cách soát chữ ở README của gói.
+knowledge:
+  - knowledge/nd-155-2025.yaml
+  - knowledge/nd-369-2026.yaml
 # Giá trị theo luật cho quy trình rà soát (#58): phần vượt trên 300 m² phải công khai 30 ngày (Điều 3a khoản 2, 3 NĐ 155/2025/NĐ-CP, bổ sung bởi Điều 3 NĐ 369/2026/NĐ-CP).
 # Demo và CI ghi đè thời hạn khi cài: make app-install APP=facilities-commune SETTINGS=publication_period=PT20S
 # (ADR 0019).
@@ -45,6 +50,13 @@ menu:
     label: Hỏi dữ liệu cơ sở
     component: assistant
     config: assistant/ask-data.yaml
+    icon: chat
+  # Trợ lý hỏi văn bản (ADR 0021): trả lời về rà soát trụ sở bằng câu trích nguyên văn của văn bản ở `knowledge`;
+  # đoạn đã bị sửa hay bãi bỏ không được trích.
+  - id: ask-documents
+    label: Hỏi văn bản
+    component: assistant
+    config: assistant/ask-documents.yaml
     icon: chat
   # Cán bộ theo dõi hồ sơ rà soát mình đã lập (ADR 0032). Không gồm hồ sơ kiểm tra kho lưu trữ: hồ sơ đó do tài khoản
   # dịch vụ mở, không có người lập nào.
