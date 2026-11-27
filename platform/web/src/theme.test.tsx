@@ -37,7 +37,7 @@ const shade = (color: string, index: number): string => {
 
 // Biến CSS của nền sáng như trình duyệt thấy (biến chung và biến riêng của nền sáng): biến của Mantine, rồi biến của
 // theme.ts đè lên.
-// Bộ biến mặc định với một màu chính; tổ hợp với các biến khác đo ở themeTokens.test.ts.
+// Bộ biến mặc định với một màu chính; tổ hợp với các biến khác đo ở themeTokens.test.tsx.
 const withColor = (color: BrandColor) => ({ ...DEFAULT_BRANDING.theme, color });
 
 function appTheme(color: BrandColor) {

@@ -5,6 +5,8 @@
 // ở mọi cặp chữ, nền của themeContrast.ts; bo góc và phông không đổi màu nào; sắc độ tự khai dưới AA bị bỏ; mọi tệp
 // thương hiệu trong repo đọc được. Bộ biến mặc định giữ đúng theme trước ADR 0063 (theme.test.tsx đo riêng).
 
+import { Button, DEFAULT_THEME, MantineProvider, NavLink } from "@mantine/core";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import {
   BRAND_BACKGROUNDS,
@@ -17,7 +19,8 @@ import {
   type ThemeTokens,
 } from "./branding";
 import { contrast } from "./contrast";
-import { contrastPairs, contrastProblems, lightTheme } from "./themeContrast";
+import { createAppTheme } from "./theme";
+import { contrastPairs, contrastProblems, lightTheme, NON_TEXT } from "./themeContrast";
 
 const base: ThemeTokens = DEFAULT_BRANDING.theme;
 const secondaries: (ColorChoice | undefined)[] = [undefined, ...BRAND_COLORS];
@@ -39,6 +42,13 @@ describe("mọi tổ hợp màu và nền mà schema cho phép", () => {
   it.each(combos)("%s đạt AA", (_, tokens) => {
     const failing = contrastPairs(tokens).filter((pair) => contrast(pair.foreground, pair.background) < pair.minimum);
     expect(failing.map((pair) => pair.label)).toEqual([]);
+  });
+});
+
+// Lý do viền ô nhập đậm lên gray.7 trên nền tint (theme.ts): gray.6 dưới 3:1 trên sắc 0 của năm bảng màu.
+describe("viền ô nhập trên nền tint", () => {
+  it.each(["blue", "indigo", "violet", "grape", "dark"])("gray.6 dưới 3:1 trên %s.0", (color) => {
+    expect(contrast(DEFAULT_THEME.colors.gray[6], DEFAULT_THEME.colors[color]?.[0] ?? "")).toBeLessThan(NON_TEXT);
   });
 });
 
@@ -77,6 +87,27 @@ describe("màu phụ", () => {
     });
     expect(vars?.(theme, { variant: "filled" }, {})).toEqual({ root: {} });
     expect(vars?.(theme, { variant: "subtle", color: "red" }, {})).toEqual({ root: {} });
+  });
+
+  // Vẽ thật qua MantineProvider: Mantine gọi vars của theme với variant của nút, và NavLink nhận color mặc định.
+  it("theme thật vẽ nút phụ và mục menu bằng màu phụ", () => {
+    const html = renderToStaticMarkup(
+      <MantineProvider theme={createAppTheme({ ...base, secondaryColor: "grape" })}>
+        <Button variant="light">a</Button>
+        <Button variant="subtle">b</Button>
+        <Button>c</Button>
+        <Button variant="light" color="red">
+          d
+        </Button>
+        <NavLink label="e" active />
+      </MantineProvider>,
+    );
+    const buttons = [...html.matchAll(/<button[^>]*style="([^"]*)"/g)].map((match) => match[1] ?? "");
+    expect(buttons[0]).toContain("--button-color:var(--mantine-color-grape-light-color)");
+    expect(buttons[1]).toContain("--button-color:var(--mantine-color-grape-light-color)");
+    expect(buttons[2]).not.toContain("grape");
+    expect(buttons[3]).toContain("--button-color:var(--mantine-color-red-light-color)");
+    expect(html).toMatch(/--nl-color:var\(--mantine-color-grape-light-color\)/);
   });
 
   it("không khai thì không đặt gì cho NavLink, Button", () => {

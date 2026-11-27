@@ -27,7 +27,7 @@
       "pattern": "^/brand/[A-Za-z0-9][A-Za-z0-9._-]*\\.(svg|png|webp)$"
     },
     "color": {
-      "description": "Màu chính (nút chính, liên kết, chữ màu): tên một bảng màu Mantine đạt WCAG AA ở sắc độ giao diện dùng (platform/web/src/theme.test.tsx, themeTokens.test.ts), hoặc mười sắc độ tự khai.",
+      "description": "Màu chính (nút chính, liên kết, chữ màu): tên một bảng màu Mantine đạt WCAG AA ở sắc độ giao diện dùng (platform/web/src/theme.test.tsx, themeTokens.test.tsx), hoặc mười sắc độ tự khai.",
       "$ref": "#/$defs/color"
     },
     "secondary_color": {

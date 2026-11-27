@@ -41,7 +41,9 @@ Phông đã xét:
 **Kiểu "Bento dịu"** (`platform/web/src/theme.ts`, `theme.css`):
 
 - Nền trang `gray.0`, đặt bằng quy tắc `body` trong `theme.css`. Không đổi `--mantine-color-body`, vì thẻ, khung, hộp
-  thoại và thanh trên tô bằng biến đó và sẽ xám theo.
+  thoại và thanh trên tô bằng biến đó và sẽ xám theo. Được sửa theo [ADR 0063](0063-install-theme-tokens.md): nền
+  trang, viền ô nhập trên nền đó, thang bo góc và phông dưới đây là giá trị mặc định; bản cài đổi được trong
+  `branding.json`.
 - `Card` có viền 1px, không bóng, bo 12px. Thang bo góc: `sm` 6px (mặc định của nút, ô nhập, `Badge`), `md` 12px (thẻ,
   khung); các trang vẫn đặt `radius="md"` cho khung nên đổi giá trị của bậc, không đổi trang.
 - Viền ô nhập `gray.6` qua biến `--mortise-input-border` mà `theme.css` đọc, cùng dạng bộ chọn với quy tắc của Mantine

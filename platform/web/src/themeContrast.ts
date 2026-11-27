@@ -3,7 +3,7 @@
 //
 // Đo tương phản của một bộ biến giao diện (ADR 0063) trên theme thật: dựng theme bằng createAppTheme, lấy biến CSS mà
 // Mantine sinh (bộ sinh mặc định cộng cssVariablesResolver) rồi đo từng cặp chữ và nền mà giao diện dùng. branding.ts
-// gọi khi đọc /branding.json để bỏ tệp có tổ hợp dưới AA; themeTokens.test.ts gọi cho mọi tổ hợp mà schema cho phép.
+// gọi khi đọc /branding.json để bỏ tệp có tổ hợp dưới AA; themeTokens.test.tsx gọi cho mọi tổ hợp mà schema cho phép.
 
 import { DEFAULT_THEME, defaultCssVariablesResolver, type MantineTheme, mergeMantineTheme } from "@mantine/core";
 import type { ThemeTokens } from "./branding";

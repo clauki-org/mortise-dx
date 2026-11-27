@@ -241,7 +241,7 @@ done
 # của màu trong BRAND_COLORS, một màu thêm vào schema mà quên ở đó sẽ qua mà chưa ai đo.
 "${checker[@]}" --schemafile contracts/branding.schema.json contracts/examples/branding.example.json \
   platform/web/brand/branding.json presets/dien-mat-troi/brand/branding.json
-# Mỗi danh sách giá trị của biến giao diện (ADR 0063) cũng phải trùng: themeTokens.test.ts đo mọi tổ hợp của danh
+# Mỗi danh sách giá trị của biến giao diện (ADR 0063) cũng phải trùng: themeTokens.test.tsx đo mọi tổ hợp của danh
 # sách trong branding.ts, giá trị chỉ có ở schema thì chưa ai đo.
 # $defs là tên khóa của JSON Schema, không phải biến shell.
 # shellcheck disable=SC2016

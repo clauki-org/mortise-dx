@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Bộ quy ước giao diện dùng chung (ADR 0043, kiểu "Bento dịu" của ADR 0048): một thang cỡ chữ, một thang khoảng cách,
-// bo góc, bóng và kiểu mặc định của thẻ, khung, bảng. Thành phần chỉ chọn bậc trong các thang này (size="sm", p="md"), không đặt số riêng. Màu chính,
-// màu phụ, bo góc, phông và nền trang đến từ biến giao diện của bản cài (branding.ts, ADR 0063); theme.test.tsx và
-// themeTokens.test.ts kiểm tương phản của mọi tổ hợp được phép.
+// bo góc, bóng và kiểu mặc định của thẻ, khung, bảng. Thành phần chỉ chọn bậc trong các thang này (size="sm",
+// p="md"), không đặt số riêng. Màu chính, màu phụ, bo góc, phông và nền trang đến từ biến giao diện của bản cài
+// (branding.ts, ADR 0063); theme.test.tsx và themeTokens.test.tsx kiểm tương phản của mọi tổ hợp được phép.
 
 import {
   Anchor,
@@ -43,8 +43,8 @@ const LIGHT_TEXT_DARKEN = 0.3;
 // dưới mức 3:1 mà WCAG 1.4.11 đòi cho đường viền giúp nhận ra ô.
 const INPUT_BORDER_SHADE: MantineColorShade = 6;
 
-// Nền sắc 0 của màu chính (`background: "tint"`) sẫm hơn gray.0 với blue, indigo, violet, grape: viền gray.6 chỉ còn
-// khoảng 2,96:1 trên các nền đó, nên trên nền này viền đậm lên một sắc.
+// Nền sắc 0 của màu chính (`background: "tint"`) sẫm hơn gray.0: viền gray.6 dưới 3:1 trên sắc 0 của blue, indigo,
+// violet, grape và dark (themeTokens.test.tsx), nên trên nền này viền đậm lên một sắc.
 const TINT_INPUT_BORDER_SHADE: MantineColorShade = 7;
 
 // Nền trang (theme.css đọc qua --mortise-page-background). Không đổi --mantine-color-body: Paper, Card, hộp thoại và
@@ -183,13 +183,15 @@ export function createAppTheme(tokens: ThemeTokens) {
 //   cùng màu với chữ phụ.
 // - Viền ô nhập và nền trang: biến riêng của dự án mà theme.css đọc, vì Mantine viết cứng hai giá trị này trong CSS.
 const backgroundOf = (theme: MantineTheme): ThemeTokens["background"] => theme.other.pageBackground ?? "gray";
+const inputBorderShade = (theme: MantineTheme) =>
+  backgroundOf(theme) === "tint" ? TINT_INPUT_BORDER_SHADE : INPUT_BORDER_SHADE;
 
 export const cssVariablesResolver: CSSVariablesResolver = (theme: MantineTheme) => ({
   variables: {},
   light: {
     "--mantine-color-dimmed": `var(--mantine-color-gray-${DIMMED_SHADE})`,
     "--mantine-color-placeholder": `var(--mantine-color-gray-${DIMMED_SHADE})`,
-    "--mortise-input-border": `var(--mantine-color-gray-${backgroundOf(theme) === "tint" ? TINT_INPUT_BORDER_SHADE : INPUT_BORDER_SHADE})`,
+    "--mortise-input-border": `var(--mantine-color-gray-${inputBorderShade(theme)})`,
     "--mortise-page-background": PAGE_BACKGROUND[backgroundOf(theme)],
     ...Object.fromEntries(
       Object.entries(theme.colors).flatMap(([name, shades]) => [

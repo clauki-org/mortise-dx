@@ -7,7 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 
 - Trạng thái: Chấp nhận
 - Ngày: 2026-11-27
-- Sửa đổi: [ADR 0043](0043-design-tokens-and-install-branding.md)
+- Sửa đổi: [ADR 0043](0043-design-tokens-and-install-branding.md), [ADR 0048](0048-bento-tokens-status-tones-font.md)
+  (nền trang, viền ô nhập, thang bo góc, phông thành giá trị mặc định)
 
 ## Bối cảnh
 
@@ -27,6 +28,9 @@ ngày 2026-11-27:
 | Viền ô nhập `gray.6` trên `blue.0` | 2,99:1 | 3:1 |
 | Viền ô nhập `gray.6` trên `indigo.0`, `violet.0` | 2,96:1 | 3:1 |
 | Viền ô nhập `gray.6` trên `grape.0` | 2,98:1 | 3:1 |
+| Viền ô nhập `gray.6` trên `pink.0` | 3,01:1 | 3:1 |
+| Viền ô nhập `gray.6` trên `dark.0` | 2,01:1 | 3:1 |
+| Viền ô nhập `gray.7` trên `dark.0` (thấp nhất trong sáu bảng) | 4,94:1 | 3:1 |
 | Liên kết sắc 8 của bảng cam mẫu (`presets/dien-mat-troi`) trên nền sắc 0 của chính nó | 5,21:1 | 4,5:1 |
 | Chữ trắng trên nút filled sắc 8 của bảng cam mẫu | 5,70:1 | 4,5:1 |
 
@@ -53,8 +57,8 @@ trước:
   cho tải phông từ nơi khác. Thêm phông là thêm thư viện, giấy phép và một giá trị vào danh sách.
 - `background`: `gray` (mặc định, `gray.0`), `white`, hay `tint` (sắc 0 của màu chính). Nền này đặt qua biến
   `--mortise-page-background` cho `body`, khung trang đã đăng nhập (`Shell.tsx`) và màn hình trước đăng nhập
-  (`App.tsx`). Trên nền `tint`, viền ô nhập đậm lên `gray.7`, vì `gray.6` dưới 3:1 trên sắc 0 của bốn bảng màu (bảng
-  trên).
+  (`App.tsx`). Trên nền `tint`, viền ô nhập đậm lên `gray.7`, vì `gray.6` dưới 3:1 trên sắc 0 của năm trong sáu bảng
+  màu (bảng trên).
 
 **Kiểm tương phản**:
 
@@ -62,7 +66,7 @@ trước:
   nền: nút filled và khi di chuột, chữ màu và liên kết trên nền trắng và nền trang, chữ nút light, subtle của màu chính
   và màu phụ trên nền trắng, nền trang, nền nhạt, nền khi di chuột, mục menu đang chọn, chữ phụ, chữ gợi ý, nhãn trạng
   thái trên nền trang ở mức 4,5:1, viền ô nhập ở mức 3:1.
-- `themeTokens.test.ts` chạy phép đo đó cho mọi tổ hợp màu chính × màu phụ (kể cả không khai) × nền mà schema cho phép
+- `themeTokens.test.tsx` chạy phép đo đó cho mọi tổ hợp màu chính × màu phụ (kể cả không khai) × nền mà schema cho phép
   (6 × 7 × 3 = 126 tổ hợp), và kiểm bo góc, phông không đổi biến màu nào. Bộ biến mặc định giữ đúng theme trước quyết
   định này; `theme.test.tsx` vẫn đo riêng như ADR 0043, 0048.
 - Sắc độ tự khai chỉ đo được lúc đọc: `parseBranding` gọi cùng phép đo, một cặp dưới mức là bỏ cả tệp như trường sai,
