@@ -45,7 +45,7 @@ Lược đồ `app_facilities_commune`.
 | `staffing` | Biên chế được giao của xã: chức danh, dòng phụ lục (`norm_row`), số người | `UNIQUE (tenant_id, position)`; `norm_row` tham chiếu `working_area_norms` |
 | `specialized_allowances` | Diện tích chuyên dùng do cấp có thẩm quyền quyết định, kèm căn cứ | `UNIQUE (tenant_id, name)` |
 | `staffing_allowances` (view) | Mỗi dòng biên chế kèm mức m², diện tích được phép và trích dẫn dòng phụ lục | Chỉ đọc |
-| `area_summary` (view) | Mỗi xã một dòng: làm việc, sử dụng chung, chuyên dùng, được phép, đang dùng, dôi dư, phần vượt | Chỉ đọc |
+| `area_summary` (view) | Mỗi xã một dòng: làm việc, sử dụng chung, chuyên dùng, được phép, đang dùng, dôi dư, phần vượt, phần trăm đang dùng so với được phép (làm tròn, trống khi chưa có diện tích được phép) | Chỉ đọc |
 | `facility_status_counts` (view) | Mỗi xã và trạng thái (`in_use`, `surplus`) một dòng: số cơ sở, tổng diện tích thông thủy | Chỉ đọc; mọi vai trò trong xã |
 | `area_by_type` (view) | Mỗi xã và loại diện tích một dòng: đang dùng, được phép (lấy từ `area_summary`); chỉ để đối chiếu, phần vượt tính trên tổng | Chỉ đọc; mọi vai trò trong xã |
 | `facility_coverage` (view) | Mỗi xã một dòng: số cơ sở, số cơ sở chưa có người phụ trách, chưa có người duyệt | Chỉ đọc; `manager`, `tenant_admin` |
@@ -87,7 +87,10 @@ câu hỏi không chứa dòng dữ liệu.
 Mục menu "Bảng điều hành" (`dashboard`, `dashboards/overview.yaml`, [ADR 0033](../../docs/adr/0033-dashboard-component.md))
 hiện diện tích được phép, đang dùng, phần vượt và dôi dư của cả xã (`area_summary`), số cơ sở theo trạng thái
 (`facility_status_counts`), diện tích theo loại (`area_by_type`), biên chế và diện tích chuyên dùng. Khối diện tích là
-khối chính, số lớn trên cùng; cách tính và câu truy vấn đã gửi của mỗi khối nằm trong "Xem cách tính"
+khối chính, số lớn trên cùng, có vòng đo phần trăm đang dùng so với được phép (cột `in_use_percent` của
+`area_summary`); thẻ phần vượt lớn hơn 0 tô đỏ kèm chữ "Vượt định mức", thẻ chưa phân công, bước hay việc quá hạn lớn
+hơn 0 cũng có màu và chữ; biểu đồ độ ẩm có thang tới 100 ([ADR 0049](../../docs/adr/0049-bento-dashboard.md)). Cách
+tính và câu truy vấn đã gửi của mỗi khối nằm trong "Xem cách tính"
 ([ADR 0045](../../docs/adr/0045-readable-dashboard.md)). Số tính cho cả xã, kể cả với cán bộ chỉ được phân công một phần cơ sở. Lãnh đạo xã
 (`manager`) thấy thêm số cơ sở chưa có người phụ trách, chưa có người duyệt (`facility_coverage`). Tỉnh
 (`rollup_reader`) thấy biểu đồ và bảng số của từng xã con (`area_rollup`); các xã không được cộng lại.

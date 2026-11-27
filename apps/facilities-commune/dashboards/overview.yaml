@@ -7,7 +7,8 @@
 # gói tính (ADR 0033), mô tả cách tính chép theo chú thích của view trong schema/migrations/. Số hồ sơ do workflow-api
 # đếm, số đo thiết bị do context-api trả; riêng việc đang chờ người xem đếm trên trình duyệt (ADR 0035). description
 # và nhãn là lời của người xem; tên view, cột, giá trị mã và căn cứ chi tiết nằm ở method, chỉ hiện trong mục "Xem cách
-# tính" (ADR 0045).
+# tính" (ADR 0045). Khối xếp trên lưới bốn cột đúng thứ tự dưới đây, khối chính đầu tiên; ngưỡng và chữ mức độ của thẻ
+# (tone), vòng đo (gauge) và trần của biểu đồ (max) là của gói, thành phần chỉ so và vẽ (ADR 0049).
 
 title: Bảng điều hành cơ sở vật chất xã
 description: >-
@@ -20,10 +21,18 @@ panels:
       trụ sở của xã.
     method: >-
       View area_summary, mỗi xã một dòng. Tiêu chuẩn tính trên tổng diện tích của mọi trụ sở xã đang dùng (Điều 3
-      khoản 3 NĐ 155/2025/NĐ-CP, sửa bởi Điều 2 NĐ 369/2026/NĐ-CP), không tính riêng từng cơ sở.
+      khoản 3 NĐ 155/2025/NĐ-CP, sửa bởi Điều 2 NĐ 369/2026/NĐ-CP), không tính riêng từng cơ sở. Phần trăm của vòng
+      đo là cột in_use_percent của view: đang dùng chia được phép, nhân 100, làm tròn tới hàng đơn vị; xã chưa có diện
+      tích được phép thì không có phần trăm.
     size: half
     primary: true
     graphql: { field: app_facilities_commune_area_summary }
+    # Phần trăm do view tính (in_use_percent); một vòng đầy là diện tích được phép, phần vượt thành vòng thứ hai.
+    gauge:
+      value: in_use_m2
+      limit: allowed_m2
+      percent: in_use_percent
+      label: Đang dùng so với diện tích được phép
     cards:
       - column: allowed_m2
         label: Diện tích được phép
@@ -40,6 +49,8 @@ panels:
         label: Phần vượt tiêu chuẩn, định mức
         unit: m²
         description: Đang dùng trừ được phép, không nhỏ hơn 0.
+        # Phần vượt nào cũng là vượt tiêu chuẩn, định mức: không có mức cảnh báo ở giữa.
+        tone: { bad_when: { gt: 0, label: Vượt định mức } }
       - column: surplus_m2
         label: Cơ sở dôi dư
         unit: m²
@@ -91,6 +102,7 @@ panels:
         label: Đã quá hạn
         format: integer
         description: Trong số đó, việc có hạn xử lý trước lúc mở trang.
+        tone: { bad_when: { gt: 0, label: Có việc quá hạn } }
   - id: coverage
     title: Phân công cơ sở
     description: Cơ sở nào chưa có người phụ trách hay người duyệt. Chỉ lãnh đạo và quản trị xã thấy khối này.
@@ -105,10 +117,12 @@ panels:
         label: Chưa có người phụ trách
         format: integer
         description: Cơ sở không có dòng phân công nào với nhiệm vụ phụ trách (custodian).
+        tone: { warn_when: { gt: 0, label: Cần phân công } }
       - column: without_approver
         label: Chưa có người duyệt
         format: integer
         description: Cơ sở không có dòng phân công nào với nhiệm vụ duyệt (approver).
+        tone: { warn_when: { gt: 0, label: Cần phân công } }
   # Hồ sơ rà soát của cả xã: workflow-api chỉ trả số cho người có vai trò của một bước (manager ở BPMN), người khác nhận
   # 404, nên khối khai role manager để cán bộ không thấy khối báo lỗi.
   - id: reviews
@@ -127,6 +141,7 @@ panels:
         label: Bước quá hạn
         format: integer
         description: Bước đang chờ đã quá hạn xử lý; đếm bước, không đếm hồ sơ.
+        tone: { bad_when: { gt: 0, label: Có bước quá hạn } }
       - column: finished
         label: Đã kết thúc
         format: integer
@@ -152,6 +167,7 @@ panels:
         label: Quá hạn
         format: integer
         description: Bước kiểm tra đã quá hạn một ngày của quy trình.
+        tone: { bad_when: { gt: 0, label: Có bước quá hạn } }
       - { column: finished, label: Đã kiểm tra, format: integer, description: Hồ sơ đã kết thúc. }
   - id: by-type
     title: Diện tích theo loại
@@ -185,6 +201,8 @@ panels:
     context: { type: Device, attribute: humidity }
     chart:
       type: bar
+      # Độ ẩm là phần trăm: thang luôn tới 100 để 81% không trông như đầy chỉ vì là số lớn nhất.
+      max: 100
       # Mã entity do iot-bridge đặt theo tên thiết bị trong devices/simulator/devices.yaml; thiết bị không có nhãn ở
       # đây hiện "Thiết bị <số thứ tự>", mã gốc nằm trong bảng số liệu thu gọn.
       x:

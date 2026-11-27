@@ -354,13 +354,16 @@ totals() { # TOKEN: in "<trạng thái>=<tổng m²>" theo thứ tự trạng th
     | map("\($of[.[0].building_id])=\(map(.clear_area_m2 | tonumber) | add)") | join(" ")'
 }
 # Kết quả tính của từng xã (view area_summary): được phép = làm việc theo biên chế + sử dụng chung bằng phần làm việc
-# + chuyên dùng; thực tế chỉ cộng cơ sở đang dùng; phần vượt không âm. View là số tổng của cả xã nên cán bộ đọc được
-# dù chỉ được phân công một phần cơ sở.
-summary_query='{ app_facilities_commune_area_summary { tenant_id allowed_m2 in_use_m2 surplus_m2 excess_m2 } }'
-summary() { # TOKEN: in "<tenant> allowed=.. in_use=.. surplus=.. excess=.." cho mỗi dòng thấy được
+# + chuyên dùng; thực tế chỉ cộng cơ sở đang dùng; phần vượt không âm; phần trăm đang dùng so với được phép làm tròn
+# tới hàng đơn vị (vòng đo của bảng điều hành). View là số tổng của cả xã nên cán bộ đọc được dù chỉ được phân công
+# một phần cơ sở.
+summary_query='{ app_facilities_commune_area_summary { tenant_id allowed_m2 in_use_m2 surplus_m2 excess_m2
+  in_use_percent } }'
+summary() { # TOKEN: in "<tenant> allowed=.. in_use=.. surplus=.. excess=.. percent=.." cho mỗi dòng thấy được
   gql "$1" "$summary_query" | jq -r '.data.app_facilities_commune_area_summary[]
     | "\(.tenant_id) allowed=\(.allowed_m2 | tonumber + 0) in_use=\(.in_use_m2 | tonumber + 0)"
-      + " surplus=\(.surplus_m2 | tonumber + 0) excess=\(.excess_m2 | tonumber + 0)"'
+      + " surplus=\(.surplus_m2 | tonumber + 0) excess=\(.excess_m2 | tonumber + 0)"
+      + " percent=\(.in_use_percent | tonumber + 0)"'
 }
 admin_c=$(token admin.c)
 # Xã nào đã có một cơ sở demo thì coi như đã nạp và kiểm cả ba xã, để nạp sót một xã không làm smoke bỏ qua.
@@ -375,11 +378,11 @@ if ((loaded > 0)); then
   gql "$token_a" 'mutation { delete_app_facilities_commune_specialized_allowances(
     where: {basis: {_eq: "Kiểm thử smoke"}}) { affected_rows } }' >/dev/null
   check "Xã A: được phép 580 m², dùng 1.000 m², vượt 420 m²; chỉ thấy dòng của mình" "$(summary "$token_a")" \
-    "xa-a allowed=580 in_use=1000 surplus=0 excess=420"
+    "xa-a allowed=580 in_use=1000 surplus=0 excess=420 percent=172"
   check "Xã B: được phép 600 m², dùng 730 m², vượt 130 m²" "$(summary "$token_b")" \
-    "xa-b allowed=600 in_use=730 surplus=0 excess=130"
+    "xa-b allowed=600 in_use=730 surplus=0 excess=130 percent=122"
   check "Xã C: được phép 480 m², dùng 460 m², không vượt; dôi dư 250 m² tính riêng" "$(summary "$(token user.c)")" \
-    "xa-c allowed=480 in_use=460 surplus=250 excess=0"
+    "xa-c allowed=480 in_use=460 surplus=250 excess=0 percent=96"
   check "Mức m² của biên chế trỏ về đúng dòng phụ lục" \
     "$(gql "$token_a" '{ app_facilities_commune_staffing_allowances(where: {norm_row: {_eq: 10}}) {
       headcount max_m2 allowed_m2 source } }' |
