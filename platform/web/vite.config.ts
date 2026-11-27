@@ -4,14 +4,29 @@
 // Build giao diện ra tệp tĩnh. Khi phát triển, máy chủ Vite chuyển /v1 sang cổng APISIX để trình duyệt gọi API như
 // cùng một địa chỉ; bản cài thật không cần vì giao diện và API cùng đứng sau cổng.
 
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { defineConfig, type Plugin } from "vitest/config";
 
 const gateway = process.env.MORTISE_PUBLIC_URL ?? "http://localhost:9080";
 
+// OFL-1.1 buộc mỗi bản phân phối phông kèm lời ghi bản quyền và văn bản giấy phép. Tệp phông chỉ mang đường dẫn tới
+// giấy phép, nên bản build chép nguyên tệp LICENSE của gói đang ghim ra licenses/, đi cùng các tệp phông trong assets/.
+function fontLicense(): Plugin {
+  const file = createRequire(import.meta.url).resolve("@fontsource/be-vietnam-pro/LICENSE");
+  return {
+    name: "mortise-font-license",
+    apply: "build",
+    generateBundle() {
+      this.emitFile({ type: "asset", fileName: "licenses/be-vietnam-pro-OFL-1.1.txt", source: readFileSync(file) });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), fontLicense()],
   // MapLibre tạo worker kiểu module (MapCanvas.tsx); bản worker do Vite build ra phải là module ES mới chạy được như vậy.
   worker: { format: "es" },
   // CSP chỉ cho phông cùng origin (default-src 'self', không có data:). Tệp phông nhỏ hơn ngưỡng của Vite sẽ bị nhúng

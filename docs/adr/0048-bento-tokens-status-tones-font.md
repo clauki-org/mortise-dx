@@ -57,8 +57,9 @@ Phông đã xét:
 **Phông**: Be Vietnam Pro từ `@fontsource/be-vietnam-pro` 5.3.0, ghim chính xác. `main.tsx` nạp ba độ đậm 400, 600, 800,
 mỗi độ đậm gồm tập chữ Việt, Latin và Latin mở rộng; trình duyệt chỉ tải tập có ký tự trên trang. `vite.config.ts`
 không bao giờ nhúng `.woff`, `.woff2` thành `data:`, vì CSP (`default-src 'self'`) chặn phông `data:`. Danh sách phông
-của hệ điều hành đứng sau, dùng khi phông chưa tải xong hay không tải được. OFL-1.1 thêm vào `WEB_LICENSES_SHIPPED`
-của Makefile và bảng "Thành phần đang chạy" của README. `scripts/deps-policy.toml` không đổi: nó chỉ có danh sách cho
+của hệ điều hành đứng sau, dùng khi phông chưa tải xong hay không tải được. OFL-1.1 đòi bản phân phối kèm văn bản
+giấy phép, nên bản build chép tệp `LICENSE` của gói ra `licenses/be-vietnam-pro-OFL-1.1.txt`. OFL-1.1 thêm vào
+`WEB_LICENSES_SHIPPED` của Makefile và bảng "Thành phần đang chạy" của README. `scripts/deps-policy.toml` không đổi: nó chỉ có danh sách cho
 thư viện Python và image, thư viện web kiểm bằng `make web-check`.
 
 **Bộ nghĩa màu chung** (`platform/web/src/tones.ts`): `bad` đỏ, `warn` cam, `info` xanh dương, `ok` xanh lá, `neutral`
