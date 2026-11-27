@@ -202,6 +202,9 @@ test("cán bộ xã A xuất danh mục cơ sở ra CSV, Excel và PDF: mọi d�
     await page.getByRole("textbox", { name: "Tìm" }).fill(code);
     await page.getByRole("button", { name: "Tìm" }).click();
     await expect(page.getByRole("link", { name: `${code}-a01` })).toBeVisible();
+    // Dòng a01 cũng có ở trang đầu khi danh sách chưa lọc; chờ cơ sở demo ngoài kết quả tìm biến mất để chắc màn
+    // hình đã là kết quả tìm trước khi đọc các dòng.
+    await expect(page.getByRole("link", { name: "TS-A1", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Trang sau" })).toBeEnabled();
     const screen = await page
       .locator("table tbody tr")
