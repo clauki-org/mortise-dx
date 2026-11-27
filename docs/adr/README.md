@@ -81,6 +81,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0065](0065-package-on-off.md) | Bật, tắt gói theo org: ẩn qua quyền đọc menu, dữ liệu giữ nguyên | Chấp nhận |
 | [0061](0061-block-composition.md) | Nguyên tắc ghép: trang gồm khối, kiểu trình bày, bài kiểm tổ hợp | Chấp nhận |
 | [0066](0066-catalog-kanban-and-calendar.md) | Kiểu Kanban và Lịch của danh mục, chuyển thẻ bằng lệnh sửa có so version | Chấp nhận |
+| [0063](0063-install-theme-tokens.md) | Bộ biến giao diện theo bản cài: màu chính, màu phụ, bo góc, phông, nền trang, vẫn đạt AA | Chấp nhận |
 
 ## Quyết định còn mở
 

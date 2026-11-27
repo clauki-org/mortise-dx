@@ -52,6 +52,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Danh mục có thêm kiểu Kanban (cột theo trường trạng thái, chuyển thẻ bằng kéo thả hay nút "Chuyển sang", có so phiên
   bản) và Lịch (tháng, tuần theo trường ngày); gói cơ sở vật chất xã dùng cả hai ([ADR
   0066](docs/adr/0066-catalog-kanban-and-calendar.md)).
+- Bộ biến giao diện theo bản cài trong `branding.json`: màu phụ, bo góc, phông, nền trang; màu tự khai bằng mười sắc
+  độ, tệp dưới AA bị bỏ ([ADR 0063](docs/adr/0063-install-theme-tokens.md)).
 
 ### Changed
 
