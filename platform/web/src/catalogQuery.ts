@@ -45,11 +45,12 @@ export function rowsQuery(config: CatalogNode, names: string[]): string {
  * đường dẫn để gắn một dòng vào cha hay ông của dòng khác thì có chặng không trả dòng nào, và màn hình báo không tìm
  * thấy thay vì hiện dòng dưới tên một đối tượng không chứa nó.
  */
-export function chainQuery(steps: Step[]): string {
+export function chainQuery(steps: Step[], extra: string[] = []): string {
   const last = steps.length - 1;
   const parameters = steps.map((step, index) => `$w${index}: ${step.node.source}_bool_exp!`).join(", ");
   const parts = steps.map((step, index) => {
-    const names = index === last ? step.node.fields.map((field) => field.name) : [titleField(step.node)];
+    // `extra` là cột chỉ dòng đang xem cần, ví dụ `custom` của trường tùy chỉnh (ADR 0059).
+    const names = index === last ? [...step.node.fields.map((field) => field.name), ...extra] : [titleField(step.node)];
     return `s${index}: ${step.node.source}(where: $w${index}, limit: 1) { ${selection([keyOf(step.node), ...names])} }`;
   });
   return `query(${parameters}) { ${parts.join(" ")} }`;

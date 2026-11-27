@@ -57,6 +57,33 @@ describe("RowsTable", () => {
   });
 });
 
+describe("trường tùy chỉnh", () => {
+  const power = {
+    root_tenant_id: "r",
+    source: "t",
+    code: "power",
+    label: "Công suất",
+    kind: "number" as const,
+    choices: null,
+    required: false,
+  };
+  const withCustom = { ...props, rows: [{ ...rows[0], custom: { power: 1500 } }], custom: [power] };
+
+  it("bảng có cột sau các cột của gói, tiêu đề không phải nút sắp xếp, giá trị đọc từ custom", () => {
+    const html = render(
+      <RowsTable {...withCustom} label="Danh mục" sort={{ field: "code", direction: "asc" }} onSort={noop} />,
+    );
+    expect(html).toMatch(/<th[^>]*><span[^>]*>Công suất<\/span><\/th>/);
+    expect(html).toContain("1.500");
+  });
+
+  it("thẻ có cặp nhãn, giá trị của trường tùy chỉnh", () => {
+    const html = render(<RowsCards {...withCustom} />);
+    expect(html).toMatch(/<dt[^>]*>Công suất<\/dt>/);
+    expect(html).toContain("1.500");
+  });
+});
+
 describe("RowsCards", () => {
   it("mỗi dòng một mục danh sách với liên kết cùng chữ như bảng, nhãn và giá trị, không có nút", () => {
     const html = render(<RowsCards {...props} />);

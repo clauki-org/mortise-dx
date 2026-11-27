@@ -8,10 +8,11 @@
 
 import { Alert, Anchor, Button, Group, Paper, Stack } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useClient } from "urql";
 import { casesPathFor } from "./cases";
+import { insertCustom, withInputs } from "./customFields";
 import { ReadableError } from "./errorText";
 import { FormFields } from "./FormFields";
 import { type FormConfig, formProblems, formRole, type KeyState, keyFor, payloadOf, type Values } from "./formConfig";
@@ -19,8 +20,9 @@ import { insertError, insertMutation } from "./formInsert";
 import { findItem, itemPath, rolesOf } from "./menu";
 import { usePackageMenu } from "./PackagePage";
 import { PageHeader } from "./PageHeader";
-import { ErrorNotice } from "./States";
+import { ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
+import { useCustomFields } from "./useCustomFields";
 import { idempotencyKey, startProcess } from "./workflow";
 
 const freshKey = (): KeyState => ({ key: idempotencyKey() });
@@ -90,11 +92,15 @@ function FormBody({ config, app }: { config: FormConfig; app: string }) {
   // gọi onSubmit. Lệnh thêm dòng không có Idempotency-Key, nên chặn ở đây.
   const sending = useRef(false);
   const submit = useSubmit(config);
+  // Biểu mẫu thêm dòng vào bảng đã bật trường tùy chỉnh có thêm ô của chúng (ADR 0059); khởi tạo quy trình thì không.
+  const custom = useCustomFields(config.submit.insert);
+  const shown = useMemo(() => withInputs(config, custom.fields), [config, custom.fields]);
 
   const send = (data: Values) => {
     if (sending.current) return;
     sending.current = true;
-    const payload = payloadOf(config, data);
+    const extra = insertCustom(custom.fields, data);
+    const payload = { ...payloadOf(config, data), ...(extra ? { custom: extra } : {}) };
     keys.current = keyFor(keys.current, JSON.stringify(payload), idempotencyKey);
     submit.mutate(
       { payload, key: keys.current.key },
@@ -115,8 +121,9 @@ function FormBody({ config, app }: { config: FormConfig; app: string }) {
     setDone(undefined);
   };
   if (done !== undefined) return <Done config={config} app={app} started={done} onAgain={again} />;
+  if (!custom.settled) return <Loading />;
   return (
-    <FormFields config={config} values={values} onValues={setValues} onSubmit={send}>
+    <FormFields config={shown} values={values} onValues={setValues} onSubmit={send}>
       <Stack mt="md" gap="sm">
         {submit.isError && <ErrorNotice title="Chưa gửi được" error={submit.error} />}
         <Group>

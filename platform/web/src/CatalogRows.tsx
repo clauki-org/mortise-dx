@@ -22,6 +22,7 @@ import { Link } from "react-router";
 import { type CatalogNode, display, type Field, keyOf, type Row, type Sort, toneOf } from "./catalog";
 import { VIEW_LABELS, type View } from "./catalogViews";
 import { rowPath } from "./menu";
+import { type CustomField, customValue, displayField } from "./customFields";
 import { StatusBadge } from "./StatusBadge";
 import { Blank, keepTogether, TableScroll } from "./TableScroll";
 
@@ -40,7 +41,12 @@ type RowsProps = {
   rows: Row[];
   /** Đường dẫn của danh sách; màn hình chi tiết của một dòng là `${path}/${khóa}` */
   path: string;
+  /** Trường tùy chỉnh của bảng (ADR 0059), hiện sau các cột của gói; giá trị đọc từ cột `custom` của dòng */
+  custom?: CustomField[];
 };
+
+// Khóa React của cột tùy chỉnh: mã có thể trùng tên một cột của gói (ví dụ "name").
+const customKey = (field: CustomField) => `custom.${field.code}`;
 
 /** Chữ của liên kết ở cột đầu; giá trị trống thì dùng khóa để dòng vẫn mở được. */
 export function linkText(config: CatalogNode, field: Field, row: Row): { key: string; text: string } {
@@ -54,7 +60,7 @@ type TableProps = RowsProps & {
   onSort: (field: Field) => void;
 };
 
-export function RowsTable({ config, columns, rows, path, label, sort, onSort }: TableProps) {
+export function RowsTable({ config, columns, rows, path, label, sort, onSort, custom = [] }: TableProps) {
   return (
     <TableScroll label={label} minWidth={480}>
       <Table highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
@@ -77,6 +83,14 @@ export function RowsTable({ config, columns, rows, path, label, sort, onSort }: 
                 </Table.Th>
               );
             })}
+            {/* Không sắp theo trường tùy chỉnh (ADR 0059): tiêu đề là chữ, không phải nút. */}
+            {custom.map((field) => (
+              <Table.Th key={customKey(field)} ta={field.kind === "number" ? "right" : undefined}>
+                <Text component="span" fw={600} fz="sm">
+                  {field.label}
+                </Text>
+              </Table.Th>
+            ))}
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -106,6 +120,11 @@ export function RowsTable({ config, columns, rows, path, label, sort, onSort }: 
                     </Table.Td>
                   );
                 })}
+                {custom.map((field) => (
+                  <Table.Td key={customKey(field)} ta={field.kind === "number" ? "right" : undefined}>
+                    <CellValue field={displayField(field)} value={customValue(row, field.code)} />
+                  </Table.Td>
+                ))}
               </Table.Tr>
             );
           })}
@@ -120,7 +139,7 @@ export function RowsTable({ config, columns, rows, path, label, sort, onSort }: 
  * các cột sau là cặp nhãn, giá trị. Thẻ là mục của một danh sách để trình đọc màn hình báo số thẻ; không có nút riêng
  * để mở, vì liên kết đã mở được và thêm nút là thêm một điểm dừng Tab cho mỗi dòng.
  */
-export function RowsCards({ config, columns, rows, path }: RowsProps) {
+export function RowsCards({ config, columns, rows, path, custom = [] }: RowsProps) {
   const [first, ...rest] = columns;
   if (!first) return null;
   return (
@@ -140,6 +159,16 @@ export function RowsCards({ config, columns, rows, path }: RowsProps) {
                   </Text>
                   <Box component="dd" m={0}>
                     <CellValue field={field} value={row[field.name]} />
+                  </Box>
+                </Box>
+              ))}
+              {custom.map((field) => (
+                <Box key={customKey(field)} mt="xs">
+                  <Text component="dt" size="sm" c="dimmed">
+                    {field.label}
+                  </Text>
+                  <Box component="dd" m={0}>
+                    <CellValue field={displayField(field)} value={customValue(row, field.code)} />
                   </Box>
                 </Box>
               ))}

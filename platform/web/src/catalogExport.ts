@@ -7,6 +7,7 @@
 
 import { type CatalogNode, display, type Field, fieldOf, type Row } from "./catalog";
 import { type ListState, listVariables, sortOf } from "./catalogQuery";
+import { type CustomField, customValue, displayField } from "./customFields";
 
 /** Số dòng tối đa một tệp. Vượt thì không xuất, để không ai nhận một tệp thiếu dòng mà tưởng là đủ. */
 export const LIMIT = 5000;
@@ -108,10 +109,16 @@ export type ExportTable = { meta: [string, string][]; columns: string[]; rows: C
 
 /**
  * Phần đầu ghi tên danh sách, nguồn, đơn vị, thời điểm, múi giờ, người xuất, điều kiện và số dòng; cột là các trường
- * trong list.columns theo nhãn, đúng thứ tự trên màn hình.
+ * trong list.columns theo nhãn, rồi các trường tùy chỉnh (ADR 0059), đúng thứ tự trên màn hình.
  */
-export function exportTable(config: CatalogNode, info: ExportInfo, rows: Row[]): ExportTable {
+export function exportTable(
+  config: CatalogNode,
+  info: ExportInfo,
+  rows: Row[],
+  custom: CustomField[] = [],
+): ExportTable {
   const fields = config.list.columns.map((name) => fieldOf(config, name)).filter((field) => field !== undefined);
+  const extra = custom.map((field) => ({ field: displayField(field), code: field.code }));
   return {
     meta: [
       ["Danh sách", info.title],
@@ -123,8 +130,11 @@ export function exportTable(config: CatalogNode, info: ExportInfo, rows: Row[]):
       ["Điều kiện", info.conditions],
       ["Số dòng", String(rows.length)],
     ],
-    columns: fields.map((field) => field.label),
-    rows: rows.map((row) => fields.map((field) => cellOf(field, row[field.name]))),
+    columns: [...fields.map((field) => field.label), ...extra.map(({ field }) => field.label)],
+    rows: rows.map((row) => [
+      ...fields.map((field) => cellOf(field, row[field.name])),
+      ...extra.map(({ field, code }) => cellOf(field, customValue(row, code))),
+    ]),
   };
 }
 

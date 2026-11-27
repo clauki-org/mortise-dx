@@ -30,9 +30,11 @@ import {
   titleField,
 } from "./catalog";
 import { chainQuery, chainVariables, emptyState } from "./catalogQuery";
+import { customValue, displayField, withCustomColumn } from "./customFields";
 import { PageHeader } from "./PageHeader";
 import { RecordBlocks } from "./RecordBlocks";
 import { ErrorNotice, Loading } from "./States";
+import { useCustomFields } from "./useCustomFields";
 
 /** Tiêu đề của một dòng theo cấu hình; trường tiêu đề trống thì dùng giá trị khóa. */
 function titleOf(step: Step, row: Row): string {
@@ -107,11 +109,14 @@ type Props = {
 export function CatalogRecord({ config, basePath, steps, app, item }: Props) {
   const current = steps[steps.length - 1];
   if (!current) throw new Error("CatalogRecord cần ít nhất một chặng");
+  const custom = useCustomFields(current.node.source);
   const [{ data, fetching, error }, reload] = useQuery<Record<string, Row[]>>({
-    query: chainQuery(steps),
+    query: chainQuery(steps, withCustomColumn([], custom.fields)),
     variables: chainVariables(steps),
     // Hiện ngay kết quả đã tải rồi đọc lại từ máy chủ, để dòng vừa đổi ở nơi khác không hiện bản cũ mãi.
     requestPolicy: "cache-and-network",
+    // Chờ định nghĩa trường tùy chỉnh để biết có đọc cột `custom` không (ADR 0059).
+    pause: !custom.settled,
   });
   if (error) {
     return (
@@ -122,7 +127,7 @@ export function CatalogRecord({ config, basePath, steps, app, item }: Props) {
       />
     );
   }
-  if (!data && fetching) return <Loading />;
+  if (!data && (fetching || !custom.settled)) return <Loading />;
   const rows = steps.map((_, index) => data?.[`s${index}`]?.[0]);
   const row = rows[rows.length - 1];
   if (!row || rows.some((found) => found === undefined)) {
@@ -189,6 +194,16 @@ export function CatalogRecord({ config, basePath, steps, app, item }: Props) {
               </Box>
             </Paper>
           ))}
+        {custom.fields.map((field) => (
+          <Paper key={`custom.${field.code}`} withBorder radius="md" px="md" py="sm">
+            <Text component="dt" size="sm" c="dimmed">
+              {field.label}
+            </Text>
+            <Box component="dd" m={0} mt={4} fw={600} style={{ overflowWrap: "anywhere" }}>
+              <CellValue field={displayField(field)} value={customValue(row, field.code)} />
+            </Box>
+          </Paper>
+        ))}
       </SimpleGrid>
       {node.detail?.text && (
         <CatalogText

@@ -6,10 +6,11 @@
 # CatalogActions.tsx, catalog.ts, catalogQuery.ts; phần tài liệu ở CatalogDocuments.tsx; nút sửa và thêm dòng con ở
 # CatalogForm.tsx; Kanban, Lịch ở CatalogKanban.tsx, CatalogCalendar.tsx, catalogViews.ts; nút nạp từ tệp ở
 # CatalogImport.tsx, CatalogImportPreview.tsx, catalogImport.ts, catalogImportFile.ts, catalogImportTemplate.ts; khối
-# trong chi tiết ở RecordBlocks.tsx). Mỗi dòng dưới đây đã được chạy thử trên giao diện, trừ nút sửa và thêm dòng con
-# (ADR 0054, mục Chưa kiểm), Kanban, Lịch (ADR 0066, mục Chưa kiểm), nút nạp từ tệp (ADR 0064, mục Chưa kiểm) và khối
-# trong chi tiết (ADR 0068, chưa chạy trên trình duyệt); đổi hành vi của thành phần thì sửa tệp này trong cùng pull
-# request.
+# trong chi tiết ở RecordBlocks.tsx; trường tùy chỉnh ở customFields.ts, useCustomFields.ts, CustomFieldsDialog.tsx,
+# customFieldsAdmin.ts). Mỗi dòng dưới đây đã được chạy thử trên giao diện, trừ nút sửa và thêm dòng con (ADR 0054,
+# mục Chưa kiểm), Kanban, Lịch (ADR 0066, mục Chưa kiểm), nút nạp từ tệp (ADR 0064, mục Chưa kiểm), khối trong chi
+# tiết (ADR 0068, chưa chạy trên trình duyệt) và trường tùy chỉnh (chưa chạy e2e); đổi hành vi của thành phần thì sửa
+# tệp này trong cùng pull request.
 
 component: catalog
 summary: Danh sách và màn hình chi tiết của một loại đối tượng cùng các đối tượng con của nó, đọc qua GraphQL theo cấu hình của gói.
@@ -68,6 +69,13 @@ capabilities:
     trong tệp và với dòng con đã có của dòng cha. Xem trước ghi lỗi bằng chữ theo dòng (số dòng của bảng tính) và cột.
     Không còn lỗi thì mọi dòng gửi trong một lệnh thêm bằng vai trò của biểu mẫu, cột via mang khóa của dòng cha;
     Hasura chạy lệnh trong một giao dịch nên lỗi ở một dòng thì không dòng nào được thêm (ADR 0064).
+  - Trường tùy chỉnh do quản trị org định nghĩa cho một bảng của danh mục (ADR 0059) đọc như một kênh riêng theo source,
+    không qua fields; bảng có định nghĩa thì danh sách dạng bảng và thẻ có thêm cột sau các cột của list.columns, màn
+    hình chi tiết có thêm ô, tệp xuất có thêm cột cùng thứ tự; giá trị đọc từ cột custom, hiện theo kiểu (chữ, số, ngày,
+    lựa chọn). Khóa của trường đã xóa bị bỏ qua.
+  - Quản trị org (tenant_admin của tenant không có cha) có nút "Trường tùy chỉnh" ở đầu danh sách ngoài cùng, mở hộp
+    thoại chọn một bảng của danh mục (cả bảng con), xem, thêm (mã, nhãn, kiểu, lựa chọn, bắt buộc), sửa nhãn, lựa chọn,
+    bắt buộc, và xóa trường; lời từ chối của CSDL hiện nguyên lý do.
   - Phần tài liệu đính kèm của dòng đang xem (detail.documents, ở mọi cấp cha–con) để xem, tải xuống, đính kèm tệp;
     năng lực và giới hạn ở contracts/documents.component.yaml (ADR 0041).
   - Khối trong màn hình chi tiết (detail.blocks, ở mọi cấp cha–con; ADR 0068) là mục menu hay khối của chính gói, vẽ như
@@ -101,6 +109,9 @@ limits:
     nằm trên đường dẫn. Chuyển thẻ không qua quy trình; trường do quy trình đặt thì gói không khai move hay khai locked.
   - Xuất chỉ ở danh sách ngoài cùng, tối đa 5.000 dòng một tệp; bảng đối tượng con không xuất. Lần xuất không được
     ghi nhật ký phía máy chủ.
+  - Trường tùy chỉnh không tìm, lọc hay sắp xếp được; không có ở Kanban, Lịch và nạp từ tệp (trường tùy chỉnh bắt buộc
+    làm mọi dòng của tệp bị từ chối). Hộp thoại liệt kê mọi bảng của danh mục, kể cả bảng gói chưa bật trường tùy chỉnh;
+    thêm trường cho bảng đó bị từ chối kèm lý do. Gói phải cho mọi vai trò đọc danh mục quyền đọc cột custom.
   - Mỗi lúc chỉ sắp xếp theo một cột; thứ tự của chữ có dấu là thứ tự so sánh của CSDL.
   - Màu của nhãn chỉ chọn được trong bộ nghĩa chung bad, warn, info, ok, neutral, theo từng lựa chọn của choices; trường
     không có choices không thành nhãn. Thẻ không có ảnh, biểu tượng hay mô tả riêng của gói.
