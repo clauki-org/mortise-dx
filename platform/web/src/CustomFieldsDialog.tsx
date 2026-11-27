@@ -247,9 +247,9 @@ function ConfirmDelete({
         Giá trị đã nhập ở các dòng không hiện nữa và không sửa được; thêm lại trường cùng mã thì hiện lại.
       </Text>
       {refusal && (
-        <Text size="sm" c="red.8" mt="xs">
+        <Alert color="red" title="Chưa xóa được" mt="xs">
           {refusal}
-        </Text>
+        </Alert>
       )}
       <Group mt="sm">
         <Button color="red" onClick={remove} loading={busy}>

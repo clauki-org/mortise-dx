@@ -103,6 +103,12 @@ describe("ô nhập", () => {
     expect(withInputs(form, [])).toBe(form);
   });
 
+  it("khi sửa, trường bắt buộc mà dòng chưa có giá trị không bị đòi; khi thêm thì bị đòi", () => {
+    expect(inputFields([brand])[0]?.required).toBe(true);
+    expect(inputFields([brand], {})[0]?.required).toBe(false);
+    expect(inputFields([brand], { brand: "A" })[0]?.required).toBe(true);
+  });
+
   it("lựa chọn đã lưu mà vừa bị bỏ vẫn chọn được, để dòng cũ lưu được", () => {
     const [choice] = inputFields([brand], { brand: "C" });
     expect(choice?.choices?.map((option) => option.value)).toEqual(["A", "B", "C"]);

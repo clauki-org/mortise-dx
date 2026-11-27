@@ -118,19 +118,22 @@ function fits(field: CustomField, value: unknown): boolean {
 }
 
 /**
- * Ô nhập của các trường tùy chỉnh. Lựa chọn đã lưu mà quản trị vừa bỏ khỏi danh sách vẫn hiện, để dòng cũ lưu được
- * mà không phải đổi giá trị đó: CSDL không kiểm lại khóa giữ nguyên giá trị.
+ * Ô nhập của các trường tùy chỉnh; `stored` là `custom` đã lưu khi sửa dòng, bỏ trống khi thêm. Lựa chọn đã lưu mà quản
+ * trị vừa bỏ khỏi danh sách vẫn hiện, để dòng cũ lưu được mà không phải đổi giá trị đó: CSDL không kiểm lại khóa giữ
+ * nguyên giá trị. Khi sửa, trường bắt buộc mà dòng chưa có giá trị không bị đòi ở trình duyệt: CSDL chỉ xét bắt buộc khi
+ * `custom` đổi, nên sửa cột khác của dòng có trước lúc thêm trường vẫn lưu được.
  */
-export function inputFields(fields: CustomField[], stored: Values = {}): FormField[] {
+export function inputFields(fields: CustomField[], stored?: Values): FormField[] {
   return fields.map((field): FormField => {
-    const base = { name: inputName(field.code), label: field.label, required: field.required };
+    const required = field.required && (stored === undefined || !empty(stored[field.code]));
+    const base = { name: inputName(field.code), label: field.label, required };
     switch (field.kind) {
       case "number":
         return { ...base, type: "number" };
       case "date":
         return { ...base, type: "date" };
       case "choice": {
-        const kept = stored[field.code];
+        const kept = stored?.[field.code];
         const choices = (field.choices ?? []).map((choice) => ({ value: choice, label: choice }));
         if (typeof kept === "string" && kept !== "" && !field.choices?.includes(kept)) {
           choices.push({ value: kept, label: `${kept} (đã bỏ khỏi danh sách)` });
@@ -144,7 +147,7 @@ export function inputFields(fields: CustomField[], stored: Values = {}): FormFie
 }
 
 /** Biểu mẫu của gói thêm ô của trường tùy chỉnh ở cuối; cấu hình gốc không đổi. */
-export function withInputs(form: FormConfig, fields: CustomField[], stored: Values = {}): FormConfig {
+export function withInputs(form: FormConfig, fields: CustomField[], stored?: Values): FormConfig {
   return fields.length === 0 ? form : { ...form, fields: [...form.fields, ...inputFields(fields, stored)] };
 }
 

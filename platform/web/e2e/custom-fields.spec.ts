@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Trường tùy chỉnh trên trình duyệt (ADR 0059), qua gói cơ sở vật chất xã: quản trị tỉnh (tenant gốc) mở hộp thoại
-// "Trường tùy chỉnh" từ danh mục cơ sở và thêm một trường lựa chọn; gửi giá trị ngoài danh sách qua API thì CSDL từ
+// "Trường tùy chỉnh" từ danh mục cơ sở và thêm một trường lựa chọn; gửi giá trị sai kiểu qua API thì CSDL từ
 // chối kèm lý do; cán bộ phụ trách xã A chọn giá trị trong biểu mẫu "Sửa", danh mục và màn hình chi tiết hiện giá trị đó.
 // Trường không bắt buộc: một trường bắt buộc còn sót lại khi bài hỏng giữa chừng sẽ chặn mọi lần thêm cơ sở ở các xã
 // của tỉnh. Mã trường mang tiền tố e2e_cf_ và được dọn trước và sau bài. Cần gói đã cài
@@ -80,12 +80,12 @@ test("quản trị tỉnh thêm trường lựa chọn, CSDL từ chối giá tr
     await expect(dialog.getByText(`Đã thêm trường "${label}".`)).toBeVisible();
     await expect(dialog.getByRole("button", { name: `Sửa trường ${label}` })).toBeVisible();
 
-    // Giá trị ngoài danh sách gửi thẳng qua API: CSDL từ chối, lý do có nhãn của trường.
+    // Giá trị sai kiểu (số cho trường lựa chọn) gửi thẳng qua API: CSDL từ chối, lý do có nhãn của trường.
     const response = await request.post("/v1/graphql", {
       headers: { Authorization: `Bearer ${await token(request, "user.a")}`, "X-Hasura-Role": "user" },
       data: {
         query: `mutation($id: uuid!, $c: jsonb!) { update_${PREFIX}_facilities(where: {id: {_eq: $id}}, _set: {custom: $c}) { affected_rows } }`,
-        variables: { id: facilityId, c: { [fieldCode]: "Hãng C" } },
+        variables: { id: facilityId, c: { [fieldCode]: 123 } },
       },
     });
     const body: { errors?: { message: string }[] } = await response.json();
