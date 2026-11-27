@@ -3,7 +3,7 @@
 #
 # Dữ liệu demo HƯ CẤU của kho "Công ty Điện mặt trời Mẫu" (doanh nghiệp hư cấu) cho cùng gói kho, theo
 # contracts/seed.schema.json: kho, mặt hàng, phiếu và số lượng đặt ra để minh họa. Tenant `dmt` và tài khoản
-# `admin.dmt` do mẫu cài `dien-mat-troi` tạo (ADR 0058); tệp này không nằm trong `make seed-demo`, mẫu cài trỏ tới
+# `admin.dmt` do mẫu cài `dien-mat-troi` tạo (#244); tệp này không nằm trong `make seed-demo`, mẫu cài trỏ tới
 # nó và nạp bằng scripts/app-seed.py. Chạy lại không tạo bản trùng. Số xuất không vượt tồn, nếu không CSDL từ chối.
 
 dmt:

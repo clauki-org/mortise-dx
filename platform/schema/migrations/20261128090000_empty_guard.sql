@@ -10,7 +10,7 @@
 
 -- Chạy sau mỗi dòng thêm, sửa, xóa (AFTER ROW, tức cuối câu lệnh: view thấy mọi dòng câu lệnh đã ghi). Khóa theo
 -- (view, tenant) rồi mới đọc view: hai giao dịch cùng ghi một tenant thì giao dịch sau chờ giao dịch trước xong, và ở
--- mức READ COMMITTED (mặc định của Hasura) câu SELECT sau khóa thấy dòng giao dịch trước đã ghi. Không khóa thì hai
+-- mức READ COMMITTED (mặc định của PostgreSQL) câu SELECT sau khóa thấy dòng giao dịch trước đã ghi. Không khóa thì hai
 -- lệnh xuất đồng thời cùng thấy đủ hàng và cùng qua. Tenant khác không chờ nhau.
 CREATE FUNCTION platform.empty_guard_check() RETURNS trigger
 LANGUAGE plpgsql
@@ -36,8 +36,8 @@ BEGIN
         EXECUTE format('SELECT EXISTS (SELECT FROM %s WHERE %I = $1)', violations, tenant_column)
             INTO found USING tenant;
         IF found THEN
-            -- check_violation: Hasura báo như vi phạm CHECK của bảng, giao diện nói "giá trị không hợp lệ" thay vì
-            -- bảo người dùng đi xin quyền.
+            -- check_violation: cùng mã với vi phạm CHECK của bảng, để Hasura và giao diện xử lý như lỗi giá trị chứ
+            -- không như lỗi quyền.
             RAISE EXCEPTION USING ERRCODE = 'check_violation', MESSAGE = message;
         END IF;
     END LOOP;

@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 Gói Tầng 3 dùng chung, không gắn ngành: mỗi đơn vị là một tenant quản lý các kho của mình, mặt hàng trong từng kho,
 phiếu nhập, phiếu xuất và tồn kho do CSDL tính; đề nghị cấp vật tư cần người duyệt của đơn vị. Cùng gói cài cho chính
-quyền (các xã của "Tỉnh Mẫu") và cho doanh nghiệp (mẫu cài `dien-mat-troi`, ADR 0058). Gói chỉ gồm tệp khai báo,
+quyền (các xã của "Tỉnh Mẫu") và cho doanh nghiệp (mẫu cài `dien-mat-troi` của #244). Gói chỉ gồm tệp khai báo,
 không có mã chạy ([ADR 0022](../../docs/adr/0022-declarative-packages.md)): `make check-fast` kiểm vì gói nằm trong
 `DECLARATIVE_APPS` của Makefile. Trang danh mục và các biểu mẫu trên giao diện dựng từ cấu hình của gói
 ([ADR 0023](../../docs/adr/0023-package-pages-in-the-web-shell.md)).
@@ -63,8 +63,8 @@ lượt, nên không cùng qua. Bỏ một dòng nhập hay hạ tồn đầu xu
 
 Quản trị lập phiếu bằng mục menu "Lập phiếu nhập" hay "Lập phiếu xuất", rồi mở phiếu trong danh mục "Phiếu nhập" hay
 "Phiếu xuất" và bấm "Thêm dòng": số phiếu điền sẵn, chọn kho rồi chọn mặt hàng trong kho đó, ghi số lượng. Dòng xuất
-vượt tồn bị từ chối với lời báo giá trị không hợp lệ. Tồn của từng kho xem ở bảng "Tồn kho" trong danh mục "Kho";
-mặt hàng mới thêm bằng nút "Thêm mặt hàng" ở bảng "Mặt hàng" của kho hay mục menu "Thêm mặt hàng".
+vượt tồn bị CSDL từ chối; lời báo trên giao diện chưa kiểm trên trình duyệt. Tồn của từng kho xem ở bảng "Tồn kho"
+trong danh mục "Kho"; mặt hàng mới thêm bằng nút "Thêm mặt hàng" ở bảng "Mặt hàng" của kho hay mục menu "Thêm mặt hàng".
 
 ## Đề nghị cấp vật tư
 
@@ -104,4 +104,5 @@ với hai mặt hàng và một phiếu xuất. Smoke của gói kiểm các s�
 
 `seed/dien-mat-troi.yaml` là dữ liệu hư cấu của "Công ty Điện mặt trời Mẫu" (tenant `dmt`, tài khoản `admin.dmt` do mẫu
 cài `dien-mat-troi` tạo): hai kho, tấm pin, bộ biến tần, cáp điện một chiều, một phiếu nhập và một phiếu xuất. Tệp
-không nằm trong `make seed-demo`; nạp bằng `scripts/app-seed.py apps/supplies-commune <tệp>` khi tenant đã có.
+không nằm trong `make seed-demo`. Nạp nó cần tenant `dmt` và bộ nạp nhận tệp dữ liệu thứ hai; cả hai đến từ mẫu cài
+hai bản cài (#244), chưa có trên nhánh này.

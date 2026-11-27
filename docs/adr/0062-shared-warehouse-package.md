@@ -6,13 +6,13 @@ SPDX-License-Identifier: Apache-2.0
 # 0062. Gói kho dùng chung: phiếu nhập, phiếu xuất, tồn kho là view, luật trên nhiều dòng qua hàm của nền tảng
 
 - Trạng thái: Đề xuất
-- Ngày: 2026-11-28
+- Ngày: 2026-11-27
 - Bổ sung: [ADR 0022](0022-declarative-packages.md) (gói khai báo gọi được hàm của nền tảng, không chỉ của lõi)
 
 ## Bối cảnh
 
 Gói `supplies-commune` quản lý kho và vật tư của xã: số lượng là một cột do quản trị xã sửa tay. Hai bản cài cạnh
-nhau (#243, [ADR 0058](0058-two-installs-and-install-presets.md)) cần cùng một gói kho cho chính quyền và cho một
+nhau (#243, ADR 0058 của #244) cần cùng một gói kho cho chính quyền và cho một
 doanh nghiệp hư cấu (tấm pin, bộ biến tần, cáp). Gói phải dùng chữ không gắn ngành, có phiếu nhập và phiếu xuất (dòng
 cha, dòng con), tồn kho tính trong CSDL, và CSDL phải từ chối phiếu xuất vượt số tồn.
 
@@ -42,7 +42,7 @@ Ba câu hỏi:
   - Gắn trigger AFTER ROW cho thêm, sửa, xóa trên `target`. Trigger xét các tenant của dòng cũ và dòng mới. Với mỗi
     tenant, nó khóa `pg_advisory_xact_lock` theo (view, tenant) rồi mới đọc `violations`. View có dòng của tenant đó
     thì lệnh bị từ chối với `check_violation` và lời báo của gói.
-  - Khóa làm hai giao dịch ghi cùng tenant chạy lần lượt. Ở READ COMMITTED (mặc định của Hasura), câu đọc sau khóa thấy
+  - Khóa làm hai giao dịch ghi cùng tenant chạy lần lượt. Ở READ COMMITTED (mặc định của PostgreSQL; `compose.yaml` không đặt mức khác cho Hasura), câu đọc sau khóa thấy
     dòng giao dịch trước đã ghi.
   - Hàm không biết luật nói gì. Gói viết luật thành view, ADR 0022 cho phép view.
 - **Gói kho:**
@@ -58,7 +58,7 @@ Ba câu hỏi:
   - Danh mục "Phiếu nhập" và "Phiếu xuất" có bảng "Dòng hàng" với nút thêm dòng.
   - Biểu mẫu "Lập phiếu nhập", "Lập phiếu xuất" chỉ quản trị thấy. Danh mục chưa có nút thêm dòng cấp đầu (ADR 0054).
 - **Dữ liệu demo:** `seed/demo.yaml` cho hai xã. `seed/dien-mat-troi.yaml` cho tenant `dmt` của mẫu cài doanh
-  nghiệp, cùng định dạng. `make check-fast` kiểm mọi `seed/*.yaml` của gói khai báo.
+  nghiệp (#244), cùng định dạng. `make check-fast` kiểm mọi `seed/*.yaml` của gói khai báo.
 
 ## Hệ quả
 
@@ -66,14 +66,14 @@ Ba câu hỏi:
   dòng, và các lệnh ghi cùng tenant trên cùng view chạy lần lượt. Thời gian của bước này chưa đo.
 - Trigger chạy ở cuối mỗi câu lệnh, không ở cuối giao dịch. Một yêu cầu Hasura xuất trước rồi nhập sau trong cùng
   giao dịch bị từ chối ở lệnh xuất. Đổi thứ tự thì qua.
-- Ở REPEATABLE READ hay SERIALIZABLE, câu đọc sau khóa vẫn dùng ảnh chụp đầu giao dịch nên khóa không đủ. Hasura
-  không chạy ở các mức đó.
+- Ở REPEATABLE READ hay SERIALIZABLE, câu đọc sau khóa vẫn dùng ảnh chụp đầu giao dịch nên khóa không đủ. Bản cài
+  đặt Hasura chạy ở mức đó (biến môi trường) thì phải xét lại hàm này.
 - Duyệt đề nghị cấp vật tư không tự lập phiếu xuất, vì gói không có mã (ADR 0022). Quản trị lập phiếu sau khi giao.
 - Mã gói còn chữ `commune`, và người dùng thấy nó trong đường dẫn.
 - Trường tùy chỉnh cho mặt hàng đến từ ADR 0059 trên chính bảng `items`. Quyết định này không đổi bảng đó.
 - **Chưa kiểm** khi ghi quyết định này: smoke của gói qua cổng (lời báo Hasura trả cho `check_violation`, quyền của
   view), danh mục và biểu mẫu mới trên trình duyệt, e2e đã sửa nhãn, nạp `seed/dien-mat-troi.yaml` trên bản cài
   doanh nghiệp.
-- **Đã kiểm** trên PostgreSQL 17 dựng riêng ngày 2026-11-28: xuất quá tồn, sửa dòng xuất, bỏ dòng nhập, hạ tồn đầu
+- **Đã kiểm** trên PostgreSQL 17 dựng riêng ngày 2026-11-27: xuất quá tồn, sửa dòng xuất, bỏ dòng nhập, hạ tồn đầu
   đều bị từ chối; hai phiên xuất đồng thời thì phiên sau bị từ chối; tenant khác không ảnh hưởng; số tồn của cả hai tệp
   dữ liệu demo đúng; lùi rồi áp lại migration chạy sạch.

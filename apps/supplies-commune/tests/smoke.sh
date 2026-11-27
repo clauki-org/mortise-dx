@@ -123,8 +123,8 @@ check "user.a không sửa được tồn đầu" "$(errors "$(gql "$user_a" "$u
 check "admin.a sửa được tồn đầu" "$(gql "$admin_a" "$update_item" "{\"code\":\"$code\"}" "$admin" |
   jq '.data.update_app_supplies_commune_items.affected_rows')" 1
 
-# Phiếu nhập, phiếu xuất (ADR 0062): tồn đầu vừa đặt về 0, nhập 5 rồi xuất 3 thì tồn 2; xuất thêm 3 (sửa dòng hay
-# thêm dòng ở phiếu thứ hai) bị CSDL từ chối, bỏ dòng nhập cũng bị từ chối vì tồn sẽ âm. Phiếu và dòng mang cùng mã chạy, nên phần dọn ở cuối tìm được.
+# Phiếu nhập, phiếu xuất (ADR 0062): tồn đầu vừa đặt về 0, nhập 5 rồi xuất 3 thì tồn 2; xuất thêm 3 ở phiếu thứ hai
+# bị CSDL từ chối, xuất 2 thì qua và tồn về 0; bỏ dòng nhập lúc đó bị từ chối vì tồn sẽ âm. Phiếu và dòng mang cùng mã chạy, nên phần dọn ở cuối tìm được.
 headers='mutation($code: String!, $second: String!) {
   insert_app_supplies_commune_receipts_one(object: {code: $code, received_on: "2026-11-28"}) { tenant_id }
   insert_app_supplies_commune_issues(objects: [{code: $code, issued_on: "2026-11-28"},
@@ -145,14 +145,14 @@ check "admin.a nhập 5 vào kho" "$(errors "$(line "$admin_a" receipt "$code" 5
 check "user.a không thêm được dòng xuất (chỉ đọc)" "$(errors "$(line "$user_a" issue "$code" 1 user)")" true
 check "admin.a xuất 3, trong số tồn" "$(errors "$(line "$admin_a" issue "$code" 3)")" false
 check "Tồn kho do CSDL tính: 0 + 5 - 3, user.a đọc được" "$(on_hand "$user_a")" "[2]"
-check "CSDL từ chối xuất quá tồn (xuất thêm 3 khi còn 2)" "$(errors "$(gql "$admin_a" 'mutation($code: String!) {
-  update_app_supplies_commune_issue_lines(where: {issue_code: {_eq: $code}}, _set: {quantity: 6}) { affected_rows } }' \
-  "{\"code\":\"$code\"}" "$admin")") $(errors "$(line "$admin_a" issue "$code-x" 3)")" "true true"
+check "CSDL từ chối xuất quá tồn (xuất thêm 3 khi còn 2)" "$(errors "$(line "$admin_a" issue "$code-x" 3)")" true
+# Đối chứng: cùng lệnh với đúng số tồn thì qua, nên lần từ chối ở trên là do luật tồn, không do lỗi khác của lệnh.
+check "Xuất đúng số tồn (2) thì qua" "$(errors "$(line "$admin_a" issue "$code-x" 2)")" false
 check "CSDL từ chối bỏ dòng nhập khi tồn sẽ âm" "$(errors "$(gql "$admin_a" 'mutation($code: String!) {
   delete_app_supplies_commune_receipt_lines(where: {receipt_code: {_eq: $code}}) { affected_rows } }' \
   "{\"code\":\"$code\"}" "$admin")")" true
-check "Tồn giữ nguyên sau các lần bị từ chối; user.b không thấy tồn của xã A" \
-  "$(on_hand "$user_a") $(on_hand "$user_b")" "[2] []"
+check "Tồn sau các lần ghi là 0; user.b không thấy tồn của xã A" \
+  "$(on_hand "$user_a") $(on_hand "$user_b")" "[0] []"
 check "Khóa ngoại ghép: admin.b không ghi được dòng vào phiếu của xã A" \
   "$(errors "$(line "$admin_b" issue "$code" 1)")" true
 audit=$(docker compose exec -T postgres psql -qXAt --username hasura --dbname mortise -v code="$code" <<'SQL'
