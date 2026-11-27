@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+intro: Hỏi về quy chế mẫu (hư cấu).
+examples: ["Câu hỏi mẫu?"]
+documents: [rules, no-such-document]

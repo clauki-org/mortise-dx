@@ -73,6 +73,9 @@ Các lựa chọn đã xét:
   của từng thành phần không nằm trong quyết định này; nó được viết cùng thành phần.
 - CI chỉ thấy gói nằm trong repo này. Gói viết ngoài repo chỉ được kiểm khi cài, nên bộ cài gói phải kiểm `app.yaml`
   bằng `app.schema.json` trước khi chạy migration, rồi kiểm thêm các luật schema không diễn đạt được.
+  `scripts/contracts.sh package <gói>` gom mọi bước kiểm của một gói (schema, luật nhiều tệp của `app.yaml`, cấu hình
+  thành phần với BPMN và quyền Hasura của gói); `make check-fast` gọi nó cho từng gói, `make app-install` gọi trước
+  khi chạy migration và dừng nếu lỗi.
 - Schema claim chỉ mô tả hình dạng của token. Chữ ký, hạn dùng và nơi cấp vẫn do cổng và workflow-api kiểm khi chạy
   ([ADR 0004](0004-workflow-access-control.md)).
 - `make check-fast` và `make smoke` cần `uv` trên máy phát triển và trên CI.

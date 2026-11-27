@@ -307,6 +307,8 @@ def process_keys(bpmn_files: list[str]) -> set[str]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--app", required=True)
+    # Thư mục đọc tệp cấu hình của mục menu thay cho thư mục gói (scripts/contracts.sh package --configs).
+    parser.add_argument("--configs")
     parser.add_argument("--hasura", nargs="*")
     parser.add_argument("--bpmn", nargs="*")
     parser.add_argument("--dashboard")
@@ -325,7 +327,7 @@ def main() -> int:
             dashboards = [(args.dashboard, None)]
         else:
             entries = [e for e in app.get("menu", []) if e["component"] == "dashboard"]
-            dashboards = [(os.path.join(directory, e["config"]), e["id"]) for e in entries]
+            dashboards = [(os.path.join(args.configs or directory, e["config"]), e["id"]) for e in entries]
         errors = []
         for path, own in dashboards:
             errors += [f"{path}: {error}" for error in dashboard_problems(read_yaml(path), own, context)]

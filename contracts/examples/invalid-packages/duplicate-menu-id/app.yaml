@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+# Ví dụ sai của scripts/check-app-manifest.py: hai mục menu cùng id.
+
+id: duplicate-menu-id
+menu:
+  - { id: items, label: Danh mục, component: catalog, config: catalog.yaml }
+  - { id: items, label: Danh mục khác, component: catalog, config: catalog.yaml }
