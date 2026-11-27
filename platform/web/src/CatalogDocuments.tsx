@@ -98,6 +98,8 @@ function Upload({ config, recordKey, onDone }: Props & { onDone: () => void }) {
             attach.reset();
           }}
           clearable
+          // Nút xóa tệp chỉ là biểu tượng; thiếu tên thì trình đọc màn hình đọc "nút" trống và axe báo lỗi.
+          clearButtonProps={{ "aria-label": "Bỏ tệp đã chọn" }}
           w={320}
         />
         {config.upload?.note && (
