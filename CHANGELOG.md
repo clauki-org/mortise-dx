@@ -34,6 +34,12 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   người dùng; dùng được trên điện thoại. Bản cài cũ chạy `make seed` và cài lại các gói để menu có tên nhóm và biểu
   tượng ([ADR 0044](docs/adr/0044-menu-groups-and-icons.md)).
 
+### Changed
+
+- Bảng điều hành: số chính nổi bật ở khối chính, cách tính và nguồn thu gọn trong "Xem cách tính", biểu đồ ghi số trên
+  từng thanh, số 0 vẫn hiện; mô tả khối bằng lời người xem, `make check-fast` chặn tên bảng, cột trong chữ người xem
+  thấy ([ADR 0045](docs/adr/0045-readable-dashboard.md)).
+
 ### Removed
 
 - `component: documents` không còn là giá trị của mục menu trong `app.yaml`: tài liệu đính kèm là một phần của màn

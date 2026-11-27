@@ -5,7 +5,9 @@
 # diễn đạt được (ADR 0033, ADR 0035): nguồn graphql đọc bảng thuộc gói, vai trò của khối (bỏ trống là user) có
 # quyền đọc bảng đó và mọi cột khối nhắc tới (đọc qua scripts/form_permissions.py); nguồn workflow đếm quy
 # trình của BPMN của chính gói; thẻ và biểu đồ của nguồn workflow, context chỉ nhắc giá trị mà nguồn trả; link
-# trỏ tới mục menu khác của gói; không trùng tên khối, không trùng cột số của biểu đồ. Thiếu bước này, lỗi chỉ
+# trỏ tới mục menu khác của gói; không trùng tên khối, không trùng cột số của biểu đồ; chữ người xem thấy
+# (tiêu đề, mô tả, nhãn) không chứa tên bảng, view, cột, vai trò, giá trị mã mà cấu hình dùng hay tên dạng
+# snake_case, vì những tên đó chỉ thuộc về method và mục "Xem cách tính" (ADR 0045). Thiếu bước này, lỗi chỉ
 # lộ ra khi người xem mở trang. Thành phần kiểm lại luật tên lúc chạy (dashboardConfig.ts,
 # dashboardSources.ts). Gọi từ scripts/contracts.sh: --app <app.yaml>; mặc định đọc quyền Hasura, BPMN và mọi
 # bảng điều hành trên menu theo app.yaml, còn --hasura, --bpmn, --dashboard thay từng phần để kiểm một cấu
@@ -25,6 +27,9 @@ BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
 REST = ("workflow", "context")
 # Cùng luật tên với contracts/dashboard.schema.json: type, attribute ghép vào đường dẫn gọi context-api.
 NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# Tên ghép bằng gạch dưới (area_summary, in_use, rollup_reader) không phải lời của người xem, dù cấu hình có
+# dùng nó hay không.
+SNAKE = re.compile(r"(?<!\w)[A-Za-z0-9]+(?:_[A-Za-z0-9]+)+(?!\w)")
 
 
 def read_yaml(path: str):
@@ -100,6 +105,70 @@ def rest_problems(panel: dict, label: str, processes: set[str]) -> list[str]:
     return errors
 
 
+def technical_names(panel: dict, tables: dict) -> set[str]:
+    """Tên kỹ thuật mà khối dùng: bảng (cả trường GraphQL lẫn tên bảng ngắn), cột, giá trị của where, vai
+    trò, quy trình, loại và tên số đo của context."""
+    names = {panel.get("role", "user")}
+    source = panel.get("graphql")
+    if isinstance(source, dict):
+        field = source["field"]
+        names |= {field, *columns_of(panel)}
+        short = (tables.get(field) or {}).get("table", {}).get("name")
+        if isinstance(short, str):
+            names.add(short)
+        where = source.get("where") or {}
+        if isinstance(where.get("equals"), str) and NAME.fullmatch(where["equals"]):
+            names.add(where["equals"])
+    for kind in REST:
+        names |= {value for value in (panel.get(kind) or {}).values() if isinstance(value, str)}
+    # Nguồn REST không có columns_of: giá trị của thẻ và biểu đồ (open, value, step) cũng là tên kỹ thuật.
+    chart = panel.get("chart") or {}
+    names |= {card["column"] for card in panel.get("cards", [])}
+    if chart:
+        names |= {chart["x"]["column"], *(y["column"] for y in chart["y"])}
+        names |= {detail["column"] for detail in chart.get("details", [])}
+    return {name for name in names if name}
+
+
+def shown_texts(panel: dict) -> list[tuple[str, object]]:
+    """Chữ của khối người xem thấy ngay, không cần mở "Xem cách tính", kèm chỗ của nó trong cấu hình."""
+    texts = [("title", panel.get("title")), ("description", panel.get("description"))]
+    texts += [(f"cards[{i}].label", card.get("label")) for i, card in enumerate(panel.get("cards", []))]
+    chart = panel.get("chart") or {}
+    if chart:
+        texts.append(("chart.x.label", chart["x"].get("label")))
+        choices = enumerate(chart["x"].get("choices", []))
+        texts += [(f"chart.x.choices[{i}].label", c.get("label")) for i, c in choices]
+        texts += [(f"chart.y[{i}].label", y.get("label")) for i, y in enumerate(chart["y"])]
+        details = enumerate(chart.get("details", []))
+        texts += [(f"chart.details[{i}].label", d.get("label")) for i, d in details]
+    texts.append(("link.label", (panel.get("link") or {}).get("label")))
+    return texts
+
+
+def technical_in(text: object, names: set[str]) -> str | None:
+    """Tên kỹ thuật đầu tiên có trong chữ, so nguyên từ để "id" không khớp trong một từ khác."""
+    if not isinstance(text, str):
+        return None
+    for name in sorted(names, key=lambda n: (-len(n), n)):
+        if re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", text):
+            return name
+    snake = SNAKE.search(text)
+    return snake.group(0) if snake else None
+
+
+def wording_problems(label: str, texts: list[tuple[str, object]], names: set[str]) -> list[str]:
+    errors = []
+    for place, text in texts:
+        name = technical_in(text, names)
+        if name:
+            errors.append(
+                f"{label}: {place} có tên kỹ thuật '{name}'; viết bằng lời của người xem, ghi chú kỹ thuật "
+                "đưa vào method"
+            )
+    return errors
+
+
 def panel_problems(panel: dict, own: str | None, context: dict) -> list[str]:
     label = f"khối '{panel['id']}'"
     if any(kind in panel for kind in REST):
@@ -115,6 +184,7 @@ def panel_problems(panel: dict, own: str | None, context: dict) -> list[str]:
     # Mục của chính trang này dẫn người xem về chỗ đang đứng; mục không có thì đường dẫn không bao giờ hiện.
     if menu and (menu not in context["menu"] or menu == own):
         errors.append(f"{label}: link.menu '{menu}' không phải mục menu khác của gói")
+    errors += wording_problems(label, shown_texts(panel), technical_names(panel, context["tables"]))
     return errors
 
 
@@ -196,6 +266,9 @@ def dashboard_problems(dashboard: dict, own: str | None, context: dict) -> list[
     errors = [f"khối '{name}' được khai hai lần" for name in sorted({n for n in ids if ids.count(n) > 1})]
     for panel in dashboard["panels"]:
         errors += panel_problems(panel, own, context)
+    names = set().union(*(technical_names(panel, context["tables"]) for panel in dashboard["panels"]))
+    page = [("title", dashboard.get("title")), ("description", dashboard.get("description"))]
+    errors += wording_problems("trang", page, names)
     return errors
 
 

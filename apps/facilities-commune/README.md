@@ -86,8 +86,9 @@ câu hỏi không chứa dòng dữ liệu.
 
 Mục menu "Bảng điều hành" (`dashboard`, `dashboards/overview.yaml`, [ADR 0033](../../docs/adr/0033-dashboard-component.md))
 hiện diện tích được phép, đang dùng, phần vượt và dôi dư của cả xã (`area_summary`), số cơ sở theo trạng thái
-(`facility_status_counts`), diện tích theo loại (`area_by_type`), biên chế và diện tích chuyên dùng; mỗi số kèm cách
-tính và câu truy vấn đã gửi. Số tính cho cả xã, kể cả với cán bộ chỉ được phân công một phần cơ sở. Lãnh đạo xã
+(`facility_status_counts`), diện tích theo loại (`area_by_type`), biên chế và diện tích chuyên dùng. Khối diện tích là
+khối chính, số lớn trên cùng; cách tính và câu truy vấn đã gửi của mỗi khối nằm trong "Xem cách tính"
+([ADR 0045](../../docs/adr/0045-readable-dashboard.md)). Số tính cho cả xã, kể cả với cán bộ chỉ được phân công một phần cơ sở. Lãnh đạo xã
 (`manager`) thấy thêm số cơ sở chưa có người phụ trách, chưa có người duyệt (`facility_coverage`). Tỉnh
 (`rollup_reader`) thấy biểu đồ và bảng số của từng xã con (`area_rollup`); các xã không được cộng lại.
 

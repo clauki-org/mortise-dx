@@ -8,8 +8,9 @@
 
 import { Alert, Loader, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { callApi } from "./api";
-import { CardsView, ChartView, type RestSent, SourceDetails } from "./DashboardView";
+import { CardsView, ChartView, MethodDetails, type RestSent } from "./DashboardView";
 import type { Panel, Row } from "./dashboardConfig";
 import {
   type ContextSource,
@@ -60,7 +61,7 @@ async function loadContext(token: string | undefined, panel: Panel, source: Cont
   return { rows, notes, more: entities.length > limit };
 }
 
-export function RestBody({ panel }: { panel: Panel }) {
+export function RestBody({ panel, link }: { panel: Panel; link: ReactNode }) {
   const { getToken } = useSession();
   const path = restPath(panel);
   // Khóa gồm quy trình: khối "mine" của các quy trình khác nhau gửi cùng đường dẫn mà ra dòng khác nhau. gcTime 0: mở
@@ -85,14 +86,23 @@ export function RestBody({ panel }: { panel: Panel }) {
         </Alert>
       )}
       {result.isPending && <Loader size="sm" aria-label={`Đang tải ${panel.title}`} />}
-      {data && panel.cards && <CardsView cards={panel.cards} rows={data.rows} empty={empty} />}
-      {data && panel.chart && <ChartView chart={panel.chart} rows={data.rows} title={panel.title} empty={empty} />}
+      {data && panel.cards && <CardsView cards={panel.cards} rows={data.rows} empty={empty} large={panel.primary} />}
+      {data && panel.chart && (
+        <ChartView
+          chart={panel.chart}
+          rows={data.rows}
+          title={panel.title}
+          empty={empty}
+          ordinal={Boolean(panel.context)}
+        />
+      )}
       {data?.more && panel.context && (
         <Text size="sm">
           Nguồn có hơn {contextLimit(panel.context)} thiết bị; chỉ hiện {contextLimit(panel.context)} thiết bị đầu.
         </Text>
       )}
-      <SourceDetails panel={panel} rest={sent} />
+      {link}
+      <MethodDetails panel={panel} rest={sent} />
     </>
   );
 }

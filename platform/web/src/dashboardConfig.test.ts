@@ -2,20 +2,24 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Kiểm thử lớp đọc cấu hình của bảng điều hành (dashboardConfig.ts): câu truy vấn sinh từ cấu hình, lỗi cấu hình mà
-// schema không bắt được, khối nào được truy vấn theo vai trò trong token, cách viết số và độ dài thanh. Cấu hình mẫu
+// schema không bắt được, khối nào được truy vấn theo vai trò trong token, khối chính lên đầu, cách viết số, độ dài và
+// chữ số của thanh, đầu mút của thang. Cấu hình mẫu
 // cùng dạng với contracts/examples/dashboard.example.yaml.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  barMarks,
   barPercents,
   categoryText,
   type DashboardConfig,
   dashboardProblems,
   type GraphqlSource,
   numberText,
+  orderedPanels,
   type Panel,
   panelQuery,
   queryErrorText,
+  scaleTop,
   sentText,
   visiblePanels,
 } from "./dashboardConfig";
@@ -110,6 +114,32 @@ describe("dashboardProblems", () => {
       "Đơn vị con: một cột khai hai lần trong chart.y",
     ]);
   });
+
+  it("tối đa một khối chính, là thẻ số và rộng cả hàng", () => {
+    const main = { ...totals, primary: true };
+    expect(dashboardProblems({ title: "x", panels: [main, children] })).toEqual([]);
+    expect(
+      dashboardProblems({
+        title: "x",
+        panels: [
+          { ...main, size: "half" },
+          { ...children, primary: true },
+        ],
+      }),
+    ).toEqual([
+      "Tổng: khối chính phải là thẻ số và rộng cả hàng",
+      "Đơn vị con: khối chính phải là thẻ số và rộng cả hàng",
+      "có hơn một khối chính",
+    ]);
+  });
+});
+
+describe("orderedPanels", () => {
+  it("khối chính lên đầu, các khối khác giữ thứ tự khai", () => {
+    const third = { ...totals, id: "third" };
+    const ids = orderedPanels([children, third, { ...totals, primary: true }]).map((panel) => panel.id);
+    expect(ids).toEqual(["totals", "children", "third"]);
+  });
 });
 
 describe("visiblePanels", () => {
@@ -152,6 +182,27 @@ describe("barPercents và categoryText", () => {
     expect(barPercents(chart, [{ score: 0, target: 0 }])).toEqual([[0, 0]]);
     expect(categoryText(chart, "u1")).toBe("Đơn vị một");
     expect(categoryText(chart, "u2")).toBe("u2");
+  });
+
+  it("thanh có số, kể cả 0, thì được vẽ và ghi số; ô trống không vẽ; thang tới số lớn nhất", () => {
+    const chart = children.chart;
+    if (!chart) throw new Error("thiếu biểu đồ mẫu");
+    const rows = [
+      { score: 0, target: "1500.5" },
+      { score: null, target: 300 },
+    ];
+    expect(barMarks(chart, rows)).toEqual([
+      [
+        { percent: 0, text: "0", drawn: true },
+        { percent: 100, text: "1.500,5", drawn: true },
+      ],
+      [
+        { percent: 0, text: "Chưa có số liệu", drawn: false },
+        { percent: (300 / 1500.5) * 100, text: "300", drawn: true },
+      ],
+    ]);
+    expect(scaleTop(chart, rows)).toBe(1500.5);
+    expect(scaleTop(chart, [{ score: -5, target: null }])).toBe(0);
   });
 });
 

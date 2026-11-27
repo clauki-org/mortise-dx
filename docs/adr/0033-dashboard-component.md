@@ -39,6 +39,8 @@ Các lựa chọn đã xét:
   được: loại nguồn, bảng, các cột, vai trò đã dùng, nguyên văn câu truy vấn mà client gửi (gồm `__typename` do
   cacheExchange của urql thêm) và biến. Biểu đồ luôn kèm bảng số liệu có chú thích; phần thanh ẩn khỏi trình đọc màn
   hình.
+  Cách hiện các phần này được sửa theo [ADR 0045](0045-readable-dashboard.md): `description` là lời của người xem, ghi
+  chú kỹ thuật ở `method`; cách tính, "Nguồn" và bảng số liệu thu gọn.
 - **Vai trò** như biểu mẫu ([ADR 0030](0030-form-component.md)): `role` của khối, bỏ trống là `user`, luôn gửi kèm
   header `X-Hasura-Role`; token không có vai trò đó thì khối không được truy vấn và không hiện. Truy vấn luôn đọc lại
   từ máy chủ, vì bộ nhớ đệm của urql không phân biệt vai trò.

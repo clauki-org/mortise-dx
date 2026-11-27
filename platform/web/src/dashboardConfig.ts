@@ -3,7 +3,7 @@
 //
 // Cấu hình của thành phần bảng điều hành (contracts/dashboard.schema.json): kiểu dữ liệu, lỗi cấu hình mà schema
 // không bắt được, khối nào được truy vấn với vai trò trong token, câu truy vấn của từng khối, cách viết một số và độ
-// dài của thanh. Hai nguồn REST (workflow, context) ở dashboardSources.ts; phần hiển thị ở DashboardView.tsx và
+// dài của thanh, thứ tự hiện của khối. Hai nguồn REST (workflow, context) ở dashboardSources.ts; phần hiển thị ở DashboardView.tsx và
 // DashboardPanel.tsx. Không có React ở đây để kiểm thử được bằng hàm thuần. Thành phần không cộng hay đếm gì: mọi số là
 // cột mà nguồn trả (ADR 0033), trừ số việc đang chờ chính người xem (ADR 0035, dashboardSources.ts).
 
@@ -32,6 +32,10 @@ export type Panel = {
   id: string;
   title: string;
   description: string;
+  /** Cách tính và ghi chú kỹ thuật; chỉ hiện trong mục "Xem cách tính" (ADR 0045) */
+  method?: string;
+  primary?: boolean;
+  size?: "half" | "full";
   role?: string;
   graphql?: GraphqlSource;
   workflow?: WorkflowSource;
@@ -123,13 +127,23 @@ export function dashboardProblems(config: DashboardConfig): string[] {
     }
     const series = (panel.chart?.y ?? []).map((item) => item.column);
     if (new Set(series).size !== series.length) problems.push(`${panel.title}: một cột khai hai lần trong chart.y`);
+    if (panel.primary && (!panel.cards || panel.size === "half")) {
+      problems.push(`${panel.title}: khối chính phải là thẻ số và rộng cả hàng`);
+    }
   }
+  if (config.panels.filter((panel) => panel.primary).length > 1) problems.push("có hơn một khối chính");
   return problems;
 }
 
 /** Khối người xem được truy vấn: vai trò của khối (bỏ trống là user) nằm trong token. */
 export const visiblePanels = (config: DashboardConfig, roles: string[]) =>
   config.panels.filter((panel) => roles.includes(panelRole(panel)));
+
+/** Thứ tự hiện: khối chính lên đầu, các khối còn lại giữ thứ tự khai. */
+export const orderedPanels = (panels: Panel[]) => [
+  ...panels.filter((panel) => panel.primary),
+  ...panels.filter((panel) => !panel.primary),
+];
 
 const orderEntry = (column: string, direction: "asc" | "desc" = "asc"): Row => ({ [column]: direction });
 
@@ -216,7 +230,32 @@ export function categoryText(chart: Chart, value: unknown): string {
  * nhau. Giá trị âm hay không phải số thành thanh rỗng; bảng số liệu vẫn ghi đúng giá trị.
  */
 export function barPercents(chart: Chart, rows: Row[]): number[][] {
-  const values = rows.map((row) => chart.y.map((series) => Math.max(numeric(row[series.column]) ?? 0, 0)));
-  const top = Math.max(0, ...values.flat());
-  return values.map((group) => group.map((value) => (top > 0 ? (value / top) * 100 : 0)));
+  const top = scaleTop(chart, rows);
+  return rows.map((row) =>
+    chart.y.map((series) => {
+      const value = Math.max(numeric(row[series.column]) ?? 0, 0);
+      return top > 0 ? (value / top) * 100 : 0;
+    }),
+  );
+}
+
+/** Đầu mút của thang chung: giá trị lớn nhất trong khối, không nhỏ hơn 0. */
+export const scaleTop = (chart: Chart, rows: Row[]) =>
+  Math.max(0, ...rows.flatMap((row) => chart.y.map((series) => numeric(row[series.column]) ?? 0)));
+
+/**
+ * Một thanh: độ dài, chữ số ghi cạnh thanh, và có vẽ không. Ô có số, kể cả 0, luôn có vạch để số 0 không bị nhìn
+ * thành thiếu dòng; ô trống hay không phải số thì không vẽ, chỉ ghi chữ.
+ */
+export type BarMark = { percent: number; text: string; drawn: boolean };
+
+export function barMarks(chart: Chart, rows: Row[]): BarMark[][] {
+  const percents = barPercents(chart, rows);
+  return rows.map((row, index) =>
+    chart.y.map((series, at) => ({
+      percent: percents[index]?.[at] ?? 0,
+      text: numberText(row[series.column]),
+      drawn: numeric(row[series.column]) !== undefined,
+    })),
+  );
 }

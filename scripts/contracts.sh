@@ -572,6 +572,50 @@ panels:
     graphql: { field: app_example_totals }
     cards: [{ column: item_count, label: B, description: B. }]
 YAML
+# Chữ người xem thấy không được mang tên kỹ thuật của cấu hình (ADR 0045): tên bảng ngắn, giá trị của where, khóa
+# quy trình, và mọi tên snake_case dù cấu hình không dùng.
+dashboard_rejects "khối 't': description có tên kỹ thuật 'totals'; viết bằng lời của người xem, ghi chú kỹ thuật \
+đưa vào method" <<'YAML'
+title: Tổng quan
+panels:
+  - id: t
+    title: Tổng
+    description: Đọc từ totals của gói.
+    graphql: { field: app_example_totals }
+    cards: [{ column: score, label: Điểm, description: Tổng điểm. }]
+YAML
+dashboard_rejects "khối 't': title có tên kỹ thuật 'active'; viết bằng lời của người xem, ghi chú kỹ thuật đưa vào \
+method" <<'YAML'
+title: Tổng quan
+panels:
+  - id: t
+    title: Đối tượng active
+    description: Đối tượng đang dùng.
+    method: Dòng có tenant_id bằng active.
+    graphql: { field: app_example_totals, where: { field: tenant_id, equals: active } }
+    cards: [{ column: score, label: Điểm, description: Tổng điểm. }]
+YAML
+dashboard_rejects "khối 't': cards[0].label có tên kỹ thuật 'score_total'; viết bằng lời của người xem, ghi chú kỹ \
+thuật đưa vào method" <<'YAML'
+title: Tổng quan
+panels:
+  - id: t
+    title: Tổng
+    description: Tổng điểm của đơn vị.
+    graphql: { field: app_example_totals }
+    cards: [{ column: score, label: Điểm (score_total), description: Tổng điểm. }]
+YAML
+dashboard_rejects "khối 'c': description có tên kỹ thuật 'core-approval'; viết bằng lời của người xem, ghi chú kỹ \
+thuật đưa vào method" <<'YAML'
+title: Tổng quan
+panels:
+  - id: c
+    title: Hồ sơ
+    description: Hồ sơ của quy trình core-approval.
+    role: manager
+    workflow: { process: core-approval, counts: tenant }
+    cards: [{ column: open, label: Còn mở, description: Hồ sơ còn mở. }]
+YAML
 # Cấu hình sai dạng (lệnh chạy riêng với --dashboard, chưa qua schema) phải thành một dòng lỗi, không traceback.
 dashboard_rejects "cần panels là danh sách khối không rỗng; sửa theo contracts/dashboard.schema.json" <<'YAML'
 title: Tổng quan
@@ -602,7 +646,7 @@ if [[ "$result" != *": mục 1: một mục của select_permissions thiếu rol
   echo "check-dashboard-config.py phải báo tệp quyền sai dạng bằng một dòng lỗi. Đang nhận: $result" >&2
   exit 1
 fi
-echo "ok -- 15 bảng điều hành và tệp quyền sai bị check-dashboard-config.py từ chối đúng luật"
+echo "ok -- 19 bảng điều hành và tệp quyền sai bị check-dashboard-config.py từ chối đúng luật"
 
 # Chiều ngược: dòng của tệp đã xóa hay đổi tên nằm im trong expected-errors.txt mà không ai biết.
 while IFS=$'\t' read -r name _; do
