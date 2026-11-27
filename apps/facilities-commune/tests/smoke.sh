@@ -535,6 +535,9 @@ scripts/device.sh remove "$tenant_a" "$sensor" >/dev/null
 # Giấy tờ đính kèm cơ sở (ADR 0041) ở tệp riêng: tải lên, gắn, người duyệt cùng xã tải về, xã B nhận 404, EICAR.
 apps/facilities-commune/tests/documents.sh || fail=1
 
+# Trường tùy chỉnh do quản trị tỉnh định nghĩa trên bảng cơ sở (ADR 0059) ở tệp riêng.
+apps/facilities-commune/tests/custom-fields.sh || fail=1
+
 # Quy trình rà soát (ngưỡng, công khai có hẹn giờ, trình) ở tệp riêng; thời hạn công khai dài thì bỏ qua phần chờ.
 apps/facilities-commune/tests/workflow.sh || fail=1
 

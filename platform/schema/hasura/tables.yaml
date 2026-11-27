@@ -56,3 +56,48 @@
         columns: [id, tenant_id, asked_at, asked_by, app, documents, question, outcome, answer, reason, citations, model,
                   model_provider, model_host, duration_ms, item, query, row_count, attempts]
         filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
+# Tenant gốc của mỗi tenant (view). Đăng ký chỉ để quyền của bảng khác đi qua quan hệ tới nó; không vai trò nào đọc
+# thẳng.
+- table: { schema: platform, name: tenant_roots }
+
+# Trường tùy chỉnh (ADR 0059): một bộ định nghĩa cho mỗi tenant gốc. Mọi tenant cùng gốc đọc được (quan hệ members
+# nối định nghĩa với các tenant có gốc đó), để biểu mẫu, danh mục ở xã hiện trường tỉnh đã thêm. Chỉ tenant_admin của
+# chính tenant gốc (tenant không có cha) thêm, sửa, xóa; quản trị của tenant con thì không, để mọi đơn vị trong org
+# dùng cùng một bộ trường. Mã, kiểu và bảng không sửa được (đổi thì giá trị đã ghi thành sai); CSDL cũng chặn.
+- table: { schema: platform, name: custom_fields }
+  object_relationships:
+    - name: root
+      using:
+        manual_configuration:
+          remote_table: { schema: core, name: tenants }
+          column_mapping: { root_tenant_id: id }
+  array_relationships:
+    - name: members
+      using:
+        manual_configuration:
+          remote_table: { schema: platform, name: tenant_roots }
+          column_mapping: { root_tenant_id: root_tenant_id }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &custom_field_columns [root_tenant_id, app, source, code, label, kind, choices, required,
+                                        created_at, updated_at]
+        filter: &same_root { members: { tenant_id: { _eq: X-Hasura-Tenant-Id } } }
+    - role: tenant_admin
+      permission: { columns: *custom_field_columns, filter: *same_root }
+  insert_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [app, source, code, label, kind, choices, required]
+        check: &org_admin
+          _and:
+            - { root_tenant_id: { _eq: X-Hasura-Tenant-Id } }
+            - { root: { parent_id: { _is_null: true } } }
+        set: { root_tenant_id: X-Hasura-Tenant-Id }
+  update_permissions:
+    - role: tenant_admin
+      permission: { columns: [label, choices, required], filter: *org_admin, check: *org_admin }
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *org_admin }

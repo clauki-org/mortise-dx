@@ -36,7 +36,7 @@
     - role: user
       permission:
         columns: &facility_columns [id, tenant_id, code, name, address, status, latitude, longitude, created_at,
-                                    updated_at]
+                                    updated_at, custom]
         filter: &facility_assigned
           _and:
             - &tenant { tenant_id: { _eq: X-Hasura-Tenant-Id } }
@@ -48,7 +48,7 @@
   insert_permissions:
     - role: tenant_admin
       permission:
-        columns: &facility_input [code, name, address, status, latitude, longitude]
+        columns: &facility_input [code, name, address, status, latitude, longitude, custom]
         check: *tenant
         set: &tenant_from_token { tenant_id: X-Hasura-Tenant-Id }
   update_permissions:
@@ -112,7 +112,7 @@
     - role: user
       permission:
         columns: &room_columns [id, tenant_id, building_id, code, name, floor, area_type, clear_area_m2, created_at,
-                                updated_at]
+                                updated_at, custom]
         filter: { _and: [*tenant, { building: { facility: *facility_assigned } }] }
     - role: manager
       permission: { columns: *room_columns, filter: *tenant }
@@ -121,7 +121,7 @@
   insert_permissions:
     - role: user
       permission:
-        columns: &room_input [building_id, code, name, floor, area_type, clear_area_m2]
+        columns: &room_input [building_id, code, name, floor, area_type, clear_area_m2, custom]
         check: &room_custodian { _and: [*tenant, { building: { facility: *facility_custodian } }] }
         set: *tenant_from_token
     - role: tenant_admin
