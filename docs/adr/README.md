@@ -78,6 +78,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0056](0056-self-hosted-osm-basemap.md) | Nền bản đồ OpenStreetMap tự lưu trữ dạng PMTiles, mặc định không chữ | Chấp nhận |
 | [0059](0059-custom-fields.md) | Trường tùy chỉnh: giá trị jsonb, định nghĩa theo tenant gốc, CSDL kiểm | Chấp nhận |
 | [0060](0060-config-overrides.md) | Ghi đè cấu hình theo org: bảng riêng, đích theo tên, trộn và kiểm lại trên trình duyệt | Chấp nhận |
+| [0065](0065-package-on-off.md) | Bật, tắt gói theo org: ẩn qua quyền đọc menu, dữ liệu giữ nguyên | Chấp nhận |
 
 ## Quyết định còn mở
 
