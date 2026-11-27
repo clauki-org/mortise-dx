@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Mortise DX contributors
+SPDX-License-Identifier: Apache-2.0
+
+Nghiệm thu một phiếu công việc. Nhân viên bấm "Đề nghị nghiệm thu" trên màn hình chi tiết phiếu
+(catalog/work-orders.yaml, ADR 0026) với các biến title, workOrderId, workOrderCode, siteCode; người có vai trò manager
+của công ty xác nhận hoặc trả lại. Người đề nghị không tự xác nhận được (category four-eyes, workflow-api chặn). Khai
+báo bước ở workflows/work-acceptance.yaml.
+
+Gói chỉ gồm tệp khai báo (ADR 0022) nên quy trình không ghi lại trạng thái của phiếu: kết quả nghiệm thu nằm ở hồ sơ
+này, người đề nghị xem ở mục "Đề nghị nghiệm thu đã lập".
+-->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             targetNamespace="https://mortise-dx/apps/field-ops">
+  <process id="work-acceptance" name="Nghiệm thu phiếu công việc" isExecutable="true">
+    <startEvent id="requested"/>
+    <sequenceFlow id="toAccept" sourceRef="requested" targetRef="accept"/>
+
+    <userTask id="accept" name="Xác nhận nghiệm thu" flowable:candidateGroups="manager"
+              flowable:category="four-eyes" flowable:dueDate="P2D">
+      <extensionElements>
+        <flowable:formProperty id="comment"/>
+        <flowable:formProperty id="accepted"/>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="toDecision" sourceRef="accept" targetRef="decision"/>
+
+    <!-- Nhánh mặc định là trả lại: không có biến accepted = true thì không coi là đã nghiệm thu. Người đề nghị không
+         đặt sẵn được accepted lúc lập: workflow-api từ chối khởi tạo kèm biến mà cổng này đọc (ADR 0025). -->
+    <exclusiveGateway id="decision" default="toReturned"/>
+    <sequenceFlow id="toAccepted" sourceRef="decision" targetRef="accepted">
+      <conditionExpression xsi:type="tFormalExpression">${execution.getVariable("accepted") == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="toReturned" sourceRef="decision" targetRef="returned"/>
+
+    <endEvent id="accepted" name="Đã nghiệm thu"/>
+    <endEvent id="returned" name="Trả lại"/>
+  </process>
+</definitions>

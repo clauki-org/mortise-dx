@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình thành phần bản đồ cho điểm lắp đặt, theo contracts/map.schema.json; app.yaml trỏ tới tệp này ở mục menu
+# `map` và `make check-fast` kiểm. Màu theo giai đoạn của điểm: mỗi giai đoạn một lớp với một màu cố định, vì màu theo
+# giá trị (color.by) chỉ nhận cột số. Tên giai đoạn nằm trong chú giải và trong danh sách điểm của từng lớp, nên màu
+# không là tín hiệu duy nhất. Lớp truy vấn với vai trò mặc định `user`: mọi nhân viên thấy mọi điểm của công ty.
+
+title: Bản đồ điểm lắp đặt
+note: Khách hàng và vị trí điểm lắp đặt là hư cấu, chỉ để minh họa.
+layers:
+  - id: needs-repair
+    label: Cần sửa chữa
+    source: app_field_ops_sites
+    latitude: latitude
+    longitude: longitude
+    title: name
+    where: { field: status, equals: needs_repair }
+    fields: &site_fields
+      - { name: code, label: Mã điểm }
+      - { name: customer.name, label: Khách hàng }
+      - { name: capacity_kwp, label: Công suất lắp đặt (kWp), type: number }
+    color: { fixed: red }
+  - id: operating
+    label: Đang vận hành
+    source: app_field_ops_sites
+    latitude: latitude
+    longitude: longitude
+    title: name
+    where: { field: status, equals: operating }
+    fields: *site_fields
+    color: { fixed: teal }
+  - id: installing
+    label: Đang lắp đặt
+    source: app_field_ops_sites
+    latitude: latitude
+    longitude: longitude
+    title: name
+    where: { field: status, equals: installing }
+    fields: *site_fields
+    color: { fixed: blue }
+  - id: survey
+    label: Khảo sát
+    source: app_field_ops_sites
+    latitude: latitude
+    longitude: longitude
+    title: name
+    where: { field: status, equals: survey }
+    fields: *site_fields
+    color: { fixed: gray }

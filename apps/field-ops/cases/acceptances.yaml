@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Trang theo dõi đề nghị nghiệm thu theo contracts/cases.schema.json; app.yaml trỏ tới tệp này ở mục menu
+# `acceptances` và `make check-fast` kiểm. Tên hồ sơ và các mã lấy từ `title`, `details` trong
+# workflows/work-acceptance.yaml; ý kiến của người điều phối không hiện (ADR 0032).
+
+title: Đề nghị nghiệm thu đã lập
+description: Phiếu bạn đã đề nghị nghiệm thu, đang chờ ai xác nhận và kết quả.
+processes: [work-acceptance]

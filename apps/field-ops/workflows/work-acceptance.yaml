@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Khai báo bước của quy trình bpmn/work-acceptance.bpmn20.xml theo contracts/workflow.schema.json: bảng việc vẽ biểu
+# mẫu ý kiến và hai nút cho người điều phối; tên hồ sơ là tên việc của phiếu, các mã đặt lúc lập từ nút của danh mục
+# hiện trong thông tin hồ sơ (details).
+
+process: work-acceptance
+steps:
+  accept:
+    title: title
+    details:
+      - { variable: workOrderCode, label: Số phiếu }
+      - { variable: siteCode, label: Mã điểm lắp đặt }
+    form:
+      type: object
+      required: [comment]
+      properties:
+        comment:
+          type: string
+          title: Ý kiến
+    ui:
+      comment:
+        ui:widget: textarea
+    actions:
+      - id: accept
+        label: Xác nhận nghiệm thu
+        variables:
+          accepted: true
+      - id: return
+        label: Trả lại
+        variables:
+          accepted: false

@@ -1,0 +1,115 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình thành phần bảng điều hành của gói, theo contracts/dashboard.schema.json; app.yaml trỏ tới tệp này ở mục
+# menu `dashboard` và `make check-fast` kiểm (scripts/check-dashboard-config.py). Số phiếu là cột của view do migration
+# của gói tính (ADR 0033); công suất phát do context-api trả, số hồ sơ do workflow-api đếm (ADR 0035). description và
+# nhãn là lời của người xem; tên view, cột và giá trị mã nằm ở method (ADR 0045). Ngưỡng của thẻ là của gói.
+
+title: Bảng điều hành vận hành
+description: >-
+  Phiếu công việc, công suất phát của các điểm lắp đặt và hồ sơ sửa chữa tự mở. Mở "Xem cách tính" dưới mỗi khối để
+  biết số được tính thế nào và lấy từ đâu.
+panels:
+  - id: orders
+    title: Phiếu công việc
+    description: Phiếu còn phải làm của cả công ty, trong đó bao nhiêu phiếu đã quá hạn.
+    method: >-
+      View work_order_summary, mỗi tenant một dòng. Còn mở là phiếu có status open hay in_progress; quá hạn là phiếu
+      còn mở có due_on trước ngày hôm nay theo giờ của CSDL; phiếu không có hạn không bao giờ quá hạn.
+    size: half
+    primary: true
+    graphql: { field: app_field_ops_work_order_summary }
+    cards:
+      - { column: open_count, label: Còn phải làm, format: integer, description: Phiếu chưa xong và chưa hủy. }
+      - column: overdue_count
+        label: Quá hạn
+        format: integer
+        description: Phiếu còn phải làm mà hạn đã qua.
+        tone: { bad_when: { gt: 0, label: Có phiếu quá hạn } }
+      - column: done_count
+        label: Đã xong
+        format: integer
+        description: Phiếu đã ghi xong, kể cả phiếu chưa nghiệm thu.
+    link:
+      menu: work-orders
+      label: Xem danh sách phiếu công việc
+  # Mã entity do iot-bridge đặt theo tên thiết bị (ADR 0012); nhãn dưới đây khớp thiết bị trong seed/dien-mat-troi.yaml
+  # và devices/simulator/dien-mat-troi.yaml. Thiết bị không có nhãn hiện "Thiết bị <số thứ tự>", mã gốc nằm trong bảng
+  # số liệu thu gọn.
+  - id: output
+    title: Công suất phát theo điểm
+    description: >-
+      Công suất phát đo gần nhất của công tơ tại từng điểm lắp đặt. Điểm chưa gửi số đo thì không có trong biểu đồ.
+    method: >-
+      Số đo power (kW) mới nhất của từng entity Device của tenant, do context-api trả. Lúc đo ghi theo giờ UTC, nguyên
+      văn như context-api trả. Số đo thấp hơn ngưỡng của rules/low-output.yaml đủ lâu thì mở hồ sơ sửa chữa.
+    size: half
+    context: { type: Device, attribute: power }
+    chart:
+      type: bar
+      x:
+        column: id
+        label: Điểm lắp đặt
+        choices:
+          - { value: "urn:ngsi-ld:Device:meter-d01", label: Nhà xưởng Mẫu số 1 }
+          - { value: "urn:ngsi-ld:Device:meter-d02", label: Trường học Mẫu }
+          - { value: "urn:ngsi-ld:Device:meter-d03", label: Hộ gia đình Mẫu }
+      y: [{ column: value, label: Công suất (kW), color: yellow }]
+      details: [{ column: observedAt, label: Lúc đo }]
+  - id: by-kind
+    title: Phiếu còn phải làm theo loại việc
+    description: Khảo sát, lắp đặt, nghiệm thu, sửa chữa còn bao nhiêu phiếu và bao nhiêu đã quá hạn.
+    method: View work_orders_by_kind, mỗi loại việc một dòng; cùng cách tính "còn mở", "quá hạn" như khối trên.
+    size: half
+    graphql: { field: app_field_ops_work_orders_by_kind }
+    chart:
+      type: bar
+      x:
+        column: kind
+        label: Loại việc
+        choices:
+          - { value: survey, label: Khảo sát }
+          - { value: install, label: Lắp đặt }
+          - { value: acceptance, label: Nghiệm thu }
+          - { value: repair, label: Sửa chữa }
+      y:
+        - { column: open_count, label: Còn phải làm, color: blue }
+        - { column: overdue_count, label: Quá hạn, color: red }
+  # Số hồ sơ luật ngưỡng đã mở, không phải số lần đo thấp: lần đo thấp chưa đủ lâu hay khi hồ sơ cũ còn mở thì không
+  # mở hồ sơ (ADR 0018). workflow-api chỉ trả số cho người có vai trò của bước (manager), nên khối khai role.
+  - id: repairs
+    title: Hồ sơ sửa chữa do sản lượng thấp
+    description: Hồ sơ được mở tự động khi công suất phát của một điểm thấp quá lâu. Chỉ người điều phối thấy khối này.
+    method: >-
+      Quy trình site-repair của tenant, do workflow-api đếm. Mỗi hồ sơ do iot-bridge mở theo luật
+      rules/low-output.yaml.
+    size: half
+    role: manager
+    workflow: { process: site-repair, counts: tenant }
+    cards:
+      - column: open
+        label: Chưa xử lý xong
+        format: integer
+        description: Hồ sơ đã mở, chưa kết thúc.
+      - column: overdue
+        label: Quá hạn
+        format: integer
+        description: Bước xử lý đã quá hạn một ngày của quy trình.
+        tone: { bad_when: { gt: 0, label: Có bước quá hạn } }
+      - { column: finished, label: Đã xử lý, format: integer, description: Hồ sơ đã kết thúc. }
+  - id: acceptances
+    title: Đề nghị nghiệm thu
+    description: Phiếu nhân viên đã đề nghị nghiệm thu. Chỉ người điều phối thấy khối này.
+    method: Quy trình work-acceptance của tenant, do workflow-api đếm lúc mở trang.
+    size: half
+    role: manager
+    workflow: { process: work-acceptance, counts: tenant }
+    cards:
+      - { column: open, label: Chờ xác nhận, format: integer, description: Đề nghị chưa được xác nhận hay trả lại. }
+      - column: overdue
+        label: Quá hạn
+        format: integer
+        description: Bước xác nhận đã quá hạn hai ngày của quy trình.
+        tone: { warn_when: { gt: 0, label: Có đề nghị chờ lâu } }
+      - { column: finished, label: Đã kết thúc, format: integer, description: Đề nghị đã được xác nhận hay trả lại. }

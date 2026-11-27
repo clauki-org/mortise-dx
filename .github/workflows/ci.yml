@@ -122,15 +122,18 @@ jobs:
       # Tiến trình chính của workflow-api thoát, Docker phải tự dựng lại đúng một lần và smoke vẫn qua.
       - name: A service whose process exits comes back by itself
         run: make heal-check SERVICE=workflow-api
-      # Hai gói Tầng 3 cài vào, kiểm, gỡ ra; lõi và gói còn lại phải vẫn qua smoke sau khi gỡ (ADR 0005). Thời hạn
+      # Các gói Tầng 3 cài vào, kiểm, gỡ ra; lõi và gói còn lại phải vẫn qua smoke sau khi gỡ (ADR 0005). Thời hạn
       # công khai ngắn để smoke của gói xã chờ được hết hạn (ADR 0019). seed-demo nạp mọi gói có dữ liệu demo nên
-      # chạy sau khi cả hai gói đã cài; gói kho chỉ gồm tệp khai báo (ADR 0022).
-      - name: Install both packages and test them
+      # chạy sau khi các gói đã cài; gói kho và gói vận hành hiện trường chỉ gồm tệp khai báo (ADR 0022). Bản cài CI
+      # không có tenant dmt, nên smoke của gói hiện trường chạy trên xã A.
+      - name: Install the packages and test them
         run: |
           make app-install APP=facilities-commune SETTINGS=publication_period=PT20S
           make app-install APP=supplies-commune
+          make app-install APP=field-ops
           make seed-demo
           make app-smoke APP=facilities-commune && make app-smoke APP=supplies-commune
+          make app-smoke APP=field-ops
       # Gói đang cài: seed áp lại quyền của gói, smoke của lõi kiểm cả quyền của gói không lệch khai báo.
       - name: Seed and smoke the core with the packages installed
         run: make seed && make smoke
@@ -157,8 +160,10 @@ jobs:
             platform/web/playwright-report
             platform/web/test-results
           retention-days: 7
-      # Gỡ sau e2e: bài trên trình duyệt (platform/web/e2e/) cần gói đang cài. Gỡ gói kho trước: lõi và gói xã phải
-      # còn qua smoke. Sau đó gỡ gói xã, lõi vẫn qua.
+      # Gỡ sau e2e: bài trên trình duyệt (platform/web/e2e/) cần gói đang cài. Gỡ gói hiện trường rồi gói kho: lõi và
+      # gói xã phải còn qua smoke. Sau đó gỡ gói xã, lõi vẫn qua.
+      - name: Uninstall the field operations package, the core still passes
+        run: make app-uninstall APP=field-ops CONFIRM=yes && make smoke
       - name: Uninstall the supplies package, the core and the commune package still pass
         run: make app-uninstall APP=supplies-commune CONFIRM=yes && make smoke && make app-smoke APP=facilities-commune
       - name: Uninstall the commune package, the core still passes

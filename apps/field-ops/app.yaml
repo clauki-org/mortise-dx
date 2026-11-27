@@ -1,0 +1,69 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Khai báo gói theo contracts/app.schema.json; `make check-fast` kiểm. Gói chỉ gồm tệp khai báo (ADR 0022):
+# scripts/app.sh đọc tệp này để chạy migration, áp quyền Hasura, deploy quy trình, nạp luật ngưỡng và menu. Dữ liệu demo
+# của tenant `dmt` ở seed/dien-mat-troi.yaml.
+#
+# Gói vận hành hiện trường cho doanh nghiệp lắp đặt điện mặt trời: khách hàng, điểm lắp đặt trên bản đồ, thiết bị tại
+# điểm, phiếu công việc có ảnh và biên bản, nghiệm thu bốn mắt, hồ sơ sửa chữa tự mở khi sản lượng thấp.
+
+id: field-ops
+name: Vận hành hiện trường
+version: 0.1.0
+description: >-
+  Khách hàng, điểm lắp đặt, thiết bị và phiếu công việc tại hiện trường; nghiệm thu cần người điều phối xác nhận; sản
+  lượng một điểm thấp quá lâu thì người điều phối có việc sửa chữa.
+database:
+  schema: app_field_ops
+  migrations: schema/migrations
+hasura: hasura
+workflows:
+  - bpmn/work-acceptance.bpmn20.xml
+  - bpmn/site-repair.bpmn20.xml
+rules:
+  - rules/low-output.yaml
+menu:
+  - id: work-orders
+    label: Phiếu công việc
+    component: catalog
+    config: catalog/work-orders.yaml
+    icon: list
+  - id: work-order
+    label: Lập phiếu công việc
+    component: form
+    config: forms/work-order.yaml
+    icon: form
+  - id: sites
+    label: Điểm lắp đặt
+    component: catalog
+    config: catalog/sites.yaml
+    icon: list
+  - id: map
+    label: Bản đồ điểm lắp đặt
+    component: map
+    config: map-layers/sites.yaml
+    icon: map
+  - id: customers
+    label: Khách hàng
+    component: catalog
+    config: catalog/customers.yaml
+    icon: list
+  - id: customer
+    label: Thêm khách hàng
+    component: form
+    config: forms/customer.yaml
+    icon: form
+    roles: [tenant_admin]
+  # Người đề nghị theo dõi đề nghị nghiệm thu của mình (ADR 0032). Hồ sơ sửa chữa do luật mở không có ở đây: tài khoản
+  # dịch vụ mở, không có người lập nào.
+  - id: acceptances
+    label: Đề nghị nghiệm thu đã lập
+    component: cases
+    config: cases/acceptances.yaml
+    icon: folder
+  - id: dashboard
+    label: Bảng điều hành vận hành
+    component: dashboard
+    config: dashboards/overview.yaml
+    icon: chart

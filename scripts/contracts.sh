@@ -131,8 +131,9 @@ for path in app.get(sys.argv[2], []):
   done
   # Dữ liệu demo khai báo: chỉ gói không có bộ nạp riêng (seed/load.py) mới dùng định dạng chung, vì make seed-demo
   # chạy bộ nạp riêng nếu có và bỏ qua demo.yaml của gói đó. Mọi tệp seed/*.yaml đều kiểm, kể cả tệp cho tenant của
-  # một mẫu cài (ví dụ seed/dien-mat-troi.yaml), vì bộ nạp chung đọc chúng cùng định dạng.
-  if [[ -f "${app}seed/demo.yaml" && ! -f "${app}seed/load.py" ]]; then
+  # một mẫu cài (ví dụ seed/dien-mat-troi.yaml), vì bộ nạp chung đọc chúng cùng định dạng; gói chỉ có tệp của mẫu cài,
+  # không có demo.yaml, cũng được kiểm.
+  if [[ ! -f "${app}seed/load.py" ]] && compgen -G "${app}seed/*.yaml" >/dev/null; then
     schema_check contracts/seed.schema.json "${app}"seed/*.yaml
   fi
   echo "ok -- gói ${app%/} qua mọi bước kiểm của gói"

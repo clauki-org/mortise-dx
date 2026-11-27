@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Khai báo bước của quy trình bpmn/site-repair.bpmn20.xml theo contracts/workflow.schema.json. `title` do iot-bridge
+# đặt khi mở hồ sơ, gồm tên luật và tên thiết bị; tên thiết bị khớp cột "Tên trên mạng thiết bị" của thiết bị trong
+# danh mục điểm lắp đặt, nên người điều phối tìm ra điểm của thiết bị đó.
+
+process: site-repair
+steps:
+  repair:
+    title: title
+    details:
+      - { variable: device, label: Thiết bị }
+      - { variable: value, label: Công suất đo được (kW) }
+      - { variable: threshold, label: Ngưỡng (kW) }
+      - { variable: observedAt, label: Lúc đo }
+    form:
+      type: object
+      required: [finding]
+      properties:
+        finding:
+          type: string
+          title: Nguyên nhân và việc đã làm
+    ui:
+      finding:
+        ui:widget: textarea
+    actions:
+      - id: done
+        label: Đã xử lý
+        variables:
+          handled: true
