@@ -158,3 +158,12 @@ Hệ quả của bổ sung:
 - Phụ thuộc đường ra mạng ngoài, phí và hạn mức của bên cung cấp; giới hạn tần suất (429) là 503 "thử lại sau".
 - Máy chủ chỉ nhận `max_completion_tokens` thay vì `max_tokens` thì trả lỗi 400; dịch vụ trả 502 và ghi lý do vào
   log. Đã kiểm bằng máy chủ giả trong `make test`, chưa có kiểm thử tự động với API thật.
+
+## Bổ sung ngày 2026-11-27 (#224): bộ câu hỏi của gói thay bộ 22 câu của #114
+
+Mục kiểm thử ở trên hẹn `make assistant-eval` chạy bộ 22 câu của #114. Bộ đó không nằm trong repo và đo cách tìm bằng
+vector, không phải đường ống này. Lệnh chạy bộ câu hỏi có đáp án do gói viết (`apps/<gói>/tests/assistant-questions.yaml`),
+đáp án là mã đoạn trong `knowledge/` của gói, gồm câu hỏi bằng từ thường ngày, câu hỏi điều đã bị thay và câu ngoài phạm
+vi; `make check-fast` kiểm đáp án còn trỏ tới đoạn đang có hiệu lực. Cách chạy, cách chấm và kết quả:
+[docs/assistant-eval.md](../assistant-eval.md). Số của lượt đo 2026-11-19 ở trên không so trực tiếp được với số của
+lệnh này.
