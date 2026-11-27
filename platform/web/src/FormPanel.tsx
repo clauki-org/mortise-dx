@@ -6,7 +6,7 @@
 // GraphQL (submit.insert), bằng token của người dùng. Trình duyệt chỉ kiểm trước cho nhanh; workflow-api và Hasura
 // vẫn quyết định. Ở đây không có tên bảng hay chữ của một lĩnh vực nào.
 
-import { Alert, Anchor, Button, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { Alert, Anchor, Button, Group, Paper, Stack } from "@mantine/core";
 import { Form as MantineForm } from "@rjsf/mantine";
 import type { RJSFValidationError } from "@rjsf/utils";
 import { useMutation } from "@tanstack/react-query";
@@ -30,6 +30,7 @@ import { insertError, insertMutation } from "./formInsert";
 import { formValidator } from "./formValidator";
 import { findItem, itemPath, rolesOf } from "./menu";
 import { usePackageMenu } from "./PackagePage";
+import { PageHeader } from "./PageHeader";
 import { type FormContext, SourceChoice } from "./SourceChoice";
 import { ErrorNotice } from "./States";
 import { useSession } from "./session";
@@ -179,10 +180,7 @@ export function FormPanel({ config, app }: { config: FormConfig; app: string }) 
   const allowed = rolesOf(getToken()).includes(role);
   return (
     <Stack maw={720}>
-      <Title order={1} size="h2">
-        {config.title}
-      </Title>
-      {config.description && <Text c="dimmed">{config.description}</Text>}
+      <PageHeader title={config.title} description={config.description} />
       {allowed ? (
         <Paper withBorder radius="md" p="md">
           <FormBody config={config} app={app} />

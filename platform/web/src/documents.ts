@@ -6,6 +6,7 @@
 // CatalogDocuments.tsx vẽ phần này trên màn hình chi tiết của danh mục; catalog.ts gọi documentsProblems khi kiểm cấu
 // hình danh mục. Không có tên bảng hay từ của lĩnh vực nào ở đây.
 
+import { formatRounded } from "./format";
 import type { InsertFailure } from "./formInsert";
 
 export type DocumentField = { name: string; label: string; type?: "text" | "date" | "datetime" };
@@ -132,11 +133,9 @@ export function linkError(failure: InsertFailure): string {
   }
 }
 
-const sizeFormat = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 });
-
 /** Cỡ tệp cho người đọc: byte, KB, MB theo bội 1024 như giới hạn cỡ của files-api. */
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${sizeFormat.format(bytes / 1024)} KB`;
-  return `${sizeFormat.format(bytes / (1024 * 1024))} MB`;
+  if (bytes < 1024 * 1024) return `${formatRounded(bytes / 1024)} KB`;
+  return `${formatRounded(bytes / (1024 * 1024))} MB`;
 }

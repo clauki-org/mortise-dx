@@ -19,7 +19,8 @@ capabilities:
   - Phân trang theo list.page_size, có nút trang trước và trang sau.
   - Tìm, lọc, thứ tự và trang của danh sách nằm trên đường dẫn; mở lại đường dẫn là về đúng chỗ đang xem.
   - Màn hình chi tiết của một dòng hiện mọi trường trong fields theo thứ tự khai.
-  - Giá trị hiện theo kiểu của trường (số, ngày, ngày giờ); trường có choices hiện chữ thay cho giá trị lưu.
+  - Giá trị hiện theo kiểu của trường (số, ngày, ngày giờ); trường có choices hiện chữ thay cho giá trị lưu; giá trị
+    trống hiện một gạch mờ. Bảng rộng hơn màn hình cuộn ngang trong một vùng có nhãn, giữ mọi cột đã khai (ADR 0047).
   - Quan hệ cha–con nhiều cấp, khai lồng trong cùng tệp bằng detail.children. Màn hình chi tiết của cha có bảng của
     từng loại đối tượng con, tìm, lọc và phân trang được; màn hình chi tiết của con có đường về mọi cấp cha.
   - Màn hình chi tiết hiện được cột của bảng khác qua quan hệ một-một mà Hasura khai cho bảng, khai trong fields

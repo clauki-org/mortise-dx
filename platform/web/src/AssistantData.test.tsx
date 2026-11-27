@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Kiểm cách thành phần trợ lý hỏi dữ liệu hiện kết quả: bảng theo cột của dịch vụ, ô hiện như chữ thường (chữ người
-// dùng nhập có thẻ HTML vẫn hiện nguyên văn, không thành thẻ), luôn kèm câu truy vấn; lời từ chối hiện lý do và câu bị
+// dùng nhập có thẻ HTML vẫn hiện nguyên văn, không thành thẻ), luôn kèm câu truy vấn trong phần mở rộng; lời từ chối hiện lý do và câu bị
 // từ chối. Dựng ra HTML bằng react-dom/server, không cần trình duyệt.
 
 import { MantineProvider } from "@mantine/core";
@@ -54,6 +54,9 @@ describe("DataResult", () => {
     expect(html).toContain("12.5");
     expect(html).toContain("Câu truy vấn đã chạy");
     expect(html).toContain(QUERY);
+    // Câu truy vấn là mã kỹ thuật: nằm trong phần "Xem câu truy vấn" đóng sẵn, bảng kết quả đứng trước.
+    expect(html).toMatch(/<details(?![^>]* open)[^>]*><summary[^>]*>Xem câu truy vấn<\/summary>/);
+    expect(html.indexOf("<table")).toBeLessThan(html.indexOf("<details"));
   });
 
   it("báo không có dòng nào thay vì bảng rỗng", () => {
@@ -94,7 +97,7 @@ describe("DataResult", () => {
     });
     expect(html).toContain("Câu truy vấn do model-x viết, qua API llm.example.test");
     expect(html).toContain("mô hình đã viết lại một lần");
-    expect(html).toContain("Đọc câu truy vấn đã chạy");
+    expect(html).toContain("Mở &quot;Xem câu truy vấn&quot; bên dưới");
     expect(html).toContain(QUERY);
   });
 
@@ -112,7 +115,7 @@ describe("DataResult", () => {
     expect(html).toContain("Câu truy vấn do model-x viết");
     expect(html).not.toContain("chữ lẽ ra không hiện");
     expect(html).not.toContain("Câu truy vấn bị từ chối");
-    expect(html).not.toContain("Đọc câu truy vấn đã chạy");
+    expect(html).not.toContain("Xem câu truy vấn");
   });
 
   it("guard từ chối: lời cố định kèm lý do của guard và câu bị từ chối", () => {
@@ -129,6 +132,8 @@ describe("DataResult", () => {
     expect(html).toContain("Chỉ chạy câu đọc dữ liệu (query).");
     expect(html).toContain("Câu truy vấn bị từ chối");
     expect(html).toContain("mutation { x }");
+    // Câu bị từ chối mở sẵn: lý do của guard trỏ tới phần tử trong câu.
+    expect(html).toMatch(/<details[^>]* open/);
   });
 
   it("Hasura từ chối: lời cố định, không hiện chi tiết của dịch vụ", () => {

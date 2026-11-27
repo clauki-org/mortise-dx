@@ -6,12 +6,13 @@
 // chỉ gốc, mọi đường dẫn bên dưới địa chỉ gốc do thành phần tự đọc. Ở đây không có tên bảng, tên cột hay chữ của
 // một lĩnh vực nào.
 
-import { Alert, Stack, Title } from "@mantine/core";
+import { Alert, Stack } from "@mantine/core";
 import { useLocation, useSearchParams } from "react-router";
 import { CatalogRecord } from "./CatalogRecord";
 import { CatalogTable } from "./CatalogTable";
 import { type CatalogConfig, configProblems, problemText, resolvePath } from "./catalog";
 import { readState, writeState } from "./catalogQuery";
+import { PageHeader } from "./PageHeader";
 
 type Props = {
   config: CatalogConfig;
@@ -36,9 +37,7 @@ export function Catalog({ config, basePath }: Props) {
   if (segments.length === 0) {
     return (
       <Stack>
-        <Title order={1} size="h2">
-          {config.title}
-        </Title>
+        <PageHeader title={config.title} />
         <CatalogTable
           config={config}
           label={config.title}
