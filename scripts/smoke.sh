@@ -833,6 +833,8 @@ done
 IFS=$'\t' read -r status _ < <(api POST "$manager_a" "/tasks/$(task_in "$manager_a" "$sealed")/complete" \
   '{"variables":{"confirmed":true}}')
 check "Niêm phong: hết bước chờ, manager.a hoàn thành bước cuối" "$status" 204
+# Hồ sơ chưa tới bước cuối (hẹn giờ không đến hạn trong lúc chờ) thì xóa, để bảng việc demo không tích hồ sơ.
+[[ "$status" == 204 ]] || drop_instance "$sealed"
 seal_hash=$(api GET "$manager_a" "/instances/$sealed" | cut -f2 | jq -r '.seal.hash // empty')
 check "Niêm phong: bước cuối xong thì /instances trả băm SHA-256" \
   "$([[ "$seal_hash" =~ ^[0-9a-f]{64}$ ]] && echo có)" có
@@ -857,6 +859,8 @@ SQL
 # seal_reports: số dòng seal-verify báo cho hồ sơ $sealed (mỗi hồ sơ lệch một dòng, bắt đầu bằng mã hồ sơ).
 seal_reports() { scripts/seal-verify.sh 2>&1 | grep -c "^$sealed " || true; }
 check "Niêm phong: make seal-verify không báo hồ sơ vừa niêm phong" "$(seal_reports)" 0
+check "Niêm phong: dòng niêm phong khớp dòng nhật ký lúc niêm phong" \
+  "$(sql -c "SELECT count(*) FROM core.case_seals_unlogged() WHERE case_id = '$sealed'")" 0
 flowable_sql() { docker compose exec -T postgres psql -qAtX -v ON_ERROR_STOP=1 -U postgres -d flowable "$@"; }
 set_note() {
   flowable_sql -v note="$1" -v id="$sealed" >/dev/null <<'SQL'

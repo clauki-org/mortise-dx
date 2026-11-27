@@ -41,7 +41,10 @@ export type CaseStep = {
   claimed: boolean;
 };
 
-export type CaseDetail = CaseSummary & { steps: CaseStep[] };
+/** Niêm phong của hồ sơ đã kết thúc (ADR 0053); null khi quy trình không khai niêm phong hay hồ sơ chưa kết thúc */
+export type CaseSeal = { hash: string; sealed_at: string; version: number };
+
+export type CaseDetail = CaseSummary & { steps: CaseStep[]; seal: CaseSeal | null };
 
 export type CaseState = "open" | "ended" | "all";
 

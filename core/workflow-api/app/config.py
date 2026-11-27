@@ -25,7 +25,8 @@ class Settings:
     # Client Keycloak của dịch vụ được mở quy trình thay cho một tenant (ADR 0017). Để trống thì không có
     # dịch vụ nào.
     service_clients: frozenset[str]
-    # Vai trò CSDL workflow_api, chỉ đọc bảng phân cấp thẩm quyền và bảng tenant (ADR 0028).
+    # Vai trò CSDL workflow_api: đọc bảng phân cấp thẩm quyền và bảng tenant (ADR 0028), thêm dòng niêm phong
+    # và hạn của bước chờ (ADR 0053).
     db_host: str
     db_name: str
     db_user: str

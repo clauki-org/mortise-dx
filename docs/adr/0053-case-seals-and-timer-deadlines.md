@@ -35,7 +35,7 @@ bộ nhớ, không chung với lõi:
   không lọt vào).
 - Hoàn thành bước cuối thì lời gọi trả về khi hồ sơ đã kết thúc: lịch sử có `endTime`, `endActivityId`, biến kèm kiểu
   (`string`, `boolean`, `double`), bước người làm có `assignee` là người đã nhận.
-- Hẹn giờ một giây đến hạn sau khoảng mười giây: Flowable quét hẹn giờ theo chu kỳ.
+- Hẹn giờ năm giây: bước sau nó bắt đầu sau khoảng mười ba giây, vì Flowable quét hẹn giờ đến hạn theo chu kỳ.
 
 ## Quyết định
 
