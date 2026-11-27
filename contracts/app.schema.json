@@ -89,8 +89,8 @@
           },
           "config": { "description": "Tệp cấu hình của thành phần", "$ref": "#/$defs/path" },
           "icon": {
-            "description": "Ý nghĩa của biểu tượng đứng trước nhãn trên menu: danh sách, biểu mẫu, bản đồ, biểu đồ, hỏi đáp, hộp việc, giấy tờ, hồ sơ, cài đặt. Khung giao diện chọn hình theo ý nghĩa này (ADR 0044); bỏ trống thì mục chỉ có nhãn.",
-            "enum": ["list", "form", "map", "chart", "chat", "inbox", "document", "folder", "settings"]
+            "description": "Ý nghĩa của biểu tượng đứng trước nhãn trên menu: trang chủ, danh sách, biểu mẫu, bản đồ, biểu đồ, hỏi đáp, hộp việc, giấy tờ, hồ sơ, cài đặt. Khung giao diện chọn hình theo ý nghĩa này (ADR 0044, ADR 0051); bỏ trống thì mục chỉ có nhãn.",
+            "enum": ["home", "list", "form", "map", "chart", "chat", "inbox", "document", "folder", "settings"]
           },
           "roles": {
             "description": "Vai trò thấy mục này",

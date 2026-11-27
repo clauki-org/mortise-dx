@@ -71,6 +71,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0048](0048-bento-tokens-status-tones-font.md) | Kiểu Bento dịu, bộ nghĩa màu chung, phông Be Vietnam Pro | Chấp nhận |
 | [0049](0049-bento-dashboard.md) | Bảng điều hành dạng lưới Bento, mức độ thẻ, vòng đo, biểu đồ có trần | Chấp nhận |
 | [0050](0050-catalog-tones-cards-form-help.md) | Nghĩa màu cho giá trị của danh mục, dạng thẻ, chi tiết dạng lưới ô và dòng gợi ý của biểu mẫu | Chấp nhận |
+| [0051](0051-home-page.md) | Trang chủ: ô lối tắt theo gói và việc đang chờ | Chấp nhận |
 
 ## Quyết định còn mở
 

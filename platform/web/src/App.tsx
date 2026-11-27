@@ -8,13 +8,14 @@ import { Button, Center, Loader, Paper, Stack, Text, Title } from "@mantine/core
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { User } from "oidc-client-ts";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
+import { createBrowserRouter, RouterProvider } from "react-router";
 import { Provider } from "urql";
 import { ApiError } from "./api";
 import { CALLBACK_PATH, userManager } from "./auth";
 import { Brand } from "./Brand";
 import { NotFound, RouteError } from "./Errors";
 import { createGraphqlClient } from "./graphql";
+import { Home } from "./Home";
 import { PackagePage } from "./PackagePage";
 import { Shell } from "./Shell";
 import { ErrorNotice } from "./States";
@@ -45,7 +46,8 @@ const createRouter = () =>
           // Lỗi của một màn hình hiện trong khung trang, menu vẫn dùng được.
           errorElement: <RouteError />,
           children: [
-            { index: true, element: <Navigate to="/tasks" replace /> },
+            // Trang chủ là điểm vào sau khi đăng nhập: việc đang chờ rồi lối tắt theo gói (ADR 0051).
+            { index: true, element: <Home /> },
             { path: "tasks", element: <TaskList /> },
             { path: "tasks/:taskId", element: <TaskScreen /> },
             // Mục menu của gói; phần đường dẫn sau mục do thành phần của mục tự đọc (ví dụ dòng chi tiết của danh mục).

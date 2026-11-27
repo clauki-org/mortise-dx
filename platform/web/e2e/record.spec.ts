@@ -109,7 +109,7 @@ test("cán bộ xã A lập hồ sơ rà soát từ cơ sở; người duyệt x
     expect(reviews[0]?.variables).toMatchObject({ title: name, facilityId, excessM2: excess });
     expect(await reviewsOf(request, "manager.b", facilityId)).toEqual([]);
 
-    // Người duyệt xã A thấy hồ sơ trên bảng việc theo tên cơ sở và mở được nó. Phiên trình duyệt riêng: phiên đăng
+    // Người duyệt xã A thấy hồ sơ trên trang chủ theo tên cơ sở và mở được nó. Phiên trình duyệt riêng: phiên đăng
     // nhập của cán bộ vẫn còn trong trang cũ.
     const { baseURL, locale } = test.info().project.use;
     const reviewer = await (await browser.newContext({ baseURL, locale })).newPage();

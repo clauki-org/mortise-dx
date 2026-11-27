@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Đường demo của bảng việc trên trình duyệt: người ở đơn vị A gửi hồ sơ, người duyệt của đơn vị A duyệt trên web,
-// người gửi không tự duyệt được, đơn vị B không thấy gì của đơn vị A. Chạy trên quy trình mẫu core-approval của
-// lõi; danh mục của gói ở catalog.spec.ts.
+// Đường demo của bảng việc trên trình duyệt: người ở đơn vị A gửi hồ sơ, người duyệt của đơn vị A mở việc từ đường dẫn
+// hay từ trang chủ rồi duyệt trên web, người gửi không tự duyệt được, đơn vị B không thấy gì của đơn vị A trên trang
+// chủ. Chạy trên quy trình mẫu core-approval của lõi; danh mục của gói ở catalog.spec.ts.
 
 import { expect, test } from "@playwright/test";
 import { complete, outcome, signIn, submitApproval, taskOf, uniqueTitle, visibleTenants } from "./support.ts";
@@ -61,7 +61,10 @@ test("người duyệt của đơn vị B không thấy, không mở, không duy
   await page.goto("/");
   await signIn(page, "manager.b");
   await tasksLoaded;
-  await expect(page.getByRole("heading", { name: "Việc của tôi" })).toBeVisible();
+  // Trang chủ liệt kê mọi việc đang chờ, như "Việc của tôi" (ADR 0051).
+  await expect(page.getByRole("heading", { level: 1, name: "Trang chủ" })).toBeVisible();
+  // Tiêu đề hiện trước danh sách; chờ số việc hiện ra để khẳng định "không thấy" trên danh sách đã vẽ xong.
+  await expect(page.getByText(/^\d+ việc$/)).toBeVisible();
   await expect(page.getByText("Xã B (Tỉnh Mẫu)")).toBeVisible();
   await expect(page.getByRole("link", { name: title })).toHaveCount(0);
 

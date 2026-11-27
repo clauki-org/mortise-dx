@@ -17,12 +17,15 @@ import { addPasskey, canAddPasskey } from "./passkey";
 import { useSession } from "./session";
 import { TenantInfo } from "./TenantInfo";
 
-// Nhóm của các màn hình dùng chung, luôn có, đứng đầu. Mục do các gói đã cài khai trong app.yaml (menu) gom theo gói
+// Nhóm của các màn hình dùng chung, luôn có, đứng đầu; trang chủ là mục đầu (ADR 0051). Mục do các gói đã cài khai trong app.yaml (menu) gom theo gói
 // ở sau, đọc qua GraphQL theo tenant: gỡ gói thì nhóm của nó tự mất, không phải sửa giao diện.
 const SHARED: MenuGroup = {
   id: "",
   label: "Chung",
-  links: [{ to: "/tasks", label: "Việc của tôi", icon: "inbox" }],
+  links: [
+    { to: "/", label: "Trang chủ", icon: "home" },
+    { to: "/tasks", label: "Việc của tôi", icon: "inbox" },
+  ],
   collapsible: false,
 };
 

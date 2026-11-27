@@ -10,6 +10,7 @@ import {
   IconFileText,
   IconFolder,
   IconForms,
+  IconHome,
   IconInbox,
   IconList,
   IconMap,
@@ -21,6 +22,7 @@ import type { MenuIcon } from "./menu";
 
 // Record theo MenuIcon: thêm ý nghĩa vào danh mục mà quên hình thì tsc báo, không để mục mất biểu tượng.
 export const MENU_ICON_SHAPES: Record<MenuIcon, TablerIcon> = {
+  home: IconHome,
   list: IconList,
   form: IconForms,
   map: IconMap,
