@@ -57,19 +57,26 @@ def post(url: str, body: bytes, headers: dict) -> tuple[int, dict]:
             return error.code, {}
 
 
+class TokenError(Exception):
+    """Không lấy được token; câu đó ghi là lỗi của lượt đo, các câu sau vẫn chạy."""
+
+
 def token(base: str, user: str, password: str) -> str:
     # Lấy token mới cho mỗi câu: cả lượt đo dài hơn hạn của access token, và cổng giới hạn tần suất theo
     # token.
     form = urllib.parse.urlencode(
         {"grant_type": "password", "client_id": "mortise-test", "username": user, "password": password}
     ).encode()
-    status, body = post(
-        f"{base}/auth/realms/mortise/protocol/openid-connect/token",
-        form,
-        {"Content-Type": "application/x-www-form-urlencoded"},
-    )
+    try:
+        status, body = post(
+            f"{base}/auth/realms/mortise/protocol/openid-connect/token",
+            form,
+            {"Content-Type": "application/x-www-form-urlencoded"},
+        )
+    except (urllib.error.URLError, TimeoutError, ValueError) as error:
+        raise TokenError(f"Không gọi được {base}/auth ({error}); kiểm lõi đang chạy (make ps).") from error
     if status != 200 or "access_token" not in body:
-        raise SystemExit(
+        raise TokenError(
             f"Không lấy được token cho {user} (HTTP {status}); kiểm lõi đang chạy, đã `make seed`, "
             "và DEMO_USER_PASSWORD đúng với .env của bản đang chạy."
         )
@@ -100,9 +107,10 @@ def result(question: qset.Question, status: int, payload: dict, seconds: float) 
         "numbers": list(question.numbers),
         "refuse": question.refuse,
         "http_status": status,
-        "verdict": score.verdict(question, answer),
+        "verdict": score.verdict(question, status, answer),
         "refused_by": score.refused_by(answer) if answer else None,
-        "model_called": bool(answer and answer.get("model")),
+        # Bước sinh hỏng (502, 504) cũng đã gọi mô hình: thời gian của nó thuộc độ trễ của các lần sinh.
+        "model_called": bool(answer.get("model")) if answer else status in score.GENERATION_FAILED,
         "cited": score.cited(answer) if answer else [],
         "answer": answer.get("answer") if answer else None,
         "reason": answer.get("reason") if answer else payload.get("error"),
@@ -195,9 +203,12 @@ def run(args: argparse.Namespace) -> int:
         raise SystemExit("Thiếu DEMO_USER_PASSWORD (biến môi trường hay .env).")
     results = []
     for number, question in enumerate(chosen, start=1):
-        status, payload, seconds = ask(
-            base, token(base, args.user, password), question_set, question.question
-        )
+        try:
+            status, payload, seconds = ask(
+                base, token(base, args.user, password), question_set, question.question
+            )
+        except TokenError as error:
+            status, payload, seconds = 0, {"error": str(error)}, 0.0
         results.append(result(question, status, payload, seconds))
         print(f"[{number}/{len(chosen)}] {question.id}: {results[-1]['verdict']} ({seconds} s)", flush=True)
     complete = len(chosen) == len(question_set.questions) and not any(
@@ -209,7 +220,8 @@ def run(args: argparse.Namespace) -> int:
         "results": results,
     }
     write(report, args.out)
-    return 0 if complete else 1
+    # Chọn một phần câu bằng --only không phải lỗi; chỉ lỗi của lượt đo làm lệnh trả mã lỗi.
+    return 1 if report["summary"]["errors"] else 0
 
 
 def write(report: dict, out: str) -> None:

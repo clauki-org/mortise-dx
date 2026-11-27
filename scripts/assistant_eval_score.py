@@ -13,6 +13,11 @@ from decimal import Decimal, InvalidOperation
 from assistant_eval_set import KINDS, Question
 
 VERIFY_PREFIX = "Câu trả lời không qua bước kiểm"
+# Mã của trợ lý khi bước sinh đã chạy mà hỏng: hết số token sinh, JSON sai dạng, mô hình trả lỗi (502), quá
+# giờ (504). Đó là kết quả của mô hình trên câu đó, lặp lại được ở nhiệt độ 0, nên tính là trả lời sai chứ
+# không làm hỏng cả lượt đo. Mã khác (503 mô hình chưa bật hay đang bận, 401, 429, không gọi được) là lỗi của
+# lượt đo.
+GENERATION_FAILED = (502, 504)
 _NUMBER = re.compile(r"\d+(?:[.,]\d+)*")
 
 
@@ -47,10 +52,10 @@ def cited(answer: dict) -> list[str]:
     return list(dict.fromkeys(keys))
 
 
-def verdict(question: Question, answer: dict | None) -> str:
-    """correct, wrong-citation, missing-number, refused, answered (câu phải từ chối mà trả lời), error."""
+def verdict(question: Question, status: int, answer: dict | None) -> str:
+    """correct, wrong-citation, missing-number, refused, answered (phải từ chối mà trả lời), failed, error."""
     if answer is None:
-        return "error"
+        return "failed" if status in GENERATION_FAILED else "error"
     if question.refuse:
         return "correct" if answer["outcome"] == "refused" else "answered"
     if answer["outcome"] == "refused":
@@ -89,6 +94,7 @@ def summary(results: list[dict]) -> dict:
         "number_questions": sum(bool(r["numbers"]) for r in answerable),
         "refusal_correct": sum(r["verdict"] == "correct" for r in out_of_scope),
         "out_of_scope": len(out_of_scope),
+        "failed": sum(r["verdict"] == "failed" for r in results),
         "errors": sum(r["verdict"] == "error" for r in results),
         "refused_by": {
             stage: sum(r["refused_by"] == stage for r in answerable)
@@ -142,9 +148,19 @@ def markdown(run: dict) -> str:
         "| Câu có đáp án bị từ chối, theo bước | "
         + ", ".join(f"{k} {v}" for k, v in s["refused_by"].items())
         + " |",
-        f"| Lỗi (không có phản hồi 200) | {s['errors']} |",
+        f"| Bước sinh hỏng (502, 504), tính là sai | {s['failed']} |",
+        f"| Lỗi của lượt đo (không gọi được, 503, 401, 429) | {s['errors']} |",
         f"| Độ trễ, câu có gọi mô hình | {_latency(s['latency_model_s'])} |",
         f"| Độ trễ, mọi câu | {_latency(s['latency_all_s'])} |",
+        "",
+        "| Loại câu | Chấm |",
+        "|---|---|",
+        *(
+            f"| {kind} | "
+            + ", ".join(f"{v} {n}" for v, n in counts.items() if v != "total")
+            + f" (trên {counts['total']}) |"
+            for kind, counts in s["by_kind"].items()
+        ),
         "",
         "| Câu | Loại | Chấm | Đoạn trích | Giây | Lý do từ chối |",
         "|---|---|---|---|---|---|",

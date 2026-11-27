@@ -79,8 +79,8 @@ simulate: ## Chạy bộ giả lập thiết bị demo, gửi số đo mỗi 5 g
 ai-up: env ## Chạy Ollama (profile ai), tải mô hình ghim trong core/ollama/models.txt và kiểm digest; lần đầu cần mạng
 	@scripts/ai.sh
 
-# Đo trợ lý hỏi văn bản bằng bộ câu hỏi có đáp án của gói (docs/assistant-eval.md); mỗi câu tới mô hình mất hàng chục
-# giây, cả bộ chạy cỡ nửa giờ. ONLY=<mã,...> chạy một phần, kết quả ghi là không đủ bộ.
+# Đo trợ lý hỏi văn bản bằng bộ câu hỏi có đáp án của gói (docs/assistant-eval.md); câu tới mô hình chờ từng câu một.
+# ONLY=<mã,...> chạy một phần, kết quả ghi là không đủ bộ.
 assistant-eval: ## Đo trợ lý hỏi văn bản trên lõi đang chạy: make assistant-eval [APP=facilities-commune] [ONLY=<mã câu,...>] [OUT=<thư mục>]
 	@uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/assistant-eval.py \
 	  apps/$(or $(APP),facilities-commune)/tests/assistant-questions.yaml $(if $(ONLY),--only "$(ONLY)") $(if $(OUT),--out "$(OUT)")

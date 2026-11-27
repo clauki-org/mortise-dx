@@ -39,8 +39,7 @@ Script lấy token mới của `user.a` (client `mortise-test`) cho mỗi câu r
 `MORTISE_PUBLIC_URL` đọc từ biến môi trường, rồi tới `.env`.
 
 Kết quả ghi vào `docs/assistant-eval/<ngày>-<mô hình>.json` (mọi phản hồi) và `.md` (tóm tắt), `OUT=<thư mục>` để
-ghi chỗ khác. Lượt chọn một phần câu, hay có câu không nhận được phản hồi 200, mang đuôi `-partial` và lệnh trả mã
-lỗi. Tệp ghi kèm ngày giờ, commit của mã nguồn, mô hình theo phản hồi của trợ lý (với Ollama thêm digest ghim trong
+ghi chỗ khác. Lượt chọn một phần câu, hay có câu `error` (mục dưới), mang đuôi `-partial`. Tệp ghi kèm ngày giờ, commit của mã nguồn, mô hình theo phản hồi của trợ lý (với Ollama thêm digest ghim trong
 `core/ollama/models.txt`), loại CPU, số luồng, RAM và hệ điều hành của máy chạy lệnh, cùng ngưỡng điểm tìm, số đoạn,
 số token sinh và thời gian chờ trong `compose.yaml`. Máy chạy lệnh được ghi chứ không phải máy chạy lõi: hai máy là
 một khi đo qua `http://localhost:9080`. Lõi dựng từ commit khác thì cấu hình đang chạy có thể khác cấu hình ghi.
@@ -58,8 +57,11 @@ Mỗi câu nhận một trong các kết quả:
   không gọi mô hình), `model` (mô hình trả không trả lời được), `verify` (câu trả lời trượt bước kiểm câu trích hay
   kiểm số).
 - `answered`: câu phải từ chối lại được trả lời.
-- `error`: không có phản hồi 200 (cổng giới hạn tần suất, mô hình chưa bật, quá giờ). Không bao giờ tính là từ chối
-  đúng.
+- `failed`: bước sinh đã chạy mà hỏng, trợ lý trả 502 (hết số token sinh, JSON sai dạng, mô hình trả lỗi) hay 504
+  (quá giờ). Tính là sai với mọi loại câu, kể cả câu phải từ chối; thời gian của nó vào độ trễ của câu có gọi mô
+  hình. Lượt đo vẫn đủ bộ.
+- `error`: lỗi của lượt đo, không phải của câu hỏi: không gọi được cổng hay lấy token, 503 (mô hình chưa bật, đang
+  bận), 401, 429. Không bao giờ tính là đúng; lượt có câu `error` mang đuôi `-partial` và lệnh trả mã lỗi.
 
 Chỉ số: trích đúng trên số câu có đáp án; trong đó câu hỏi số; từ chối đúng trên số câu ngoài phạm vi; độ trễ đo ở
 phía lệnh đo, từ lúc gửi tới lúc nhận phản hồi, trung vị và p90 theo hạng gần nhất, tính riêng cho câu có gọi mô hình
