@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # 0054. Sửa dòng và thêm dòng con từ màn hình danh mục, so cột version để không ghi đè
 
-- Trạng thái: Đề xuất
+- Trạng thái: Chấp nhận
 - Ngày: 2026-11-27
 
 ## Bối cảnh
