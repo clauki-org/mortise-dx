@@ -179,7 +179,8 @@ export function FormPanel({ config, app }: { config: FormConfig; app: string }) 
   const role = formRole(config);
   const allowed = rolesOf(getToken()).includes(role);
   return (
-    <Stack maw={720}>
+    // Một cột hẹp (ADR 0050): mắt không phải đi ngang xa giữa nhãn, gợi ý và ô nhập.
+    <Stack maw={640}>
       <PageHeader title={config.title} description={config.description} />
       {allowed ? (
         <Paper withBorder radius="md" p="md">

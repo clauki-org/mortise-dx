@@ -8,14 +8,18 @@
 
 import { type DocumentsConfig, documentsProblems } from "./documents";
 import { formatDate, formatDateTime, formatNumber } from "./format";
+import { TONES, type Tone } from "./tones";
 
 export type Field = {
   /** Tên cột, hoặc <quan hệ>.<cột> để đọc qua quan hệ một-một; loại sau chỉ hiện ở màn hình chi tiết */
   name: string;
   label: string;
   type?: "text" | "number" | "date" | "datetime";
-  choices?: { value: string; label: string }[];
+  choices?: Choice[];
 };
+
+/** Một giá trị cố định của trường: giá trị lưu, chữ hiện ra, và nghĩa màu của nhãn nếu gói khai (ADR 0050). */
+export type Choice = { value: string; label: string; tone?: Tone };
 
 /** Một loại đối tượng: đọc bảng nào, có trường nào, danh sách hiện gì, và các loại đối tượng con lồng trong nó. */
 export type CatalogNode = {
@@ -99,6 +103,14 @@ function nodeProblems(config: CatalogNode): string[] {
   for (const name of config.list.filters ?? []) {
     if (fieldOf(config, name) && !fieldOf(config, name)?.choices) {
       problems.push(`list.filters dùng trường "${name}" không có choices`);
+    }
+  }
+  for (const field of config.fields) {
+    // Cấu hình đọc từ CSDL, không qua schema lúc chạy: nghĩa lạ thì nhãn không có màu nào mà người đọc vẫn tưởng có.
+    for (const choice of field.choices ?? []) {
+      if (choice.tone !== undefined && !(TONES as readonly string[]).includes(choice.tone)) {
+        problems.push(`trường "${field.name}" khai tone "${choice.tone}" ngoài ${TONES.join(", ")}`);
+      }
     }
   }
   for (const name of config.list.search ?? []) {
@@ -198,6 +210,12 @@ export function display(field: Field, value: unknown): string {
   if (field.type === "date") return formatDate(String(value));
   if (field.type === "datetime") return formatDateTime(String(value));
   return String(value);
+}
+
+/** Nghĩa màu của một giá trị khi gói khai tone cho lựa chọn đó; còn lại hiện chữ thường, không thành nhãn. */
+export function toneOf(field: Field, value: unknown): Tone | undefined {
+  if (value === null || value === undefined) return undefined;
+  return field.choices?.find((candidate) => candidate.value === String(value))?.tone;
 }
 
 /** Một giá trị mà nút sẽ gửi, kèm nhãn của trường để hộp xác nhận cho người bấm thấy trước. */

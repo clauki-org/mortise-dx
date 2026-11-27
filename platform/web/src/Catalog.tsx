@@ -44,6 +44,7 @@ export function Catalog({ config, basePath }: Props) {
           path={basePath}
           state={readState(params)}
           onChange={(state) => setParams(writeState(state))}
+          views
         />
       </Stack>
     );

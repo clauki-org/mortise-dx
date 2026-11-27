@@ -43,6 +43,8 @@ export function SourceChoice(props: WidgetProps) {
       <Select
         id={id}
         label={label}
+        // Dòng gợi ý của gói (help, ADR 0050): Mantine vẽ dưới nhãn và gắn vào ô bằng aria-describedby.
+        description={typeof options.description === "string" ? options.description : undefined}
         required={required}
         value={typeof value === "string" ? value : null}
         data={items}

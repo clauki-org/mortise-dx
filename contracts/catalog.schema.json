@@ -53,7 +53,11 @@
             "required": ["value", "label"],
             "properties": {
               "value": { "type": "string" },
-              "label": { "$ref": "#/$defs/text" }
+              "label": { "$ref": "#/$defs/text" },
+              "tone": {
+                "description": "Nghĩa màu khi giá trị này hiện thành nhãn trạng thái (ADR 0050): bad cần xử lý ngay, warn cần để ý, info đang diễn ra, ok đạt hay đang dùng tốt, neutral không mang mức nào. Có tone thì giá trị hiện thành nhãn màu kèm chữ ở danh sách, thẻ và màn hình chi tiết; bỏ trống thì hiện chữ thường.",
+                "enum": ["bad", "warn", "info", "ok", "neutral"]
+              }
             }
           }
         }

@@ -49,6 +49,7 @@ catalog.source-not-identifier.yaml	$.source	'app_example_items { no_such_column 
 catalog.unknown-field-type.yaml	$.fields[0].type	'no-such-type' is not one of ['text', 'number', 'date', 'datetime']
 catalog.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
 catalog.unknown-sort-direction.yaml	$.list.sort.direction	'no-such-direction' is not one of ['asc', 'desc']
+catalog.unknown-tone.yaml	$.fields[0].choices[0].tone	'green' is not one of ['bad', 'warn', 'info', 'ok', 'neutral']
 component.no-capabilities.yaml	$.capabilities	[] should be non-empty
 component.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
 device-message.reserved-name.json	$.measurements	'type' should not be valid under {'enum': ['id', 'type', 'scope', 'location', 'observationSpace', 'operationSpace', 'createdAt', 'modifiedAt', 'deletedAt', 'observedAt']}
@@ -88,6 +89,7 @@ dashboard.gauge-without-cards.yaml	$.panels[0]	'cards' is a required property
 dashboard.chart-max-zero.yaml	$.panels[0].chart.max	0 is less than or equal to the minimum of 0
 dashboard.primary-chart.yaml	$.panels[0]	'cards' is a required property
 form.authority-prefix.yaml	$.fields[0].name	'authority_level' should not be valid under {'anyOf': [{'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}, {'pattern': '^authority_'}]}
+form.blank-help.yaml	$.fields[0].help	'   ' does not match '\\\\S'
 form.choices-on-string.yaml	$.fields[0]	False schema does not allow [{'value': 'a', 'label': 'A'}]
 form.choice-without-options.yaml	$.fields[0]	{'name': 'kind', 'label': 'Loại', 'type': 'choice'} is not valid under any of the given schemas
 form.empty-choice-value.yaml	$.fields[0].choices[0].value	'' should be non-empty
