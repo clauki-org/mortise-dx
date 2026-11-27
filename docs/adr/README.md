@@ -80,6 +80,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0060](0060-config-overrides.md) | Ghi đè cấu hình theo org: bảng riêng, đích theo tên, trộn và kiểm lại trên trình duyệt | Chấp nhận |
 | [0065](0065-package-on-off.md) | Bật, tắt gói theo org: ẩn qua quyền đọc menu, dữ liệu giữ nguyên | Chấp nhận |
 | [0061](0061-block-composition.md) | Nguyên tắc ghép: trang gồm khối, kiểu trình bày, bài kiểm tổ hợp | Chấp nhận |
+| [0066](0066-catalog-kanban-and-calendar.md) | Kiểu Kanban và Lịch của danh mục, chuyển thẻ bằng lệnh sửa có so version | Chấp nhận |
 
 ## Quyết định còn mở
 
