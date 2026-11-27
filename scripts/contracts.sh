@@ -325,7 +325,7 @@ fi
 # Lỗi qua được schema thì do bộ kiểm của thành phần bắt; chúng cũng phải đọc từ thư mục --configs, nếu không cấu
 # hình đã trộn bị bỏ qua và bản gốc của gói qua thay nó.
 cp apps/supplies-commune/catalog/stores.yaml "$overlay/catalog/stores.yaml"
-sed -i.orig 's/{ name: code, label: Mã vật tư/{ name: no_such_column, label: Mã vật tư/' "$overlay/forms/item.yaml"
+sed -i.orig 's/{ name: code, label: Mã mặt hàng/{ name: no_such_column, label: Mã mặt hàng/' "$overlay/forms/item.yaml"
 result=$(scripts/contracts.sh package supplies-commune --configs "$overlay" 2>&1) && result="không bị từ chối"
 if [[ "$result" != *"$overlay/forms/item.yaml: vai trò 'tenant_admin' không được ghi cột 'no_such_column' của "* ]]; then
   echo "contracts.sh package --configs phải đưa biểu mẫu trong thư mục cấu hình qua check-form-config.py." \
