@@ -79,11 +79,15 @@ bốn cột, kéo một phiếu từ "Mới" sang "Đang làm". Cùng lúc ngư�
   viện.
 - Chuyển thẻ không qua quy trình, không ghi lý do; trường do quy trình đặt phải khai `locked` hay bỏ `move`, nếu không
   người có quyền update đổi được giá trị bằng tay. Hasura vẫn là nơi chặn cuối.
+- Bảng đọc thẻ và cột version bằng vai trò mặc định của token, như danh sách; `make check-fast` chỉ kiểm vai trò
+  `move.role` đọc được cột version. Hai vai trò khác nhau mà vai trò mặc định không đọc được cột đó thì lệnh chuyển
+  luôn bị báo trùng. Ở gói xã cả hai là `user`.
 - Kanban không phân trang; cột dài thì người xem tìm, lọc để thu hẹp. Lịch chỉ đọc, không có sự kiện nhiều ngày, tháng
   và tuần đang xem không nằm trên đường dẫn.
 - Bài kiểm tổ hợp (`blocks.test.tsx`) dựng cả hai kiểu cho mọi danh mục: danh mục có mục cấu hình phải vẽ Kanban, Lịch
   thật, danh mục không có phải về bảng.
 - **Chưa kiểm** khi ghi quyết định này: kéo thả và nút "Chuyển sang" trên trình duyệt thật, lần chuyển trùng, lịch
-  theo tuần (`e2e/catalog-views.spec.ts`), axe của hai kiểu (`e2e/visual.spec.ts`). Kiểm tự động đã chạy:
+  theo tuần, axe của hai kiểu khi có thẻ (`e2e/catalog-views.spec.ts`), ảnh hai kiểu ở cỡ laptop và điện thoại
+  (`e2e/visual.spec.ts`). Kiểm tự động đã chạy:
   `make check-fast` (schema, ví dụ sai, quyền của `move`, kiểu của khối) và `make web-check` (câu truy vấn, cột, khoảng
   ngày, nút theo vai trò, cột khóa, bài tổ hợp).

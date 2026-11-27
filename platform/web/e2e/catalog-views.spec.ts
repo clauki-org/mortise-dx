@@ -4,9 +4,11 @@
 // Kiểu Kanban và Lịch của danh mục (ADR 0066), qua danh mục cơ sở của gói cơ sở vật chất xã. Cán bộ phụ trách xã A
 // chuyển thẻ cơ sở thử sang "Dôi dư" chỉ bằng bàn phím (nút "Chuyển sang"), rồi kéo thả về "Đang sử dụng"; lần chuyển
 // sau khi người khác đã sửa cơ sở qua API bị báo, tình trạng trong CSDL không đổi. Lịch theo ngày tạo hiện cơ sở ở ô
-// hôm nay, theo tháng và theo tuần. Cán bộ xã B không thấy cơ sở. Axe của hai kiểu đo ở visual.spec.ts. Cần gói đã
-// cài (`make app-install APP=facilities-commune`); bài tự tạo và tự dọn cơ sở thử.
+// hôm nay, theo tháng và theo tuần. Cán bộ xã B không thấy cơ sở. Axe đo cả hai kiểu khi có thẻ thử trên trang (lỗi
+// WCAG 2.1 A, AA mức critical, serious làm bài hỏng, như visual.spec.ts). Cần gói đã cài
+// (`make app-install APP=facilities-commune`); bài tự tạo và tự dọn cơ sở thử.
 
+import AxeBuilder from "@axe-core/playwright";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { graphql, openMenuItem, signIn, subOf, uniqueTitle } from "./support.ts";
 
@@ -22,6 +24,14 @@ async function statusOf(request: APIRequestContext, username: string, id: string
     { id },
   );
   return data.rows[0]?.status;
+}
+
+/** Lỗi trợ năng chặn của trang đang mở, cùng mức với visual.spec.ts. */
+async function blocking(page: Page): Promise<string[]> {
+  const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+  return result.violations
+    .filter((violation) => violation.impact === "critical" || violation.impact === "serious")
+    .map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(", ")}`);
 }
 
 async function openView(page: Page, code: string, view: "Kanban" | "Lịch") {
@@ -64,6 +74,9 @@ test("cán bộ xã A chuyển thẻ bằng bàn phím và kéo thả, lần chu
     await expect(board.getByRole("heading", { name: "Đang sử dụng" })).toBeVisible();
     await expect(board.getByRole("heading", { name: "Dôi dư" })).toBeVisible();
     const status = page.getByRole("status").filter({ hasText: /chuyển/ });
+    const card = (column: string) => board.getByRole("list", { name: column }).getByRole("link", { name: code });
+    await expect(card("Đang sử dụng")).toBeVisible();
+    expect(await blocking(page), "lỗi trợ năng của Kanban").toEqual([]);
 
     // Bàn phím: Tab tới nút của thẻ, Enter mở danh sách cột, mũi tên và Enter chọn.
     const moveButton = page.getByRole("button", { name: `Chuyển sang: ${code}` });
@@ -73,12 +86,15 @@ test("cán bộ xã A chuyển thẻ bằng bàn phím và kéo thả, lần chu
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
     await expect(status).toHaveText(`Đã chuyển "${code}" sang "Dôi dư".`);
+    // Thẻ hiện ở cột mới là lúc bảng đã tải lại xong, với cột version mới.
+    await expect(card("Dôi dư")).toBeVisible();
     await expect.poll(() => statusOf(request, "user.a", id)).toBe("surplus");
 
     // Kéo thả về cột "Đang sử dụng".
-    const card = board.getByRole("listitem").filter({ has: page.getByRole("link", { name: code, exact: true }) });
-    await card.dragTo(board.getByRole("heading", { name: "Đang sử dụng" }));
+    const item = board.getByRole("listitem").filter({ has: page.getByRole("link", { name: code, exact: true }) });
+    await item.dragTo(board.getByRole("heading", { name: "Đang sử dụng" }));
     await expect(status).toHaveText(`Đã chuyển "${code}" sang "Đang sử dụng".`);
+    await expect(card("Đang sử dụng")).toBeVisible();
     await expect.poll(() => statusOf(request, "user.a", id)).toBe("in_use");
 
     // Người khác sửa cơ sở sau khi bảng đã tải: lần chuyển không khớp cột version, bị báo, tình trạng giữ nguyên.
@@ -91,6 +107,7 @@ test("cán bộ xã A chuyển thẻ bằng bàn phím và kéo thả, lần chu
     await moveButton.click();
     await page.getByRole("menuitem", { name: "Dôi dư" }).click();
     await expect(page.getByRole("status").filter({ hasText: CONFLICT })).toBeVisible();
+    await expect(card("Đang sử dụng")).toBeVisible();
     expect(await statusOf(request, "user.a", id)).toBe("in_use");
 
     // Lịch theo ngày tạo: cơ sở vừa tạo nằm ở ô hôm nay, theo tháng và theo tuần.
@@ -98,6 +115,7 @@ test("cán bộ xã A chuyển thẻ bằng bàn phím và kéo thả, lần chu
     await expect(page).toHaveURL(/view=calendar/);
     const today = page.locator('[aria-current="date"]');
     await expect(today.getByRole("link", { name: `${name} (đổi qua API)` })).toBeVisible();
+    expect(await blocking(page), "lỗi trợ năng của lịch theo tháng").toEqual([]);
     await page.getByRole("radiogroup", { name: "Lịch theo" }).getByText("Tuần", { exact: true }).click();
     await expect(today.getByRole("link", { name: `${name} (đổi qua API)` })).toBeVisible();
 

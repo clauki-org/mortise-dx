@@ -8,7 +8,7 @@
 // chuyển thẻ đi. CatalogTable.tsx giữ tìm, lọc, thứ tự và chọn kiểu; câu truy vấn ở catalogViews.ts.
 
 import { Anchor, Box, Button, Group, Menu, Paper, Stack, Text, Title } from "@mantine/core";
-import { type DragEvent, useMemo, useState } from "react";
+import { type DragEvent, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useClient, useQuery } from "urql";
 import { useBlock } from "./blockContext";
@@ -61,6 +61,8 @@ export function CatalogKanban({ config, kanban, columns, state, fixed, path, lab
   const { getToken } = useSession();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  // Chặn lần chuyển thứ hai ngay lập tức: trạng thái pending chỉ đổi ở lần vẽ sau, nên thả hai lần liền nhau vẫn lọt.
+  const sending = useRef(false);
   const [dragging, setDragging] = useState<Moving | null>(null);
   const role = kanban.move?.role ?? "user";
   // Nút chỉ là lối vào; token thiếu vai trò thì Hasura từ chối mọi lệnh gửi kèm vai trò đó.
@@ -70,7 +72,8 @@ export function CatalogKanban({ config, kanban, columns, state, fixed, path, lab
 
   const move = async ({ row, from }: Moving, to: BoardColumn) => {
     const version = kanban.move?.version;
-    if (!version || pending !== null || !moveTargets(board, from).includes(to)) return;
+    if (!version || sending.current || !moveTargets(board, from).includes(to)) return;
+    sending.current = true;
     const text = linkText(config, columns[0] ?? { name: key, label: key }, row).text;
     setPending(String(row[key]));
     const where = updateWhere(key, row[key], version, row[version]);
@@ -82,6 +85,7 @@ export function CatalogKanban({ config, kanban, columns, state, fixed, path, lab
       setNotice({ ok: false, text: `Chưa chuyển được "${text}": ${updateError(result.error, role, fields)}` });
     } else if (result.data?.result?.affected_rows !== 1) setNotice({ ok: false, text: MOVE_CONFLICT });
     else setNotice({ ok: true, text: `Đã chuyển "${text}" sang "${to.label}".` });
+    sending.current = false;
     setPending(null);
     reload({ requestPolicy: "network-only" });
   };
@@ -109,7 +113,8 @@ export function CatalogKanban({ config, kanban, columns, state, fixed, path, lab
   return (
     <Stack gap="sm">
       {/* Vùng báo luôn có trong trang để trình đọc màn hình đọc lời báo mới sau mỗi lần chuyển. */}
-      <Text role="status" size="sm" c={notice && !notice.ok ? "red.8" : undefined} fw={notice ? 600 : undefined}>
+      {/* Chữ thường, không màu riêng: lời báo tự nói được hay chưa được, và giữ tương phản như chữ của trang. */}
+      <Text role="status" size="sm" fw={notice ? 600 : undefined}>
         {notice?.text}
       </Text>
       <Box
@@ -191,7 +196,6 @@ function BoardLane({ column, rows, more, lane, onDrag, onMove }: LaneProps) {
       p="sm"
       miw={260}
       maw={320}
-      bg="var(--mantine-color-default-hover)"
       style={accepts ? { outline: "2px dashed var(--mantine-primary-color-filled)", outlineOffset: 2 } : undefined}
       onDragOver={over}
       onDrop={drop}
@@ -209,7 +213,8 @@ function BoardLane({ column, rows, more, lane, onDrag, onMove }: LaneProps) {
           Giá trị do quy trình đặt, không chuyển tay được.
         </Text>
       )}
-      <Stack component="ul" gap="xs" p={0} m={0} style={{ listStyle: "none" }}>
+      {/* Danh sách mang tên cột để trình đọc màn hình và e2e biết thẻ đang ở cột nào. */}
+      <Stack component="ul" aria-label={column.label} gap="xs" p={0} m={0} style={{ listStyle: "none" }}>
         {rows.map((row) => (
           <BoardCard
             key={String(row[keyOf(lane.config)])}

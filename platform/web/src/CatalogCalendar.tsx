@@ -105,10 +105,10 @@ export function CatalogCalendar({ config, calendar, state, fixed, path, label, o
         <Paper withBorder radius="md">
           <Loading />
         </Paper>
-      ) : rows.length === 0 ? (
-        <CalendarEmpty state={state} label={label} onClear={onClear} />
       ) : (
         <>
+          {/* Lưới vẫn vẽ khi khoảng này không có dòng: người xem thấy đang ở tháng nào và đi tiếp được. */}
+          {rows.length === 0 && <CalendarEmpty state={state} label={label} onClear={onClear} />}
           {mode === "month" ? (
             <MonthGrid
               days={days}
