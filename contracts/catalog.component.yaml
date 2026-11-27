@@ -74,6 +74,12 @@ capabilities:
     trên trang, nằm dưới các trường. Có attach thì khối chỉ đọc dòng của attach.source có attach.column bằng khóa của
     dòng đang xem; không có thì khối chạy như đứng riêng. Danh mục đặt làm khối như vậy cũng lọc danh sách của nó theo
     dòng đang xem. Liên kết của dòng dựng bằng liên kết chung tới chi tiết dòng (menu.ts).
+  - detail.text hiện một trường chữ dài (văn bản mẫu do view của gói dựng sẵn) thành khối riêng dưới phần chi tiết,
+    giữ nguyên xuống dòng, kèm nút tải về tệp .txt UTF-8 có BOM, tên <download>-<khóa>.txt; trường đó không hiện lại
+    trong lưới ô (ADR 0069).
+  - writes (ở mọi cấp) cho biểu mẫu sửa dòng và thêm dòng con ghi vào bảng gốc khi danh sách đọc một view đọc chéo
+    đơn vị dựng trên bảng đó; khóa của dòng cùng tên ở cả hai (ADR 0069).
+  - description của tệp hiện thành đoạn hướng dẫn dưới tiêu đề màn hình danh sách.
   - Nơi gọi đưa cấu hình, địa chỉ gốc, gói và mục; ngoài menu của gói (để tìm mục của detail.blocks), thành phần không
     cần bảng hay cấu hình nào khác của hệ thống.
 limits:

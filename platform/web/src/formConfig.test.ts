@@ -165,6 +165,10 @@ describe("danh sách chọn", () => {
     });
   });
 
+  it("cột order thay cho thứ tự theo nhãn", () => {
+    expect(sourceQuery({ ...items, order: "rank" }, "g1").variables.order_by).toEqual([{ rank: "asc" }]);
+  });
+
   it("giá trị thành chữ, bỏ dòng trống và trùng, cắt ở trần", () => {
     const rows = [{ id: 1, name: "A" }, { id: null, name: "B" }, { id: 1, name: "C" }, { id: 2 }];
     expect(sourceOptions(items, rows)).toEqual([
@@ -230,5 +234,17 @@ describe("lệnh thêm dòng", () => {
       ],
     };
     expect(insertError(check, "tenant_admin")).toMatch(/^Một giá trị không hợp lệ theo luật của bảng/);
+  });
+
+  it("trigger của gói báo lý do bằng mã check_violation: hiện nguyên lý do của gói", () => {
+    const trigger = {
+      graphQLErrors: [
+        {
+          message: "Check constraint violation. Đã hết thời hạn nhận.",
+          extensions: { code: "permission-error" },
+        },
+      ],
+    };
+    expect(insertError(trigger, "user")).toBe("Đã hết thời hạn nhận.");
   });
 });

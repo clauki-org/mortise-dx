@@ -83,7 +83,11 @@ export function Catalog({ config, basePath, app, item }: Props) {
     return (
       <Stack>
         {/* Nút xuất chỉ ở danh sách ngoài cùng; bảng đối tượng con trong màn hình chi tiết không xuất (ADR 0052). */}
-        <PageHeader title={config.title} action={<CatalogExport config={config} state={state} />} />
+        <PageHeader
+          title={config.title}
+          description={config.description}
+          action={<CatalogExport config={config} state={state} />}
+        />
         <CatalogTable
           config={config}
           label={config.title}

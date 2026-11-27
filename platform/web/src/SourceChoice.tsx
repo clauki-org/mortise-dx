@@ -18,7 +18,10 @@ export type FormContext = { values: Values; role: string };
 export function SourceChoice(props: WidgetProps) {
   const { id, value, required, disabled, readonly, label, rawErrors, onChange, onBlur, onFocus, options } = props;
   const source = options.source as Source;
-  const { values, role } = props.registry.formContext as FormContext;
+  const shared = props.registry.formContext as FormContext;
+  const { values } = shared;
+  // Danh sách chọn của bước quy trình mang vai trò riêng của nó (TaskScreen.tsx); biểu mẫu dùng vai trò của biểu mẫu.
+  const role = typeof options.role === "string" ? options.role : shared.role;
   const parent = source.where ? values[source.where.field] : undefined;
   // Trường cha chưa chọn thì chưa có gì để lọc; truy vấn không điều kiện sẽ trả mục của mọi trường cha.
   const waiting = source.where !== undefined && (parent === undefined || parent === "");
@@ -62,7 +65,9 @@ export function SourceChoice(props: WidgetProps) {
       />
       {!waiting && !fetching && !error && items.length === 0 && (
         <Text size="sm" c="dimmed">
-          Danh sách chưa có mục nào. Báo người quản trị thêm mục trước khi điền biểu mẫu này.
+          {typeof options.empty === "string"
+            ? options.empty
+            : "Danh sách chưa có mục nào. Báo người quản trị thêm mục trước khi điền biểu mẫu này."}
         </Text>
       )}
       {(data?.rows.length ?? 0) > limit && (

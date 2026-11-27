@@ -76,6 +76,19 @@ export type StepConfig = {
   ui?: Record<string, unknown>;
   actions: { id: string; label: string; variables: Record<string, unknown> }[];
   record?: { menu: string; variable: string };
+  /** Trường của biểu mẫu chọn từ một bảng của gói, chỉ các dòng của chính hồ sơ (cột case bằng mã hồ sơ) */
+  sources?: Record<string, StepSource>;
+};
+
+export type StepSource = {
+  table: string;
+  value: string;
+  label: string;
+  case: string;
+  role: string;
+  order?: string;
+  empty?: string;
+  limit?: number;
 };
 
 /**

@@ -13,7 +13,9 @@
 # nối, cột unique để kiểm trùng. Thiếu bước này, lỗi chỉ lộ ra khi người dùng bấm Gửi. Thành phần
 # kiểm lại luật tên lúc chạy. Gọi từ scripts/contracts.sh: --app <app.yaml>; mặc định đọc BPMN, khai báo
 # bước, quyền Hasura, mọi biểu mẫu trên menu và mọi biểu mẫu trong danh mục theo app.yaml, còn --bpmn,
-# --steps, --hasura, --form, --catalog thay từng phần để kiểm với tệp mẫu.
+# --steps, --hasura, --form, --catalog thay từng phần để kiểm với tệp mẫu. Danh sách chọn của bước quy
+# trình (sources trong workflows/*.yaml, ADR 0069) cũng đọc bảng của gói: trường phải có trong biểu mẫu
+# của bước, bảng và các cột value, label, case, order nằm trong quyền đọc của vai trò khai ở nguồn.
 
 import argparse
 import glob
@@ -183,6 +185,29 @@ def source_problems(field: dict, earlier: list[str], role: str, tables: dict) ->
     return errors
 
 
+def step_source_problems(declaration: dict, tables: dict) -> list[str]:
+    errors = []
+    for step, config in declaration.get("steps", {}).items():
+        fields = (config.get("form") or {}).get("properties", {})
+        for name, source in (config.get("sources") or {}).items():
+            at = f"quy trình '{declaration.get('process')}', bước '{step}', nguồn của '{name}'"
+            if name not in fields:
+                errors.append(f"{at}: biểu mẫu của bước không có trường này")
+            if source["table"] not in tables:
+                errors.append(f"{at}: đọc bảng '{source['table']}', không thuộc quyền Hasura của gói")
+                continue
+            allowed = permission(tables[source["table"]], "select_permissions", source["role"])
+            if allowed is None:
+                errors.append(f"{at}: vai trò '{source['role']}' không đọc được '{source['table']}'")
+                continue
+            columns = [source["value"], source["label"], source["case"]]
+            columns += [source["order"]] if "order" in source else []
+            for column in columns:
+                if allowed.get("columns") != "*" and column not in allowed.get("columns", []):
+                    errors.append(f"{at}: vai trò '{source['role']}' không đọc được cột '{column}'")
+    return errors
+
+
 def form_problems(form: dict, entry: dict | None, context: dict, key: str | None = None) -> list[str]:
     """Lỗi của một biểu mẫu. key là khóa của loại đối tượng khi biểu mẫu mở từ danh mục để sửa dòng."""
     names = [field["name"] for field in form["fields"]]
@@ -268,8 +293,10 @@ def catalog_problems(node: dict, context: dict, where: str = "") -> list[str]:
     edit = detail.get("edit")
     if edit:
         at, form = f"{where}nút '{edit['label']}'", edit["form"]
-        if form["submit"].get("update") != node["source"]:
-            errors.append(f"{at}: biểu mẫu phải sửa bảng '{node['source']}' (submit.update)")
+        # writes: bảng gốc khi danh sách đọc một view đọc chéo đơn vị dựng trên bảng đó (ADR 0069).
+        target = node.get("writes", node["source"])
+        if form["submit"].get("update") != target:
+            errors.append(f"{at}: biểu mẫu phải sửa bảng '{target}' (submit.update)")
         else:
             errors += [f"{at}: {e}" for e in form_problems(form, None, context, node.get("key", "id"))]
         if "menu" in form["done"]:
@@ -279,8 +306,9 @@ def catalog_problems(node: dict, context: dict, where: str = "") -> list[str]:
         if add:
             at, form = f"{inner}nút '{add['label']}'", add["form"]
             role = form.get("role", "user")
-            if form["submit"].get("insert") != child["source"]:
-                errors.append(f"{at}: biểu mẫu phải thêm dòng vào '{child['source']}' (submit.insert)")
+            target = child.get("writes", child["source"])
+            if form["submit"].get("insert") != target:
+                errors.append(f"{at}: biểu mẫu phải thêm dòng vào '{target}' (submit.insert)")
             else:
                 errors += [f"{at}: {e}" for e in form_problems(form, None, context)]
                 errors += [f"{at}: {e}" for e in via_problems(form, child["via"], role, context["tables"])]
@@ -329,6 +357,8 @@ def main() -> int:
             errors += [f"{path}: {error}" for error in form_problems(read_yaml(path), entry, context)]
         for path in catalogs:
             errors += [f"{path}: {error}" for error in catalog_problems(read_yaml(path), context)]
+        for declaration in context["steps"]:
+            errors += step_source_problems(declaration, context["tables"])
     except (ET.ParseError, OSError, ValueError, yaml.YAMLError) as error:
         errors = [f"không đọc được tệp: {error}"]
     for error in errors:

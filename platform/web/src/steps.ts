@@ -8,6 +8,7 @@
 import { useMemo } from "react";
 import { useQuery } from "urql";
 import { formatNumber } from "./format";
+import type { Source, Values } from "./formConfig";
 import type { StepConfig, Task } from "./workflow";
 
 const STEPS = "query { platform_workflow_steps { process step config } }";
@@ -70,4 +71,43 @@ export function detailRows(task: Task, step: StepConfig | undefined): [string, s
 }
 
 // Bảng điều hành đọc dateTime từ đây; đưa lại từ format.ts để mọi trang cùng một kiểu ngày giờ.
+/** Khóa giữ mã hồ sơ trong formContext: không là tên biến hợp lệ, nên không trùng trường nào của biểu mẫu. */
+export const CASE_FIELD = "@case";
+
+/**
+ * uiSchema của biểu mẫu bước kèm ô chọn cho các trường khai ở sources: SourceChoice lọc cột case theo mã hồ sơ đặt
+ * trong formContext (caseContext), đọc bằng vai trò của nguồn, xếp theo cột order. Khai báo đọc từ CSDL không được
+ * kiểm lại lúc chạy, nên trường không có trong biểu mẫu thì bỏ qua thay vì vẽ ô thừa.
+ */
+export function stepUi(step: StepConfig): Record<string, unknown> {
+  const ui: Record<string, unknown> = { ...(step.ui ?? {}) };
+  const properties = (step.form?.properties ?? {}) as Record<string, { description?: unknown }>;
+  for (const [name, source] of Object.entries(step.sources ?? {})) {
+    if (!(name in properties)) continue;
+    const query: Source = {
+      table: source.table,
+      value: source.value,
+      label: source.label,
+      where: { column: source.case, field: CASE_FIELD },
+      ...(source.order ? { order: source.order } : {}),
+      ...(source.limit ? { limit: source.limit } : {}),
+    };
+    const description = properties[name]?.description;
+    ui[name] = {
+      ...((ui[name] as object | undefined) ?? {}),
+      "ui:widget": "sourceChoice",
+      "ui:options": {
+        source: query,
+        role: source.role,
+        ...(source.empty ? { empty: source.empty } : {}),
+        ...(typeof description === "string" ? { description } : {}),
+      },
+    };
+  }
+  return ui;
+}
+
+/** Giá trị formContext cho SourceChoice: mã hồ sơ của việc ở khóa CASE_FIELD. */
+export const caseContext = (task: Task): Values => ({ [CASE_FIELD]: task.processInstanceId });
+
 export { dateTime } from "./format";

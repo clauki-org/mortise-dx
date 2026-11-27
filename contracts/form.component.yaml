@@ -13,6 +13,9 @@ capabilities:
   - Trường kiểu string (max_length, multiline), number và integer (min, max), boolean, date và choice; required đánh dấu trường bắt buộc, với boolean là bắt buộc đánh dấu.
   - Trường choice chọn từ danh sách cố định (choices) hoặc từ một bảng của gói qua GraphQL (source), xếp theo nhãn, đọc lại từ máy chủ mỗi lần mở.
   - Danh sách source lọc được theo giá trị của một trường đứng trước (source.where); trường đó còn trống thì ô bị khóa, đổi trường đó thì giá trị đã chọn bị xóa.
+  - Cùng ô chọn này vẽ trường khai ở sources của một bước quy trình (contracts/workflow.schema.json, màn hình xử lý
+    việc TaskScreen.tsx) và chỉ hiện dòng có cột case bằng mã hồ sơ của việc, đọc bằng vai trò của nguồn, xếp theo cột order,
+    danh sách trống thì hiện chữ empty của gói (ADR 0069).
   - Danh sách source dài hơn limit (mặc định 200, trần 500) thì chỉ hiện limit mục đầu và báo ra.
   - help của trường hiện thành một dòng gợi ý dưới nhãn, gắn vào ô nhập bằng aria-describedby, ở mọi kiểu trường (ADR 0050).
   - Các trường xếp một cột, rộng tối đa 640px.

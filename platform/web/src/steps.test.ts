@@ -5,7 +5,7 @@
 // lập điền, theo thứ tự khai, kể cả khi khai báo đọc từ CSDL sai dạng.
 
 import { describe, expect, it } from "vitest";
-import { detailRows } from "./steps";
+import { CASE_FIELD, caseContext, detailRows, stepUi } from "./steps";
 import type { StepConfig, Task } from "./workflow";
 
 const task = {
@@ -52,5 +52,38 @@ describe("details của bước", () => {
       { variable: "note", label: "Ghi chú lại" },
     ];
     expect(detailRows(task, step(declared))).toEqual([["note", "Ghi chú", "Gấp"]]);
+  });
+});
+
+describe("danh sách chọn của bước (sources)", () => {
+  const step: StepConfig = {
+    form: { type: "object", properties: { unit: { type: "string", description: "Bỏ trống nếu không có" } } },
+    ui: { unit: { "ui:placeholder": "x" } },
+    actions: [{ id: "send", label: "Gửi", variables: {} }],
+    sources: {
+      unit: { table: "app_x_rows", value: "code", label: "name", case: "case_id", order: "rank", role: "manager" },
+      missing: { table: "app_x_rows", value: "code", label: "name", case: "case_id", role: "manager" },
+    },
+  };
+
+  it("ô chọn lọc theo mã hồ sơ, xếp theo order, mang vai trò và gợi ý; trường không có trong biểu mẫu bị bỏ", () => {
+    expect(stepUi(step)).toEqual({
+      unit: {
+        "ui:placeholder": "x",
+        "ui:widget": "sourceChoice",
+        "ui:options": {
+          source: {
+            table: "app_x_rows",
+            value: "code",
+            label: "name",
+            where: { column: "case_id", field: CASE_FIELD },
+            order: "rank",
+          },
+          role: "manager",
+          description: "Bỏ trống nếu không có",
+        },
+      },
+    });
+    expect(caseContext(task)).toEqual({ [CASE_FIELD]: "p1" });
   });
 });
