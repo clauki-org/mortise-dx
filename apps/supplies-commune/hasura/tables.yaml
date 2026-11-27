@@ -3,9 +3,9 @@
 #
 # Bảng của gói mà Hasura đăng ký và quyền trên chúng; cùng định dạng và cùng cách kiểm như core/hasura/tables.yaml.
 # make app-install áp khi cài gói, bỏ đăng ký khi gỡ. Mọi quyền lọc theo tenant trong token:
-#   user, manager  chỉ đọc toàn xã (giao diện đọc bằng vai trò user)
+#   user, manager  chỉ đọc toàn đơn vị (giao diện đọc bằng vai trò user)
 #   tenant_admin   đọc, thêm, sửa, xóa; tenant_id gán từ token
-# Mã kho không nằm trong cột sửa được: vật tư trỏ về kho bằng mã, đổi mã sẽ bị khóa ngoại chặn.
+# Mã kho không nằm trong cột sửa được: mặt hàng trỏ về kho bằng mã, đổi mã sẽ bị khóa ngoại chặn.
 
 - table: { schema: app_supplies_commune, name: stores }
   select_permissions:
@@ -55,3 +55,99 @@
   delete_permissions:
     - role: tenant_admin
       permission: { filter: *tenant }
+
+# Phiếu nhập, phiếu xuất và dòng của chúng (ADR 0062): cùng cách chia quyền như kho. Mã phiếu không sửa được vì dòng
+# trỏ về phiếu bằng mã. Dòng không có quyền sửa: ghi sai thì xóa dòng rồi thêm lại, để mỗi thay đổi số lượng là một
+# lần thêm hay xóa trong nhật ký. CSDL từ chối dòng xuất làm tồn âm, kể cả khi lệnh đi thẳng qua GraphQL.
+- table: { schema: app_supplies_commune, name: receipts }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &receipt_columns [id, tenant_id, code, received_on, partner, note, created_at]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *receipt_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *receipt_columns, filter: *tenant }
+  insert_permissions:
+    - role: tenant_admin
+      permission: { columns: [code, received_on, partner, note], check: *tenant, set: *tenant_from_token }
+  update_permissions:
+    - role: tenant_admin
+      permission: { columns: [received_on, partner, note], filter: *tenant, check: *tenant }
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *tenant }
+
+- table: { schema: app_supplies_commune, name: receipt_lines }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &receipt_line_columns [id, tenant_id, receipt_code, store_code, item_code, quantity, created_at]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *receipt_line_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *receipt_line_columns, filter: *tenant }
+  insert_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [receipt_code, store_code, item_code, quantity]
+        check: *tenant
+        set: *tenant_from_token
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *tenant }
+
+- table: { schema: app_supplies_commune, name: issues }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &issue_columns [id, tenant_id, code, issued_on, partner, note, created_at]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *issue_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *issue_columns, filter: *tenant }
+  insert_permissions:
+    - role: tenant_admin
+      permission: { columns: [code, issued_on, partner, note], check: *tenant, set: *tenant_from_token }
+  update_permissions:
+    - role: tenant_admin
+      permission: { columns: [issued_on, partner, note], filter: *tenant, check: *tenant }
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *tenant }
+
+- table: { schema: app_supplies_commune, name: issue_lines }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &issue_line_columns [id, tenant_id, issue_code, store_code, item_code, quantity, created_at]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *issue_line_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *issue_line_columns, filter: *tenant }
+  insert_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [issue_code, store_code, item_code, quantity]
+        check: *tenant
+        set: *tenant_from_token
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *tenant }
+
+# Tồn kho tính trong CSDL (view stock): chỉ đọc; danh mục kho hiện thành bảng "Tồn kho" của từng kho.
+- table: { schema: app_supplies_commune, name: stock }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &stock_columns [id, tenant_id, store_code, item_code, name, unit, kind, opening, received, issued,
+                                 on_hand]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *stock_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *stock_columns, filter: *tenant }

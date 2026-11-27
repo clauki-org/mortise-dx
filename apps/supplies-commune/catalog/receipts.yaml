@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình thành phần danh mục cho phiếu nhập → dòng hàng (ADR 0062), theo contracts/catalog.schema.json;
+# app.yaml trỏ tới tệp này ở mục menu `receipts` và `make check-fast` kiểm. Phiếu lập bằng biểu mẫu
+# forms/receipt.yaml; dòng thêm từ màn hình chi tiết của phiếu, mã phiếu điền sẵn. Mỗi dòng ghi kho và mặt hàng:
+# biểu mẫu thêm dòng con chỉ điền sẵn được cột nối về phiếu, nên kho không đặt trên phiếu.
+
+title: Phiếu nhập
+source: app_supplies_commune_receipts
+key: code
+fields:
+  - { name: code, label: Số phiếu }
+  - { name: received_on, label: Ngày nhập, type: date }
+  - { name: partner, label: Nhận từ }
+  - { name: note, label: Ghi chú }
+  - { name: created_at, label: Ngày tạo, type: datetime }
+list:
+  columns: [code, received_on, partner]
+  search: [code, partner, note]
+  sort: { field: received_on, direction: desc }
+detail:
+  title: code
+  children:
+    - id: lines
+      label: Dòng hàng
+      via: receipt_code
+      source: app_supplies_commune_receipt_lines
+      fields:
+        - { name: store_code, label: Mã kho }
+        - { name: item_code, label: Mã mặt hàng }
+        - { name: quantity, label: Số lượng, type: number }
+        - { name: created_at, label: Ngày tạo, type: datetime }
+      list:
+        columns: [store_code, item_code, quantity]
+        search: [store_code, item_code]
+      add:
+        label: Thêm dòng
+        parent: code
+        form:
+          title: Thêm dòng vào phiếu nhập
+          role: tenant_admin
+          fields:
+            - name: store_code
+              label: Kho
+              type: choice
+              required: true
+              source: { table: app_supplies_commune_stores, value: code, label: name }
+            - name: item_code
+              label: Mặt hàng
+              type: choice
+              required: true
+              source:
+                table: app_supplies_commune_items
+                value: code
+                label: name
+                where: { column: store_code, field: store_code }
+            - { name: quantity, label: Số lượng, type: number, required: true, min: 0.01 }
+          submit: { label: Thêm, insert: app_supplies_commune_receipt_lines }
+          done: { message: Đã thêm dòng. }
+      detail:
+        title: item_code

@@ -84,6 +84,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   0020](docs/adr/0020-facility-locations.md)).
 - `make app-install` kiểm gói bằng đúng bộ kiểm của `make check-fast` (`scripts/contracts.sh package`) và dừng trước
   khi đụng CSDL nếu cấu hình sai; `make app-check APP=<gói>` chỉ kiểm.
+- Gói kho vật tư xã thành gói Kho dùng chung: phiếu nhập, phiếu xuất, tồn kho tính trong CSDL, CSDL chặn xuất quá tồn;
+  có dữ liệu demo cho doanh nghiệp ([ADR 0062](docs/adr/0062-shared-warehouse-package.md)).
 
 ### Removed
 

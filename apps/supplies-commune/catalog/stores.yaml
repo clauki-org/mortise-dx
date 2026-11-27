@@ -1,10 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Cấu hình thành phần danh mục cho kho → vật tư, theo contracts/catalog.schema.json; app.yaml trỏ tới tệp này ở mục
-# menu `stores` và `make check-fast` kiểm. Khóa của kho là mã vì vật tư nối về kho bằng cột store_code.
+# Cấu hình thành phần danh mục cho kho → tồn kho, mặt hàng, theo contracts/catalog.schema.json; app.yaml trỏ tới tệp
+# này ở mục menu `stores` và `make check-fast` kiểm. Khóa của kho là mã vì mặt hàng nối về kho bằng cột store_code.
+# Tồn kho đọc từ view stock do CSDL tính (ADR 0062), nên chỉ có danh sách, không có nút thêm.
 
-title: Kho vật tư
+title: Kho
 source: app_supplies_commune_stores
 key: code
 fields:
@@ -18,8 +19,25 @@ list:
 detail:
   title: name
   children:
+    - id: stock
+      label: Tồn kho
+      via: store_code
+      source: app_supplies_commune_stock
+      fields:
+        - { name: item_code, label: Mã }
+        - { name: name, label: Tên mặt hàng }
+        - { name: on_hand, label: Tồn, type: number }
+        - { name: unit, label: Đơn vị tính }
+        - { name: opening, label: Tồn đầu, type: number }
+        - { name: received, label: Đã nhập, type: number }
+        - { name: issued, label: Đã xuất, type: number }
+      list:
+        columns: [item_code, name, on_hand, unit, opening, received, issued]
+        search: [item_code, name]
+      detail:
+        title: name
     - id: items
-      label: Vật tư, thiết bị
+      label: Mặt hàng
       via: store_code
       source: app_supplies_commune_items
       fields:
@@ -30,14 +48,40 @@ detail:
         - name: kind
           label: Loại
           choices:
-            - { value: consumable, label: Vật tư tiêu hao, tone: neutral }
+            - { value: consumable, label: Hàng tiêu hao, tone: neutral }
             - { value: equipment, label: Thiết bị, tone: neutral }
-        - { name: quantity, label: Số lượng, type: number }
+        - { name: quantity, label: Tồn đầu, type: number }
         - { name: unit, label: Đơn vị tính }
         - { name: created_at, label: Ngày tạo, type: datetime }
       list:
         columns: [code, name, kind, quantity, unit]
         search: [code, name]
         filters: [kind]
+      # Mã kho điền sẵn từ kho đang xem (cột via), nên không đặt nhầm mặt hàng vào kho khác.
+      add:
+        label: Thêm mặt hàng
+        parent: name
+        form:
+          title: Thêm mặt hàng vào kho
+          role: tenant_admin
+          fields:
+            - { name: code, label: Mã mặt hàng, type: string, required: true, max_length: 50 }
+            - { name: name, label: Tên mặt hàng, type: string, required: true, max_length: 200 }
+            - { name: unit, label: Đơn vị tính, type: string, required: true, max_length: 30 }
+            - name: kind
+              label: Loại
+              type: choice
+              required: true
+              choices:
+                - { value: consumable, label: Hàng tiêu hao }
+                - { value: equipment, label: Thiết bị }
+            - name: quantity
+              label: Tồn đầu
+              type: number
+              required: true
+              min: 0
+              help: Số đang có lúc đưa mặt hàng vào sổ; về sau tồn thay đổi qua phiếu nhập, phiếu xuất.
+          submit: { label: Thêm, insert: app_supplies_commune_items }
+          done: { message: Đã thêm mặt hàng. }
       detail:
         title: name

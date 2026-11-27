@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình thành phần danh mục cho phiếu xuất → dòng hàng (ADR 0062), theo contracts/catalog.schema.json;
+# app.yaml trỏ tới tệp này ở mục menu `issues` và `make check-fast` kiểm. Phiếu lập bằng biểu mẫu
+# forms/issue.yaml; dòng thêm từ màn hình chi tiết của phiếu, mã phiếu điền sẵn. Mỗi dòng ghi kho và mặt hàng:
+# biểu mẫu thêm dòng con chỉ điền sẵn được cột nối về phiếu, nên kho không đặt trên phiếu.
+
+title: Phiếu xuất
+source: app_supplies_commune_issues
+key: code
+fields:
+  - { name: code, label: Số phiếu }
+  - { name: issued_on, label: Ngày xuất, type: date }
+  - { name: partner, label: Giao cho }
+  - { name: note, label: Ghi chú }
+  - { name: created_at, label: Ngày tạo, type: datetime }
+list:
+  columns: [code, issued_on, partner]
+  search: [code, partner, note]
+  sort: { field: issued_on, direction: desc }
+detail:
+  title: code
+  children:
+    - id: lines
+      label: Dòng hàng
+      via: issue_code
+      source: app_supplies_commune_issue_lines
+      fields:
+        - { name: store_code, label: Mã kho }
+        - { name: item_code, label: Mã mặt hàng }
+        - { name: quantity, label: Số lượng, type: number }
+        - { name: created_at, label: Ngày tạo, type: datetime }
+      list:
+        columns: [store_code, item_code, quantity]
+        search: [store_code, item_code]
+      add:
+        label: Thêm dòng
+        parent: code
+        form:
+          title: Thêm dòng vào phiếu xuất
+          role: tenant_admin
+          fields:
+            - name: store_code
+              label: Kho
+              type: choice
+              required: true
+              source: { table: app_supplies_commune_stores, value: code, label: name }
+            - name: item_code
+              label: Mặt hàng
+              type: choice
+              required: true
+              source:
+                table: app_supplies_commune_items
+                value: code
+                label: name
+                where: { column: store_code, field: store_code }
+            - name: quantity
+              label: Số lượng
+              type: number
+              required: true
+              min: 0.01
+              help: Không vượt số tồn của mặt hàng trong kho đã chọn, xem ở danh mục Kho.
+          submit: { label: Thêm, insert: app_supplies_commune_issue_lines }
+          done: { message: Đã thêm dòng. }
+      detail:
+        title: item_code

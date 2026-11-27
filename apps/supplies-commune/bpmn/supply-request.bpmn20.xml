@@ -3,13 +3,13 @@
 SPDX-FileCopyrightText: 2026 Mortise DX contributors
 SPDX-License-Identifier: Apache-2.0
 
-Đề nghị cấp vật tư từ kho của xã. Cán bộ lập đề nghị trên web bằng biểu mẫu forms/supply-request.yaml (hoặc gọi thẳng
+Đề nghị cấp vật tư từ kho của đơn vị. Cán bộ lập đề nghị trên web bằng biểu mẫu forms/supply-request.yaml (hoặc gọi thẳng
 API quy trình) với các biến title (tên đề nghị), storeCode, itemCode (vật tư trong kho nào), quantity và reason; người
-có vai trò manager trong cùng xã duyệt hoặc từ chối, người lập không tự duyệt được (category four-eyes, workflow-api
+có vai trò manager trong cùng đơn vị duyệt hoặc từ chối, người lập không tự duyệt được (category four-eyes, workflow-api
 chặn). Khai báo bước ở workflows/supply-request.yaml.
 
-Gói chỉ gồm tệp khai báo (ADR 0022) nên quy trình không có bước chạy mã: duyệt xong không tự trừ số lượng trong kho,
-quản trị xã cập nhật số lượng sau khi giao.
+Gói chỉ gồm tệp khai báo (ADR 0022) nên quy trình không có bước chạy mã: duyệt xong không tự lập phiếu xuất, quản
+trị lập phiếu xuất sau khi giao (ADR 0062).
 -->
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
              xmlns:flowable="http://flowable.org/bpmn"

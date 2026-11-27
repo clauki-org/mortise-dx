@@ -130,9 +130,10 @@ for path in app.get(sys.argv[2], []):
     fi
   done
   # Dữ liệu demo khai báo: chỉ gói không có bộ nạp riêng (seed/load.py) mới dùng định dạng chung, vì make seed-demo
-  # chạy bộ nạp riêng nếu có và bỏ qua demo.yaml của gói đó.
+  # chạy bộ nạp riêng nếu có và bỏ qua demo.yaml của gói đó. Mọi tệp seed/*.yaml đều kiểm, kể cả tệp cho tenant của
+  # một mẫu cài (ví dụ seed/dien-mat-troi.yaml), vì bộ nạp chung đọc chúng cùng định dạng.
   if [[ -f "${app}seed/demo.yaml" && ! -f "${app}seed/load.py" ]]; then
-    schema_check contracts/seed.schema.json "${app}seed/demo.yaml"
+    schema_check contracts/seed.schema.json "${app}"seed/*.yaml
   fi
   echo "ok -- gói ${app%/} qua mọi bước kiểm của gói"
 }
@@ -324,7 +325,7 @@ fi
 # Lỗi qua được schema thì do bộ kiểm của thành phần bắt; chúng cũng phải đọc từ thư mục --configs, nếu không cấu
 # hình đã trộn bị bỏ qua và bản gốc của gói qua thay nó.
 cp apps/supplies-commune/catalog/stores.yaml "$overlay/catalog/stores.yaml"
-sed -i.orig 's/{ name: code, label: Mã vật tư/{ name: no_such_column, label: Mã vật tư/' "$overlay/forms/item.yaml"
+sed -i.orig 's/{ name: code, label: Mã mặt hàng/{ name: no_such_column, label: Mã mặt hàng/' "$overlay/forms/item.yaml"
 result=$(scripts/contracts.sh package supplies-commune --configs "$overlay" 2>&1) && result="không bị từ chối"
 if [[ "$result" != *"$overlay/forms/item.yaml: vai trò 'tenant_admin' không được ghi cột 'no_such_column' của "* ]]; then
   echo "contracts.sh package --configs phải đưa biểu mẫu trong thư mục cấu hình qua check-form-config.py." \

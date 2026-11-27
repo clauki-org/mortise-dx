@@ -11,7 +11,7 @@ steps:
     title: title
     details:
       - { variable: storeCode, label: Mã kho }
-      - { variable: itemCode, label: Mã vật tư }
+      - { variable: itemCode, label: Mã mặt hàng }
       - { variable: quantity, label: Số lượng }
       - { variable: reason, label: Lý do }
     form:
