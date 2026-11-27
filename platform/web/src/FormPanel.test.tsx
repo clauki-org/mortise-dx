@@ -120,6 +120,8 @@ describe("FormPanel", () => {
       }
       const texts = described.split(" ").map((id) => new RegExp(`id="${id}"[^>]*>([^<]*)<`).exec(html)?.[1] ?? "");
       expect(texts, field.name).toContain(field.help);
+      // Gợi ý chỉ hiện một lần: ô nào cũng vẽ thêm một dòng riêng thì người đọc thấy hai lần.
+      expect(html.split(field.help).length - 1, field.name).toBe(1);
     }
   });
 });

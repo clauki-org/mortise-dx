@@ -84,7 +84,10 @@ export function RowsTable({ config, columns, rows, path, label, sort, onSort }: 
             const { key, text } = linkText(config, first, row);
             return (
               <Table.Tr key={key}>
-                <Table.Td style={keepTogether(text) ? { whiteSpace: "nowrap" } : undefined}>
+                <Table.Td
+                  ta={first.type === "number" ? "right" : undefined}
+                  style={keepTogether(text) ? { whiteSpace: "nowrap" } : undefined}
+                >
                   <Anchor component={Link} to={`${path}/${encodeURIComponent(key)}`} fw={600}>
                     {text}
                   </Anchor>
