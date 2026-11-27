@@ -60,7 +60,8 @@ thêm vào mẫu này bằng cách thêm dòng vào `packages` và `demo`.
 
 ## Hệ quả
 
-- Mỗi bản cài chạy đủ bộ dịch vụ của lõi với CSDL và volume riêng; RAM của hai bản chạy cùng lúc chưa được đo.
+- Mỗi bản cài chạy đủ bộ dịch vụ của lõi với CSDL và volume riêng. RAM đo ngày 2026-11-27 bằng `docker stats
+  --no-stream`, hai bản chạy cùng lúc, không bật profile `ai` hay `observability`: 2,5 GiB cho bản Tỉnh Mẫu (hai gói), 3,8 GiB cho bản công ty (một gói, vừa khởi động).
 - Bản cài thứ hai cũng có tài khoản và tenant demo của "Tỉnh Mẫu". Tách tài khoản kiểm thử của lõi khỏi tài khoản demo
   để bản cài của công ty chỉ có tenant của mình là việc sau.
 - Hai checkout dùng chung tên image tự dựng (`mortise.invalid/<dịch vụ>:dev`), và `up` không dựng lại image đã có. Hai

@@ -174,8 +174,10 @@ make smoke
 
 Biến đặt trước `make env` chỉ có tác dụng khi `.env` chưa có; sau đó sửa thẳng trong `.env`. `MORTISE_PORT` phải trùng
 cổng trong `MORTISE_PUBLIC_URL`. `make install` dừng khi dự án compose cùng tên đang chạy từ thư mục khác. Hai checkout
-ở hai commit khác nhau thì đặt `MORTISE_VERSION` khác nhau (ví dụ `dev-dmt`) để mỗi bản dựng image riêng. RAM của hai
-bản cài chạy cùng lúc chưa được đo.
+ở hai commit khác nhau thì đặt `MORTISE_VERSION` khác nhau (ví dụ `dev-dmt`) để mỗi bản dựng image riêng. RAM đo ngày
+2026-11-27 bằng tổng cột bộ nhớ của `docker stats --no-stream` theo từng dự án, hai bản chạy cùng lúc, không bật
+profile `ai` hay `observability`: bản `mortise` (Tỉnh Mẫu, hai gói) 2,5 GiB, bản `dmt` (một gói, vừa khởi động) 3,8
+GiB; bản vừa dựng chưa ổn định bộ đệm nên số của nó còn đổi.
 
 ## Kiến trúc
 

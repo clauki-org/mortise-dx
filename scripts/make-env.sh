@@ -24,7 +24,9 @@ value_for() {
 
 if [[ ! -f .env ]]; then
   while IFS= read -r line; do
-    if [[ "$line" =~ ^([A-Z_]+)=(.*)$ ]]; then
+    # Tên biến có chữ số (S3_PORT, S3_ACCESS_KEY): mẫu thiếu chữ số thì dòng bị chép nguyên, không nhận giá trị từ môi
+    # trường và bí mật giữ nguyên `change-me`; scripts/check-make-env.sh kiểm.
+    if [[ "$line" =~ ^([A-Z][A-Z0-9_]*)=(.*)$ ]]; then
       printf '%s=%s\n' "${BASH_REMATCH[1]}" "$(value_for "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}")"
     else
       printf '%s\n' "$line"
@@ -37,7 +39,7 @@ fi
 
 added=0
 while IFS= read -r line; do
-  if [[ "$line" =~ ^([A-Z_]+)=(.*)$ ]] && ! grep -q "^${BASH_REMATCH[1]}=" .env; then
+  if [[ "$line" =~ ^([A-Z][A-Z0-9_]*)=(.*)$ ]] && ! grep -q "^${BASH_REMATCH[1]}=" .env; then
     printf '%s=%s\n' "${BASH_REMATCH[1]}" "$(value_for "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}")" >> .env
     echo "Đã thêm ${BASH_REMATCH[1]} vào .env"
     added=1

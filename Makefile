@@ -196,6 +196,7 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	uvx ruff==0.17.6 check --no-cache --config core/workflow-api/pyproject.toml scripts apps
 	uvx ruff==0.17.6 format --no-cache --check --config core/workflow-api/pyproject.toml scripts apps
 	@scripts/contracts.sh check
+	@scripts/check-make-env.sh
 	uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py lint
 	uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/assistant-eval.py --check apps/*/tests/assistant-questions.yaml
 	$(if $(DECLARATIVE_APPS),@scripts/check-declarative.sh $(DECLARATIVE_APPS))
