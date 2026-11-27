@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Mortise DX contributors
+SPDX-License-Identifier: Apache-2.0
+
+Sửa chữa điểm lắp đặt có sản lượng thấp. Không ai lập hồ sơ này bằng tay: iot-bridge mở khi công suất phát của một
+thiết bị thấp hơn ngưỡng đủ lâu theo luật rules/low-output.yaml (ADR 0018), với các biến title, device, measurement,
+value, threshold, observedAt. Người có vai trò manager của công ty (người điều phối) nhận việc, lập phiếu sửa chữa
+trong danh mục nếu cần và ghi kết quả. Hồ sơ chưa gắn ảnh hay vật tư: đó là việc của phiếu công việc. Khai báo bước ở
+workflows/site-repair.yaml.
+-->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="https://mortise-dx/apps/field-ops">
+  <process id="site-repair" name="Sửa chữa điểm lắp đặt" isExecutable="true">
+    <startEvent id="opened"/>
+    <sequenceFlow id="toRepair" sourceRef="opened" targetRef="repair"/>
+
+    <!-- Hạn 1 ngày: mỗi ngày sản lượng thấp là điện khách hàng không nhận được. -->
+    <userTask id="repair" name="Xử lý sản lượng thấp" flowable:candidateGroups="manager" flowable:dueDate="P1D">
+      <extensionElements>
+        <flowable:formProperty id="finding"/>
+        <flowable:formProperty id="handled"/>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="toDone" sourceRef="repair" targetRef="handled"/>
+
+    <endEvent id="handled" name="Đã xử lý"/>
+  </process>
+</definitions>

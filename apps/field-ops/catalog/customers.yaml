@@ -1,0 +1,76 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình thành phần danh mục cho khách hàng → điểm lắp đặt, theo contracts/catalog.schema.json; app.yaml trỏ tới tệp
+# này ở mục menu `customers` và `make check-fast` kiểm. Khóa là mã khách hàng vì điểm nối về khách hàng bằng cột
+# customer_code. Quản trị thêm khách hàng bằng biểu mẫu forms/customer.yaml, thêm điểm của khách hàng đang xem bằng nút
+# "Thêm điểm lắp đặt" (ADR 0054); thiết bị và phiếu của điểm xem ở mục menu "Điểm lắp đặt".
+
+title: Khách hàng
+source: app_field_ops_customers
+key: code
+fields:
+  - { name: code, label: Mã khách hàng }
+  - { name: name, label: Tên khách hàng }
+  - { name: phone, label: Điện thoại }
+  - { name: address, label: Địa chỉ }
+  - { name: created_at, label: Ngày tạo, type: datetime }
+list:
+  columns: [code, name, phone, address]
+  search: [code, name, phone, address]
+detail:
+  title: name
+  edit:
+    label: Sửa
+    form:
+      title: Sửa khách hàng
+      role: tenant_admin
+      fields:
+        - { name: name, label: Tên khách hàng, type: string, required: true, max_length: 200 }
+        - { name: phone, label: Điện thoại, type: string, max_length: 30 }
+        - { name: address, label: Địa chỉ, type: string, max_length: 500 }
+      submit: { label: Lưu, update: app_field_ops_customers, version: updated_at }
+      done: { message: Đã lưu khách hàng. }
+  children:
+    - id: sites
+      label: Điểm lắp đặt
+      via: customer_code
+      source: app_field_ops_sites
+      fields:
+        - { name: code, label: Mã điểm }
+        - { name: name, label: Tên điểm }
+        - { name: address, label: Địa chỉ }
+        - { name: capacity_kwp, label: Công suất lắp đặt (kWp), type: number }
+        - name: status
+          label: Giai đoạn
+          choices:
+            - { value: survey, label: Khảo sát, tone: info }
+            - { value: installing, label: Đang lắp đặt, tone: info }
+            - { value: operating, label: Đang vận hành, tone: ok }
+            - { value: needs_repair, label: Cần sửa chữa, tone: bad }
+      list:
+        columns: [code, name, status, capacity_kwp]
+        search: [code, name, address]
+        filters: [status]
+      add:
+        label: Thêm điểm lắp đặt
+        parent: name
+        form:
+          title: Thêm điểm lắp đặt cho khách hàng
+          role: tenant_admin
+          fields:
+            - { name: code, label: Mã điểm, type: string, required: true, max_length: 50 }
+            - { name: name, label: Tên điểm, type: string, required: true, max_length: 200 }
+            - { name: address, label: Địa chỉ, type: string, max_length: 500 }
+            - { name: capacity_kwp, label: Công suất lắp đặt (kWp), type: number, min: 0.01, max: 99999999.99 }
+            - name: latitude
+              label: Vĩ độ
+              type: number
+              min: -90
+              max: 90
+              help: Nhập cả vĩ độ và kinh độ, hoặc để trống cả hai.
+            - { name: longitude, label: Kinh độ, type: number, min: -180, max: 180 }
+          submit: { label: Thêm, insert: app_field_ops_sites }
+          done: { message: Đã thêm điểm lắp đặt; điểm mới ở giai đoạn khảo sát. }
+      detail:
+        title: name

@@ -1,0 +1,171 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bảng của gói mà Hasura đăng ký và quyền trên chúng; cùng định dạng và cùng cách kiểm như core/hasura/tables.yaml.
+# make app-install áp khi cài gói, bỏ đăng ký khi gỡ. Mọi quyền lọc theo tenant trong token:
+#   user, manager  đọc toàn đơn vị; mọi nhân viên (user) lập, sửa phiếu công việc và đính kèm ảnh, biên bản
+#   tenant_admin   thêm, sửa, xóa khách hàng, điểm lắp đặt, thiết bị; xóa phiếu
+# Mã và cột nối về bảng cha bằng mã không sửa được: dòng con trỏ về bằng mã, và dữ liệu demo nhận ra dòng đã nạp
+# bằng mã. updated_at do CSDL đặt (platform.row_version_attach), không nằm trong cột ghi được của vai trò nào.
+
+- table: { schema: app_field_ops, name: customers }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &customer_columns [id, tenant_id, code, name, phone, address, created_at, updated_at]
+        filter: &tenant { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+    - role: manager
+      permission: { columns: *customer_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *customer_columns, filter: *tenant }
+  insert_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [code, name, phone, address]
+        check: *tenant
+        set: &tenant_from_token { tenant_id: X-Hasura-Tenant-Id }
+  update_permissions:
+    - role: tenant_admin
+      permission: { columns: [name, phone, address], filter: *tenant, check: *tenant }
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *tenant }
+
+# Quan hệ customer cho bản đồ và màn hình chi tiết hiện tên khách hàng thay vì mã.
+- table: { schema: app_field_ops, name: sites }
+  object_relationships:
+    - name: customer
+      using:
+        manual_configuration:
+          remote_table: { schema: app_field_ops, name: customers }
+          column_mapping: { tenant_id: tenant_id, customer_code: code }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &site_columns [id, tenant_id, customer_code, code, name, address, latitude, longitude, capacity_kwp,
+                                status, created_at, updated_at]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *site_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *site_columns, filter: *tenant }
+  insert_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [customer_code, code, name, address, latitude, longitude, capacity_kwp, status]
+        check: *tenant
+        set: *tenant_from_token
+  update_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [name, address, latitude, longitude, capacity_kwp, status]
+        filter: *tenant
+        check: *tenant
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *tenant }
+
+- table: { schema: app_field_ops, name: devices }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &device_columns [id, tenant_id, site_code, code, kind, model, device_name, created_at, updated_at]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *device_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *device_columns, filter: *tenant }
+  insert_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [site_code, code, kind, model, device_name]
+        check: *tenant
+        set: *tenant_from_token
+  update_permissions:
+    - role: tenant_admin
+      permission: { columns: [kind, model, device_name], filter: *tenant, check: *tenant }
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *tenant }
+
+# Phiếu công việc: nhân viên hiện trường lập và cập nhật phiếu từ điện thoại, nên vai trò user ghi được; điểm của phiếu
+# chọn lúc lập, không đổi về sau. Nhật ký ghi ai đổi trạng thái, người thực hiện hay hạn (ADR 0009).
+- table: { schema: app_field_ops, name: work_orders }
+  object_relationships:
+    - name: site
+      using:
+        manual_configuration:
+          remote_table: { schema: app_field_ops, name: sites }
+          column_mapping: { tenant_id: tenant_id, site_code: code }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &work_order_columns [id, tenant_id, code, site_code, kind, title, assignee, due_on, status, note,
+                                      created_at, updated_at]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *work_order_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *work_order_columns, filter: *tenant }
+  insert_permissions:
+    - role: user
+      permission:
+        columns: &work_order_input [code, site_code, kind, title, assignee, due_on, status, note]
+        check: *tenant
+        set: *tenant_from_token
+    - role: tenant_admin
+      permission: { columns: *work_order_input, check: *tenant, set: *tenant_from_token }
+  update_permissions:
+    - role: user
+      permission:
+        columns: &work_order_edit [title, assignee, due_on, status, note]
+        filter: *tenant
+        check: *tenant
+    - role: tenant_admin
+      permission: { columns: *work_order_edit, filter: *tenant, check: *tenant }
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *tenant }
+
+# Ảnh, biên bản đính kèm phiếu (ADR 0041). Không ai xóa được dòng nối: tệp đã gắn vào phiếu là chứng cứ của việc đã làm.
+- table: { schema: app_field_ops, name: work_order_documents }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &document_columns [id, tenant_id, work_order_id, file_id, note, created_by, created_at]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *document_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *document_columns, filter: *tenant }
+  insert_permissions:
+    - role: user
+      permission:
+        columns: &document_input [work_order_id, file_id, note]
+        check: *tenant
+        set: &document_from_token { tenant_id: X-Hasura-Tenant-Id, created_by: X-Hasura-User-Id }
+    - role: tenant_admin
+      permission: { columns: *document_input, check: *tenant, set: *document_from_token }
+
+# Số phiếu cho bảng điều hành (view, chỉ đọc).
+- table: { schema: app_field_ops, name: work_order_summary }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &summary_columns [tenant_id, open_count, overdue_count, done_count]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *summary_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *summary_columns, filter: *tenant }
+
+- table: { schema: app_field_ops, name: work_orders_by_kind }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &by_kind_columns [tenant_id, kind, open_count, overdue_count]
+        filter: *tenant
+    - role: manager
+      permission: { columns: *by_kind_columns, filter: *tenant }
+    - role: tenant_admin
+      permission: { columns: *by_kind_columns, filter: *tenant }

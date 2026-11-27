@@ -1,0 +1,178 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình thành phần danh mục cho điểm lắp đặt → thiết bị, phiếu công việc, theo contracts/catalog.schema.json;
+# app.yaml trỏ tới tệp này ở mục menu `sites` và `make check-fast` kiểm. Khóa là mã điểm vì thiết bị và phiếu nối về
+# điểm bằng cột site_code. Điểm mới thêm từ chi tiết khách hàng (catalog/customers.yaml); quản trị sửa điểm ở đây,
+# nhân viên lập phiếu cho điểm đang xem bằng nút "Lập phiếu", mã điểm điền sẵn (ADR 0054).
+
+title: Điểm lắp đặt
+source: app_field_ops_sites
+key: code
+fields:
+  - { name: code, label: Mã điểm }
+  - { name: name, label: Tên điểm }
+  - { name: customer_code, label: Mã khách hàng }
+  - { name: customer.name, label: Khách hàng }
+  - { name: address, label: Địa chỉ }
+  - { name: capacity_kwp, label: Công suất lắp đặt (kWp), type: number }
+  # Cần sửa chữa là mức phải xử lý; đang vận hành là bình thường; hai giai đoạn trước vận hành là đang diễn ra.
+  - name: status
+    label: Giai đoạn
+    choices:
+      - { value: survey, label: Khảo sát, tone: info }
+      - { value: installing, label: Đang lắp đặt, tone: info }
+      - { value: operating, label: Đang vận hành, tone: ok }
+      - { value: needs_repair, label: Cần sửa chữa, tone: bad }
+  # Tọa độ khai kiểu text như gói xã: kiểu number làm tròn còn ba chữ số thập phân.
+  - { name: latitude, label: Vĩ độ }
+  - { name: longitude, label: Kinh độ }
+  - { name: created_at, label: Ngày tạo, type: datetime }
+list:
+  columns: [code, name, customer_code, status, capacity_kwp]
+  search: [code, name, address]
+  filters: [status]
+detail:
+  title: name
+  edit:
+    label: Sửa
+    form:
+      title: Sửa điểm lắp đặt
+      role: tenant_admin
+      fields:
+        - { name: name, label: Tên điểm, type: string, required: true, max_length: 200 }
+        - { name: address, label: Địa chỉ, type: string, max_length: 500 }
+        - { name: capacity_kwp, label: Công suất lắp đặt (kWp), type: number, min: 0.01, max: 99999999.99 }
+        - name: status
+          label: Giai đoạn
+          type: choice
+          required: true
+          choices:
+            - { value: survey, label: Khảo sát }
+            - { value: installing, label: Đang lắp đặt }
+            - { value: operating, label: Đang vận hành }
+            - { value: needs_repair, label: Cần sửa chữa }
+        # Bảng buộc tọa độ có đủ cả hai hoặc trống cả hai (sites_location_pair).
+        - name: latitude
+          label: Vĩ độ
+          type: number
+          min: -90
+          max: 90
+          help: Nhập cả vĩ độ và kinh độ, hoặc để trống cả hai.
+        - { name: longitude, label: Kinh độ, type: number, min: -180, max: 180 }
+      submit: { label: Lưu, update: app_field_ops_sites, version: updated_at }
+      done: { message: Đã lưu điểm lắp đặt. }
+  children:
+    - id: devices
+      label: Thiết bị
+      via: site_code
+      source: app_field_ops_devices
+      fields:
+        - { name: code, label: Mã }
+        - name: kind
+          label: Loại
+          choices:
+            - { value: meter, label: Công tơ, tone: neutral }
+            - { value: inverter, label: Bộ biến tần, tone: neutral }
+            - { value: panel, label: Dãy tấm pin, tone: neutral }
+        - { name: model, label: Mẫu thiết bị }
+        - { name: device_name, label: Tên trên mạng thiết bị }
+        - { name: created_at, label: Ngày tạo, type: datetime }
+      list:
+        columns: [code, kind, model, device_name]
+        search: [code, model, device_name]
+        filters: [kind]
+      add:
+        label: Thêm thiết bị
+        parent: name
+        form:
+          title: Thêm thiết bị tại điểm
+          role: tenant_admin
+          fields:
+            - { name: code, label: Mã thiết bị, type: string, required: true, max_length: 50 }
+            - name: kind
+              label: Loại
+              type: choice
+              required: true
+              choices:
+                - { value: meter, label: Công tơ }
+                - { value: inverter, label: Bộ biến tần }
+                - { value: panel, label: Dãy tấm pin }
+            - { name: model, label: Mẫu thiết bị, type: string, max_length: 200 }
+            - name: device_name
+              label: Tên trên mạng thiết bị
+              type: string
+              max_length: 64
+              help: Tên thiết bị dùng khi gửi số đo, chữ thường, số và gạch nối; để trống nếu thiết bị không gửi số đo.
+          submit: { label: Thêm, insert: app_field_ops_devices }
+          done: { message: Đã thêm thiết bị. }
+      detail:
+        title: code
+    - id: work-orders
+      label: Phiếu công việc
+      via: site_code
+      source: app_field_ops_work_orders
+      fields:
+        - { name: code, label: Số phiếu }
+        - { name: title, label: Việc cần làm }
+        - name: kind
+          label: Loại việc
+          choices:
+            - { value: survey, label: Khảo sát, tone: neutral }
+            - { value: install, label: Lắp đặt, tone: neutral }
+            - { value: acceptance, label: Nghiệm thu, tone: neutral }
+            - { value: repair, label: Sửa chữa, tone: neutral }
+        - name: status
+          label: Trạng thái
+          choices:
+            - { value: open, label: Mới lập, tone: warn }
+            - { value: in_progress, label: Đang làm, tone: info }
+            - { value: done, label: Đã xong, tone: ok }
+            - { value: cancelled, label: Đã hủy, tone: neutral }
+        - { name: assignee, label: Người thực hiện }
+        - { name: due_on, label: Hạn, type: date }
+        - { name: note, label: Ghi chú }
+      list:
+        columns: [code, title, kind, status, assignee, due_on]
+        search: [code, title, assignee]
+        filters: [kind, status]
+        sort: { field: due_on, direction: asc }
+      add:
+        label: Lập phiếu
+        parent: name
+        form:
+          title: Lập phiếu công việc cho điểm
+          role: user
+          fields:
+            - { name: code, label: Số phiếu, type: string, required: true, max_length: 50 }
+            - name: kind
+              label: Loại việc
+              type: choice
+              required: true
+              choices:
+                - { value: survey, label: Khảo sát }
+                - { value: install, label: Lắp đặt }
+                - { value: acceptance, label: Nghiệm thu }
+                - { value: repair, label: Sửa chữa }
+            - { name: title, label: Việc cần làm, type: string, required: true, max_length: 200 }
+            - { name: assignee, label: Người thực hiện, type: string, max_length: 200 }
+            - { name: due_on, label: Hạn, type: date }
+            - { name: note, label: Ghi chú, type: string, multiline: true, max_length: 2000 }
+          submit: { label: Lập phiếu, insert: app_field_ops_work_orders }
+          done: { message: Đã lập phiếu; mở phiếu ở bảng bên dưới để cập nhật và đính kèm ảnh. }
+      # Phiếu mở từ đây có cùng giấy tờ đính kèm như ở mục menu "Phiếu công việc", để nhân viên đang xem điểm không
+      # phải tìm lại phiếu.
+      detail:
+        title: title
+        documents:
+          title: Ảnh và biên bản
+          source: app_field_ops_work_order_documents
+          via: work_order_id
+          file: file_id
+          fields:
+            - { name: note, label: Ghi chú }
+            - { name: created_at, label: Ngày đính kèm, type: datetime }
+          sort: { field: created_at, direction: desc }
+          upload:
+            label: Đính kèm ảnh, biên bản
+            note: note

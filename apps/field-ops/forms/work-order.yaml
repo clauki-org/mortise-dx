@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Biểu mẫu lập phiếu công việc theo contracts/form.schema.json; app.yaml trỏ tới tệp này ở mục menu `work-order` và
+# `make check-fast` kiểm. Gửi thì thêm một dòng vào bảng work_orders bằng vai trò user; trạng thái mặc định "Mới lập"
+# do CSDL đặt. Cùng việc với nút "Lập phiếu" trong chi tiết điểm lắp đặt, nhưng chọn điểm từ danh sách.
+
+title: Lập phiếu công việc
+description: Chọn điểm lắp đặt và loại việc. Phiếu mới hiện ở mục Phiếu công việc để cập nhật và đính kèm ảnh.
+fields:
+  - name: site_code
+    label: Điểm lắp đặt
+    type: choice
+    required: true
+    source: { table: app_field_ops_sites, value: code, label: name }
+  - { name: code, label: Số phiếu, type: string, required: true, max_length: 50 }
+  - name: kind
+    label: Loại việc
+    type: choice
+    required: true
+    choices:
+      - { value: survey, label: Khảo sát }
+      - { value: install, label: Lắp đặt }
+      - { value: acceptance, label: Nghiệm thu }
+      - { value: repair, label: Sửa chữa }
+  - { name: title, label: Việc cần làm, type: string, required: true, max_length: 200 }
+  - { name: assignee, label: Người thực hiện, type: string, max_length: 200 }
+  - { name: due_on, label: Hạn, type: date }
+  - { name: note, label: Ghi chú, type: string, multiline: true, max_length: 2000 }
+submit:
+  label: Lập phiếu
+  insert: app_field_ops_work_orders
+done:
+  message: Đã lập phiếu công việc.
+  menu: work-orders

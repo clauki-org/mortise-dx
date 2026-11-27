@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Dữ liệu demo HƯ CẤU của "Công ty Điện mặt trời Mẫu" (doanh nghiệp hư cấu) cho gói vận hành hiện trường, theo
+# contracts/seed.schema.json: tên khách hàng, địa chỉ, vị trí, công suất và phiếu đặt ra để minh họa. Vị trí nằm trong
+# vùng nền bản đồ ghim (platform/web/basemap.pins) nhưng không được chọn theo công trình có thật nào. Tenant `dmt` và
+# tài khoản `admin.dmt` do mẫu cài `dien-mat-troi` tạo (#244); tệp này không mang tên demo.yaml nên không nằm trong
+# `make seed-demo` của bản cài chính quyền. Tên thiết bị khớp devices/simulator/dien-mat-troi.yaml. Chạy lại không tạo
+# bản trùng.
+
+dmt:
+  account: admin.dmt
+  tables:
+    - table: customers
+      key: [code]
+      rows:
+        - { code: KH-01, name: Công ty May Mẫu, phone: "0200 000 001", address: Cụm công nghiệp hư cấu số 1 }
+        - { code: KH-02, name: Trường Tiểu học Mẫu, phone: "0200 000 002", address: "Thôn Mẫu, xã hư cấu" }
+        - { code: KH-03, name: Hộ gia đình Mẫu, address: "Xóm Mẫu, xã hư cấu" }
+    - table: sites
+      key: [code]
+      rows:
+        - { code: D01, customer_code: KH-01, name: Nhà xưởng Mẫu số 1, address: Mái nhà xưởng A,
+            latitude: 20.462, longitude: 106.388, capacity_kwp: 50, status: operating }
+        - { code: D02, customer_code: KH-02, name: Trường học Mẫu, address: Mái dãy phòng học,
+            latitude: 20.448, longitude: 106.421, capacity_kwp: 15, status: operating }
+        - { code: D03, customer_code: KH-03, name: Hộ gia đình Mẫu, address: Mái nhà ở,
+            latitude: 20.431, longitude: 106.444, capacity_kwp: 5, status: needs_repair }
+        - { code: D04, customer_code: KH-01, name: Nhà xưởng Mẫu số 2, address: Mái nhà xưởng B,
+            latitude: 20.416, longitude: 106.393, status: survey }
+    - table: devices
+      key: [site_code, code]
+      rows:
+        - { site_code: D01, code: CT-01, kind: meter, model: Công tơ hai chiều mẫu, device_name: meter-d01 }
+        - { site_code: D01, code: BT-01, kind: inverter, model: Bộ biến tần mẫu 50 kW }
+        - { site_code: D02, code: CT-01, kind: meter, model: Công tơ hai chiều mẫu, device_name: meter-d02 }
+        - { site_code: D03, code: CT-01, kind: meter, model: Công tơ hai chiều mẫu, device_name: meter-d03 }
+        - { site_code: D03, code: TP-01, kind: panel, model: Dãy tấm pin mẫu }
+    - table: work_orders
+      key: [code]
+      rows:
+        - { code: PCV-001, site_code: D04, kind: survey, title: Khảo sát mái nhà xưởng B, assignee: Kỹ thuật viên A,
+            due_on: "2026-12-10", status: open }
+        - { code: PCV-002, site_code: D02, kind: acceptance, title: Nghiệm thu với nhà trường,
+            assignee: Kỹ thuật viên B, due_on: "2026-11-25", status: done }
+        - { code: PCV-003, site_code: D03, kind: repair, title: Kiểm tra dãy tấm pin, assignee: Kỹ thuật viên A,
+            due_on: "2026-11-20", status: in_progress, note: Khách hàng báo sản lượng giảm }
+        - { code: PCV-004, site_code: D01, kind: install, title: Lắp thêm công tơ dự phòng, due_on: "2026-12-20",
+            status: open }

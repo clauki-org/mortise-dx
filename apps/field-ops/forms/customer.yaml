@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Biểu mẫu thêm khách hàng theo contracts/form.schema.json; app.yaml trỏ tới tệp này ở mục menu `customer` và
+# `make check-fast` kiểm. Chỉ quản trị (tenant_admin) thêm được, theo quyền ở hasura/tables.yaml.
+
+title: Thêm khách hàng
+description: Điểm lắp đặt của khách hàng thêm sau, từ màn hình chi tiết khách hàng.
+role: tenant_admin
+fields:
+  - { name: code, label: Mã khách hàng, type: string, required: true, max_length: 50 }
+  - { name: name, label: Tên khách hàng, type: string, required: true, max_length: 200 }
+  - { name: phone, label: Điện thoại, type: string, max_length: 30 }
+  - { name: address, label: Địa chỉ, type: string, max_length: 500 }
+submit:
+  label: Thêm
+  insert: app_field_ops_customers
+done:
+  message: Đã thêm khách hàng.
+  menu: customers

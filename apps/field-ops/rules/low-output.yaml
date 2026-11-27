@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Luật ngưỡng theo contracts/threshold-rule.schema.json: công suất phát của một công tơ tại điểm lắp đặt thấp hơn ngưỡng
+# liên tục thì mở hồ sơ sửa chữa cho công ty có thiết bị (ADR 0018). Ngưỡng 1 kW và 10 phút là số minh họa cho demo,
+# không lấy từ quy định hay số liệu vận hành nào. Luật không biết ngày đêm: ban đêm công suất thật về 0, nên bản cài
+# có thiết bị thật phải đổi luật trước khi dùng. Luật chỉ xét số đo có tới; thiết bị mất kết nối, không gửi số đo nào,
+# không mở hồ sơ.
+
+id: low-output
+title: Sản lượng thấp
+entityType: Device
+measurement: power
+below: 1
+holdSeconds: 600
+process: site-repair

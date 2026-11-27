@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình thành phần danh mục cho phiếu công việc, theo contracts/catalog.schema.json; app.yaml trỏ tới tệp này ở mục
+# menu `work-orders` và `make check-fast` kiểm. Phiếu lập bằng biểu mẫu forms/work-order.yaml hay nút "Lập phiếu" trong
+# chi tiết điểm lắp đặt. Nhân viên mở phiếu trên điện thoại, đổi trạng thái bằng nút "Cập nhật" (ADR 0054; updated_at do
+# platform.row_version_attach đặt, ADR 0067), đính kèm ảnh, biên bản (ADR 0041), rồi bấm "Đề nghị nghiệm thu" để người
+# điều phối xác nhận theo quy tắc bốn mắt (bpmn/work-acceptance.bpmn20.xml, ADR 0026).
+
+title: Phiếu công việc
+source: app_field_ops_work_orders
+fields:
+  - { name: code, label: Số phiếu }
+  - { name: title, label: Việc cần làm }
+  - { name: site_code, label: Mã điểm }
+  - { name: site.name, label: Điểm lắp đặt }
+  - name: kind
+    label: Loại việc
+    choices:
+      - { value: survey, label: Khảo sát, tone: neutral }
+      - { value: install, label: Lắp đặt, tone: neutral }
+      - { value: acceptance, label: Nghiệm thu, tone: neutral }
+      - { value: repair, label: Sửa chữa, tone: neutral }
+  - name: status
+    label: Trạng thái
+    choices:
+      - { value: open, label: Mới lập, tone: warn }
+      - { value: in_progress, label: Đang làm, tone: info }
+      - { value: done, label: Đã xong, tone: ok }
+      - { value: cancelled, label: Đã hủy, tone: neutral }
+  - { name: assignee, label: Người thực hiện }
+  - { name: due_on, label: Hạn, type: date }
+  - { name: note, label: Ghi chú }
+  - { name: created_at, label: Ngày lập, type: datetime }
+list:
+  columns: [code, title, site_code, kind, status, assignee, due_on]
+  search: [code, title, site_code, assignee]
+  filters: [kind, status]
+  sort: { field: due_on, direction: asc }
+detail:
+  title: title
+  # Biến theo workflows/work-acceptance.yaml: title hiện trên bảng việc của người điều phối, các mã để họ mở lại phiếu.
+  actions:
+    - id: acceptance
+      label: Đề nghị nghiệm thu
+      process: work-acceptance
+      variables:
+        title: title
+        workOrderId: id
+        workOrderCode: code
+        siteCode: site_code
+  edit:
+    label: Cập nhật
+    form:
+      title: Cập nhật phiếu công việc
+      role: user
+      fields:
+        - { name: title, label: Việc cần làm, type: string, required: true, max_length: 200 }
+        - name: status
+          label: Trạng thái
+          type: choice
+          required: true
+          choices:
+            - { value: open, label: Mới lập }
+            - { value: in_progress, label: Đang làm }
+            - { value: done, label: Đã xong }
+            - { value: cancelled, label: Đã hủy }
+        - { name: assignee, label: Người thực hiện, type: string, max_length: 200 }
+        - { name: due_on, label: Hạn, type: date }
+        - { name: note, label: Ghi chú, type: string, multiline: true, max_length: 2000 }
+      submit: { label: Lưu, update: app_field_ops_work_orders, version: updated_at }
+      done: { message: Đã lưu phiếu công việc. }
+  documents:
+    title: Ảnh và biên bản
+    source: app_field_ops_work_order_documents
+    via: work_order_id
+    file: file_id
+    fields:
+      - { name: note, label: Ghi chú }
+      - { name: created_at, label: Ngày đính kèm, type: datetime }
+    sort: { field: created_at, direction: desc }
+    upload:
+      label: Đính kèm ảnh, biên bản
+      note: note
