@@ -13,7 +13,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { Client, type Exchange, Provider } from "urql";
 import { describe, expect, it } from "vitest";
-import { filter, fromValue, map, pipe } from "wonka";
+import { filter, map, pipe } from "wonka";
 import { CatalogCalendar } from "./CatalogCalendar";
 import { CatalogKanban } from "./CatalogKanban";
 import type { CatalogConfig } from "./catalog";
