@@ -52,6 +52,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   0048](docs/adr/0048-bento-tokens-status-tones-font.md)).
 - Bảng điều hành xếp lưới bốn cột theo thứ tự khai; khối chính có vòng đo phần trăm do gói tính, thẻ số có màu và chữ
   mức độ theo ngưỡng của gói, biểu đồ có trần ([ADR 0049](docs/adr/0049-bento-dashboard.md)).
+- Trang chủ sau khi đăng nhập: một ô lối tắt cho mỗi gói và việc đang chờ dạng liên kết; menu có "Trang chủ" đầu nhóm
+  "Chung" ([ADR 0051](docs/adr/0051-home-page.md)).
 
 ### Removed
 
