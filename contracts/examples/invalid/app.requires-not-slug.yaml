@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: `requires` ghi tên hiển thị thay vì mã gói (ADR 0065).
+# Nếu lọt, bộ cài không tìm thấy gói nào mang tên đó và từ chối cài với lời báo khó hiểu.
+
+id: example
+name: Example package
+version: 0.1.0
+requires:
+  - Example Base
+database:
+  schema: app_example
+  migrations: schema/migrations

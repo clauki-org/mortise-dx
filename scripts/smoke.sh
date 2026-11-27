@@ -640,6 +640,12 @@ check "Ghi đè cấu hình: $(grep -c 'NOTICE:  PASS' <<<"$result" || true) ca 
 [[ "$status" == qua ]] || grep -m1 -E 'FAIL|ERROR' <<<"$result" || true
 scripts/config-overrides-smoke.sh || fail=1
 
+# Bật, tắt gói (ADR 0065): ở mức CSDL (tệp chạy trong giao dịch rồi ROLLBACK), rồi quyền và menu qua cổng.
+result=$(sql -f - <platform/schema/tests/app_states.sql 2>&1 >/dev/null) && status=qua || status=lỗi
+check "Bật, tắt gói: $(grep -c 'NOTICE:  PASS' <<<"$result" || true) ca kiểm ở CSDL" "$status" qua
+[[ "$status" == qua ]] || grep -m1 -E 'FAIL|ERROR' <<<"$result" || true
+scripts/app-states-smoke.sh || fail=1
+
 # Quét mã độc (clamav): tệp thử EICAR bị từ chối và không để lại gì trong CSDL hay kho tệp. Chuỗi EICAR ghép
 # từ hai nửa lúc chạy để chính tệp này không bị phần mềm diệt virus trên máy người phát triển nhận là nhiễm.
 stored() {

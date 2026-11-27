@@ -44,6 +44,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   từ chối khóa lạ, sai kiểu, thiếu trường bắt buộc ([ADR 0059](docs/adr/0059-custom-fields.md)).
 - Quản trị org đổi nhãn, ẩn hiện, thứ tự cột, trường, khối và ngưỡng thẻ số cho cả org; cài lại gói vẫn giữ, xóa phần
   chỉnh là về mặc định ([ADR 0060](docs/adr/0060-config-overrides.md)).
+- Trang "Ứng dụng" cho quản trị org: bật, tắt từng gói cho cả org bằng một nút; tắt thì menu, trang chủ và khối của
+  gói ẩn ở mọi đơn vị, dữ liệu giữ nguyên; gói đang được gói khác cần thì không tắt được ([ADR
+  0065](docs/adr/0065-package-on-off.md)).
 
 ### Changed
 
