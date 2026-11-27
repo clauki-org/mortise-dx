@@ -93,7 +93,7 @@ function CaseList({ config, basePath }: { config: CasesConfig; basePath: string 
                       {item.ended === null ? (
                         caseStatus(item)
                       ) : (
-                        <StatusBadge tone={item.outcome === null ? "neutral" : "done"}>{caseStatus(item)}</StatusBadge>
+                        <StatusBadge tone={item.outcome === null ? "neutral" : "ok"}>{caseStatus(item)}</StatusBadge>
                       )}
                     </Table.Td>
                     <Table.Td>

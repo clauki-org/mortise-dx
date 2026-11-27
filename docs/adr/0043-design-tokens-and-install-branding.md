@@ -15,7 +15,7 @@ thành phần tự đặt viền, bo góc, khoảng đệm cho thẻ và bảng.
 trên và tiêu đề tab, nên đơn vị cài đặt không hiện được tên, logo, màu của mình.
 
 Tương phản tính theo công thức độ chói tương đối của WCAG 2 trên bảng màu mặc định của Mantine 9.8.0 (cùng công thức
-với `platform/web/src/theme.test.ts`, tính ngày 2026-11-27):
+với `platform/web/src/theme.test.tsx`, tính ngày 2026-11-27):
 
 | Cặp màu | Tỷ lệ | AA (4,5:1) |
 |---|---|---|
@@ -43,9 +43,12 @@ Các cách giữ màu chính đạt AA đã xét:
 
 - Một thang cỡ chữ (`xs`–`xl`, tiêu đề `h1`–`h4`), một thang khoảng cách theo bội 4px, một thang bo góc, một thang
   bóng; thành phần chỉ chọn bậc trong thang, không đặt số riêng.
-- Phông của hệ điều hành (`system-ui` và các phông hệ thống theo nền tảng), không tải phông web.
+- Phông của hệ điều hành (`system-ui` và các phông hệ thống theo nền tảng), không tải phông web. Được sửa theo
+  [ADR 0048](0048-bento-tokens-status-tones-font.md): Be Vietnam Pro đóng gói cùng giao diện, phông hệ điều hành là dự phòng.
 - Kiểu mặc định chung: `Card` có viền, bo góc `md`, đệm `lg`, bóng `xs`; `Paper` có viền, bo góc `md`; `Table`
-  khoảng cách dòng `sm`, cột `md`. Khung trong hộp thoại của Mantine cũng có viền.
+  khoảng cách dòng `sm`, cột `md`. Khung trong hộp thoại của Mantine cũng có viền. Được sửa theo [ADR 0048](0048-bento-tokens-status-tones-font.md): `Card` không
+  bóng, bậc `md` là 12px, bậc `sm` 6px là bo góc mặc định; nền trang `gray.0`, viền ô nhập `gray.6`, liên kết luôn gạch
+  chân.
 - `primaryShade` là 8 cho mọi màu. Chữ phụ (`--mantine-color-dimmed`) và chữ gợi ý trong ô nhập (`--mantine-color-placeholder`) là `gray.7`.
 - Chữ của biến thể light (Alert, Badge light, nút light, subtle, mục menu đang chọn) là sắc 9 làm đậm thêm 30% cho
   mọi bảng màu: sắc 9 trên nền sắc 1 chỉ khoảng 2,7:1 với `yellow`, 3,6:1 với `orange`, 3,8:1 với `green`, và trên

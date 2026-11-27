@@ -23,14 +23,15 @@ import {
 import { formatDateTime } from "./format";
 import { PageHeader } from "./PageHeader";
 import { ErrorNotice, Loading } from "./States";
-import { StatusBadge, type Tone } from "./StatusBadge";
+import { StatusBadge } from "./StatusBadge";
 import { useSession } from "./session";
 import { useSteps } from "./steps";
 import { DueBadge } from "./TaskList";
+import type { Tone } from "./tones";
 
 const STATUS: Record<CaseStep["status"], { text: string; tone: Tone }> = {
-  open: { text: "Đang chờ", tone: "active" },
-  done: { text: "Đã xong", tone: "done" },
+  open: { text: "Đang chờ", tone: "info" },
+  done: { text: "Đã xong", tone: "ok" },
   cancelled: { text: "Dừng, không ai hoàn thành", tone: "neutral" },
 };
 
@@ -76,9 +77,9 @@ function Body({ found, back }: { found: CaseDetail; back: ReactNode }) {
         title={caseTitle(found, declared) ?? `Hồ sơ ${found.id.slice(0, 8)}`}
         meta={
           found.ended === null ? (
-            <StatusBadge tone="active">Đang xử lý</StatusBadge>
+            <StatusBadge tone="info">Đang xử lý</StatusBadge>
           ) : (
-            <StatusBadge tone={found.outcome === null ? "neutral" : "done"}>Đã kết thúc</StatusBadge>
+            <StatusBadge tone={found.outcome === null ? "neutral" : "ok"}>Đã kết thúc</StatusBadge>
           )
         }
       />
@@ -106,7 +107,7 @@ function Body({ found, back }: { found: CaseDetail; back: ReactNode }) {
           ))}
           {found.ended !== null && (
             <Timeline.Item title={found.outcomeName ?? "Đã dừng"}>
-              <StatusBadge tone={found.outcome === null ? "neutral" : "done"}>
+              <StatusBadge tone={found.outcome === null ? "neutral" : "ok"}>
                 Kết thúc {formatDateTime(found.ended)}
               </StatusBadge>
             </Timeline.Item>
