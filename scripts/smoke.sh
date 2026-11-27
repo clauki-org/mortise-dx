@@ -628,6 +628,12 @@ check "Xóa lén một dòng ở giữa: lệnh kiểm chỉ ra chỗ đứt" "$
 status=$(scripts/audit-verify.sh >/dev/null 2>&1 && echo khớp || echo lệch)
 check "Sau các lần thử, nhật ký vẫn nguyên vẹn" "$status" khớp
 
+# Trường tùy chỉnh ở mức CSDL (ADR 0059): tenant gốc, định nghĩa, trigger kiểm `custom` trên một bảng thử; tệp chạy
+# trong giao dịch rồi ROLLBACK nên không để lại gì. In dòng FAIL của ca đầu tiên sai.
+result=$(sql -f - <platform/schema/tests/custom_fields.sql 2>&1 >/dev/null) && status=qua || status=lỗi
+check "Trường tùy chỉnh: $(grep -c 'NOTICE:  PASS' <<<"$result" || true) ca kiểm ở CSDL" "$status" qua
+[[ "$status" == qua ]] || grep -m1 -E 'FAIL|ERROR' <<<"$result" || true
+
 # Quét mã độc (clamav): tệp thử EICAR bị từ chối và không để lại gì trong CSDL hay kho tệp. Chuỗi EICAR ghép
 # từ hai nửa lúc chạy để chính tệp này không bị phần mềm diệt virus trên máy người phát triển nhận là nhiễm.
 stored() {

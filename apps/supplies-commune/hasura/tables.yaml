@@ -34,7 +34,7 @@
   select_permissions:
     - role: user
       permission:
-        columns: &item_columns [id, tenant_id, store_code, code, name, unit, kind, quantity, created_at]
+        columns: &item_columns [id, tenant_id, store_code, code, name, unit, kind, quantity, created_at, custom]
         filter: *tenant
     - role: manager
       permission: { columns: *item_columns, filter: *tenant }
@@ -43,7 +43,7 @@
   insert_permissions:
     - role: tenant_admin
       permission:
-        columns: [store_code, code, name, unit, kind, quantity]
+        columns: [store_code, code, name, unit, kind, quantity, custom]
         check: *tenant
         set: *tenant_from_token
   # Mã vật tư và mã kho của vật tư không sửa được: CSDL không chặn, nhưng cặp (store_code, code) là khóa mà
@@ -51,7 +51,7 @@
   # chữ. Đổi mã hay chuyển kho thì make seed-demo nạp thêm bản trùng, đề nghị đang mở trỏ vào vật tư không còn.
   update_permissions:
     - role: tenant_admin
-      permission: { columns: [name, unit, kind, quantity], filter: *tenant, check: *tenant }
+      permission: { columns: [name, unit, kind, quantity, custom], filter: *tenant, check: *tenant }
   delete_permissions:
     - role: tenant_admin
       permission: { filter: *tenant }

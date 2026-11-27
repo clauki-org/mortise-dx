@@ -40,6 +40,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Hồ sơ của quy trình khai niêm phong được băm khi kết thúc; `/instances/{id}`, `/cases/{id}` trả mã băm và thời điểm,
   `make seal-verify` báo hồ sơ bị sửa lén; lõi ghi hạn của bước chờ hẹn giờ ([ADR
   0053](docs/adr/0053-case-seals-and-timer-deadlines.md)).
+- Trường tùy chỉnh (phần CSDL và API): quản trị org định nghĩa trường chữ, số, ngày, lựa chọn cho bảng của gói; CSDL
+  từ chối khóa lạ, sai kiểu, thiếu trường bắt buộc ([ADR 0059](docs/adr/0059-custom-fields.md)).
 
 ### Changed
 
