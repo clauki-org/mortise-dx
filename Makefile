@@ -11,13 +11,8 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-<<<<<<< HEAD
-  check-fast deps-check web-check overrides-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-check app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up assistant-eval basemap \
+  check-fast deps-check web-check overrides-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-check app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up assistant-eval basemap install \
   obs-up obs-down obs-check tenant-login
-=======
-  check-fast deps-check web-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up basemap \
-  obs-up obs-down obs-check tenant-login install
->>>>>>> 98f50ca (feat(ops): run two installs on one machine with install presets)
 
 help: ## Liệt kê các lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-15s %s\n", $$1, $$2}'
