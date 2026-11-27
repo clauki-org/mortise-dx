@@ -139,7 +139,7 @@ line() { # TOKEN BẢNG(receipt|issue) PHIẾU SỐ_LƯỢNG [VAI_TRÒ]: thêm m
 }
 stock='query($code: String!) { app_supplies_commune_stock(where: {item_code: {_eq: $code}}) { on_hand } }'
 on_hand() { # TOKEN [VAI_TRÒ]
-  gql "$1" "$stock" "{\"code\":\"$code\"}" "${2:-user}" | jq -c '[.data.app_supplies_commune_stock[].on_hand | tonumber]'
+  gql "$1" "$stock" "{\"code\":\"$code\"}" "${2:-user}" | jq -c '[.data.app_supplies_commune_stock[].on_hand | tonumber + 0]'
 }
 check "admin.a nhập 5 vào kho" "$(errors "$(line "$admin_a" receipt "$code" 5)")" false
 check "user.a không thêm được dòng xuất (chỉ đọc)" "$(errors "$(line "$user_a" issue "$code" 1 user)")" true
@@ -266,7 +266,7 @@ demo='{ app_supplies_commune_stores(where: {code: {_like: "KHO-%"}}) { code }
 counts() {
   gql "$1" "$demo" |
     jq -r '.data | "\(.app_supplies_commune_stores | length)/\(.app_supplies_commune_items | length)" +
-      (.app_supplies_commune_stock | map("/" + (.on_hand | tonumber | tostring)) | join(""))'
+      (.app_supplies_commune_stock | map("/" + (.on_hand | tonumber + 0 | tostring)) | join(""))'
 }
 if [[ "$(counts "$user_a")" != "0/0" ]]; then
   check "Dữ liệu demo xã A: 2 kho, 4 mặt hàng, tồn giấy A4 ở KHO-A1 là 45" "$(counts "$user_a")" "2/4/45"
