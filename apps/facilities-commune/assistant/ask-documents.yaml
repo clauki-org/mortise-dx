@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cấu hình trợ lý hỏi văn bản của gói theo contracts/assistant.schema.json (ADR 0021): mục menu `ask-documents`
+# trong app.yaml. Hai văn bản ở knowledge/ phải hỏi cùng nhau: NĐ 369 sửa và bổ sung NĐ 155, các đoạn của NĐ 155 đã
+# bị sửa hay bãi bỏ khai `superseded_by` nên trợ lý chỉ trích phần đang có hiệu lực.
+
+intro: >-
+  Hỏi về rà soát trụ sở theo tiêu chuẩn, định mức: Điều 3 NĐ 155/2025 và Điều 3a, 3b do NĐ 369/2026 bổ sung. Câu
+  trả lời kèm câu trích nguyên văn; thiếu căn cứ thì trợ lý từ chối.
+examples:
+  - Phần diện tích vượt tiêu chuẩn, định mức trên bao nhiêu m² thì phải đăng tải thông tin?
+  - Thời hạn đăng tải thông tin trên Cổng thông tin điện tử là bao nhiêu ngày?
+  - Kỳ rà soát đầu tiên được thực hiện khi nào?
+documents: [nd-155-2025, nd-369-2026]

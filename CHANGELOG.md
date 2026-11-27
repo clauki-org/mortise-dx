@@ -56,6 +56,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   mức độ theo ngưỡng của gói, biểu đồ có trần ([ADR 0049](docs/adr/0049-bento-dashboard.md)).
 - Trang chủ sau khi đăng nhập: một ô lối tắt cho mỗi gói và việc đang chờ dạng liên kết; menu có "Trang chủ" đầu nhóm
   "Chung" ([ADR 0051](docs/adr/0051-home-page.md)).
+- Gói cơ sở vật chất xã có mục "Hỏi văn bản": trả lời về rà soát trụ sở bằng câu trích nguyên văn Điều 3 NĐ 155/2025
+  và Điều 3a, 3b do NĐ 369/2026 bổ sung; khoản đã sửa hay bãi bỏ không được trích ([ADR
+  0021](docs/adr/0021-document-assistant.md)).
 
 ### Removed
 

@@ -311,9 +311,10 @@ check "Xóa cơ sở thì phân công của nó đi theo" "$(gql "$admin_a" "$le
 # của tenant khác.
 menu='{ platform_menu_items(where: {app: {_eq: "facilities-commune"}}, order_by: {position: asc}) {
   tenant_id item component config } }'
-check "Menu của gói: user.a thấy mục danh mục, bản đồ, hỏi dữ liệu, hồ sơ rà soát và bảng điều hành kèm cấu hình, chỉ của xã mình" \
+check "Menu của gói: user.a thấy mục danh mục, bản đồ, hỏi dữ liệu, hỏi văn bản, hồ sơ rà soát và bảng điều hành kèm cấu hình, chỉ của xã mình" \
   "$(gql "$token_a" "$menu" | jq -c '[.data.platform_menu_items[] | [.tenant_id, .item, .component, .config.title]]')" \
   '[["xa-a","facilities","catalog","Cơ sở nhà, đất"],["xa-a","map","map","Bản đồ trụ sở"],["xa-a","ask-data","assistant",null],'\
+'["xa-a","ask-documents","assistant",null],'\
 '["xa-a","reviews","cases","Hồ sơ rà soát đã lập"],["xa-a","dashboard","dashboard","Bảng điều hành cơ sở vật chất xã"]]'
 check "Menu của gói: user.b chỉ thấy mục của xã mình" \
   "$(gql "$token_b" "$menu" | jq -c '[.data.platform_menu_items[].tenant_id] | unique')" '["xa-b"]'

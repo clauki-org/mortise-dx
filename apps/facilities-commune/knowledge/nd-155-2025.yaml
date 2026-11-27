@@ -1,0 +1,78 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Văn bản cho trợ lý hỏi văn bản của gói (contracts/knowledge.schema.json, ADR 0021): Điều 3 của Nghị định
+# 155/2025/NĐ-CP. Bản gốc là bản quét có chữ ký số, không có lớp chữ: chữ lấy bằng OCR rồi soát từng dòng với ảnh
+# trang 2 và 3 của tệp đã băm. Khoản 2, 3 đã được Điều 2 NĐ 369/2026 sửa và khoản 5 đã bị Điều 10 khoản 3 NĐ 369
+# bãi bỏ, nên ba đoạn đó khai `superseded_by` (tệp nd-369-2026.yaml) để trợ lý không trích nội dung hết hiệu lực.
+# Số khoản nằm ở nhãn, không lặp ở đầu `text`.
+
+id: nd-155-2025
+title: Nghị định 155/2025/NĐ-CP quy định tiêu chuẩn, định mức sử dụng trụ sở làm việc, cơ sở hoạt động sự nghiệp
+source:
+  url: https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/6/155-cp.signed.pdf
+  sha256: b5cf65d96ea278c83150db0490d57b9522dd0a505a6c6e369c650499fff4765b
+  retrieved: 2026-11-27
+passages:
+  - id: art-3-cl-1
+    label: Điều 3 khoản 1
+    text: >-
+      Tiêu chuẩn, định mức sử dụng trụ sở làm việc, cơ sở hoạt động sự nghiệp quy định tại Nghị định này được sử
+      dụng làm một trong các căn cứ để lập kế hoạch và dự toán ngân sách; giao, đầu tư xây dựng, mua sắm, thuê,
+      quản lý, sử dụng và xử lý trụ sở làm việc, cơ sở hoạt động sự nghiệp.
+  - id: art-3-cl-2
+    label: Điều 3 khoản 2
+    text: >-
+      Tiêu chuẩn, định mức sử dụng diện tích làm việc phục vụ công tác các chức danh được xác định theo từng chức
+      danh, chức vụ. Trường hợp một người giữ nhiều chức danh, chức vụ thì được áp dụng tiêu chuẩn cao nhất.
+
+      Ủy viên Trung ương Đảng dự khuyết đang đảm nhiệm vị trí công tác nào thì được áp dụng tiêu chuẩn, định mức
+      sử dụng diện tích làm việc theo chức vụ đang công tác.
+
+      Đối với các chức danh, chức vụ trong các cơ quan, tổ chức, đơn vị không quy định cụ thể tại Phụ lục I, Phụ
+      lục II ban hành kèm theo Nghị định này thì xác định tiêu chuẩn, định mức căn cứ quy định của cơ quan, người
+      có thẩm quyền về chức danh, chức vụ đó tương đương với chức danh, chức vụ nào quy định tại Phụ lục I, Phụ lục
+      II ban hành kèm theo Nghị định này hoặc xác định chức danh, chức vụ tương đương theo mức lương chức vụ hoặc
+      hệ số phụ cấp chức vụ tương đương với các chức danh, chức vụ quy định tại Phụ lục I, Phụ lục II ban hành kèm
+      theo Nghị định này.
+    superseded_by:
+      document: nd-369-2026
+      passage: art-2-cl-1
+  - id: art-3-cl-3
+    label: Điều 3 khoản 3
+    text: >-
+      Diện tích làm việc phục vụ công tác các chức danh, diện tích sử dụng chung, diện tích chuyên dùng, diện tích
+      công trình sự nghiệp quy định tại Nghị định này là diện tích được tính theo kích thước thông thủy theo quy
+      định của pháp luật, không bao gồm cầu thang, thang máy, thang thoát hiểm, ram dốc, diện tích nhà để xe, diện
+      tích tường bao, tường phân chia các phòng làm việc, diện tích sàn có cột, hộp kỹ thuật và tường bao hộp kỹ
+      thuật (nếu có) bên trong phòng làm việc.
+    superseded_by:
+      document: nd-369-2026
+      passage: art-2-cl-2
+  - id: art-3-cl-4
+    label: Điều 3 khoản 4
+    text: >-
+      Phòng làm việc quy định tại Nghị định này là phòng làm việc theo thiết kế của trụ sở làm việc, cơ sở hoạt
+      động sự nghiệp (không phải là phòng theo cơ cấu tổ chức của cơ quan, tổ chức, đơn vị).
+  - id: art-3-cl-5
+    label: Điều 3 khoản 5
+    text: >-
+      Đối với trụ sở làm việc, cơ sở hoạt động sự nghiệp hiện có đang quản lý, sử dụng hoặc thực hiện giao, điều
+      chuyển hoặc xử lý sau khi thực hiện sáp nhập, hợp nhất, chia tách, giải thể, chấm dứt hoạt động, cơ quan, tổ
+      chức, đơn vị đang quản lý, sử dụng hoặc tiếp nhận trụ sở làm việc, cơ sở hoạt động sự nghiệp được quản lý, sử
+      dụng đối với phần diện tích theo tiêu chuẩn, định mức quy định tại Nghị định này.
+
+      Đối với phần diện tích lớn hơn so với tiêu chuẩn, định mức (nếu có), cơ quan, người có thẩm quyền giao, điều
+      chuyển quy định tại pháp luật về quản lý, sử dụng tài sản công quyết định giao, điều chuyển phần diện tích
+      này cho cơ quan, tổ chức, đơn vị khác quản lý, sử dụng nếu phù hợp với tiêu chuẩn, định mức và nhu cầu sử
+      dụng của cơ quan, tổ chức, đơn vị đó; trong thời gian cơ quan, người có thẩm quyền chưa giao, điều chuyển
+      cho cơ quan, tổ chức, đơn vị khác thì cơ quan, tổ chức, đơn vị đang quản lý, sử dụng hoặc cơ quan, tổ chức,
+      đơn vị tiếp nhận tài sản có trách nhiệm quản lý, bảo quản, bảo vệ đối với phần diện tích này. Trường hợp
+      không có cơ quan, tổ chức, đơn vị phù hợp để giao, điều chuyển thì cơ quan, người có thẩm quyền giao, điều
+      chuyển quy định tại pháp luật về quản lý, sử dụng tài sản công quyết định giao, điều chuyển cho cơ quan, tổ
+      chức, đơn vị đang quản lý, sử dụng hoặc cơ quan, tổ chức, đơn vị tiếp nhận trụ sở làm việc, cơ sở hoạt động
+      sự nghiệp quản lý, sử dụng bảo đảm tiết kiệm, hiệu quả.
+    # Bị bãi bỏ, không có đoạn nào viết lại khoản này; trỏ tới khoản bãi bỏ để người đọc thấy căn cứ.
+    superseded_by:
+      document: nd-369-2026
+      passage: art-10-cl-3
