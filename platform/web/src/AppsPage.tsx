@@ -158,9 +158,9 @@ export function AppsPage() {
       description="Bật, tắt từng gói cho cả org. Tắt gói thì menu, trang chủ và khối của gói ẩn đi ở mọi đơn vị; dữ liệu giữ nguyên, bật lại thì hiện như cũ."
     />
   );
-  // Lúc vừa thôi tạm dừng, truy vấn có thể chưa chạy (fetching còn false); chưa có dữ liệu cũng là đang tải, không thì
-  // trang hiện "chưa có gói nào" trong chốc lát.
-  if (orgAdmin === undefined || (!data && !error)) return <Loading what="danh sách gói" />;
+  if (orgAdmin === undefined) return <Loading what="danh sách gói" />;
+  // Xét trước khi chờ dữ liệu: với người không phải quản trị org, truy vấn danh sách gói tạm dừng hẳn, nên chờ dữ liệu
+  // ở đây thì trang kẹt ở "đang tải" mãi.
   if (orgAdmin === false) {
     return (
       <>
@@ -171,6 +171,9 @@ export function AppsPage() {
       </>
     );
   }
+  // Lúc vừa thôi tạm dừng, truy vấn có thể chưa chạy (fetching còn false); chưa có dữ liệu cũng là đang tải, không thì
+  // trang hiện "chưa có gói nào" trong chốc lát.
+  if (!data && !error) return <Loading what="danh sách gói" />;
   if (error) {
     return (
       <>
