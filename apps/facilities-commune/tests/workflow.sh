@@ -10,7 +10,8 @@
 # 1000 m²) có bước quyết định ở người duyệt của tỉnh (ADR 0029): manager.tinh chỉ thấy bước đó, người của xã khác và
 # tỉnh khác nhận 404. Trường của bước (ADR 0031): người lập hay người trình không gửi sẵn được nội dung quyết định.
 # Số hồ sơ (ADR 0035): lập hồ sơ thì số của xã A tăng, xã B không đổi; chỉ vai trò của một bước, kể cả vai trò trong
-# bảng phân cấp của xã, xem được số.
+# bảng phân cấp của xã, xem được số. Hồ sơ vào bước công khai có dòng hạn trong lõi, hồ sơ có quyết định được niêm
+# phong (ADR 0053).
 # Ngưỡng 300 m² là giá trị trong app.yaml; thời hạn công khai đọc từ quy trình đã deploy (ADR 0019): chỉ chờ hết hạn
 # khi gói được cài với thời hạn ngắn, ví dụ make app-install APP=facilities-commune SETTINGS=publication_period=PT20S,
 # còn không thì báo SKIP phần đó. Mọi hồ sơ tạo ra đều được đưa tới kết thúc hoặc bị xóa; dòng của xã A được đặt lại
@@ -190,6 +191,13 @@ else
   for instance in "$later" "$province"; do complete "$manager" "$instance" '{"approved": true}' >/dev/null; done
   check "Đang công khai: chưa kết thúc, chưa có bước nào cho người dùng" "$(status "$above") [$(step_of "$above")]" \
     "false null []"
+  # Hạn của bước công khai (ADR 0053): workflow-api ghi khi hồ sơ vào bước chờ hẹn giờ, để gói đọc được mà không hỏi
+  # Flowable. Đọc thẳng bảng của lõi chỉ trong bài kiểm.
+  check "Đang công khai: lõi ghi một dòng hạn của bước công khai cho hồ sơ, theo xã của hồ sơ" \
+    "$(docker compose exec -T postgres psql -qXAt --username hasura --dbname mortise -v id="$above" <<'SQL'
+SELECT tenant_id || ' ' || activity_id || ' ' || (due_at > recorded_at) FROM core.case_deadlines WHERE case_id = :'id';
+SQL
+)" "$tenant publication true"
   # Theo dõi hồ sơ (ADR 0032): người lập thấy hồ sơ đang ở bước chờ "Công khai" dù không có việc nào.
   check "Người lập thấy hồ sơ đang ở bước công khai" "$(api "$user" GET "/cases?process=$process&state=open&limit=100" |
     sed '$d' | jq -r --arg i "$above" '.items[] | select(.id == $i) | .current[] | "\(.step) \(.name)"')" \
@@ -235,6 +243,10 @@ else
       "$(complete "$manager" "$above" "$decision")" 204
     check "Ghi nhận quyết định xong: hai hồ sơ kết thúc ở đã có quyết định" "$(status "$above") $(status "$later")" \
       "true decided true decided"
+    # Niêm phong (ADR 0053): quy trình khai mortise:seal="true", nên hồ sơ có quyết định có băm ngay khi kết thúc.
+    sealed_of() { api "$1" GET "$2" | sed '$d' | jq -r '.seal.hash // "" | test("^[0-9a-f]{64}$")'; }
+    check "Hồ sơ có quyết định đã niêm phong: người duyệt thấy băm ở /instances, người lập thấy ở /cases" \
+      "$(sealed_of "$manager" "/instances/$above") $(sealed_of "$user" "/cases/$above")" "true true"
     check "Người lập thấy kết quả và các bước đã qua, không thấy ý kiến, nơi nhận hay quyết định" \
       "$(api "$user" GET "/cases/$above" | sed '$d' | jq -c '[.outcomeName, ([.steps[].step] | join(" ")),
         (.variables | keys)]')" '["Đã có quyết định","review_publish publication submit decide",["excessM2","title"]]'
