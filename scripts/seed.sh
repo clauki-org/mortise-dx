@@ -54,20 +54,23 @@ fi
 kc remove-roles -r mortise --uusername service-account-mortise-iot-bridge --rolename default-roles-mortise
 echo "keycloak: tài khoản dịch vụ mortise-iot-bridge"
 
-# Máy chủ phát triển giao diện (Vite) chạy ở địa chỉ khác URL công khai, nên client giao diện nhận thêm địa chỉ đó làm
-# redirect URI, địa chỉ sau đăng xuất và web origin. Chỉ làm khi bản cài chạy trên máy cục bộ (URL công khai là
-# localhost), để seed chạy nhầm trên máy chủ thật không mở thêm địa chỉ đăng nhập; realm trong tệp không đổi.
+# Địa chỉ đăng nhập của client giao diện theo URL công khai hiện tại: tệp realm chỉ được nạp khi Keycloak khởi động lần
+# đầu, nên bản cài đổi MORTISE_PUBLIC_URL sau đó (ví dụ sang tinh.localhost khi chạy hai bản cài, ADR 0058) mà không
+# đặt lại ở đây thì Keycloak từ chối redirect URI mới. Danh sách ghi đè chứ không cộng dồn, để URL cũ không còn đăng
+# nhập được. Máy chủ phát triển giao diện (Vite) chạy ở địa chỉ khác URL công khai, nên nhận thêm địa chỉ đó; chỉ khi
+# bản cài chạy trên máy cục bộ (URL công khai là localhost hay *.localhost), để seed chạy nhầm trên máy chủ thật không
+# mở thêm địa chỉ đăng nhập.
 web_client=$(kc get clients -r mortise -q clientId=mortise-web --fields id --format csv --noquotes)
 public_url="${MORTISE_PUBLIC_URL:-http://localhost:9080}"
-if [[ "$public_url" =~ ^http://(localhost|127\.0\.0\.1)(:|/|$) ]]; then
-  web_dev_url="${WEB_DEV_URL:-http://localhost:5173}"
-  kc get "clients/$web_client" -r mortise | jq --arg u "$web_dev_url" \
-    '{redirectUris: ((.redirectUris + [$u + "/*"]) | unique), webOrigins: ((.webOrigins + [$u]) | unique),
-      attributes: (.attributes + {"post.logout.redirect.uris": (((.attributes["post.logout.redirect.uris"] // "")
-        | split("##") | map(select(. != ""))) + [$u + "/*"] | unique | join("##"))})}' |
-    kc update "clients/$web_client" -r mortise -f - >/dev/null
-  echo "keycloak: mortise-web nhận thêm $web_dev_url cho máy chủ phát triển giao diện"
+web_urls=("$public_url")
+if [[ "$public_url" =~ ^http://(([a-z0-9-]+\.)*localhost|127\.0\.0\.1)(:|/|$) ]]; then
+  web_urls+=("${WEB_DEV_URL:-http://localhost:5173}")
 fi
+kc get "clients/$web_client" -r mortise | jq '$ARGS.positional as $u |
+    {redirectUris: ($u | map(. + "/*")), webOrigins: $u,
+      attributes: (.attributes + {"post.logout.redirect.uris": ($u | map(. + "/*") | join("##"))})}' \
+  --args "${web_urls[@]}" | kc update "clients/$web_client" -r mortise -f - >/dev/null
+echo "keycloak: mortise-web đăng nhập được từ ${web_urls[*]}"
 
 # username  tenant   vai trò thêm   otp nếu phải nhập OTP. admin.<x> quản trị một tenant (tenant_admin): gói dùng vai
 # trò này để tenant tự sửa dữ liệu cấu hình của mình, ví dụ phân công cán bộ. admin.tinh sửa bảng phân cấp thẩm quyền
@@ -98,6 +101,17 @@ users=(
 # bằng Passkey, manager.c đăng nhập bằng Passkey rồi vẫn nhập OTP); tenant khác giữ chính sách mặc định.
 otp_tenants=(tinh-khac)
 passkey_tenants=(xa-c)
+# Tenant gốc và tài khoản demo của mẫu cài đã áp (MORTISE_PRESET, presets/<mẫu>/preset.yaml, ADR 0058), thêm vào tài
+# khoản của lõi chứ không thay: `make smoke` và smoke của gói đăng nhập bằng tài khoản Tỉnh Mẫu. Tạo ở đây, trước khi
+# deploy quy trình mẫu và trước khi cài gói, vì cả hai chỉ nạp cho tenant đã có trong core.tenants.
+preset_tenants=()
+if [[ -n "${MORTISE_PRESET:-}" ]]; then
+  preset_py=(uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/preset.py)
+  accounts=$("${preset_py[@]}" accounts "$MORTISE_PRESET")
+  tenants=$("${preset_py[@]}" tenants "$MORTISE_PRESET")
+  [[ -z "$accounts" ]] || mapfile -t -O "${#users[@]}" users <<<"$accounts"
+  [[ -z "$tenants" ]] || mapfile -t preset_tenants <<<"$tenants"
+fi
 
 # Tệp realm chỉ được nạp khi Keycloak khởi động lần đầu. Bản cài dựng trước khi có vai trò rollup_reader và tenant
 # cha (ADR 0016) thì tạo bù ở đây (group tạo bù trong vòng lặp dưới), để không phải `make reset`.
@@ -179,6 +193,15 @@ INSERT INTO core.tenants (id, name, parent_id) VALUES
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, parent_id = EXCLUDED.parent_id;
 SQL
 echo "postgres: tenant demo tinh-mau (cha), xa-a, xa-b, xa-c, tinh-khac"
+for entry in "${preset_tenants[@]}"; do
+  IFS=$'\t' read -r tenant name <<<"$entry"
+  docker compose exec -T postgres psql -qX -v ON_ERROR_STOP=1 --username hasura --dbname mortise \
+    -v "id=$tenant" -v "name=$name" <<'SQL'
+INSERT INTO core.tenants (id, name, parent_id) VALUES (:'id', :'name', NULL)
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, parent_id = NULL;
+SQL
+  echo "postgres: tenant $tenant của mẫu cài $MORTISE_PRESET"
+done
 
 # Quyền dữ liệu của Hasura: áp tệp khai báo theo kiểu ghi đè, nên chạy lại seed cũng sửa được quyền đã bị đổi sai.
 uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py apply

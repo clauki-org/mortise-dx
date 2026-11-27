@@ -27,13 +27,19 @@ PERIOD = 30
 DIGITS = 6
 
 
-def secret() -> str:
-    value = os.environ.get("DEMO_OTP_SECRET")
+def env_value(name: str) -> str | None:
+    """Biến ở môi trường, không có thì đọc .env của checkout."""
+    value = os.environ.get(name)
     if not value:
         env = Path(__file__).resolve().parent.parent / ".env"
         text = env.read_text(encoding="utf-8") if env.exists() else ""
-        found = re.search(r"^DEMO_OTP_SECRET=(.+)$", text, re.M)
+        found = re.search(rf"^{name}=(.+)$", text, re.M)
         value = found.group(1).strip() if found else None
+    return value
+
+
+def secret() -> str:
+    value = env_value("DEMO_OTP_SECRET")
     if not value:
         raise SystemExit("Thiếu DEMO_OTP_SECRET trong .env; chạy `make env` rồi `make seed`.")
     return value
@@ -51,7 +57,14 @@ def fresh_counter(username: str) -> int:
     """Khung chưa dùng sớm nhất mà Keycloak còn nhận; ghi lại để lần sau không dùng lại."""
     if not re.fullmatch(r"[A-Za-z0-9._-]+", username):
         raise SystemExit(f"Tên tài khoản không hợp lệ: {username}")
-    path = Path(tempfile.gettempdir()) / f"mortise-otp-{os.getuid()}-{username}"
+    # Một tệp cho mỗi bản cài (tên dự án compose), không cho mỗi checkout: nhiều worktree có thể cùng gọi một
+    # Keycloak. Hai bản cài trên cùng máy (ADR 0058) có tài khoản trùng tên ở hai Keycloak; chung tệp thì lần
+    # đăng nhập ở bản này phải chờ khung mới chỉ vì mã đã dùng ở bản kia.
+    project = env_value("COMPOSE_PROJECT_NAME") or "mortise"
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*", project):
+        raise SystemExit(f"COMPOSE_PROJECT_NAME không hợp lệ: {project}")
+    suffix = "" if project == "mortise" else f"-{project}"
+    path = Path(tempfile.gettempdir()) / f"mortise-otp-{os.getuid()}{suffix}-{username}"
     # Khóa tệp trong lúc đọc và ghi: hai tiến trình (smoke và e2e chạy cùng lúc) đọc cùng khung đã dùng sẽ lấy
     # cùng một mã, và Keycloak từ chối lần thứ hai.
     with path.open("a+") as state:

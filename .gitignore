@@ -4,6 +4,7 @@
 .env
 .env.before-restore
 .env.before-drill
+.env.install.*
 *.log
 .DS_Store
 .idea/

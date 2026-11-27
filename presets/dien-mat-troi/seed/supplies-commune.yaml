@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Dữ liệu demo HƯ CẤU của kho công ty "Điện mặt trời Mẫu" cho gói supplies-commune, theo contracts/seed.schema.json:
+# tên kho, vật tư và số lượng đặt ra để minh họa. scripts/install.sh nạp qua cổng bằng admin.dmt
+# (scripts/app-seed.py); chạy lại không tạo bản trùng.
+
+dmt:
+  account: admin.dmt
+  tables:
+    - table: stores
+      key: [code]
+      rows:
+        - { code: DMT-K1, name: Kho vật tư lắp đặt, location: "Văn phòng công ty, tầng trệt" }
+    - table: items
+      key: [store_code, code]
+      rows:
+        - { store_code: DMT-K1, code: TAM-PIN, name: Tấm pin năng lượng mặt trời, unit: tấm, kind: equipment,
+            quantity: 24 }
+        - { store_code: DMT-K1, code: BIEN-TAN, name: Bộ biến tần (inverter), unit: bộ, kind: equipment, quantity: 3 }
+        - { store_code: DMT-K1, code: CAP-DC, name: Cáp điện một chiều, unit: cuộn, kind: consumable, quantity: 10 }

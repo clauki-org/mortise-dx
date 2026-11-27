@@ -164,6 +164,15 @@ case "$mode" in
     # Không dùng -q: lỗi schema là thứ người gọi cần đọc.
     exec "${checker[@]}" "$(base_uri "contracts/$2.schema.json")" --schemafile "contracts/$2.schema.json" "$3"
     ;;
+  preset)
+    # Mẫu cài và thư mục thương hiệu của nó (scripts/install.sh gọi trước khi cài, ADR 0058).
+    if [[ ! -f "${2:-}" ]]; then
+      echo "Cách dùng: $0 preset <presets/<mẫu>/preset.yaml>; không thấy tệp '${2:-}'." >&2
+      exit 2
+    fi
+    "${checker[@]}" --schemafile contracts/preset.schema.json "$2"
+    exec "${checker[@]}" --schemafile contracts/branding.schema.json "$(dirname "$2")"/*/branding.json
+    ;;
   assistant-data)
     if [[ -z "${2:-}" || ! -f "${3:-}" ]]; then
       echo "Cách dùng: $0 assistant-data <apps/<gói> | core> <tệp cấu hình trợ lý>." >&2
@@ -185,7 +194,7 @@ case "$mode" in
     ;;
   *)
     echo "Cách dùng: $0 [check | write | token <tệp claim> | service-token <tệp claim> | config <thành phần> <tệp> |" \
-      "assistant-data <gói | core> <tệp> | package <gói> [--configs <thư mục>]]" >&2
+      "assistant-data <gói | core> <tệp> | package <gói> [--configs <thư mục>] | preset <tệp>]" >&2
     exit 2
     ;;
 esac
@@ -258,6 +267,18 @@ for pair in 'BRAND_COLORS:."$defs".palette' BRAND_RADII:.properties.radius BRAND
     exit 1
   fi
 done
+# Mẫu cài (ADR 0058): tệp mẫu, thương hiệu và dữ liệu demo riêng của mẫu theo hợp đồng của chúng, rồi các tham chiếu
+# mà schema không kiểm được (gói, thư mục, tệp có thật).
+presets=(presets/*/preset.yaml)
+if [[ -f "${presets[0]}" ]]; then
+  "${checker[@]}" --schemafile contracts/preset.schema.json "${presets[@]}"
+  mapfile -t preset_seeds < <(find presets -path '*/seed/*.yaml')
+  if ((${#preset_seeds[@]})); then
+    "${checker[@]}" --schemafile contracts/seed.schema.json "${preset_seeds[@]}"
+  fi
+  preset_names=("${presets[@]#presets/}")
+  "${yaml[@]}" scripts/preset.py check "${preset_names[@]%/preset.yaml}"
+fi
 "${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml \
   --steps contracts/examples/workflow.example.yaml core/workflow/fixtures/*.yaml \
   --authorities contracts/examples/authority.example.yaml --rules contracts/examples/threshold-rule.example.yaml

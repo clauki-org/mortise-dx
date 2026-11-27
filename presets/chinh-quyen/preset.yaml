@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Mẫu cài của chính quyền "Tỉnh Mẫu" (hư cấu): tỉnh và ba xã của tài khoản demo lõi, gói cơ sở vật chất xã và gói kho
+# vật tư cùng dữ liệu demo của chính hai gói. `make install PRESET=chinh-quyen` đọc tệp này
+# (contracts/preset.schema.json, ADR 0058). Tenant của Tỉnh Mẫu do `make seed` tạo sẵn nên không khai lại ở đây.
+
+name: chinh-quyen
+title: Tỉnh Mẫu (hư cấu)
+branding: brand
+packages:
+  - facilities-commune
+  - supplies-commune
+demo:
+  - package: facilities-commune
+  - package: supplies-commune

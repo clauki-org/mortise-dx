@@ -146,6 +146,37 @@ chúng, `make obs-down` dừng mà giữ số liệu và log ([ADR 0037](docs/ad
 profile này cần chưa được đo. Truy vết phân tán mặc định tắt: đặt `MORTISE_TRACING=on` trong `.env`, chạy `make up` và
 `make obs-up`, rồi xem vết trong Grafana, mục Explore, nguồn Jaeger ([ADR 0038](docs/adr/0038-distributed-tracing.md)).
 
+### Mẫu cài và hai bản cài trên một máy
+
+`make install PRESET=<mẫu>` dựng một org bằng một lệnh: tạo `.env`, dựng lõi, seed, cài các gói, nạp dữ liệu demo và
+đặt thương hiệu theo `presets/<mẫu>/preset.yaml` ([ADR 0058](docs/adr/0058-two-installs-and-install-presets.md)). Có
+hai mẫu: `chinh-quyen` (Tỉnh Mẫu, gói `facilities-commune` và `supplies-commune`) và `dien-mat-troi` ("Công ty Điện mặt
+trời Mẫu", hư cấu: tenant `dmt` với `admin.dmt`, `manager.dmt`, `user.dmt`, gói `supplies-commune`). Tài khoản demo
+của lõi có ở mọi bản cài vì `make smoke` dùng chúng.
+
+Hai bản cài chạy cạnh nhau từ hai checkout, mỗi checkout một `.env` với tên dự án, cổng và tên máy riêng. Tên
+`*.localhost` trỏ về máy mình, và hai tên máy khác nhau giữ cookie đăng nhập của hai bản tách nhau:
+
+```bash
+# Checkout thứ nhất: bản cài chính quyền ở http://tinh.localhost:9080. Chưa có .env thì tạo bằng lệnh dưới; đã có thì
+# sửa MORTISE_PUBLIC_URL trong .env (seed trong `make install` đặt lại địa chỉ đăng nhập của Keycloak theo URL mới).
+MORTISE_PUBLIC_URL=http://tinh.localhost:9080 make env
+make install PRESET=chinh-quyen
+
+# Checkout thứ hai, thư mục khác: bản cài công ty ở http://dmt.localhost:9180, mọi cổng khác bản thứ nhất
+git clone https://github.com/clauki-org/mortise-dx.git mortise-dmt && cd mortise-dmt
+COMPOSE_PROJECT_NAME=dmt MORTISE_PORT=9180 MORTISE_PUBLIC_URL=http://dmt.localhost:9180 PG_PORT=55433 \
+  KEYCLOAK_ADMIN_PORT=8181 HASURA_PORT=8182 FLOWABLE_PORT=8183 S3_PORT=8334 SCORPIO_PORT=9190 GRAFANA_PORT=3001 \
+  make env
+make install PRESET=dien-mat-troi
+make smoke
+```
+
+Biến đặt trước `make env` chỉ có tác dụng khi `.env` chưa có; sau đó sửa thẳng trong `.env`. `MORTISE_PORT` phải trùng
+cổng trong `MORTISE_PUBLIC_URL`. `make install` dừng khi dự án compose cùng tên đang chạy từ thư mục khác. Hai checkout
+ở hai commit khác nhau thì đặt `MORTISE_VERSION` khác nhau (ví dụ `dev-dmt`) để mỗi bản dựng image riêng. RAM của hai
+bản cài chạy cùng lúc chưa được đo.
+
 ## Kiến trúc
 
 ```
@@ -241,6 +272,7 @@ platform/             Tầng 2
   schema/migrations/  migration lược đồ `platform` (dbmate): khai báo bước của quy trình, menu của gói
 apps/facilities-commune/  Tầng 3: gói cơ sở vật chất xã (app.yaml, migration, quyền Hasura, smoke của gói)
 apps/supplies-commune/    Tầng 3: gói kho vật tư xã, chỉ gồm tệp khai báo (ADR 0022)
+presets/<mẫu>/        mẫu cài: gói, thương hiệu, tenant và dữ liệu demo của một org (ADR 0058)
 devices/simulator/    bộ giả lập và danh sách thiết bị demo (Python)
 deploy/               máy chủ demo: script kéo tag phát hành mới, unit systemd, hướng dẫn
 scripts/              tạo .env, seed, smoke, tạo migration, cài và gỡ gói, sao lưu, khôi phục, diễn tập khôi phục,

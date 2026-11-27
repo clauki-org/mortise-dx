@@ -64,6 +64,27 @@ ensure_basemap_dir() {
   mkdir -p "${dir:-$HOME/.cache/mortise-dx/basemap}"
 }
 
+# env_value TÊN MẶC_ĐỊNH: biến ở môi trường thắng .env, như compose.
+env_value() {
+  local value="${!1-$(sed -n "s/^$1=//p" .env 2>/dev/null | tail -1)}"
+  printf '%s' "${value:-$2}"
+}
+
+# URL công khai trên máy cục bộ phải mang đúng cổng APISIX mở ra máy chủ: lệch nhau thì Keycloak cấp token và chuyển
+# hướng tới một cổng không ai nghe, lỗi chỉ hiện ra lúc đăng nhập (ADR 0058). URL của máy chủ thật thường đứng sau
+# reverse proxy với cổng khác, nên không kiểm.
+check_public_port() {
+  local url port
+  url=$(env_value MORTISE_PUBLIC_URL http://localhost:9080)
+  port=$(env_value MORTISE_PORT 9080)
+  if [[ "$url" =~ ^http://(([a-z0-9-]+\.)*localhost|127\.0\.0\.1)(:([0-9]+))?(/|$) ]]; then
+    if [[ "${BASH_REMATCH[4]:-80}" != "$port" ]]; then
+      echo "MORTISE_PUBLIC_URL ($url) và MORTISE_PORT ($port) lệch cổng; sửa một trong hai trong .env." >&2
+      exit 1
+    fi
+  fi
+}
+
 main() {
   local action="${1:-}" profile service
   shift || true
@@ -71,6 +92,7 @@ main() {
     up)
       check_tracing
       ensure_basemap_dir
+      check_public_port
       if no_build; then
         local services
         mapfile -t services < <(built_services)
