@@ -18,12 +18,16 @@ deploy (ADR 0019), nên chúng nằm trong định nghĩa quy trình, người l
 Nhánh được chọn ngay khi lập hồ sơ, trước bước duyệt: workflow-api cho người hoàn thành bước gửi kèm biến, nên nếu
 rẽ nhánh sau bước duyệt thì người duyệt gửi excessM2 = 0 là né được bước công khai. excessM2 do client gửi lúc
 lập, người duyệt đối chiếu với hồ sơ; lấy số ở phía máy chủ là việc sau (README của gói).
+
+mortise:seal="true": hồ sơ kết thúc thì workflow-api niêm phong nó (ADR 0053). Hạn của bước công khai do workflow-api
+ghi khi hồ sơ vào bước đó, như mọi bước chờ hẹn giờ, không phụ thuộc cờ này.
 -->
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
              xmlns:flowable="http://flowable.org/bpmn"
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:mortise="https://mortise-dx/bpmn"
              targetNamespace="https://mortise-dx/apps/facilities-commune">
-  <process id="facilities-review" name="Rà soát diện tích trụ sở" isExecutable="true">
+  <process id="facilities-review" name="Rà soát diện tích trụ sở" isExecutable="true" mortise:seal="true">
     <startEvent id="filed"/>
     <sequenceFlow id="toRoute" sourceRef="filed" targetRef="route"/>
 

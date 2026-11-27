@@ -57,6 +57,17 @@
             "title": "Process",
             "type": "string"
           },
+          "seal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Seal"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Niêm phong của hồ sơ; null khi quy trình không khai niêm phong (`mortise:seal` trong BPMN), hồ sơ chưa kết thúc hay bị dừng mà không tới sự kiện kết thúc nào"
+          },
           "started": {
             "description": "Thời điểm lập, ISO 8601",
             "title": "Started",
@@ -86,7 +97,8 @@
           "outcomeName",
           "current",
           "variables",
-          "steps"
+          "steps",
+          "seal"
         ],
         "title": "CaseDetail",
         "type": "object"
@@ -344,12 +356,24 @@
             ],
             "description": "Mã sự kiện kết thúc; null khi quy trình chưa xong",
             "title": "Outcome"
+          },
+          "seal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Seal"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Niêm phong của hồ sơ; null khi quy trình không khai niêm phong (`mortise:seal` trong BPMN), hồ sơ chưa kết thúc hay bị dừng mà không tới sự kiện kết thúc nào"
           }
         },
         "required": [
           "id",
           "ended",
-          "outcome"
+          "outcome",
+          "seal"
         ],
         "title": "InstanceStatus",
         "type": "object"
@@ -419,6 +443,32 @@
           "process"
         ],
         "title": "ProcessStarted",
+        "type": "object"
+      },
+      "Seal": {
+        "properties": {
+          "hash": {
+            "description": "SHA-256 (hex) của bản JSON chuẩn của hồ sơ: trường của các bước, lịch sử bước, kết quả (ADR 0053); `make seal-verify` dựng lại từ lịch sử Flowable và so",
+            "title": "Hash",
+            "type": "string"
+          },
+          "sealed_at": {
+            "description": "Thời điểm niêm phong, ISO 8601",
+            "title": "Sealed At",
+            "type": "string"
+          },
+          "version": {
+            "description": "Phiên bản cách dựng bản JSON chuẩn",
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hash",
+          "sealed_at",
+          "version"
+        ],
+        "title": "Seal",
         "type": "object"
       },
       "StepCounts": {

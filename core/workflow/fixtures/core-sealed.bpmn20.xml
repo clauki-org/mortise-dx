@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Mortise DX contributors
+SPDX-License-Identifier: Apache-2.0
+
+Quy trình mẫu chỉ dùng để kiểm thử niêm phong và hạn của bước chờ (ADR 0053), không phải quy trình nghiệp vụ.
+`prepare` (vai trò user) ghi `note`, rồi bước chờ hẹn giờ `hold` (workflow-api ghi hạn vào core.case_deadlines),
+rồi `confirm` (manager) ghi `confirmed`. mortise:seal="true": khi hồ sơ kết thúc, workflow-api niêm phong nó.
+Hẹn giờ một giây để `make smoke` không phải chờ lâu; Flowable chỉ quét hẹn giờ đến hạn theo chu kỳ của nó, nên bước
+chờ thực tế dài hơn. Khai báo bước ở core-sealed.yaml cùng thư mục.
+-->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:mortise="https://mortise-dx/bpmn"
+             targetNamespace="https://mortise-dx/workflow">
+  <process id="core-sealed" name="Chuẩn bị, chờ rồi xác nhận" isExecutable="true" mortise:seal="true">
+    <startEvent id="submitted"/>
+    <sequenceFlow id="toPrepare" sourceRef="submitted" targetRef="prepare"/>
+    <userTask id="prepare" name="Chuẩn bị" flowable:candidateGroups="user">
+      <extensionElements>
+        <flowable:formProperty id="note"/>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="toHold" sourceRef="prepare" targetRef="hold"/>
+    <intermediateCatchEvent id="hold" name="Chờ">
+      <timerEventDefinition>
+        <timeDuration>PT1S</timeDuration>
+      </timerEventDefinition>
+    </intermediateCatchEvent>
+    <sequenceFlow id="toConfirm" sourceRef="hold" targetRef="confirm"/>
+    <userTask id="confirm" name="Xác nhận" flowable:candidateGroups="manager">
+      <extensionElements>
+        <flowable:formProperty id="confirmed"/>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="toDone" sourceRef="confirm" targetRef="done"/>
+    <endEvent id="done" name="Xong"/>
+  </process>
+</definitions>

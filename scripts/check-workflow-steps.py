@@ -9,12 +9,14 @@
 # (ADR 0019); BPMN của lõi không có settings. Bước đọc bảng phân cấp thẩm quyền phải có dòng gốc khai sẵn
 # (scripts/workflow_authorities.py, ADR 0028). Trường mà khai báo của một bước gửi phải khớp formProperty của
 # userTask đó (scripts/workflow_fields.py), và biến mà iot-bridge hay nút danh mục gửi lúc khởi tạo không được
-# trùng trường của bước (scripts/workflow_starts.py, ADR 0031). Gọi từ scripts/contracts.sh:
+# trùng trường của bước (scripts/workflow_starts.py, ADR 0031). Cờ niêm phong `mortise:seal` chỉ là true hay
+# false (ADR 0053), đọc bằng chính mã của workflow-api. Gọi từ scripts/contracts.sh:
 # --bpmn <tệp BPMN...> --steps <tệp khai báo...> [--authorities <bảng phân cấp của lõi...>]
 # [--rules <luật ngưỡng của lõi...>] [--catalogs <cấu hình danh mục...>] [--packages <thư mục gói...>]; bảng,
 # luật và danh mục của gói đọc từ app.yaml.
 
 import argparse
+import importlib.util
 import os
 import sys
 import xml.etree.ElementTree as ET
@@ -26,6 +28,20 @@ import yaml
 from workflow_settings import placeholders
 
 BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _seal_module():
+    """Cách đọc cờ niêm phong của workflow-api; seal.py chỉ dùng thư viện chuẩn nên nạp được theo đường dẫn.
+    Đọc khác workflow-api thì cờ sai lọt qua đây và quy trình chỉ hỏng (502) khi đã deploy."""
+    path = os.path.join(REPO, "core", "workflow-api", "app", "seal.py")
+    spec = importlib.util.spec_from_file_location("workflow_seal_api", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+seal_api = _seal_module()
 
 
 class Unreadable(Exception):
@@ -135,6 +151,17 @@ def settings_problems(bpmn_files: list[str]) -> list[str]:
     return errors
 
 
+def seal_problems(roots: dict[str, ET.Element]) -> list[str]:
+    errors = []
+    for path, root in roots.items():
+        for process in root.iter(f"{BPMN}process"):
+            try:
+                seal_api.seal_flag(process)
+            except ValueError as error:
+                errors.append(f"{path}: {error}")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--bpmn", nargs="*", default=[], required=True)
@@ -151,6 +178,7 @@ def main() -> int:
         processes, errors = user_tasks(roots)
         errors += problems(processes, args.steps)
         errors += settings_problems(args.bpmn)
+        errors += seal_problems(roots)
         errors += workflow_authorities.problems(roots, args.authorities, args.packages)
         errors += workflow_fields.problems(roots, declared_steps(args.steps))
         errors += workflow_starts.problems(roots, args.rules, args.catalogs, args.packages)

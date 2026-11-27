@@ -1,0 +1,4 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+# Lỗi scripts/check-workflow-steps.py phải in cho ví dụ sai cùng thư mục; scripts/contracts.sh so từng ký tự.
+contracts/examples/invalid-steps/seal-flag-value/process.bpmn20.xml: mortise:seal của quy trình "invalid-steps" là "yes", chỉ nhận true hoặc false

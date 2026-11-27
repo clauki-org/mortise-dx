@@ -811,6 +811,70 @@ check "Theo dõi hồ sơ: bước của tỉnh ghi nhóm tinh-mau/manager; core
   "$(api GET "$user_a" "/cases/$parent_case" | cut -f2 | jq -c '[([.steps[].groups[]] | join(",")), (.variables | length)]')" \
   '["tinh-mau/manager",0]'
 
+# Niêm phong hồ sơ (ADR 0053): quy trình mẫu core-sealed khai mortise:seal="true". Hồ sơ vào bước chờ hẹn giờ thì có
+# dòng hạn; bước cuối xong thì /instances và /cases trả băm; `make seal-verify` không báo hồ sơ đó, sửa lén một trường
+# của bước thẳng trong lịch sử Flowable thì báo đúng hồ sơ đó, đặt lại thì thôi báo. Lần sửa lén phải commit vì
+# seal-verify đọc Flowable qua REST; trap đặt lại giá trị cả khi bài dừng giữa chừng, vì niêm phong chỉ thêm, không
+# xóa được, nên để lại giá trị sửa thì seal-verify báo hồ sơ này mãi.
+IFS=$'\t' read -r _ body < <(api POST "$user_a" /processes/core-sealed/instances '{"variables":{"title":"Niêm phong"}}')
+sealed=$(jq -r .id <<<"$body")
+api POST "$user_a" "/tasks/$(task_in "$user_a" "$sealed")/complete" '{"variables":{"note":"Ghi chú gốc"}}' >/dev/null
+check "Niêm phong: hồ sơ vào bước chờ hẹn giờ thì có một dòng hạn của bước đó, ghi tenant của hồ sơ" \
+  "$(sql -c "SELECT tenant_id || ' ' || process || ' ' || activity_id FROM core.case_deadlines
+    WHERE case_id = '$sealed'")" "xa-a core-sealed hold"
+check "Niêm phong: hồ sơ chưa kết thúc thì chưa có niêm phong" \
+  "$(api GET "$user_a" "/instances/$sealed" | cut -f2 | jq -r .seal)" null
+# Hẹn giờ một giây, nhưng Flowable chỉ quét hẹn giờ đến hạn theo chu kỳ của nó.
+waited=0
+while [[ -z "$(task_in "$manager_a" "$sealed")" ]] && ((waited < 60)); do
+  sleep 3
+  waited=$((waited + 3))
+done
+IFS=$'\t' read -r status _ < <(api POST "$manager_a" "/tasks/$(task_in "$manager_a" "$sealed")/complete" \
+  '{"variables":{"confirmed":true}}')
+check "Niêm phong: hết bước chờ, manager.a hoàn thành bước cuối" "$status" 204
+# Hồ sơ chưa tới bước cuối (hẹn giờ không đến hạn trong lúc chờ) thì xóa, để bảng việc demo không tích hồ sơ.
+[[ "$status" == 204 ]] || drop_instance "$sealed"
+seal_hash=$(api GET "$manager_a" "/instances/$sealed" | cut -f2 | jq -r '.seal.hash // empty')
+check "Niêm phong: bước cuối xong thì /instances trả băm SHA-256" \
+  "$([[ "$seal_hash" =~ ^[0-9a-f]{64}$ ]] && echo có)" có
+check "Niêm phong: người lập thấy cùng băm ở /cases/{id}" \
+  "$(api GET "$user_a" "/cases/$sealed" | cut -f2 | jq -r .seal.hash)" "$seal_hash"
+check "Niêm phong: bảng niêm phong chỉ giữ mã hồ sơ, tenant, quy trình và băm" \
+  "$(sql -c "SELECT tenant_id || ' ' || process || ' ' || encode(hash, 'hex') FROM core.case_seals
+    WHERE case_id = '$sealed'")" "xa-a core-sealed $seal_hash"
+check "Niêm phong: quy trình không khai niêm phong trả seal null" \
+  "$(api GET "$user_a" "/instances/$approved_case" | cut -f2 | jq -r .seal)" null
+check "Niêm phong: bảng niêm phong không cho sửa, kể cả chủ bảng" \
+  "$(sql -c "UPDATE core.case_seals SET process = 'khac' WHERE case_id = '$sealed'" 2>&1 |
+    grep -c 'không được phép' || true)" 1
+check "Niêm phong: sửa lén băm niêm phong (tắt trigger) thì khác dòng nhật ký lúc niêm phong" "$(sql <<SQL
+BEGIN;
+SET LOCAL session_replication_role = replica;
+UPDATE core.case_seals SET hash = sha256('sua-len') WHERE case_id = '$sealed';
+SELECT problem FROM core.case_seals_unlogged() WHERE case_id = '$sealed';
+ROLLBACK;
+SQL
+)" "băm niêm phong khác băm ghi trong nhật ký lúc niêm phong"
+# seal_reports: số dòng seal-verify báo cho hồ sơ $sealed (mỗi hồ sơ lệch một dòng, bắt đầu bằng mã hồ sơ).
+seal_reports() { scripts/seal-verify.sh 2>&1 | grep -c "^$sealed " || true; }
+check "Niêm phong: make seal-verify không báo hồ sơ vừa niêm phong" "$(seal_reports)" 0
+check "Niêm phong: dòng niêm phong khớp dòng nhật ký lúc niêm phong" \
+  "$(sql -c "SELECT count(*) FROM core.case_seals_unlogged() WHERE case_id = '$sealed'")" 0
+flowable_sql() { docker compose exec -T postgres psql -qAtX -v ON_ERROR_STOP=1 -U postgres -d flowable "$@"; }
+set_note() {
+  flowable_sql -v note="$1" -v id="$sealed" >/dev/null <<'SQL'
+UPDATE act_hi_varinst SET text_ = :'note' WHERE proc_inst_id_ = :'id' AND name_ = 'note';
+SQL
+}
+trap 'rm -f "$claims_file"; set_note "Ghi chú gốc"' EXIT
+set_note "Sửa lén"
+check "Sửa lén ghi chú của bước trong lịch sử Flowable: make seal-verify báo đúng hồ sơ đó và thoát lỗi" \
+  "$(seal_reports) $(scripts/seal-verify.sh >/dev/null 2>&1 && echo khớp || echo lệch)" "1 lệch"
+set_note "Ghi chú gốc"
+trap 'rm -f "$claims_file"' EXIT
+check "Đặt lại ghi chú: make seal-verify không báo hồ sơ đó nữa" "$(seal_reports)" 0
+
 # Số hồ sơ của một quy trình (ADR 0035): manager.a (vai trò của bước duyệt) thấy số của xã A; lập hồ sơ thì số còn mở
 # tăng một, duyệt xong thì trở lại và số đã kết thúc tăng một; manager.b thấy số của xã B, không đổi theo xã A. user.a
 # không làm bước nào của core-approval nên nhận đúng câu 404 của quy trình không có.

@@ -37,6 +37,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   mẫu có dòng gợi ý `help` ([ADR 0050](docs/adr/0050-catalog-tones-cards-form-help.md)).
 - Danh sách của thành phần danh mục xuất được ra CSV, Excel và PDF: mọi dòng khớp tìm, lọc đang xem, bằng quyền của
   người xuất, đầu tệp ghi nguồn, đơn vị, thời điểm và người xuất ([ADR 0052](docs/adr/0052-catalog-export.md)).
+- Hồ sơ của quy trình khai niêm phong được băm khi kết thúc; `/instances/{id}`, `/cases/{id}` trả mã băm và thời điểm,
+  `make seal-verify` báo hồ sơ bị sửa lén; lõi ghi hạn của bước chờ hẹn giờ ([ADR
+  0053](docs/adr/0053-case-seals-and-timer-deadlines.md)).
 
 ### Changed
 
