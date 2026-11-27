@@ -45,6 +45,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Các trang dùng chung đầu trang, nhãn trạng thái, định dạng ngày giờ; bảng cuộn ngang được trên điện thoại, nút việc
   chính nổi bật; câu truy vấn của trợ lý dữ liệu nằm sau nút "Xem câu truy vấn" ([ADR
   0047](docs/adr/0047-page-header-status-badge-formatting.md)).
+- Giao diện kiểu Bento dịu: nền xám nhạt, thẻ viền mảnh bo 12px, ô nhập viền rõ, liên kết gạch chân, phông Be Vietnam
+  Pro đóng gói cùng giao diện; nhãn trạng thái dùng một bộ nghĩa màu chung ([ADR
+  0048](docs/adr/0048-bento-tokens-status-tones-font.md)).
 
 ### Removed
 
