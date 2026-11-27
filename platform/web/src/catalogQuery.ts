@@ -8,16 +8,21 @@
 
 import { type CatalogNode, firstColumn, keyOf, pageSize, type Sort, type Step, titleField } from "./catalog";
 
+/** Kiểu trình bày của danh sách, cùng thứ tự với `variant` của schema; chữ trên nút ở catalogViews.ts. */
+export const VIEWS = ["table", "cards", "kanban", "calendar"] as const;
+export type View = (typeof VIEWS)[number];
+
 /**
- * Trạng thái của một danh sách: người dùng đang tìm gì, lọc gì, xếp theo gì, ở trang nào (trang đầu là 0), và có
- * đang xem dạng bảng hay thẻ (ADR 0050); không có view là kiểu mặc định của danh mục (`variant`, ADR 0061).
+ * Trạng thái của một danh sách: người dùng đang tìm gì, lọc gì, xếp theo gì, ở trang nào (trang đầu là 0), và đang
+ * xem kiểu nào (bảng, thẻ, ADR 0050; Kanban, Lịch, ADR 0066); không có view là kiểu mặc định của danh mục (`variant`,
+ * ADR 0061).
  */
 export type ListState = {
   search: string;
   filters: Record<string, string>;
   sort?: Sort;
   page: number;
-  view?: "table" | "cards";
+  view?: View;
 };
 
 type Where = Record<string, unknown>;
@@ -127,7 +132,7 @@ export function readState(params: URLSearchParams): ListState {
     filters,
     sort: sort ? { field: sort.replace(/^-/, ""), direction: sort.startsWith("-") ? "desc" : "asc" } : undefined,
     page: Number.isInteger(page) && page > 1 ? page - 1 : 0,
-    view: params.get("view") === "cards" ? "cards" : params.get("view") === "table" ? "table" : undefined,
+    view: VIEWS.find((view): view is View => view === params.get("view")),
   };
 }
 

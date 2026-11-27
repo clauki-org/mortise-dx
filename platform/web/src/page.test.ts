@@ -21,7 +21,7 @@ describe("kiểu của thành phần", () => {
 
   it("giá trị lạ hay bỏ trống về kiểu đầu tiên", () => {
     expect(variantOf("catalog", "cards")).toBe("cards");
-    expect(variantOf("catalog", "kanban")).toBe("table");
+    expect(variantOf("catalog", "timeline")).toBe("table");
     expect(variantOf("map", undefined)).toBe("map");
     expect(variantOf("dashboard", 3)).toBe("full");
   });

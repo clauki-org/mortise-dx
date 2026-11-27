@@ -132,7 +132,9 @@ branding.low-contrast-color.json	$.color	'teal' is not one of ['blue', 'indigo',
 branding.missing-short-name.json	$	'short_name' is a required property
 catalog.add-form-unknown-field-type.yaml	$.detail.children[0].add.form.fields[0].type	'no-such-type' is not one of ['string', 'number', 'integer', 'boolean', 'date', 'choice']
 catalog.edit-missing-label.yaml	$.detail.edit	'label' is a required property
-catalog.unknown-variant.yaml	$.variant	'kanban' is not one of ['table', 'cards']
+catalog.unknown-variant.yaml	$.variant	'timeline' is not one of ['table', 'cards', 'kanban', 'calendar']
 form.update-without-version.yaml	$.submit	'version' is a dependency of 'update'
 page.block-unknown-key.yaml	$.blocks[0]	Additional properties are not allowed ('config' was unexpected)
 page.no-blocks.yaml	$.blocks	[] should be non-empty
+catalog.kanban-without-config.yaml	$	'kanban' is a required property
+catalog.calendar-unknown-key.yaml	$.calendar	Additional properties are not allowed ('end' was unexpected)

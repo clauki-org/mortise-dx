@@ -49,6 +49,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   0065](docs/adr/0065-package-on-off.md)).
 - Trang gồm khối: gói khai khối và trang trong `app.yaml`, mỗi thành phần có kiểu trình bày; trang Tổng quan của gói
   cơ sở vật chất xã ([ADR 0061](docs/adr/0061-block-composition.md)).
+- Danh mục có thêm kiểu Kanban (cột theo trường trạng thái, chuyển thẻ bằng kéo thả hay nút "Chuyển sang", có so phiên
+  bản) và Lịch (tháng, tuần theo trường ngày); gói cơ sở vật chất xã dùng cả hai ([ADR
+  0066](docs/adr/0066-catalog-kanban-and-calendar.md)).
 
 ### Changed
 

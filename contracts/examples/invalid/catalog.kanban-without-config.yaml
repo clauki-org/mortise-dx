@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: kiểu `kanban` mà không có mục `kanban` nói trường nào
+# chia cột (ADR 0066). Nếu lọt, giao diện vẽ dạng bảng và gói tưởng đã chọn Kanban.
+
+title: Danh mục
+variant: kanban
+source: app_example_items
+fields:
+  - name: status
+    label: Tình trạng
+    choices: [{ value: active, label: Đang dùng }]
+list:
+  columns: [status]

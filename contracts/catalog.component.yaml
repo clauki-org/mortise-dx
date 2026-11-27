@@ -4,19 +4,30 @@
 # Bản mô tả thành phần danh mục theo contracts/component.schema.json; `make check-fast` kiểm tệp này.
 # Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, CatalogRows.tsx,
 # CatalogActions.tsx, catalog.ts, catalogQuery.ts; phần tài liệu ở CatalogDocuments.tsx; nút sửa và thêm dòng con ở
-# CatalogForm.tsx). Mỗi dòng dưới đây đã được chạy thử trên giao diện, trừ nút sửa và thêm dòng con (ADR 0054, mục
-# Chưa kiểm); đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
+# CatalogForm.tsx; Kanban, Lịch ở CatalogKanban.tsx, CatalogCalendar.tsx, catalogViews.ts). Mỗi dòng dưới đây đã được
+# chạy thử trên giao diện, trừ nút sửa và thêm dòng con (ADR 0054, mục Chưa kiểm) và Kanban, Lịch (ADR 0066, mục Chưa
+# kiểm); đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
 
 component: catalog
 summary: Danh sách và màn hình chi tiết của một loại đối tượng cùng các đối tượng con của nó, đọc qua GraphQL theo cấu hình của gói.
 config_schema: catalog.schema.json
 example: examples/catalog.example.yaml
 capabilities:
-  - Kiểu trình bày của danh sách ngoài cùng chọn bằng variant (table, cards; ADR 0061); người xem vẫn đổi được bằng nút chọn kiểu. Đặt trong một khối của trang (component page) thì chỉ có danh sách, giữ tìm, lọc, trang trong bộ nhớ, không có nút xuất.
+  - Kiểu trình bày của danh sách ngoài cùng chọn bằng variant (table, cards, kanban, calendar; ADR 0061, ADR 0066); người xem vẫn đổi được bằng nút chọn kiểu. Đặt trong một khối của trang (component page) thì chỉ có danh sách, giữ tìm, lọc, trang trong bộ nhớ, không có nút xuất.
   - Danh sách dạng bảng; cột nào hiện, tên cột và thứ tự cột theo fields và list.columns.
   - Danh sách ngoài cùng có công tắc Bảng/Thẻ (mặc định Bảng, ADR 0050). Ở dạng thẻ mỗi dòng một thẻ, giá trị cột đầu là
     liên kết tới màn hình chi tiết như ở bảng, các cột sau là cặp nhãn, giá trị; ô "Sắp theo" chọn cột và chiều. Tìm,
     lọc, phân trang như dạng bảng; dạng thẻ nằm trên đường dẫn. Bảng đối tượng con luôn ở dạng bảng.
+  - Kiểu Kanban (mục kanban, ADR 0066) có một cột cho mỗi lựa chọn của kanban.field, theo thứ tự choices, cột có tone
+    mang nhãn màu; dòng có giá trị trống hay ngoài choices vào cột "Chưa xếp cột", cột này chỉ hiện khi có dòng. Mỗi cột đọc
+    riêng tối đa list.page_size thẻ theo cùng tìm, lọc, thứ tự; còn thẻ thì cột báo. Khai kanban.move thì người có vai
+    trò move.role chuyển thẻ bằng kéo thả hay nút "Chuyển sang" trên thẻ (bàn phím, điện thoại); lệnh ghi đúng cột
+    kanban.field qua update của Hasura với điều kiện cột move.version, không khớp thì báo và tải lại bảng. Cột trong
+    kanban.locked không nhận và không cho chuyển thẻ đi; không khai move thì bảng chỉ đọc.
+  - Kiểu Lịch (mục calendar, ADR 0066) đặt mỗi dòng ở ngày của calendar.field (cột date theo ngày lưu, cột datetime
+    theo giờ của trình duyệt), xem theo tháng (lưới bảy cột từ thứ hai) hay tuần (danh sách bảy ngày), nút tháng, tuần trước,
+    sau và hôm nay; chữ của dòng là calendar.title, là liên kết tới chi tiết. Dòng có ngày không đọc được hiện ở danh
+    sách riêng. Tìm, lọc như danh sách.
   - Tìm theo chữ, không phân biệt hoa thường, trên các trường kiểu text khai trong list.search.
   - Lọc theo một giá trị của mỗi trường có choices khai trong list.filters.
   - Sắp xếp tăng hoặc giảm theo một cột khi bấm tiêu đề cột; thứ tự lúc mới mở theo list.sort. Dòng chưa có giá
@@ -60,6 +71,9 @@ limits:
     mở cho một dòng. Nút hiện cho mọi người đọc được dòng; ai được khởi tạo do workflow-api quyết định.
   - Giá trị gửi cho quy trình do trình duyệt đọc từ dòng lúc bấm; quy trình không tự đọc lại từ CSDL.
   - Không hiện tổng số dòng và tổng số trang.
+  - Kanban và Lịch chỉ ở danh sách ngoài cùng. Kanban không phân trang, mỗi cột tối đa list.page_size thẻ. Lịch đọc tối
+    đa 200 dòng của khoảng đang xem, chỉ đọc (không kéo đổi ngày), không có sự kiện nhiều ngày; tháng, tuần đang xem không
+    nằm trên đường dẫn. Chuyển thẻ không qua quy trình; trường do quy trình đặt thì gói không khai move hay khai locked.
   - Xuất chỉ ở danh sách ngoài cùng, tối đa 5.000 dòng một tệp; bảng đối tượng con không xuất. Lần xuất không được
     ghi nhật ký phía máy chủ.
   - Mỗi lúc chỉ sắp xếp theo một cột; thứ tự của chữ có dấu là thứ tự so sánh của CSDL.

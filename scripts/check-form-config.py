@@ -8,7 +8,8 @@
 # scripts/form_permissions.py), không trường nào là cột tenant; mục menu sau khi gửi có trong app.yaml.
 # Biểu mẫu mở từ danh mục (detail.edit, add của đối tượng con, ADR 0054) cũng được kiểm: biểu mẫu sửa chỉ
 # sửa cột trong quyền update của vai trò, đọc được khóa, cột version và mọi trường để điền sẵn; biểu mẫu
-# thêm dòng con ghi được cột nối về cha. Thiếu bước này, lỗi chỉ lộ ra khi người dùng bấm Gửi. Thành phần
+# thêm dòng con ghi được cột nối về cha; lệnh chuyển thẻ của Kanban (kanban.move, ADR 0066) kiểm như biểu
+# mẫu sửa chỉ có trường của cột. Thiếu bước này, lỗi chỉ lộ ra khi người dùng bấm Gửi. Thành phần
 # kiểm lại luật tên lúc chạy. Gọi từ scripts/contracts.sh: --app <app.yaml>; mặc định đọc BPMN, khai báo
 # bước, quyền Hasura, mọi biểu mẫu trên menu và mọi biểu mẫu trong danh mục theo app.yaml, còn --bpmn,
 # --steps, --hasura, --form, --catalog thay từng phần để kiểm với tệp mẫu.
@@ -214,10 +215,22 @@ def form_problems(form: dict, entry: dict | None, context: dict, key: str | None
     return errors
 
 
+def move_problems(node: dict, context: dict) -> list[str]:
+    """Chuyển thẻ của Kanban (ADR 0066) là lệnh sửa đúng một cột: kiểm như biểu mẫu sửa chỉ có trường đó."""
+    kanban = node.get("kanban") or {}
+    move = kanban.get("move")
+    if not move:
+        return []
+    form = {"submit": {"update": node["source"], "version": move["version"]}}
+    role = move.get("role", "user")
+    errors = update_problems(form, [kanban["field"]], role, context["tables"], node.get("key", "id"))
+    return [f"kanban.move: {error}" for error in errors]
+
+
 def catalog_problems(node: dict, context: dict, where: str = "") -> list[str]:
     """Biểu mẫu trong danh mục: đích đúng bảng của danh sách, done.menu không dùng (hộp thoại tự đóng)."""
     detail = node.get("detail") or {}
-    errors = []
+    errors = move_problems(node, context)
     edit = detail.get("edit")
     if edit:
         at, form = f"{where}nút '{edit['label']}'", edit["form"]

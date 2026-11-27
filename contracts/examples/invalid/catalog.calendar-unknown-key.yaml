@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: mục `calendar` có khóa lạ (ADR 0066). Nếu lọt, gói tưởng
+# lịch đọc khóa đó, ví dụ một trường ngày kết thúc, mà giao diện không biết tới.
+
+title: Danh mục
+variant: calendar
+source: app_example_items
+fields:
+  - { name: due_on, label: Hạn, type: date }
+list:
+  columns: [due_on]
+calendar:
+  field: due_on
+  end: due_on

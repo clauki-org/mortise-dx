@@ -2,16 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Danh sách của thành phần danh mục: ô tìm, ô lọc, thứ tự và phân trang, tất cả theo cấu hình của gói (catalog.ts,
-// catalogQuery.ts); các dòng vẽ thành bảng hay thẻ ở CatalogRows.tsx. Dùng cho màn hình danh sách và cho bảng đối
-// tượng con trong màn hình chi tiết; nơi gọi giữ trạng thái (trên thanh địa chỉ hoặc trong bộ nhớ), truyền điều kiện
-// cố định nếu có, và chỉ danh sách ngoài cùng bật dạng thẻ.
+// catalogQuery.ts); các dòng vẽ thành bảng hay thẻ ở CatalogRows.tsx, bảng Kanban ở CatalogKanban.tsx, lịch ở
+// CatalogCalendar.tsx. Dùng cho màn hình danh sách và cho bảng đối tượng con trong màn hình chi tiết; nơi gọi giữ trạng
+// thái (trên thanh địa chỉ hoặc trong bộ nhớ), truyền điều kiện cố định nếu có, và chỉ danh sách ngoài cùng có kiểu
+// khác bảng.
 
 import { Button, Group, Paper, Select, Stack, Text, TextInput } from "@mantine/core";
 import type { FormEvent } from "react";
 import { useQuery } from "urql";
+import { CatalogCalendar } from "./CatalogCalendar";
+import { CatalogKanban } from "./CatalogKanban";
 import { RowsCards, RowsTable, ViewControls } from "./CatalogRows";
 import { type CatalogNode, type Field, fieldOf, pageSize, type Row } from "./catalog";
-import { type ListState, listVariables, rowsQuery, sortOf } from "./catalogQuery";
+import { type ListState, listVariables, rowsQuery, sortOf, type View } from "./catalogQuery";
+import { type CalendarConfig, type KanbanConfig, viewOf } from "./catalogViews";
 import { Empty, ErrorNotice, Loading } from "./States";
 
 type Props = {
@@ -24,25 +28,35 @@ type Props = {
   onChange: (state: ListState) => void;
   /** Điều kiện luôn áp, ví dụ chỉ lấy đối tượng con của một đối tượng cha */
   fixed?: Record<string, unknown>;
-  /** Cho đổi sang dạng thẻ (ADR 0050); chỉ danh sách ngoài cùng bật, bảng đối tượng con giữ dạng bảng */
-  views?: boolean;
+  /**
+   * Kiểu người xem chọn được (ADR 0050, ADR 0066); chỉ danh sách ngoài cùng có, bảng đối tượng con giữ dạng bảng. Bỏ
+   * trống là chỉ bảng, không có nút chọn kiểu.
+   */
+  views?: View[];
   /** Kiểu khi người xem chưa chọn (`variant` của danh mục, ADR 0061) */
-  defaultView?: "table" | "cards";
+  defaultView?: View;
+  kanban?: KanbanConfig;
+  calendar?: CalendarConfig;
 };
 
-export function CatalogTable({ config, label, path, state, onChange, fixed, views = false, defaultView }: Props) {
+export function CatalogTable(props: Props) {
+  const { config, label, path, state, onChange, fixed, views = [], defaultView, kanban, calendar } = props;
   const columns = config.list.columns.map((name) => fieldOf(config, name)).filter((field) => field !== undefined);
   const size = pageSize(config);
   const sort = sortOf(config, state);
+  const view = viewOf(views, state.view, defaultView);
+  const own = view === "kanban" || view === "calendar";
   const [{ data, fetching, error }, reload] = useQuery<{ rows: Row[] }>({
     query: rowsQuery(config, config.list.columns),
     variables: listVariables(config, state, fixed),
     // Hiện ngay kết quả đã tải rồi đọc lại từ máy chủ: quay về danh sách sau khi dữ liệu đổi không thấy bản cũ mãi.
     requestPolicy: "cache-and-network",
+    // Kanban và lịch đọc theo câu riêng của chúng; đọc thêm trang danh sách là một yêu cầu thừa.
+    pause: own,
   });
   const rows = data?.rows.slice(0, size) ?? [];
   const hasNext = (data?.rows.length ?? 0) > size;
-  const cards = views && (state.view ?? defaultView) === "cards";
+  const cards = view === "cards";
   const filtering = state.search.trim() !== "" || Object.keys(state.filters).length > 0;
 
   // Đổi điều kiện tìm, lọc hay thứ tự thì về trang đầu: trang đang xem có thể không còn tồn tại.
@@ -91,21 +105,42 @@ export function CatalogTable({ config, label, path, state, onChange, fixed, view
             )
           );
         })}
-        {views && (
+        {views.length > 1 && (
           <ViewControls
             columns={columns}
-            cards={cards}
+            views={views}
+            view={view}
             sort={sort}
             // Đổi kiểu hiển thị giữ trang đang xem: cùng dòng, chỉ khác cách vẽ.
-            onView={(next) => {
-              const view = next ? "cards" : "table";
-              onChange({ ...state, view: view === (defaultView ?? "table") ? undefined : view });
-            }}
+            onView={(next) => onChange({ ...state, view: next === (defaultView ?? "table") ? undefined : next })}
             onSort={(next) => change({ sort: next })}
           />
         )}
       </Group>
-      {error && (
+      {view === "kanban" && kanban && (
+        <CatalogKanban
+          config={config}
+          kanban={kanban}
+          columns={columns}
+          state={state}
+          fixed={fixed}
+          path={path}
+          label={label}
+          onClear={() => change({ search: "", filters: {} })}
+        />
+      )}
+      {view === "calendar" && calendar && (
+        <CatalogCalendar
+          config={config}
+          calendar={calendar}
+          state={state}
+          fixed={fixed}
+          path={path}
+          label={label}
+          onClear={() => change({ search: "", filters: {} })}
+        />
+      )}
+      {!own && error && (
         <ErrorNotice
           title="Không tải được dữ liệu"
           error={error}
@@ -113,7 +148,8 @@ export function CatalogTable({ config, label, path, state, onChange, fixed, view
         />
       )}
       {/* Lỗi mà chưa có dữ liệu thì không vẽ bảng rỗng: lời "chưa có dòng nào" lúc đó là sai. */}
-      {!(error && !data) &&
+      {!own &&
+        !(error && !data) &&
         (cards && rows.length > 0 ? (
           <RowsCards config={config} columns={columns} rows={rows} path={path} />
         ) : (
@@ -146,7 +182,7 @@ export function CatalogTable({ config, label, path, state, onChange, fixed, view
             )}
           </Paper>
         ))}
-      {(state.page > 0 || hasNext) && (
+      {!own && (state.page > 0 || hasNext) && (
         <Group justify="space-between">
           <Text size="sm" c="dimmed">
             {rows.length > 0 ? `Dòng ${state.page * size + 1}–${state.page * size + rows.length}` : ""}

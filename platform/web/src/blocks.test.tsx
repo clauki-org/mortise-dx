@@ -205,6 +205,9 @@ type Combination = {
   /** Thành phần đọc GraphQL mà trạng thái dữ liệu phải hiện ra được trên trang */
   graphql?: boolean;
   component?: string;
+  /** Kiểu đã áp và cấu hình gốc của mục, để biết Kanban, Lịch có vẽ thật hay đã về bảng (ADR 0066) */
+  variant?: string;
+  config?: unknown;
 };
 
 /** Mọi tổ hợp mục × vị trí × kiểu × trạng thái dữ liệu của một gói, và trang chứa mọi mục của gói. */
@@ -226,6 +229,8 @@ function combinations(items: MenuItem[]): Combination[] {
           state,
           graphql: GRAPHQL.has(entry.component),
           component: entry.component,
+          variant,
+          config: entry.config,
         });
         found.push({
           name: `${entry.app}/${entry.item} trên trang, ${variant ?? "mặc định"}, ${state}`,
@@ -236,6 +241,8 @@ function combinations(items: MenuItem[]): Combination[] {
           nested: entry.component === "page",
           graphql: GRAPHQL.has(entry.component),
           component: entry.component,
+          variant,
+          config: entry.config,
         });
       }
     }
@@ -279,6 +286,22 @@ describe("tổ hợp khối", () => {
     }
     if (combination.component === "catalog" && combination.state === "empty")
       expect(html).toContain("Chưa có dòng nào.");
+    // Kanban và Lịch vẽ thật khi cấu hình khai mục của chúng, và về bảng khi không: dữ liệu giả có giá trị 1 ở mọi cột,
+    // nên thẻ rơi vào cột "Chưa xếp cột" và dòng của lịch vào danh sách ngày không đọc được.
+    if (
+      combination.component === "catalog" &&
+      (combination.variant === "kanban" || combination.variant === "calendar")
+    ) {
+      const declared = Object.hasOwn((combination.config ?? {}) as object, combination.variant);
+      const marker = combination.variant === "kanban" ? "Chưa xếp cột" : "Không xếp được vào lịch";
+      if (combination.state === "rows" && declared) expect(html).toContain(marker);
+      if (!declared) expect(html).not.toContain(combination.variant === "kanban" ? "Chưa xếp cột" : "Lịch theo");
+      if (combination.variant === "calendar" && declared) expect(html).toContain('aria-label="Lịch theo"');
+      const move = (combination.config as { kanban?: { move?: unknown } }).kanban?.move;
+      if (combination.variant === "kanban" && combination.state === "rows" && move) {
+        expect(html).toContain('aria-label="Chuyển sang: 1"');
+      }
+    }
     if (combination.graphql && combination.state === "denied") expect(html).toContain('role="alert"');
     if (combination.graphql && combination.state === "loading") expect(html).toContain('aria-label="Đang tải');
     // Khung bản đồ nạp lười nên khi dựng tĩnh luôn ở phần chờ của nó; vòng tải khác phải hết khi đã có kết quả.

@@ -99,6 +99,9 @@ const PAGES: { name: string; path: (request: APIRequestContext) => Promise<strin
   { name: "dashboard", path: () => "/apps/facilities-commune/dashboard" },
   { name: "facilities", path: () => "/apps/facilities-commune/facilities" },
   { name: "facilities-cards", path: () => "/apps/facilities-commune/facilities?view=cards" },
+  // Kanban theo tình trạng và lịch theo ngày tạo (ADR 0066): axe đo cả nút "Chuyển sang" và lưới tháng.
+  { name: "facilities-kanban", path: () => "/apps/facilities-commune/facilities?view=kanban" },
+  { name: "facilities-calendar", path: () => "/apps/facilities-commune/facilities?view=calendar" },
   {
     name: "facility-detail",
     path: async (request) => `/apps/facilities-commune/facilities/${await facilityId(request, "TS-A1")}`,

@@ -5,7 +5,7 @@
 # (ADR 0061). Nếu lọt, giao diện vẽ kiểu mặc định và gói tưởng đã chọn kiểu khác.
 
 title: Danh mục
-variant: kanban
+variant: timeline
 source: app_example_items
 fields:
   - { name: name, label: Tên, type: text }

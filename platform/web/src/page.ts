@@ -11,7 +11,7 @@ export type PageConfig = { title: string; description?: string; blocks: PageBloc
 // Cùng danh sách với `variant` trong contracts/<thành phần>.schema.json, kiểu đầu là mặc định; page.test.ts so hai bên
 // để không lệch. Thành phần không có ở đây chưa có kiểu nào.
 export const VARIANTS = {
-  catalog: ["table", "cards"],
+  catalog: ["table", "cards", "kanban", "calendar"],
   dashboard: ["full", "compact"],
   map: ["map", "list"],
 } as const satisfies Record<string, readonly string[]>;
