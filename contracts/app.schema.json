@@ -93,8 +93,8 @@
           "id": { "$ref": "#/$defs/slug" },
           "label": { "$ref": "#/$defs/text" },
           "component": {
-            "description": "Thành phần Tầng 2 hiển thị mục này",
-            "enum": ["catalog", "form", "map", "tasks", "dashboard", "rules", "assistant", "cases"]
+            "description": "Thành phần Tầng 2 hiển thị mục này; page là trang gồm nhiều khối của chính gói (ADR 0061)",
+            "enum": ["catalog", "form", "map", "tasks", "dashboard", "rules", "assistant", "cases", "page"]
           },
           "config": { "description": "Tệp cấu hình của thành phần", "$ref": "#/$defs/path" },
           "icon": {
@@ -108,6 +108,11 @@
           }
         }
       }
+    },
+    "blocks": {
+      "description": "Khối chỉ đặt trên trang (thành phần page) của chính gói, không hiện trên menu (ADR 0061). Khối có dạng như một mục menu và qua cùng bước kiểm; bộ cài ghi nó thành một dòng platform.menu_items với on_menu = false. id không trùng id nào trong menu; không có icon vì khối không đứng trên thanh bên.",
+      "type": "array",
+      "items": { "allOf": [{ "$ref": "#/properties/menu/items" }, { "not": { "required": ["icon"] } }] }
     }
   },
   "$defs": {

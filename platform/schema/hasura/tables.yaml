@@ -23,7 +23,7 @@
   select_permissions:
     - role: user
       permission:
-        columns: [tenant_id, app, app_name, item, position, label, component, config, roles, icon]
+        columns: [tenant_id, app, app_name, item, position, label, component, config, roles, icon, on_menu]
         filter:
           _and:
             - { tenant_id: { _eq: X-Hasura-Tenant-Id } }

@@ -6,7 +6,7 @@
 # platform.menu_items, luật ngưỡng vào core.threshold_rules, văn bản cho trợ lý vào bảng knowledge của
 # platform (scripts/app_knowledge.py), bảng phân cấp mặc định vào core.step_authorities, tên, mô tả và gói cần
 # (`requires`) vào platform.apps cho trang "Ứng dụng" (ADR 0065). Bảy lệnh:
-#   install <thư mục gói>   đọc app.yaml (workflows, menu, rules, knowledge, authorities) và
+#   install <thư mục gói>   đọc app.yaml (workflows, menu, blocks, rules, knowledge, authorities) và
 #                           <gói>/workflows/*.yaml; app.sh gọi khi cài
 #   remove <thư mục gói>    xóa deployment (kèm hồ sơ đang chạy), khai báo bước, menu, luật, văn bản, bảng
 #                           phân cấp của gói; gọi khi gỡ
@@ -43,6 +43,7 @@ import xml.etree.ElementTree as ET
 
 import app_knowledge
 import yaml
+from app_entries import entries
 from workflow_settings import SettingsError, merge, parse_overrides, render
 
 BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
@@ -180,22 +181,24 @@ def load_steps(files: list[str]) -> None:
 MENU_SQL = """
 BEGIN;
 CREATE TEMP TABLE item ON COMMIT DROP AS SELECT * FROM jsonb_to_recordset(:'items'::jsonb)
-    AS x(item text, position integer, label text, component text, config jsonb, roles text[], icon text);
+    AS x(item text, position integer, label text, component text, config jsonb, roles text[], icon text,
+         on_menu boolean);
 DELETE FROM platform.menu_items m WHERE m.app = :'app' AND m.item NOT IN (SELECT item FROM item);
 INSERT INTO platform.menu_items
-    (tenant_id, app, app_name, item, position, label, component, config, roles, icon)
-SELECT t.id, :'app', :'app_name', i.item, i.position, i.label, i.component, i.config, i.roles, i.icon
+    (tenant_id, app, app_name, item, position, label, component, config, roles, icon, on_menu)
+SELECT t.id, :'app', :'app_name', i.item, i.position, i.label, i.component, i.config, i.roles, i.icon,
+       i.on_menu
 FROM core.tenants t, item i
 ON CONFLICT (tenant_id, app, item) DO UPDATE
     SET app_name = EXCLUDED.app_name, position = EXCLUDED.position, label = EXCLUDED.label,
     component = EXCLUDED.component, config = EXCLUDED.config, roles = EXCLUDED.roles, icon = EXCLUDED.icon,
-    updated_at = now()
+    on_menu = EXCLUDED.on_menu, updated_at = now()
     WHERE (platform.menu_items.app_name, platform.menu_items.position, platform.menu_items.label,
            platform.menu_items.component, platform.menu_items.config, platform.menu_items.roles,
-           platform.menu_items.icon)
+           platform.menu_items.icon, platform.menu_items.on_menu)
         IS DISTINCT FROM
         (EXCLUDED.app_name, EXCLUDED.position, EXCLUDED.label, EXCLUDED.component, EXCLUDED.config,
-         EXCLUDED.roles, EXCLUDED.icon);
+         EXCLUDED.roles, EXCLUDED.icon, EXCLUDED.on_menu);
 COMMIT;
 """
 
@@ -210,12 +213,14 @@ def load_menu(directory: str, app: dict) -> None:
             "config": load_yaml(os.path.join(directory, entry["config"])),
             "roles": entry.get("roles") or None,
             "icon": entry.get("icon"),
+            # Khối (mục `blocks`, ADR 0061) nằm cùng bảng để trang tìm được nó, nhưng không lên thanh bên.
+            "on_menu": position < len(app.get("menu", [])),
         }
-        for position, entry in enumerate(app.get("menu", []))
+        for position, entry in enumerate(entries(app))
     ]
     # Tên hiển thị của gói là tên nhóm của các mục trên menu (ADR 0044); trình duyệt không đọc được app.yaml.
     psql(MENU_SQL, app=app["id"], app_name=app["name"], items=json.dumps(items))
-    print(f"postgres: {len(items)} mục menu của {app['id']}")
+    print(f"postgres: {len(items)} mục menu và khối của {app['id']}")
 
 
 # Chỉ sửa dòng đã có, không xóa rồi ghi lại: platform.app_states trỏ về đây với ON DELETE CASCADE,
@@ -415,10 +420,11 @@ def check_assistant_data(owner: str, configs: list[str]) -> None:
 def package(directory: str) -> tuple[dict, list[str], list[str]]:
     app = load_yaml(os.path.join(directory, "app.yaml"))
     # Kiểm trước khi ghi gì: schema không buộc id menu duy nhất, và trùng id làm câu INSERT báo lỗi khó hiểu
-    # sau khi quy trình đã deploy.
-    ids = [entry["id"] for entry in app.get("menu", [])]
+    # sau khi quy trình đã deploy. Khối nằm cùng bảng với mục menu nên id của hai mục cũng không được trùng.
+    ids = [entry["id"] for entry in entries(app)]
     if len(ids) != len(set(ids)):
-        raise SystemExit(f"{directory}/app.yaml: id trong menu bị trùng ({', '.join(sorted(ids))}).")
+        listed = ", ".join(sorted(ids))
+        raise SystemExit(f"{directory}/app.yaml: id trong menu và blocks bị trùng ({listed}).")
     bpmn = [os.path.join(directory, path) for path in app.get("workflows", [])]
     steps = sorted(glob.glob(os.path.join(directory, "workflows", "*.yaml")))
     return app, bpmn, steps

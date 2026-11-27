@@ -12,6 +12,7 @@ summary: Danh sách và màn hình chi tiết của một loại đối tượng
 config_schema: catalog.schema.json
 example: examples/catalog.example.yaml
 capabilities:
+  - Kiểu trình bày của danh sách ngoài cùng chọn bằng variant (table, cards; ADR 0061); người xem vẫn đổi được bằng nút chọn kiểu. Đặt trong một khối của trang (component page) thì chỉ có danh sách, giữ tìm, lọc, trang trong bộ nhớ, không có nút xuất.
   - Danh sách dạng bảng; cột nào hiện, tên cột và thứ tự cột theo fields và list.columns.
   - Danh sách ngoài cùng có công tắc Bảng/Thẻ (mặc định Bảng, ADR 0050). Ở dạng thẻ mỗi dòng một thẻ, giá trị cột đầu là
     liên kết tới màn hình chi tiết như ở bảng, các cột sau là cặp nhãn, giá trị; ô "Sắp theo" chọn cột và chiều. Tìm,

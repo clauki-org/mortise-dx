@@ -16,6 +16,7 @@ import os
 import sys
 
 import yaml
+from app_entries import entries
 from form_permissions import permission, tables_of, tenant_columns
 
 # Danh mục không gửi X-Hasura-Role khi đọc, nên Hasura dùng vai trò mặc định của token là user (ADR 0023).
@@ -98,8 +99,8 @@ def main() -> int:
         if args.catalog:
             paths = [args.catalog]
         else:
-            entries = [e for e in app.get("menu", []) if e["component"] == "catalog"]
-            paths = [os.path.join(args.configs or directory, e["config"]) for e in entries]
+            catalogs = [e for e in entries(app) if e["component"] == "catalog"]
+            paths = [os.path.join(args.configs or directory, e["config"]) for e in catalogs]
         errors = []
         for path in paths:
             errors += [f"{path}: {error}" for error in node_problems(read_yaml(path), tables, "")]

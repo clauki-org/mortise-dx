@@ -8,6 +8,10 @@
   "required": ["title", "source", "fields", "list"],
   "properties": {
     "title": { "description": "Tiêu đề màn hình danh sách", "$ref": "#/$defs/text" },
+    "variant": {
+      "description": "Kiểu trình bày của danh sách ngoài cùng (ADR 0061): bảng hay thẻ (ADR 0050). Người xem vẫn đổi được bằng nút chọn kiểu; trang (page) chọn kiểu riêng cho khối. Bỏ trống là table; giá trị giao diện không biết cũng là table.",
+      "enum": ["table", "cards"]
+    },
     "source": { "$ref": "#/$defs/source" },
     "key": { "$ref": "#/$defs/key" },
     "fields": { "$ref": "#/$defs/fields" },

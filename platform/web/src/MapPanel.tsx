@@ -26,6 +26,7 @@ import {
 } from "./mapConfig";
 import { rolesOf } from "./menu";
 import { PageHeader } from "./PageHeader";
+import { variantOf } from "./page";
 import { Empty, ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
 import { TableScroll } from "./TableScroll";
@@ -194,16 +195,20 @@ export function MapPanel({ config }: { config: MapConfig }) {
       </Alert>
     );
   }
+  // Kiểu danh sách (ADR 0061) không nạp MapLibre: chú giải và danh sách điểm đã đủ mọi điểm.
+  const canvas = variantOf("map", config.variant) === "map";
   return (
     <Stack>
       <PageHeader title={config.title} />
-      <Paper withBorder radius="md">
-        <CanvasBoundary>
-          <Suspense fallback={<Loading what="bản đồ" />}>
-            <MapCanvas points={points} areas={config.areas} selected={selected} onSelect={setSelected} />
-          </Suspense>
-        </CanvasBoundary>
-      </Paper>
+      {canvas && (
+        <Paper withBorder radius="md">
+          <CanvasBoundary>
+            <Suspense fallback={<Loading what="bản đồ" />}>
+              <MapCanvas points={points} areas={config.areas} selected={selected} onSelect={setSelected} />
+            </Suspense>
+          </CanvasBoundary>
+        </Paper>
+      )}
       {config.note && <Text size="sm">{config.note}</Text>}
       {config.areas && <AreaLegend areas={config.areas} />}
       {layers.map((layer) => (

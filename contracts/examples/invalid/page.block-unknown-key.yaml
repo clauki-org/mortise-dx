@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/page.schema.json từ chối: khối mang khóa không thuộc hợp đồng. Cấu hình của thành
+# phần nằm ở tệp của mục mà khối trỏ tới; nếu lọt, người viết tưởng khối dùng cấu hình viết ở đây.
+
+title: Tổng quan
+blocks:
+  - item: items
+    config: catalog/items.yaml

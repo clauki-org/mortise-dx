@@ -27,6 +27,8 @@ import type { FormConfig } from "./formConfig";
 import { MapPanel } from "./MapPanel";
 import type { MapConfig } from "./mapConfig";
 import { findItem, itemPath, MENU_QUERY, type MenuData, OVERRIDES_QUERY, rolesOf, visibleItems } from "./menu";
+import { Page } from "./Page";
+import type { PageConfig } from "./page";
 import { ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
 
@@ -78,8 +80,8 @@ type Render = (config: unknown, basePath: string, app: string, item: string) => 
 
 // Tên thành phần là dữ liệu đọc từ CSDL nên tra bằng Map: tra trên đối tượng thường thì tên như "constructor" hay
 // "toString" sẽ khớp với thuộc tính có sẵn của mọi đối tượng. Thành phần mới thêm một dòng ở đây; tên hợp lệ do
-// contracts/app.schema.json liệt kê.
-const COMPONENTS = new Map<string, Render>([
+// contracts/app.schema.json liệt kê. Khối trên trang (Block.tsx) vẽ qua cùng bảng này.
+export const COMPONENTS = new Map<string, Render>([
   ["catalog", (config, basePath) => <Catalog config={config as CatalogConfig} basePath={basePath} />],
   ["map", (config) => <MapPanel config={config as MapConfig} />],
   ["form", (config, _basePath, app) => <FormPanel config={config as FormConfig} app={app} />],
@@ -94,6 +96,7 @@ const COMPONENTS = new Map<string, Render>([
         <Assistant config={config as AssistantConfig} app={app} />
       ),
   ],
+  ["page", (config, _basePath, app) => <Page config={config as PageConfig} app={app} />],
 ]);
 
 export function PackagePage() {

@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: `variant` không phải kiểu trình bày của danh mục
+# (ADR 0061). Nếu lọt, giao diện vẽ kiểu mặc định và gói tưởng đã chọn kiểu khác.
+
+title: Danh mục
+variant: kanban
+source: app_example_items
+fields:
+  - { name: name, label: Tên, type: text }
+list:
+  columns: [name]

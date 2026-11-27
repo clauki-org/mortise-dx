@@ -50,7 +50,7 @@ export type Action = { id: string; label: string; process: string; variables: Re
 export type Child = CatalogNode & { id: string; label: string; via: string; add?: Add };
 
 /** Cấu hình gói đưa cho thành phần: loại đối tượng ngoài cùng, kèm tiêu đề của danh sách. */
-export type CatalogConfig = CatalogNode & { title: string };
+export type CatalogConfig = CatalogNode & { title: string; variant?: string };
 
 export type Sort = { field: string; direction?: "asc" | "desc" };
 

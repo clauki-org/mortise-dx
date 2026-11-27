@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ cấu hình trang gồm khối hợp lệ theo contracts/page.schema.json (ADR 0061); `make check-fast` kiểm tệp này theo
+# schema và theo examples/app.example.yaml (scripts/check-page-config.py: mỗi item có trong menu hay blocks của gói,
+# không phải trang, kiểu có trong variant của thành phần). Bảng điều hành ở kiểu gọn, khối bản đồ chỉ có danh sách
+# điểm, danh mục ở dạng thẻ. Gói thật đặt tệp trong thư mục của gói (pages/).
+
+title: Tổng quan
+description: Số liệu chính, địa điểm và danh mục trên một trang.
+blocks:
+  - item: reports
+    variant: compact
+  - item: sites
+    variant: list
+  - item: items
+    variant: cards

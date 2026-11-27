@@ -222,11 +222,12 @@ describe("trạng thái trên thanh địa chỉ", () => {
     expect(readState(new URLSearchParams("page=-4")).page).toBe(0);
   });
 
-  it("dạng thẻ nằm trên thanh địa chỉ, dạng bảng mặc định thì không; giá trị lạ là dạng bảng", () => {
+  it("kiểu đã chọn nằm trên thanh địa chỉ, chưa chọn thì không; giá trị lạ là kiểu mặc định của danh mục", () => {
     const cards = { ...emptyState, view: "cards" as const };
     expect(writeState(cards).toString()).toBe("view=cards");
     expect(readState(writeState(cards))).toEqual(cards);
-    expect(readState(new URLSearchParams("view=table")).view).toBeUndefined();
+    expect(readState(new URLSearchParams("view=table")).view).toBe("table");
+    expect(readState(new URLSearchParams("view=grid")).view).toBeUndefined();
   });
 });
 

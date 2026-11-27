@@ -21,13 +21,15 @@ export type MenuItem = {
   icon: string | null;
   /** Quản trị org ẩn mục khỏi menu và trang chủ (ADR 0060); đường dẫn của mục vẫn mở được, dữ liệu vẫn theo quyền. */
   hidden?: boolean;
+  /** false với khối chỉ đặt trên trang (mục `blocks` trong app.yaml, ADR 0061): mở được theo địa chỉ, không lên menu. */
+  on_menu: boolean;
 };
 
 export type MenuData = { platform_menu_items: MenuItem[] };
 
 // Gom theo gói, trong mỗi gói theo thứ tự gói khai; Hasura chỉ trả mục của tenant trong token.
 export const MENU_QUERY =
-  "query { platform_menu_items(order_by: [{ app: asc }, { position: asc }]) { app app_name item label component config roles icon } }";
+  "query { platform_menu_items(order_by: [{ app: asc }, { position: asc }]) { app app_name item label component config roles icon on_menu } }";
 
 // Phần chỉnh của org (ADR 0060), truy vấn riêng với menu: view chưa có hay lỗi thì menu vẫn hiện theo cấu hình gốc.
 export const OVERRIDES_QUERY = "query { platform_config_overrides_by_tenant { app item kind target value } }";
@@ -90,7 +92,9 @@ export const SAMPLE_OWNER = "core";
  */
 export function packageGroups(items: MenuItem[]): MenuGroup[] {
   const groups = new Map<string, MenuGroup>();
-  for (const entry of items.filter((item) => !item.hidden)) {
+  // Khối vẫn ở trong `items` để trang và đường dẫn tới dòng của khối tìm được nó; chỉ thanh bên và trang chủ bỏ qua.
+  // Mục quản trị org ẩn (ADR 0060) cũng không lên thanh bên và trang chủ.
+  for (const entry of items.filter((item) => !item.hidden && item.on_menu !== false)) {
     let group = groups.get(entry.app);
     if (!group) {
       const label = entry.app_name?.trim() || entry.app;

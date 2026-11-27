@@ -61,7 +61,7 @@ export type Panel = {
   link?: { menu: string; label: string };
 };
 
-export type DashboardConfig = { title: string; description?: string; panels: Panel[] };
+export type DashboardConfig = { title: string; description?: string; variant?: string; panels: Panel[] };
 
 export type Row = Record<string, unknown>;
 

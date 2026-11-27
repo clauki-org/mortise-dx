@@ -422,6 +422,7 @@ hưởng tới mã Apache-2.0 của dự án. Những công cụ chạy qua `uvx
 | Node.js, npm | Build và kiểm giao diện; Node chỉ có trong image build, không có khi chạy | `make web-check`, `npm run dev` | MIT / Artistic-2.0 |
 | Biome | Kiểm lỗi và định dạng mã giao diện | `make web-check` | MIT OR Apache-2.0 |
 | Vitest | Kiểm thử đơn vị mã giao diện không cần trình duyệt; bài kiểm là tệp `*.test.ts` trong `platform/web/src/` | `make web-check` | MIT |
+| yaml (`yaml` trên npm) | Đọc `app.yaml` và cấu hình thành phần của `contracts/examples/` và `apps/*` trong bài kiểm tổ hợp khối `src/blocks.test.tsx` ([ADR 0061](adr/0061-block-composition.md)); chỉ dùng khi kiểm thử, không vào bản build | `make web-check` | ISC |
 | license-checker-rseidelsohn | Kiểm giấy phép phụ thuộc của giao diện theo danh sách cho phép trong `Makefile` | `make web-check` | BSD-3-Clause |
 | `scripts/deps-check.py` (tự viết) | Kiểm image, thư viện Python, web, mô hình và công cụ chạy qua `uvx` được ghim phiên bản; giấy phép thư viện Python và image theo danh sách cho phép và bảng giấy phép của README (chính sách ở `scripts/deps-policy.toml`); báo bản mới qua registry, `uv pip list --outdated`, `npm outdated`, không tự nâng cấp ([ADR 0039](adr/0039-dependency-check-script.md)) | `make check-fast` (bỏ phần bản mới), `make deps-check` | Apache-2.0 |
 | curl, jq, openssl | Gọi API trong seed và smoke, đọc JSON, sinh bí mật ngẫu nhiên | `scripts/` | curl / MIT / Apache-2.0 |

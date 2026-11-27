@@ -22,6 +22,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 import yaml
+from app_entries import entries
 from form_permissions import permission, tables_of
 
 BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
@@ -320,14 +321,14 @@ def main() -> int:
         bpmn = [os.path.join(directory, path) for path in app.get("workflows", [])]
         context = {
             "tables": tables_of(args.hasura or (sorted(glob.glob(f"{hasura}/*.yaml")) if hasura else [])),
-            "menu": {entry["id"] for entry in app.get("menu", [])},
+            "menu": {entry["id"] for entry in entries(app)},
             "processes": process_keys(args.bpmn if args.bpmn is not None else bpmn),
         }
         if args.dashboard:
             dashboards = [(args.dashboard, None)]
         else:
-            entries = [e for e in app.get("menu", []) if e["component"] == "dashboard"]
-            dashboards = [(os.path.join(args.configs or directory, e["config"]), e["id"]) for e in entries]
+            boards = [e for e in entries(app) if e["component"] == "dashboard"]
+            dashboards = [(os.path.join(args.configs or directory, e["config"]), e["id"]) for e in boards]
         errors = []
         for path, own in dashboards:
             errors += [f"{path}: {error}" for error in dashboard_problems(read_yaml(path), own, context)]

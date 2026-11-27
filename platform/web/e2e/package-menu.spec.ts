@@ -7,7 +7,7 @@
 // chuyển được sang dạng thẻ và về; có dòng thì mở chi tiết dòng đầu, thấy mọi trường thành ô, cùng các bảng con. Bài
 // đọc mục và cấu hình từ platform_menu_items nên không biết gói nào hay từ ngữ của lĩnh vực nào: gói mới cài vào được
 // kiểm mà không phải sửa bài. Bài không kiểm một gói cụ thể có mục menu; việc đó thuộc smoke của từng gói. Cần ít nhất
-// một gói có mục menu đã cài (`make app-install`).
+// một gói có mục menu đã cài (`make app-install`). Trang gồm khối (ADR 0061) được kiểm tiêu đề và không có khối hỏng.
 
 import { expect, test } from "@playwright/test";
 import { graphql, openMenuItem, signIn } from "./support.ts";
@@ -26,6 +26,7 @@ type MenuItem = {
   component: string;
   config: unknown;
   roles: string[] | null;
+  on_menu: boolean;
 };
 
 const USER = "user.a";
@@ -37,11 +38,14 @@ const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&
 const ROLE = "user";
 
 const MENU_QUERY =
-  "{ platform_menu_items(order_by: [{ app: asc }, { position: asc }]) { app item label component config roles } }";
+  "{ platform_menu_items(order_by: [{ app: asc }, { position: asc }]) { app item label component config roles on_menu } }";
 
 test("mỗi mục menu của gói đã cài hiện trên menu và mở được trang theo cấu hình của gói", async ({ page, request }) => {
   const data = await graphql<{ platform_menu_items: MenuItem[] }>(request, USER, MENU_QUERY);
-  const items = data.platform_menu_items.filter((entry) => !entry.roles?.length || entry.roles.includes(ROLE));
+  // Khối chỉ đặt trên trang (on_menu false, ADR 0061) không có trên menu; trang chứa nó kiểm khối đó.
+  const items = data.platform_menu_items.filter(
+    (entry) => entry.on_menu && (!entry.roles?.length || entry.roles.includes(ROLE)),
+  );
   expect(items.length, "cần ít nhất một gói có mục menu đã cài (make app-install APP=<gói>)").toBeGreaterThan(0);
 
   await page.goto("/");
@@ -69,6 +73,14 @@ test("mỗi mục menu của gói đã cài hiện trên menu và mở được 
         await expect(page.getByLabel(/^Đang tải/)).toHaveCount(0);
         await expect(page.getByText("Cấu hình bảng điều hành sai")).toHaveCount(0);
         await expect(page.getByText("Không đọc được số liệu", { exact: false })).toHaveCount(0);
+        return;
+      }
+      // Trang gồm khối: một h1 theo cấu hình, không khối nào hỏng lúc vẽ hay thiếu thành phần.
+      if (entry.component === "page") {
+        await expect(page.getByRole("heading", { level: 1 })).toHaveText((entry.config as { title: string }).title);
+        await expect(page.getByLabel(/^Đang tải/)).toHaveCount(0);
+        await expect(page.getByText(/^Khối ".*" gặp lỗi$/)).toHaveCount(0);
+        await expect(page.getByText("Chưa mở được khối này")).toHaveCount(0);
         return;
       }
       // Thành phần khác danh mục, biểu mẫu và bảng điều hành chỉ kiểm nhãn và đường dẫn ở trên.

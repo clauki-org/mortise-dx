@@ -32,6 +32,12 @@ settings:
   review_threshold_m2: 300
   publication_period: P30D
 menu:
+  # Trang gồm khối (ADR 0061): số chính, bản đồ, danh mục dạng thẻ; khối `summary` ở dưới chỉ đặt trên trang này.
+  - id: overview
+    label: Tổng quan
+    component: page
+    config: pages/overview.yaml
+    icon: home
   - id: facilities
     label: Cơ sở nhà, đất
     component: catalog
@@ -72,3 +78,8 @@ menu:
     component: dashboard
     config: dashboards/overview.yaml
     icon: chart
+blocks:
+  - id: summary
+    label: Diện tích nhà làm việc
+    component: dashboard
+    config: dashboards/summary.yaml

@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bản mô tả thành phần trang theo contracts/component.schema.json; `make check-fast` kiểm tệp này. Mã của thành phần ở
+# platform/web/src/ (Page.tsx, Block.tsx, page.ts, blockContext.ts); bài kiểm tổ hợp ở platform/web/src/blocks.test.tsx
+# (ADR 0061). Đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
+
+component: page
+summary: Một trang gồm nhiều khối theo thứ tự gói khai; mỗi khối là một mục menu hay khối của chính gói, vẽ bằng thành phần của mục đó theo kiểu trình bày chọn ở trang.
+config_schema: page.schema.json
+example: examples/page.example.yaml
+capabilities:
+  - Tiêu đề (h1 duy nhất của trang) và đoạn giới thiệu tùy chọn; tiêu đề của thành phần trong mỗi khối thành h2.
+  - Khối trỏ tới một mục trong menu hay trong blocks của app.yaml; khối khai ở blocks không lên thanh bên hay trang chủ nhưng mở được theo địa chỉ riêng.
+  - Kiểu của khối (variant) đè kiểu trong cấu hình của mục; danh mục có table, cards; bảng điều hành có full, compact; bản đồ có map, list. Giá trị giao diện không biết về kiểu mặc định.
+  - Mỗi khối có ranh giới lỗi riêng; khối hỏng lúc vẽ chỉ hiện lời báo chung trong khối đó, khối khác vẫn chạy.
+  - Khối của mục dành cho vai trò khác không hiện; không còn khối nào thì trang báo rỗng.
+  - Danh mục trong khối chỉ có danh sách, giữ tìm, lọc, trang trong bộ nhớ; bấm một dòng mở chi tiết dưới địa chỉ của mục. Theo dõi hồ sơ trong khối cũng chỉ có danh sách.
+limits:
+  - Không có khối nào ngoài mục của chính gói; không đặt trang trong trang.
+  - Khối xếp một cột từ trên xuống; không chia cột, không kéo thả.
+  - Danh mục trong khối không có nút xuất tệp; trạng thái tìm, lọc mất khi rời trang.
+  - Các khối không truyền dữ liệu cho nhau; khối trong chi tiết một dòng là việc khác.
