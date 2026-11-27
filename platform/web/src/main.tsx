@@ -7,6 +7,13 @@
 import "@mantine/core/styles.css";
 // Biểu mẫu (rjsf) dùng ô chọn ngày của Mantine khi schema có trường kiểu ngày.
 import "@mantine/dates/styles.css";
+// Be Vietnam Pro (OFL-1.1, ADR 0048): mỗi độ đậm gồm các tập chữ Việt, Latin và Latin mở rộng; trình duyệt chỉ tải tập
+// có ký tự trên trang (unicode-range). Vite xuất tệp phông thành tệp riêng trong assets/, không nhúng data: (CSP).
+import "@fontsource/be-vietnam-pro/400.css";
+import "@fontsource/be-vietnam-pro/600.css";
+import "@fontsource/be-vietnam-pro/800.css";
+// Nạp sau CSS của Mantine để các quy tắc cùng độ ưu tiên trong đó thắng.
+import "./theme.css";
 import { MantineProvider } from "@mantine/core";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

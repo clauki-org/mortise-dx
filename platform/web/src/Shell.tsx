@@ -73,7 +73,7 @@ export function Shell() {
               aria-expanded={opened}
             />
             {/* Tên hệ thống không phải tiêu đề của trang; mỗi màn hình có tiêu đề cấp 1 của nó. */}
-            <Text fw={700} size="lg" style={{ whiteSpace: "nowrap" }}>
+            <Text fw={800} size="lg" style={{ whiteSpace: "nowrap" }}>
               <Brand compact />
             </Text>
           </Group>

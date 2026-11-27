@@ -369,6 +369,9 @@ mở cổng, và chỉ ở `127.0.0.1`.
   - Menu chia nhóm theo gói, tên nhóm là `name` của gói; mỗi mục có biểu tượng theo ý nghĩa `icon` khai trong
     `app.yaml`, hình lấy từ Tabler Icons (`@tabler/icons-react` 3.51.0, MIT), nhập tĩnh từng hình nên bản build chỉ
     chứa các hình đã dùng ([ADR 0044](adr/0044-menu-groups-and-icons.md)). Dưới cỡ `sm` menu thu vào nút mở menu.
+  - Chữ là Be Vietnam Pro (`@fontsource/be-vietnam-pro` 5.3.0, OFL-1.1), ba độ đậm 400, 600, 800, tệp phông nằm
+    trong `assets/` cùng origin, không nhúng `data:` vì CSP; chưa tải được thì dùng phông của hệ điều hành
+    ([ADR 0048](adr/0048-bento-tokens-status-tones-font.md)).
   - Bản đồ vẽ bằng MapLibre GL JS 6.18.0 trên nền trơn, không tải tile từ máy chủ nào; mã của nó chỉ tải khi mở
     trang bản đồ, worker chạy từ tệp cùng origin nên CSP không mở `blob:`.
   - Biểu đồ của bảng điều hành là thanh vẽ bằng CSS theo biến màu của Mantine, không thêm thư viện biểu đồ; mỗi biểu

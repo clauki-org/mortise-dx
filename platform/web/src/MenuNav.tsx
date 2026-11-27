@@ -38,7 +38,7 @@ function MenuSection({ group, pathname, onNavigate }: { group: MenuGroup } & Omi
     />
   ));
   const heading = (
-    <Text component="span" size="xs" fw={700} tt="uppercase" c="gray.7" id={headingId}>
+    <Text component="span" size="xs" fw={800} tt="uppercase" c="gray.7" id={headingId}>
       {group.label}
     </Text>
   );

@@ -92,7 +92,7 @@ export function Result({ answer }: { answer: Answer }) {
   }
   return (
     <Stack>
-      <Text fw={500}>{answer.answer}</Text>
+      <Text>{answer.answer}</Text>
       {answer.model && (
         <Text size="sm" c="dimmed">
           {modelLine(answer.model)}

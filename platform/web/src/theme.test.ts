@@ -6,12 +6,24 @@
 // CSS mà Mantine sinh ra cho theme thật (bộ sinh mặc định cộng cssVariablesResolver), không chép số sắc độ vào đây:
 // đổi theme hay nâng Mantine làm đổi màu thì kiểm thử đo màu mới.
 
-import { DEFAULT_THEME, defaultCssVariablesResolver, mergeMantineTheme } from "@mantine/core";
+import {
+  DEFAULT_THEME,
+  defaultCssVariablesResolver,
+  MantineProvider,
+  mergeMantineTheme,
+  TextInput,
+} from "@mantine/core";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { BRAND_COLORS } from "./branding";
 import { createAppTheme, cssVariablesResolver } from "./theme";
+import themeCss from "./theme.css?raw";
+import { TONE_COLOR, TONES } from "./tones";
 
 const AA = 4.5;
+// WCAG 2.2, 1.4.11: thành phần giao diện (đường viền ô nhập) cần 3:1 với màu kề bên.
+const NON_TEXT = 3;
 const WHITE = "#ffffff";
 
 // Kênh màu 0–255 của #rgb, #rrggbb hay rgba(r, g, b, a) (dạng darken của Mantine trả về).
@@ -84,9 +96,11 @@ describe.each(BRAND_COLORS)("màu chính %s", (color) => {
     ["chữ trắng trên nút filled", WHITE, v("filled")],
     ["chữ trắng trên nút filled khi di chuột", WHITE, v("filled-hover")],
     ["liên kết trên nền trắng", resolve(variables, "--mantine-color-anchor"), WHITE],
+    ["liên kết trên nền trang gray.0", resolve(variables, "--mantine-color-anchor"), shade("gray", 0)],
     ["chữ màu trên nền trắng", v("text"), WHITE],
     ["chữ màu trên nền trang gray.0", v("text"), shade("gray", 0)],
     ["chữ của nút light, subtle trên nền trắng", v("light-color"), WHITE],
+    ["chữ của nút subtle trên nền trang gray.0", v("light-color"), shade("gray", 0)],
     ["chữ của nút light trên nền nhạt", v("light-color"), v("light")],
     ["chữ của nút light, subtle khi di chuột", v("light-color"), v("light-hover")],
     // NavLink đọc biến --mantine-primary-color-light* (styles/NavLink.css), không đọc biến theo tên màu.
@@ -137,6 +151,78 @@ describe.each(["green", "yellow", "orange", "red", "blue", "teal", "cyan", "lime
     });
   },
 );
+
+// Bộ nghĩa màu chung của nhãn trạng thái (tones.ts): StatusBadge dùng biến thể light, nhãn nằm trên thẻ trắng hay trên
+// nền trang. Lặp theo bảng thật, không chép danh sách màu.
+describe.each(TONES)("nghĩa %s", (tone) => {
+  const { theme, variables } = appTheme("blue");
+  const light = theme.variantColorResolver({ color: TONE_COLOR[tone], theme, variant: "light" });
+  const text = resolveValue(variables, light.color ?? "");
+  it.each([
+    ["nền nhạt của nhãn", resolveValue(variables, light.background ?? "")],
+    ["nền trắng", WHITE],
+    ["nền trang gray.0", shade("gray", 0)],
+  ])("chữ của nhãn đạt AA trên %s", (_, background) => {
+    expect(contrast(text, background)).toBeGreaterThanOrEqual(AA);
+  });
+});
+
+describe("mỗi nghĩa một màu", () => {
+  it("không hai nghĩa chung màu", () => {
+    expect(new Set(Object.values(TONE_COLOR)).size).toBe(TONES.length);
+  });
+});
+
+// Viền ô nhập và nền trang đặt qua biến riêng mà theme.css đọc (Mantine viết cứng hai giá trị này trong CSS của nó).
+describe("Bento dịu", () => {
+  const { theme, variables } = appTheme("blue");
+  const css = themeCss;
+
+  it.each([
+    ["nền trắng của ô nhập", WHITE],
+    ["nền trang gray.0", shade("gray", 0)],
+  ])("viền ô nhập đạt 3:1 trên %s", (_, background) => {
+    expect(contrast(resolve(variables, "--mortise-input-border"), background)).toBeGreaterThanOrEqual(NON_TEXT);
+  });
+
+  it("viền ô nhập mặc định của Mantine (gray.4) dưới 3:1, lý do đổi", () => {
+    expect(contrast(shade("gray", 4), WHITE)).toBeLessThan(NON_TEXT);
+  });
+
+  // Bộ chọn của theme.css dựa vào lớp tĩnh và data-variant mà Mantine gắn lên khung ô nhập; nâng Mantine mà đổi tên
+  // lớp thì viền lặng lẽ quay về gray.4, nên kiểm trên ô nhập thật.
+  it("khung ô nhập mang lớp và biến thể mà theme.css chọn", () => {
+    const html = renderToStaticMarkup(createElement(MantineProvider, null, createElement(TextInput, { label: "a" })));
+    expect(html).toMatch(/class="[^"]*\bmantine-Input-wrapper\b[^"]*"[^>]*data-variant="default"/);
+    expect(css).toContain('.mantine-Input-wrapper[data-variant="default"]');
+  });
+
+  it("theme.css dùng hai biến đó", () => {
+    expect(css).toContain("--input-bd: var(--mortise-input-border)");
+    expect(css).toContain("background-color: var(--mortise-page-background");
+    expect(resolve(variables, "--mortise-page-background")).toBe(shade("gray", 0));
+  });
+
+  it("thẻ viền 1px không bóng, bo 12px; nút, ô nhập, nhãn bo 6px", () => {
+    expect(theme.components.Card?.defaultProps).toMatchObject({ withBorder: true, radius: "md" });
+    expect(theme.components.Card?.defaultProps).not.toHaveProperty("shadow");
+    expect(theme.radius.md).toBe("0.75rem");
+    expect(theme.defaultRadius).toBe("sm");
+    expect(theme.radius.sm).toBe("0.375rem");
+    expect(theme.components.Badge?.defaultProps).toMatchObject({ radius: "sm" });
+  });
+
+  it("liên kết luôn gạch chân", () => {
+    expect(theme.components.Anchor?.defaultProps).toMatchObject({ underline: "always" });
+  });
+
+  it("Be Vietnam Pro trước phông hệ điều hành, tiêu đề đậm 800, nhãn 600", () => {
+    expect(theme.fontFamily).toMatch(/^"Be Vietnam Pro", system-ui/);
+    expect(theme.headings.fontFamily).toBe(theme.fontFamily);
+    expect(theme.headings.fontWeight).toBe("800");
+    expect(theme.components.Badge?.defaultProps).toMatchObject({ fw: 600 });
+  });
+});
 
 // Hộp thoại không vẽ được ở đây (cổng và hiệu ứng chỉ chạy trên trình duyệt; e2e/visual.spec.ts chạy axe trên hộp
 // thật), nên chỉ kiểm giá trị mặc định mà ModalHeader nhận từ theme.
