@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # 0061. Nguyên tắc ghép: trang gồm khối, kiểu trình bày của thành phần, bài kiểm tổ hợp
 
-- Trạng thái: Đề xuất
+- Trạng thái: Chấp nhận
 - Ngày: 2026-11-27
 
 ## Bối cảnh
