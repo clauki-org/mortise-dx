@@ -15,7 +15,7 @@ export type Grid = Cell[][];
 export class FileProblem extends ReadableError {}
 
 /**
- * Trần cỡ tệp. Tệp được đọc hết trong trang; một tệp rất lớn làm treo thẻ trình duyệt trước khi kịp đếm dòng và báo
+ * Trần cỡ tệp. Tệp được đọc hết trong trang; một tệp rất lớn giữ thẻ trình duyệt bận lâu trước khi kịp đếm dòng và báo
  * vượt max_rows. catalogImportFile.test.ts kiểm một tệp 1.000 dòng (trần của max_rows) nằm dưới trần này.
  */
 export const FILE_LIMIT_BYTES = 5 * 1024 * 1024;
@@ -89,9 +89,10 @@ function decodeUtf8(buffer: ArrayBuffer): string {
 const SYNC_INFLATE_BYTES = 524288;
 
 /**
- * Tệp .xlsx có phần nén mà fflate sẽ giải nén trong Web Worker dựng từ blob:. CSP của giao diện (worker-src 'self')
- * chặn worker đó và lần đọc treo, không báo lỗi; nên đọc danh mục của tệp zip trước, gặp phần như vậy thì báo ngay.
- * Điều kiện giống fflate: nén kiểu deflate, giải ra từ 512 KB và nén được hơn 20%.
+ * Tệp .xlsx có phần nén mà fflate sẽ giải nén trong Web Worker dựng từ blob:, theo mã nguồn của fflate 0.8.3. CSP của
+ * giao diện (worker-src 'self') không cho worker từ blob:, nên báo người dùng tách tệp trước khi đọc thay vì để lần
+ * đọc phụ thuộc vào một worker bị chặn. Điều kiện như của fflate (deflate, giải ra từ 512 KB, nén được hơn 20%), xét
+ * trên mọi phần của tệp zip, kể cả phần read-excel-file không đọc, nên có thể chặn thừa một tệp hiếm gặp.
  */
 export function needsWorker(buffer: ArrayBuffer): boolean {
   const view = new DataView(buffer);

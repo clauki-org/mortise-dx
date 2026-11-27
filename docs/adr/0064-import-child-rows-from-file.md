@@ -45,11 +45,11 @@ tích, dòng 30 trùng mã. Sửa xong thì cả 40 dòng vào trong một lần
   - CSV: bộ tách tự viết theo RFC 4180, giải mã UTF-8 chặt (`fatal`), bỏ BOM, dấu phân cách là dấu phẩy hay chấm
     phẩy, đoán từ dòng tiêu đề.
   - Tệp lớn hơn 5 MB bị từ chối trước khi đọc.
-- **Tệp .xlsx có phần nén giải ra từ 512 KB bị từ chối.** fflate (thư viện giải nén của read-excel-file) giải nén
-  phần như vậy trong một Web Worker dựng từ `blob:`. CSP `worker-src 'self'` chặn worker đó, và lần đọc treo mà không
-  báo lỗi. Trình duyệt đọc danh mục của tệp zip trước, theo đúng điều kiện của fflate, rồi báo người dùng tách tệp.
-  Không mở CSP cho `blob:`. `catalogImportFile.test.ts` kiểm một tệp 1.000 dòng, năm cột, ghi bằng write-excel-file,
-  không chạm ngưỡng này.
+- **Tệp .xlsx có phần nén giải ra từ 512 KB bị từ chối.** Theo mã nguồn của fflate 0.8.3 (thư viện giải nén của
+  read-excel-file), phần như vậy được giải nén trong một Web Worker dựng từ `blob:`, mà CSP `worker-src 'self'` của
+  giao diện không cho. Trình duyệt đọc danh mục của tệp zip trước và báo người dùng tách tệp. Điều kiện như của fflate
+  nhưng xét mọi phần của tệp, kể cả phần read-excel-file bỏ qua, nên có thể chặn thừa. Không mở CSP cho `blob:`.
+  `catalogImportFile.test.ts` kiểm một tệp 1.000 dòng, năm cột, ghi bằng write-excel-file, không chạm ngưỡng này.
 - **Khớp và đổi ô:**
   - Tiêu đề khớp theo nhãn hay tên trường, không phân biệt hoa thường.
   - Thiếu cột bắt buộc, cột lạ hay cột trùng là lỗi cả tệp. Vượt `max_rows` hay không có dòng dữ liệu nào cũng vậy.
@@ -99,4 +99,5 @@ tích, dòng 30 trùng mã. Sửa xong thì cả 40 dòng vào trong một lần
   - `e2e/catalog-import.spec.ts` (tệp mẫu, lỗi theo dòng, nạp bị từ chối cả lần, nạp được, axe, CSP) chưa chạy trên
     bản cài thật khi ghi quyết định này.
   - Tệp do Excel, LibreOffice lưu ra: kiểm tự động dùng tệp ghi bằng write-excel-file và CSV viết tay.
+  - Trình duyệt xử lý worker của fflate thế nào khi CSP chặn: chưa thử, vì tệp như vậy bị từ chối trước khi đọc.
   - Firefox, Safari.

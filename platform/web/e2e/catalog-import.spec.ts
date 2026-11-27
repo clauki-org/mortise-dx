@@ -5,7 +5,7 @@
 // trách xã A mở tòa thử, tải tệp mẫu (đúng tiêu đề cột), chọn tệp có dòng thiếu diện tích và hai dòng trùng mã: xem
 // trước chỉ đúng dòng, cột và không cho nạp. Tệp đã sửa nhưng trong lúc xem trước có người thêm một phòng trùng mã qua
 // API: lệnh nạp bị từ chối và không phòng nào vào. Chọn lại tệp thì xem trước báo mã đã có; bỏ dòng đó thì nạp được cả
-// lần, mọi phòng thuộc đúng tòa. Cùng lúc kiểm hộp thoại không có lỗi axe mức nghiêm trọng và không vi phạm CSP (thư
+// lần, mọi phòng thuộc đúng tòa. Cùng lúc kiểm hộp thoại không có lỗi axe chặn và không vi phạm CSP (thư
 // viện đọc Excel chạy trong trang). Cần gói đã cài (`make app-install APP=facilities-commune`); bài tự tạo và tự dọn
 // cơ sở thử.
 
@@ -112,15 +112,22 @@ test("cán bộ xã A nạp phòng từ tệp Excel: xem trước báo lỗi the
         ["P101", "Phòng làm việc 1", 1, "Làm việc", 18.5],
         ["P102", "Phòng họp", 1, "Sử dụng chung", null],
         ["P101", "Phòng làm việc 2", 2, "Làm việc", "20,5"],
+        ["P104", "Kho lưu trữ", 1, "Chuyên dùng", 12],
       ]),
     );
-    await expect(dialog.getByText("2 trong 3 dòng có lỗi")).toBeVisible();
+    // Cả hai dòng mang mã trùng đều được báo, mỗi dòng chỉ tới dòng kia; dòng 5 không có lỗi.
+    await expect(dialog.getByText("3 trong 4 dòng có lỗi")).toBeVisible();
     await expect(dialog.getByText("Lỗi: Bắt buộc nhập")).toBeVisible();
     await expect(dialog.getByText("Lỗi: Trùng với dòng 4")).toBeVisible();
     await expect(dialog.getByText("Lỗi: Trùng với dòng 2")).toBeVisible();
     await expect(dialog.getByRole("button", { name: "Nạp", exact: true })).toBeDisabled();
+    // Cùng ngưỡng chặn với visual.spec.ts: WCAG 2.1 A, AA ở mức critical, serious.
     const axe = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
-    expect(axe.violations.filter((violation) => violation.impact === "critical")).toEqual([]);
+    const blocking = axe.violations
+      .filter((violation) => ["critical", "serious"].includes(violation.impact ?? ""))
+      .filter((violation) => violation.tags.some((tag) => ["wcag2a", "wcag2aa", "wcag21aa"].includes(tag)))
+      .map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(", ")}`);
+    expect(blocking, "lỗi trợ năng chặn trong hộp nạp tệp").toEqual([]);
 
     // Tệp đã sửa; trong lúc xem trước, một phòng P103 được thêm qua API. Lệnh nạp bị từ chối cả lần.
     const fixed: Line[] = [
