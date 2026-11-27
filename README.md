@@ -151,8 +151,8 @@ profile này cần chưa được đo. Truy vết phân tán mặc định tắt
 `make install PRESET=<mẫu>` dựng một org bằng một lệnh: tạo `.env`, dựng lõi, seed, cài các gói, nạp dữ liệu demo và
 đặt thương hiệu theo `presets/<mẫu>/preset.yaml` ([ADR 0058](docs/adr/0058-two-installs-and-install-presets.md)). Có
 hai mẫu: `chinh-quyen` (Tỉnh Mẫu, gói `facilities-commune` và `supplies-commune`) và `dien-mat-troi` ("Công ty Điện mặt
-trời Mẫu", hư cấu: tenant `dmt` với `admin.dmt`, `manager.dmt`, `user.dmt`, gói `supplies-commune`). Tài khoản demo
-của lõi có ở mọi bản cài vì `make smoke` dùng chúng.
+trời Mẫu", hư cấu: tenant `dmt` với `admin.dmt`, `manager.dmt`, `user.dmt`, gói `supplies-commune` và `field-ops`, dữ
+liệu demo do hai gói mang theo). Tài khoản demo của lõi có ở mọi bản cài vì `make smoke` dùng chúng.
 
 Hai bản cài chạy cạnh nhau từ hai checkout, mỗi checkout một `.env` với tên dự án, cổng và tên máy riêng. Tên
 `*.localhost` trỏ về máy mình, và hai tên máy khác nhau giữ cookie đăng nhập của hai bản tách nhau:

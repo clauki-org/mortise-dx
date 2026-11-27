@@ -27,6 +27,11 @@ def load(name: str) -> dict:
         raise SystemExit(f"Không đọc được {path}: {error}. Mẫu có sẵn: {known}.") from error
 
 
+def data_dir(base: Path, step: dict) -> Path:
+    """Thư mục của tệp dữ liệu demo: của mẫu, hay của gói khi gói tự mang dữ liệu cho mẫu cài (from: package)."""
+    return ROOT / "apps" / step["package"] if step.get("from") == "package" else base
+
+
 def problems(name: str, preset: dict) -> list[str]:
     base = ROOT / "presets" / name
     found = []
@@ -43,8 +48,8 @@ def problems(name: str, preset: dict) -> list[str]:
     for step in preset.get("demo", []):
         if step["package"] not in packages:
             found.append(f"demo cho gói {step['package']} không nằm trong packages")
-        if "data" in step and not (base / step["data"]).is_file():
-            found.append(f"tệp dữ liệu demo {step['data']} không có")
+        if "data" in step and not (data_dir(base, step) / step["data"]).is_file():
+            found.append(f"tệp dữ liệu demo {step['data']} không có trong {data_dir(base, step).relative_to(ROOT)}")
     usernames = [a["username"] for t in preset.get("tenants", []) for a in t["accounts"]]
     found += [f"tài khoản {u} khai hai lần" for u in sorted({u for u in usernames if usernames.count(u) > 1})]
     return found
@@ -72,7 +77,8 @@ def main() -> int:
         for package in preset["packages"]:
             print("package", package)
         for step in preset.get("demo", []):
-            data = f" ./presets/{names[0]}/{step['data']}" if "data" in step else ""
+            folder = f"apps/{step['package']}" if step.get("from") == "package" else f"presets/{names[0]}"
+            data = f" ./{folder}/{step['data']}" if "data" in step else ""
             print(f"demo {step['package']}{data}")
     return 0
 

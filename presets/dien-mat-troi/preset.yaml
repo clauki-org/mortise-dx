@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Mẫu cài tối thiểu của "Công ty Điện mặt trời Mẫu" (doanh nghiệp hư cấu), chạy trên bản cài riêng cạnh bản cài của
-# chính quyền (ADR 0058): một tenant gốc `dmt` với ba tài khoản demo, gói kho vật tư và dữ liệu demo kho của công ty.
+# chính quyền (ADR 0058): một tenant gốc `dmt` với ba tài khoản demo, gói Kho dùng chung và gói vận hành hiện trường,
+# dữ liệu demo hư cấu của công ty do chính hai gói mang theo (seed/dien-mat-troi.yaml của từng gói).
 # `make install PRESET=dien-mat-troi` đọc tệp này (contracts/preset.schema.json). Tài khoản demo của lõi vẫn được tạo
 # vì `make smoke` đăng nhập bằng chúng.
 
@@ -18,6 +19,7 @@ tenants:
       - { username: user.dmt }
 packages:
   - supplies-commune
+  - field-ops
 demo:
-  - package: supplies-commune
-    data: seed/supplies-commune.yaml
+  - { package: supplies-commune, from: package, data: seed/dien-mat-troi.yaml }
+  - { package: field-ops, from: package, data: seed/dien-mat-troi.yaml }

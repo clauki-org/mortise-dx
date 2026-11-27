@@ -75,9 +75,13 @@
       "properties": {
         "package": { "description": "Gói đã khai trong packages", "$ref": "#/$defs/slug" },
         "data": {
-          "description": "Tệp dữ liệu theo contracts/seed.schema.json trong thư mục seed/ của mẫu (make check-fast kiểm mọi tệp ở đó); bỏ trống là dữ liệu demo của chính gói (seed/load.py hay seed/demo.yaml)",
+          "description": "Tệp dữ liệu theo contracts/seed.schema.json trong thư mục seed/ của mẫu, hay của gói khi from là package (make check-fast kiểm mọi tệp ở đó); bỏ trống là dữ liệu demo của chính gói (seed/load.py hay seed/demo.yaml)",
           "type": "string",
           "pattern": "^seed/[A-Za-z0-9_-]+\\.yaml$"
+        },
+        "from": {
+          "description": "Thư mục chứa tệp data: preset (mặc định, presets/<mẫu>/) hay package (apps/<gói>/), để dữ liệu demo gói mang theo cho mẫu cài không phải chép sang mẫu",
+          "enum": ["preset", "package"]
         }
       }
     }
