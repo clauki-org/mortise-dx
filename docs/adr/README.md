@@ -83,6 +83,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0066](0066-catalog-kanban-and-calendar.md) | Kiểu Kanban và Lịch của danh mục, chuyển thẻ bằng lệnh sửa có so version | Chấp nhận |
 | [0063](0063-install-theme-tokens.md) | Bộ biến giao diện theo bản cài: màu chính, màu phụ, bo góc, phông, nền trang, vẫn đạt AA | Chấp nhận |
 | [0062](0062-shared-warehouse-package.md) | Gói kho dùng chung, luật trên nhiều dòng qua hàm của nền tảng | Chấp nhận |
+| [0067](0067-field-operations-package.md) | Gói vận hành hiện trường: cột sửa cuối qua hàm của nền tảng, việc sửa chữa do luật mở là hồ sơ | Chấp nhận |
 
 ## Quyết định còn mở
 

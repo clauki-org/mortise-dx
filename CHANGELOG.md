@@ -54,6 +54,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   0066](docs/adr/0066-catalog-kanban-and-calendar.md)).
 - Bộ biến giao diện theo bản cài trong `branding.json`: màu phụ, bo góc, phông, nền trang; màu tự khai bằng mười sắc
   độ, tệp dưới AA bị bỏ ([ADR 0063](docs/adr/0063-install-theme-tokens.md)).
+- Gói vận hành hiện trường `field-ops`: khách hàng, điểm lắp đặt trên bản đồ, thiết bị, phiếu công việc có ảnh và biên
+  bản, nghiệm thu bốn mắt, sản lượng thấp mở hồ sơ sửa chữa, bảng điều hành; hàm `platform.row_version_attach` ([ADR
+  0067](docs/adr/0067-field-operations-package.md)).
 
 ### Changed
 

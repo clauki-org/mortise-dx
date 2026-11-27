@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # 0067. Gói vận hành hiện trường: cột sửa cuối qua hàm của nền tảng, việc sửa chữa do luật mở là hồ sơ
 
-- Trạng thái: Đề xuất
+- Trạng thái: Chấp nhận
 - Ngày: 2026-11-28
 - Bổ sung: [ADR 0022](0022-declarative-packages.md), [ADR 0062](0062-shared-warehouse-package.md) (thêm một hàm của
   nền tảng mà gói khai báo gọi được)
