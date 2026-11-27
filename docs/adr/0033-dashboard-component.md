@@ -30,6 +30,8 @@ Các lựa chọn đã xét:
 - **Cấu hình riêng** `contracts/dashboard.schema.json`, mục menu `component: dashboard`. Trang gồm các khối; mỗi khối
   có `description` bắt buộc ghi nguồn là gì và số tính thế nào, đúng một nguồn và đúng một cách hiện: `cards` (thẻ
   số) hoặc `chart` (cột ngang, `type: bar`, tối đa bốn cột số chung một thang, `details` là cột chỉ hiện trong bảng).
+  Được sửa theo [ADR 0049](0049-bento-dashboard.md): thẻ số có thể có mức độ so với hằng số của gói và vòng đo đọc cột
+  phần trăm của view; biểu đồ có thể có trần `chart.max`; các khối xếp trên lưới bốn cột theo thứ tự khai.
 - **Không tính trên trình duyệt.** Nguồn `graphql` đọc một bảng hay view bằng token của người xem, lọc được theo một
   cột bằng một giá trị. Mọi con số là một cột mà nguồn trả; gói tính sẵn trong view của migration, không dùng
   `_aggregate`. Thẻ số cần đúng một dòng: câu truy vấn xin hai dòng, không dòng thì hiện "Chưa có số liệu", nhiều
