@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast deps-check web-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-check app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up basemap \
+  check-fast deps-check web-check overrides-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-check app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up basemap \
   obs-up obs-down obs-check tenant-login
 
 help: ## Liệt kê các lệnh
@@ -217,6 +217,10 @@ web-check: ## Giao diện: cài theo package-lock, Biome, kiểm thử đơn v�
 	  --onlyAllow "$(WEB_LICENSES_SHIPPED)"
 	cd platform/web && npx license-checker-rseidelsohn --summary --development --excludePrivatePackages \
 	  --onlyAllow "$(WEB_LICENSES_TOOLING)"
+
+# Phần chỉnh của org (ADR 0060) sinh cho cấu hình mọi gói, trộn bằng hàm của trình duyệt, qua bộ kiểm chung của gói.
+overrides-check: ## Phần chỉnh hợp lệ × cấu hình mọi gói, trộn rồi kiểm (cần uv và Node 24+)
+	@scripts/config-overrides-check.sh
 
 hooks: ## Cài hook pre-push chạy check-fast
 	install -m 755 scripts/pre-push "$$(git rev-parse --git-path hooks)/pre-push"

@@ -101,3 +101,45 @@
   delete_permissions:
     - role: tenant_admin
       permission: { filter: *org_admin }
+
+# Lớp ghi đè cấu hình theo org (ADR 0060). Mọi tenant đọc phần chỉnh của tenant gốc của mình qua view; chỉ tenant_admin
+# của chính tenant gốc (tenant không có cha) thêm, sửa giá trị, xóa ("Về mặc định"). Quản trị của tenant con thì không,
+# để mọi đơn vị trong org thấy cùng một giao diện. Đích và dạng của giá trị do trigger của bảng kiểm.
+- table: { schema: platform, name: config_overrides_by_tenant }
+  select_permissions:
+    - role: user
+      permission:
+        columns: &override_columns [tenant_id, root_tenant_id, app, item, kind, target, value, updated_at]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+    - role: tenant_admin
+      permission: { columns: *override_columns, filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } } }
+
+- table: { schema: platform, name: config_overrides }
+  object_relationships:
+    - name: root
+      using:
+        manual_configuration:
+          remote_table: { schema: core, name: tenants }
+          column_mapping: { root_tenant_id: id }
+  # Đọc bảng gốc chỉ để mutation trả lại dòng vừa ghi (returning); giao diện đọc qua view.
+  select_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [root_tenant_id, app, item, kind, target, value, updated_at]
+        filter: &override_admin
+          _and:
+            - { root_tenant_id: { _eq: X-Hasura-Tenant-Id } }
+            - { root: { parent_id: { _is_null: true } } }
+  insert_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [app, item, kind, target, value]
+        check: *override_admin
+        set: { root_tenant_id: X-Hasura-Tenant-Id }
+  # Quyền sửa value để insert kèm on_conflict (ghi đè phần chỉnh đã có) chạy được.
+  update_permissions:
+    - role: tenant_admin
+      permission: { columns: [value], filter: *override_admin, check: *override_admin }
+  delete_permissions:
+    - role: tenant_admin
+      permission: { filter: *override_admin }

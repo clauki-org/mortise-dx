@@ -634,6 +634,12 @@ result=$(sql -f - <platform/schema/tests/custom_fields.sql 2>&1 >/dev/null) && s
 check "Trường tùy chỉnh: $(grep -c 'NOTICE:  PASS' <<<"$result" || true) ca kiểm ở CSDL" "$status" qua
 [[ "$status" == qua ]] || grep -m1 -E 'FAIL|ERROR' <<<"$result" || true
 
+# Lớp ghi đè cấu hình (ADR 0060): ở mức CSDL (tệp chạy trong giao dịch rồi ROLLBACK), rồi quyền ghi, đọc qua cổng.
+result=$(sql -f - <platform/schema/tests/config_overrides.sql 2>&1 >/dev/null) && status=qua || status=lỗi
+check "Ghi đè cấu hình: $(grep -c 'NOTICE:  PASS' <<<"$result" || true) ca kiểm ở CSDL" "$status" qua
+[[ "$status" == qua ]] || grep -m1 -E 'FAIL|ERROR' <<<"$result" || true
+scripts/config-overrides-smoke.sh || fail=1
+
 # Quét mã độc (clamav): tệp thử EICAR bị từ chối và không để lại gì trong CSDL hay kho tệp. Chuỗi EICAR ghép
 # từ hai nửa lúc chạy để chính tệp này không bị phần mềm diệt virus trên máy người phát triển nhận là nhiễm.
 stored() {
