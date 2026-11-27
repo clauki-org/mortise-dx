@@ -3,7 +3,7 @@
 //
 // Bộ quy ước giao diện dùng chung (ADR 0043, kiểu "Bento dịu" của ADR 0048): một thang cỡ chữ, một thang khoảng cách,
 // bo góc, bóng và kiểu mặc định của thẻ, khung, bảng. Thành phần chỉ chọn bậc trong các thang này (size="sm", p="md"), không đặt số riêng. Màu chính
-// đến từ thương hiệu của bản cài (branding.ts); theme.test.ts kiểm tương phản của mọi màu được phép.
+// đến từ thương hiệu của bản cài (branding.ts); theme.test.tsx kiểm tương phản của mọi màu được phép.
 
 import {
   Anchor,

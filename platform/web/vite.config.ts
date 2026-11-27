@@ -27,7 +27,7 @@ export default defineConfig({
   // Kiểm thử đơn vị (Vitest) chỉ lấy tệp trong src/; e2e/ là của Playwright và cần một bản cài đang chạy. rjsf được
   // biến đổi như mã của giao diện để bí danh @rjsf/validator-ajv8 ở trên cũng áp khi kiểm thử dựng biểu mẫu; để Node
   // nạp thẳng thì nó tìm gói thật và báo không có.
-  // theme.test.ts đọc theme.css (?raw) để kiểm bộ chọn và biến mà nó dùng; Vitest mặc định thay mọi tệp CSS bằng chuỗi
+  // theme.test.tsx đọc theme.css (?raw) để kiểm bộ chọn và biến mà nó dùng; Vitest mặc định thay mọi tệp CSS bằng chuỗi
   // rỗng, nên chỉ tệp đó được xử lý thật.
   test: {
     include: ["src/**/*.test.{ts,tsx}"],

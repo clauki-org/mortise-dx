@@ -19,7 +19,7 @@ Nhãn trạng thái của [ADR 0047](0047-page-header-status-badge-formatting.md
 (`overdue`, `active`, `done`, `neutral`). Thẻ số của bảng điều hành và giá trị của danh mục sẽ cần mức cảnh báo, mức xấu
 theo khai báo của gói; nếu mỗi nơi tự đặt tên nghĩa thì cùng một màu đỏ mang hai tên.
 
-Tương phản tính theo công thức độ chói tương đối của WCAG 2 (cùng công thức với `platform/web/src/theme.test.ts`), trên
+Tương phản tính theo công thức độ chói tương đối của WCAG 2 (cùng công thức với `platform/web/src/theme.test.tsx`), trên
 bảng màu mặc định của Mantine 9.8.0, ngày 2026-11-27:
 
 | Cặp màu | Tỷ lệ | Mức cần |

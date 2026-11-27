@@ -182,8 +182,8 @@ deps-check: ## Ghim phiên bản, giấy phép và bản mới của image, thư
 	@python3 scripts/deps-check.py $(if $(REPORT),--report "$(REPORT)")
 
 # Giấy phép phụ thuộc của giao diện (ADR 0006). Thư viện đóng gói vào tệp giao diện gửi tới người dùng chỉ được mang
-# giấy phép dễ dãi; thêm OFL-1.1 (OSI) cho tệp phông Be Vietnam Pro (ADR 0048): phông được dùng, đóng gói nguyên bản,
-# chỉ cấm bán riêng tệp phông và đặt lại tên khi sửa, không ràng buộc mã của giao diện. Công cụ chỉ chạy lúc phát triển và build, không đóng gói vào sản phẩm, được thêm: BlueOak-1.0.0
+# giấy phép dễ dãi; thêm OFL-1.1 (OSI) cho tệp phông Be Vietnam Pro (ADR 0048), đóng gói nguyên bản: điều kiện của nó
+# chỉ áp cho chính tệp phông (không bán riêng, bản sửa vẫn theo OFL), không ràng buộc mã dùng phông. Công cụ chỉ chạy lúc phát triển và build, không đóng gói vào sản phẩm, được thêm: BlueOak-1.0.0
 # (OSI, dễ dãi; nhóm gói của npm), MPL-2.0 (OSI; lightningcss mà Vite dùng để xử lý CSS) và CC0-1.0, CC-BY-3.0 (dữ
 # liệu danh sách giấy phép SPDX mà chính công cụ kiểm giấy phép đọc).
 WEB_LICENSES_SHIPPED := MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;0BSD;OFL-1.1

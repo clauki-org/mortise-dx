@@ -7,13 +7,15 @@
 // đổi theme hay nâng Mantine làm đổi màu thì kiểm thử đo màu mới.
 
 import {
+  Anchor,
+  Badge,
+  Card,
   DEFAULT_THEME,
   defaultCssVariablesResolver,
   MantineProvider,
   mergeMantineTheme,
   TextInput,
 } from "@mantine/core";
-import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { BRAND_COLORS } from "./branding";
@@ -192,7 +194,11 @@ describe("Bento dịu", () => {
   // Bộ chọn của theme.css dựa vào lớp tĩnh và data-variant mà Mantine gắn lên khung ô nhập; nâng Mantine mà đổi tên
   // lớp thì viền lặng lẽ quay về gray.4, nên kiểm trên ô nhập thật.
   it("khung ô nhập mang lớp và biến thể mà theme.css chọn", () => {
-    const html = renderToStaticMarkup(createElement(MantineProvider, null, createElement(TextInput, { label: "a" })));
+    const html = renderToStaticMarkup(
+      <MantineProvider>
+        <TextInput label="a" />
+      </MantineProvider>,
+    );
     expect(html).toMatch(/class="[^"]*\bmantine-Input-wrapper\b[^"]*"[^>]*data-variant="default"/);
     expect(css).toContain('.mantine-Input-wrapper[data-variant="default"]');
   });
@@ -210,6 +216,20 @@ describe("Bento dịu", () => {
     expect(theme.defaultRadius).toBe("sm");
     expect(theme.radius.sm).toBe("0.375rem");
     expect(theme.components.Badge?.defaultProps).toMatchObject({ radius: "sm" });
+  });
+
+  it("theme thật vẽ nhãn bo 6px chữ 600, liên kết gạch chân, thẻ không bóng", () => {
+    const html = renderToStaticMarkup(
+      <MantineProvider theme={createAppTheme("blue")}>
+        <Badge>x</Badge>
+        <Anchor href="/x">y</Anchor>
+        <Card>z</Card>
+      </MantineProvider>,
+    );
+    expect(html).toMatch(/--badge-radius:var\(--mantine-radius-sm\)/);
+    expect(html).toMatch(/font-weight:600/);
+    expect(html).toContain('data-underline="always"');
+    expect(html).not.toMatch(/--card-shadow|--paper-shadow/);
   });
 
   it("liên kết luôn gạch chân", () => {

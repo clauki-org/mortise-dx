@@ -9,7 +9,7 @@ import { createContext, useContext } from "react";
 import shipped from "../brand/branding.json";
 
 // Bảng màu Mantine được chọn làm màu chính: chữ trắng trên nền màu và chữ màu trên nền trắng hay nền nhạt đều đạt
-// WCAG AA ở sắc độ theme.ts dùng (theme.test.ts kiểm). Phải giữ đúng thứ tự và nội dung như enum `color` của
+// WCAG AA ở sắc độ theme.ts dùng (theme.test.tsx kiểm). Phải giữ đúng thứ tự và nội dung như enum `color` của
 // contracts/branding.schema.json; scripts/contracts.sh so hai danh sách.
 export const BRAND_COLORS = ["blue", "indigo", "violet", "grape", "pink", "dark"] as const;
 

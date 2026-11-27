@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Hai kiểu của "Bento dịu" (ADR 0048) mà theme Mantine không đặt được vì CSS của Mantine viết cứng giá trị: nền trang
- * và viền ô nhập. Màu lấy từ biến mà cssVariablesResolver trong theme.ts đặt, nên theme.test.ts đo được tương phản.
+ * và viền ô nhập. Màu lấy từ biến mà cssVariablesResolver trong theme.ts đặt, nên theme.test.tsx đo được tương phản.
  * main.tsx nạp tệp này sau CSS của Mantine: bộ chọn cùng độ ưu tiên thì quy tắc nạp sau thắng.
  */
 

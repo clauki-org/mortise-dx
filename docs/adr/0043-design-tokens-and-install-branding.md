@@ -15,7 +15,7 @@ thành phần tự đặt viền, bo góc, khoảng đệm cho thẻ và bảng.
 trên và tiêu đề tab, nên đơn vị cài đặt không hiện được tên, logo, màu của mình.
 
 Tương phản tính theo công thức độ chói tương đối của WCAG 2 trên bảng màu mặc định của Mantine 9.8.0 (cùng công thức
-với `platform/web/src/theme.test.ts`, tính ngày 2026-11-27):
+với `platform/web/src/theme.test.tsx`, tính ngày 2026-11-27):
 
 | Cặp màu | Tỷ lệ | AA (4,5:1) |
 |---|---|---|

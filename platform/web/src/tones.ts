@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Bộ nghĩa màu dùng chung cho mọi nhãn trạng thái của Tầng 2 (ADR 0048): trang và thành phần chọn nghĩa, không chọn
-// màu, để một màu không mang hai nghĩa ở hai trang. StatusBadge đọc bảng này; theme.test.ts kiểm tương phản AA của
+// màu, để một màu không mang hai nghĩa ở hai trang. StatusBadge đọc bảng này; theme.test.tsx kiểm tương phản AA của
 // từng nghĩa ở biến thể light. Tách khỏi StatusBadge để thành phần khác dùng lại bảng mà không kéo theo component.
 
 export const TONES = ["bad", "warn", "info", "ok", "neutral"] as const;

@@ -27,7 +27,7 @@
       "pattern": "^/brand/[A-Za-z0-9][A-Za-z0-9._-]*\\.(svg|png|webp)$"
     },
     "color": {
-      "description": "Tên bảng màu Mantine làm màu chính. Chỉ các bảng mà chữ trắng trên nền màu và chữ màu trên nền trắng, nền nhạt đều đạt WCAG AA ở sắc độ giao diện dùng (platform/web/src/theme.test.ts).",
+      "description": "Tên bảng màu Mantine làm màu chính. Chỉ các bảng mà chữ trắng trên nền màu và chữ màu trên nền trắng, nền nhạt đều đạt WCAG AA ở sắc độ giao diện dùng (platform/web/src/theme.test.tsx).",
       "enum": ["blue", "indigo", "violet", "grape", "pink", "dark"]
     }
   }
