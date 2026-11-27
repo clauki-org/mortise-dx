@@ -16,6 +16,7 @@ from .decisions import decision_variables
 from .fields import step_fields
 from .names import node_names
 from .policy import IDEMPOTENCY_VARIABLE, Denied
+from .seal import seal_of
 
 log = logging.getLogger("workflow-api.flowable")
 
@@ -104,8 +105,14 @@ def tasks(tenant: str | None, *, groups: list[str] | None = None, assignee: str 
     return read_all("/query/tasks", query, "truy vấn task", who)
 
 
-def read_all(path: str, query: dict[str, object], action: str, who: str) -> list[dict]:
-    """Mọi trang của một truy vấn POST /query/...; `query` phải có `sort` để các trang không chồng nhau."""
+def read_all(
+    path: str, query: dict[str, object], action: str, who: str, *, complete: bool = False
+) -> list[dict]:
+    """Mọi trang của một truy vấn POST /query/...; `query` phải có `sort` để các trang không chồng nhau.
+
+    `complete`: chạm trần thì từ chối thay vì trả phần đã đọc. Niêm phong cần vậy: băm trên lịch sử thiếu thì
+    lần kiểm sau báo lệch dù không ai sửa gì.
+    """
     found: list[dict] = []
     for _ in range(MAX_PAGES):
         response = _call("POST", path, json=query | {"start": len(found), "size": PAGE_SIZE})
@@ -114,6 +121,10 @@ def read_all(path: str, query: dict[str, object], action: str, who: str) -> list
         found += page["data"]
         if not page["data"] or len(found) >= page["total"]:
             return found
+    if complete:
+        raise Denied(
+            502, f"{action.capitalize()} ({who}) có {page['total']} dòng, nhiều hơn workflow-api đọc được."
+        )
     log.warning("%s (%s) có %s dòng, chỉ đọc %s", action.capitalize(), who, page["total"], len(found))
     return found
 
@@ -159,6 +170,15 @@ def process_key(definition_id: str) -> str:
     return _process_keys[definition_id]
 
 
+def timer_jobs(instance_id: str) -> list[dict]:
+    """Hẹn giờ đang chờ của một hồ sơ: elementId là nút BPMN, dueDate là lúc hết hạn."""
+    query = {"processInstanceId": instance_id, "start": 0, "size": PAGE_SIZE}
+    response = _call("GET", "/management/timer-jobs", params=query)
+    _ensure_ok(response, "đọc hẹn giờ")
+    # Khóa lọc Flowable không biết bị bỏ qua im lặng (ADR 0032): lọc lại để không ghi hạn của hồ sơ khác.
+    return [job for job in response.json()["data"] if job.get("processInstanceId") == instance_id]
+
+
 def instance(instance_id: str) -> dict | None:
     response = _call("GET", f"/history/historic-process-instances/{instance_id}")
     if response.status_code == 404:
@@ -179,6 +199,19 @@ class Definition:
     nodes: Mapping[str, tuple[str, str]] = field(default_factory=dict)
     # Vai trò viết thẳng trong candidateGroups của các bước, để biết ai được xem số hồ sơ (ADR 0035).
     groups: frozenset[str] = frozenset()
+    # Quy trình khai mortise:seal="true": niêm phong hồ sơ khi kết thúc (ADR 0053).
+    seal: bool = False
+
+    @property
+    def waits(self) -> frozenset[str]:
+        """id các bước chờ (intermediateCatchEvent); chỉ hẹn giờ ở các nút này được ghi hạn (ADR 0053)."""
+        return frozenset(node for node, (kind, _) in self.nodes.items() if kind == "wait")
+
+    @property
+    def tracked(self) -> bool:
+        """Có việc cho workflow-api sau mỗi bước (niêm phong, ghi hạn). Không có thì không gọi thêm Flowable
+        hay CSDL, để quy trình khác vẫn chạy khi CSDL lỗi."""
+        return self.seal or bool(self.waits)
 
 
 # Điều lõi cần biết về một định nghĩa, theo mã định nghĩa; định nghĩa đã deploy không đổi nên nhớ suốt đời
@@ -218,6 +251,7 @@ def _load(definition_id: str, key: str) -> Definition:
                 step_fields(response.content, key),
                 node_names(response.content, key),
                 static_groups(response.content, key),
+                seal_of(response.content, key),
             )
         except ValueError as error:
             reason = f"Không đọc được BPMN của quy trình '{key}' ({error}); deploy lại quy trình."

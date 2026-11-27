@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast deps-check web-check e2e audit-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up \
+  check-fast deps-check web-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up \
   obs-up obs-down obs-check tenant-login
 
 help: ## Liệt kê các lệnh
@@ -60,6 +60,9 @@ migrate-status: ## Migration nào của lõi đã áp, nào còn chờ (cần l�
 
 audit-verify: ## Kiểm nhật ký thay đổi không bị sửa lén; ANCHOR=<thư mục sao lưu> để đối chiếu băm lúc sao lưu
 	@scripts/audit-verify.sh "$(ANCHOR)"
+
+seal-verify: ## Dựng lại hồ sơ đã niêm phong từ lịch sử Flowable, so băm; in hồ sơ bị sửa lén (cần lõi đang chạy)
+	@scripts/seal-verify.sh
 
 backup: ## Sao lưu CSDL, tệp và .env ra ngoài repo (BACKUP_DIR để đổi nơi lưu); dịch vụ ghi dữ liệu dừng trong lúc sao lưu
 	@scripts/backup.sh

@@ -50,6 +50,9 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
 - **Cấu hình:** migration `core/postgres/migrations/*_core_audit_log.sql`; lệnh kiểm `scripts/audit-verify.sh`.
 - **Xem:** `make audit-verify` (thêm `ANCHOR=<thư mục sao lưu>` để đối chiếu); đọc nhật ký bằng
   `docker compose exec postgres psql -U postgres -d mortise -c 'TABLE core.audit_log'`.
+- **Niêm phong hồ sơ:** quy trình khai `mortise:seal="true"` thì workflow-api ghi băm của hồ sơ đã kết thúc vào
+  `core.case_seals`, gắn nhật ký này; `make seal-verify` dựng lại từ lịch sử Flowable và so
+  ([ADR 0053](adr/0053-case-seals-and-timer-deadlines.md)).
 
 ### Keycloak: định danh và đăng nhập một lần
 

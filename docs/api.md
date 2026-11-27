@@ -163,9 +163,9 @@ không có đường vào trực tiếp từ bên ngoài.
 | `POST` | `/v1/workflow/processes/{key}/instances` | Khởi tạo một quy trình của tenant mình; thân `{"variables": {...}}` hoặc không có thân; header `Idempotency-Key` tùy chọn |
 | `GET` | `/v1/workflow/tasks` | Các task giao cho mình hoặc cho vai trò của mình, trong tenant mình, cùng bước của tenant con mà workflow-api gán cho nhóm của tenant mình theo bảng phân cấp; mỗi task có `tenant` (tenant của hồ sơ), `process`, `step` (id của userTask) và `due` (hạn, có thể null) |
 | `POST` | `/v1/workflow/tasks/{id}/complete` | Hoàn thành task; thân `{"variables": {...}}` hoặc không có thân |
-| `GET` | `/v1/workflow/instances/{id}` | Trạng thái một quy trình của tenant mình |
+| `GET` | `/v1/workflow/instances/{id}` | Trạng thái một quy trình của tenant mình; `seal` (`hash`, `sealed_at`, `version`) khi quy trình khai niêm phong và hồ sơ đã kết thúc ([ADR 0053](adr/0053-case-seals-and-timer-deadlines.md)) |
 | `GET` | `/v1/workflow/cases` | Hồ sơ do chính người gọi lập trong tenant mình, mới nhất trước: `process` (lặp được, tối đa 20), `state` (`open`, `ended`, `all`), `offset` (0–100000), `limit` (1–100, mặc định 20); trả `{total, items}`, mỗi hồ sơ có bước đang chờ (`current`), kết quả (`outcome`, `outcomeName`) và biến người lập thấy |
-| `GET` | `/v1/workflow/cases/{id}` | Một hồ sơ do chính người gọi lập, thêm `steps`: bước người làm và bước chờ, trạng thái `open`, `done`, `cancelled`, nhóm ứng viên, đã có người nhận chưa |
+| `GET` | `/v1/workflow/cases/{id}` | Một hồ sơ do chính người gọi lập, thêm `steps`: bước người làm và bước chờ, trạng thái `open`, `done`, `cancelled`, nhóm ứng viên, đã có người nhận chưa; `seal` như ở `/instances/{id}` |
 | `GET` | `/v1/workflow/processes/{key}/counts` | Số hồ sơ của quy trình trong tenant mình: `open`, `finished`, `overdue`, `steps` (mỗi bước người làm: `open`, `overdue`), `counted_at`; chỉ số, không biến, mã hồ sơ hay tên người |
 
 Ví dụ với quy trình mẫu `core-approval` (do `make seed` deploy cho từng tenant):

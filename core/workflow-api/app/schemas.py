@@ -48,10 +48,26 @@ class Task(BaseModel):
     variables: dict[str, object]
 
 
+class Seal(BaseModel):
+    hash: str = Field(
+        description="SHA-256 (hex) của bản JSON chuẩn của hồ sơ: trường của các bước, lịch sử bước, kết quả "
+        "(ADR 0053); `make seal-verify` dựng lại từ lịch sử Flowable và so"
+    )
+    sealed_at: str = Field(description="Thời điểm niêm phong, ISO 8601")
+    version: int = Field(description="Phiên bản cách dựng bản JSON chuẩn")
+
+
+SEAL_DESCRIPTION = (
+    "Niêm phong của hồ sơ; null khi quy trình không khai niêm phong (`mortise:seal` trong BPMN), hồ sơ chưa "
+    "kết thúc hay bị dừng mà không tới sự kiện kết thúc nào"
+)
+
+
 class InstanceStatus(BaseModel):
     id: str
     ended: bool
     outcome: str | None = Field(description="Mã sự kiện kết thúc; null khi quy trình chưa xong")
+    seal: Seal | None = Field(description=SEAL_DESCRIPTION)
 
 
 class CurrentStep(BaseModel):
@@ -101,6 +117,7 @@ class CaseStep(BaseModel):
 
 class CaseDetail(CaseSummary):
     steps: list[CaseStep] = Field(description="Bước đã qua và đang chờ, theo thời điểm bắt đầu")
+    seal: Seal | None = Field(description=SEAL_DESCRIPTION)
 
 
 class StepCounts(BaseModel):

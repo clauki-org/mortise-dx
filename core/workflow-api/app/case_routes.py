@@ -11,7 +11,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query
 from pydantic import StringConstraints
 
-from . import flowable, history
+from . import flowable, history, sealing
 from .auth import caller_from_token
 from .cases import STATES, current_of, summary, timeline
 from .policy import Caller, Denied, check_person
@@ -80,7 +80,8 @@ def my_case(instance_id: str, caller: CallerDep) -> dict:
         {"step": s["step"], "name": s["name"], "due": s["due"]} for s in steps if s["status"] == "open"
     ]
     process = flowable.process_key(raw["processDefinitionId"])
-    return summary(raw, process, definition, current) | {"steps": steps}
+    seal = sealing.status(raw, definition)
+    return summary(raw, process, definition, current) | {"steps": steps, "seal": seal}
 
 
 def _current(

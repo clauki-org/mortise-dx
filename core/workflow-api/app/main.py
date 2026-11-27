@@ -11,7 +11,7 @@ from fastapi import Body, Depends, FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
-from . import db, delegation, flowable
+from . import db, delegation, flowable, sealing
 from .auth import caller_from_token
 from .authority import group, pick
 from .case_routes import router as case_router
@@ -115,7 +115,10 @@ def start_process(
     variables |= {"initiator": caller.sub, "initiatorName": caller.username, "tenant": caller.tenant}
     variables |= authorities
     if idempotency_key is None:
-        return {"id": flowable.start(key, caller.tenant, variables)["id"], "process": key}
+        started = flowable.start(key, caller.tenant, variables)["id"]
+        if definition.tracked:
+            sealing.after_step(started, definition, caller.sub)
+        return {"id": started, "process": key}
     check_idempotency_key(idempotency_key)
     with _start_locks[hash((caller.tenant, key, caller.sub, idempotency_key)) % len(_start_locks)]:
         # Dịch vụ dùng mã cố định cho một sự việc, ví dụ một luật trên một thiết bị: còn hồ sơ mở thì không mở
@@ -126,6 +129,9 @@ def start_process(
         )
         if found is None:
             found = flowable.start(key, caller.tenant, variables | {IDEMPOTENCY_VARIABLE: idempotency_key})
+            # Quy trình có thể vào ngay một bước chờ hẹn giờ sau sự kiện bắt đầu.
+            if definition.tracked:
+                sealing.after_step(found["id"], definition, caller.sub)
     return {"id": found["id"], "process": key}
 
 
@@ -163,9 +169,12 @@ def complete_task(task_id: str, caller: CallerDep, body: VariablesIn = None) -> 
     # Kiểm sau quyền: người của tenant khác hay vai trò khác nhận 404/403 như trước, không biết được bước
     # nào có trường gì. Đường của tenant cha cũng qua đây: người duyệt của tenant cha không ghi được trường
     # của bước khác.
-    fields = flowable.definition_of(raw["processDefinitionId"]).fields
-    check_step_fields(variables, fields, raw["taskDefinitionKey"])
+    definition = flowable.definition_of(raw["processDefinitionId"])
+    check_step_fields(variables, definition.fields, raw["taskDefinitionKey"])
     flowable.claim_and_complete(task_id, caller.sub, variables)
+    # Bước vừa xong có thể đưa hồ sơ vào bước chờ hẹn giờ hay tới kết thúc (ADR 0053).
+    if definition.tracked:
+        sealing.after_step(raw["processInstanceId"], definition, caller.sub)
     return Response(status_code=204)
 
 
@@ -179,7 +188,13 @@ def instance_status(instance_id: str, caller: CallerDep) -> dict:
     found = flowable.instance(instance_id)
     if found is None or found.get("tenantId") != caller.tenant:
         raise Denied(404, "Không tìm thấy quy trình.")
-    return {"id": found["id"], "ended": found["endTime"] is not None, "outcome": found.get("endActivityId")}
+    seal = sealing.status(found, flowable.definition_of(found["processDefinitionId"]))
+    return {
+        "id": found["id"],
+        "ended": found["endTime"] is not None,
+        "outcome": found.get("endActivityId"),
+        "seal": seal,
+    }
 
 
 def _authorities(

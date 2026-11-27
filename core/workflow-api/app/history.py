@@ -97,13 +97,15 @@ def waiting(instances: list[str], tenant: str) -> list[dict]:
     return found
 
 
-def task_history(instance_id: str) -> list[dict]:
+def task_history(instance_id: str, *, complete: bool = False) -> list[dict]:
     query = {"processInstanceId": instance_id, "sort": "startTime", "order": "asc"}
-    found = flowable.read_all("/query/historic-task-instances", query, "đọc lịch sử bước", instance_id)
+    found = flowable.read_all(
+        "/query/historic-task-instances", query, "đọc lịch sử bước", instance_id, complete=complete
+    )
     return [row for row in found if row.get("processInstanceId") == instance_id]
 
 
-def wait_history(instance_id: str) -> list[dict]:
+def wait_history(instance_id: str, *, complete: bool = False) -> list[dict]:
     """Bước chờ (intermediateCatchEvent) đã qua và đang chờ; bỏ startEvent, sequenceFlow, gateway."""
     query = {
         "processInstanceId": instance_id,
@@ -112,7 +114,7 @@ def wait_history(instance_id: str) -> list[dict]:
         "order": "asc",
     }
     found = flowable.read_all(
-        "/query/historic-activity-instances", query, "đọc lịch sử bước chờ", instance_id
+        "/query/historic-activity-instances", query, "đọc lịch sử bước chờ", instance_id, complete=complete
     )
     return [
         row
