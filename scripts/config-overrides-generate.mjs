@@ -28,7 +28,12 @@ function generate(component, config, kind) {
     const needed = new Set((config.fields ?? []).map((field) => field.source?.where?.field));
     const shown = component === "catalog" ? targets.filter((t) => config.list.columns.includes(t)) : targets;
     const hidden = shown.slice(1).filter((target) => component !== "form" || !needed.has(target));
-    return hidden.map((target) => ({ kind, target, value: true }));
+    // Trường khai mà chưa là cột thì hiện thêm thành cột: đường duy nhất thêm cột vào câu truy vấn danh sách.
+    const extra = component === "catalog" ? targets.filter((t) => !config.list.columns.includes(t)) : [];
+    return [
+      ...hidden.map((target) => ({ kind, target, value: true })),
+      ...extra.map((target) => ({ kind, target, value: false })),
+    ];
   }
   if (kind === "order") return orders(component, config, targets);
   if (kind === "threshold") return targets.map((target) => ({ kind, target, value: shifted(config, target) }));
@@ -57,11 +62,12 @@ function shifted(config, target) {
   return value;
 }
 
-// Mọi loại cùng lúc trên một mục: ẩn đúng một đích (đích cuối), các loại khác áp cho mọi đích còn lại; phần chỉnh trỏ
+// Mọi loại cùng lúc trên một mục: ẩn đúng một đích (đích cuối), hiện mọi cột thêm được, các loại khác áp cho mọi đích còn lại; phần chỉnh trỏ
 // vào khối hay cột đã ẩn thì hàm trộn bỏ qua đúng như thiết kế, nên không sinh.
 function combined(entry) {
-  const hidden = generate(entry.component, entry.config, "hidden").slice(-1);
-  const gone = new Set(hidden.map((override) => override.target));
+  const all = generate(entry.component, entry.config, "hidden");
+  const hidden = [...all.filter((o) => o.value === true).slice(-1), ...all.filter((o) => o.value === false)];
+  const gone = new Set(hidden.filter((o) => o.value === true).map((override) => override.target));
   const rest = KINDS.filter((kind) => kind !== "hidden").flatMap((kind) =>
     generate(entry.component, entry.config, kind).filter((o) => !gone.has(o.target.split(".")[0])),
   );

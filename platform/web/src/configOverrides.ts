@@ -5,7 +5,7 @@
 // React, không import lúc chạy, để scripts/config-overrides-check.mjs chạy được tệp này bằng node mà không cần dựng
 // giao diện. Kiểm lại kết quả bằng hàm *Problems của thành phần và quay về bản gốc khi có lỗi nằm ở
 // configEffective.ts. Đích nào nhận loại nào phải khớp platform.config_override_target_problem() trong migration
-// 20261128090000_config_overrides.sql: CSDL chặn khi ghi, hàm này bỏ qua khi đọc (gói lên bản mới có thể bỏ một trường).
+// 20261127233000_config_overrides.sql: CSDL chặn khi ghi, hàm này bỏ qua khi đọc (gói lên bản mới có thể bỏ một trường).
 
 export const OVERRIDE_KINDS = ["label", "hidden", "order", "variant", "block", "threshold"] as const;
 export type OverrideKind = (typeof OVERRIDE_KINDS)[number];
