@@ -82,6 +82,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0061](0061-block-composition.md) | Nguyên tắc ghép: trang gồm khối, kiểu trình bày, bài kiểm tổ hợp | Chấp nhận |
 | [0066](0066-catalog-kanban-and-calendar.md) | Kiểu Kanban và Lịch của danh mục, chuyển thẻ bằng lệnh sửa có so version | Chấp nhận |
 | [0063](0063-install-theme-tokens.md) | Bộ biến giao diện theo bản cài: màu chính, màu phụ, bo góc, phông, nền trang, vẫn đạt AA | Chấp nhận |
+| [0062](0062-shared-warehouse-package.md) | Gói kho dùng chung, luật trên nhiều dòng qua hàm của nền tảng | Chấp nhận |
 
 ## Quyết định còn mở
 

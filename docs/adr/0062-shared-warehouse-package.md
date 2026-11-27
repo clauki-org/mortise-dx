@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # 0062. Gói kho dùng chung: phiếu nhập, phiếu xuất, tồn kho là view, luật trên nhiều dòng qua hàm của nền tảng
 
-- Trạng thái: Đề xuất
+- Trạng thái: Chấp nhận
 - Ngày: 2026-11-27
 - Bổ sung: [ADR 0022](0022-declarative-packages.md) (gói khai báo gọi được hàm của nền tảng, không chỉ của lõi)
 
