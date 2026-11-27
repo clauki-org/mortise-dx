@@ -183,6 +183,12 @@
           "type": "array",
           "items": { "$ref": "#/$defs/child" }
         },
+        "blocks": {
+          "description": "Khối đặt trong màn hình chi tiết, dưới các trường và trên bảng đối tượng con (ADR 0068): mỗi khối là một mục menu hay khối của chính gói, vẽ như trên trang (component page). Có attach thì khối chỉ đọc dòng thuộc dòng đang xem; không có thì khối chạy như đứng riêng. make check-fast kiểm item, variant và attach.",
+          "type": "array",
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/record_block" }
+        },
         "actions": {
           "description": "Các nút trên màn hình chi tiết; mỗi nút khởi tạo một quy trình của gói cho dòng đang xem, qua API quy trình của lõi",
           "type": "array",
@@ -307,6 +313,34 @@
       "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
     },
     "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "record_block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item"],
+      "properties": {
+        "item": {
+          "description": "id của một mục trong menu hay blocks của chính gói; không được là một trang",
+          "$ref": "#/$defs/slug"
+        },
+        "variant": {
+          "description": "Kiểu trình bày của khối, một giá trị trong variant của schema thành phần mà mục dùng; bỏ trống thì dùng variant trong cấu hình của mục",
+          "type": "string",
+          "pattern": "^[a-z]+(-[a-z]+)*$"
+        },
+        "attach": {
+          "description": "Gắn khối với dòng đang xem: khối thêm điều kiện column bằng khóa của dòng vào mọi truy vấn đọc source. source là một nguồn của khối: bảng của danh mục, bảng của một lớp bản đồ, graphql.field của một khối bảng điều hành, hay khóa quy trình của theo dõi hồ sơ (column khi đó là tên biến của quy trình). Với bảng, vai trò mà khối dùng để đọc source phải đọc được column trong quyền Hasura của gói.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "column"],
+          "properties": {
+            "source": {
+              "anyOf": [{ "$ref": "#/$defs/identifier" }, { "$ref": "#/$defs/slug" }]
+            },
+            "column": { "$ref": "#/$defs/identifier" }
+          }
+        }
+      }
+    },
     "text": {
       "description": "Chữ hiển thị cho người dùng: có ít nhất một ký tự không phải khoảng trắng",
       "type": "string",

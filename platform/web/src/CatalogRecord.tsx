@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Màn hình chi tiết của thành phần danh mục: mọi trường của một dòng theo thứ tự gói khai, xếp thành lưới ô (ADR
-// 0050), bảng của từng loại đối tượng con (detail.children) kèm nút thêm dòng con và nút nạp từ tệp (ADR 0064), nút
-// sửa dòng (detail.edit, ADR 0054), nút khởi tạo quy trình (detail.actions), tài liệu đính kèm (detail.documents) và
-// đường về các đối tượng cha. Catalog.tsx mở màn hình này sau khi đã kiểm cấu hình và đọc đường dẫn thành các chặng
-// từ đối tượng ngoài cùng tới dòng đang xem.
+// 0050), khối của gói gắn với dòng (detail.blocks, ADR 0068, RecordBlocks.tsx), bảng của từng loại đối tượng con
+// (detail.children) kèm nút thêm dòng con và nút nạp từ tệp (ADR 0064), nút sửa dòng (detail.edit, ADR 0054), nút
+// khởi tạo quy trình (detail.actions), tài liệu đính kèm (detail.documents) và đường về các đối tượng cha. Catalog.tsx
+// mở màn hình này sau khi đã kiểm cấu hình và đọc đường dẫn thành các chặng từ đối tượng ngoài cùng tới dòng đang xem.
 
 import { Alert, Anchor, Box, Breadcrumbs, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { useState } from "react";
@@ -30,6 +30,7 @@ import {
 } from "./catalog";
 import { chainQuery, chainVariables, emptyState } from "./catalogQuery";
 import { PageHeader } from "./PageHeader";
+import { RecordBlocks } from "./RecordBlocks";
 import { ErrorNotice, Loading } from "./States";
 
 /** Tiêu đề của một dòng theo cấu hình; trường tiêu đề trống thì dùng giá trị khóa. */
@@ -98,9 +99,11 @@ type Props = {
   basePath: string;
   /** Các chặng từ đối tượng ngoài cùng tới dòng đang xem; chặng cuối là dòng này */
   steps: Step[];
+  app: string;
+  item: string;
 };
 
-export function CatalogRecord({ config, basePath, steps }: Props) {
+export function CatalogRecord({ config, basePath, steps, app, item }: Props) {
   const current = steps[steps.length - 1];
   if (!current) throw new Error("CatalogRecord cần ít nhất một chặng");
   const [{ data, fetching, error }, reload] = useQuery<Record<string, Row[]>>({
@@ -183,6 +186,12 @@ export function CatalogRecord({ config, basePath, steps }: Props) {
           </Paper>
         ))}
       </SimpleGrid>
+      {node.detail?.blocks && (
+        <RecordBlocks
+          blocks={node.detail.blocks}
+          record={{ app, item, source: node.source, key: keyOf(node), id: row[keyOf(node)], row }}
+        />
+      )}
       {node.detail?.documents && <CatalogDocuments config={node.detail.documents} recordKey={row[keyOf(node)]} />}
       {(node.detail?.children ?? []).map((child) => (
         <Children

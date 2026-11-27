@@ -138,6 +138,7 @@ branding.unknown-font.json	$.font	'Comic Sans MS' is not one of ['be-vietnam-pro
 catalog.add-form-unknown-field-type.yaml	$.detail.children[0].add.form.fields[0].type	'no-such-type' is not one of ['string', 'number', 'integer', 'boolean', 'date', 'choice']
 catalog.edit-missing-label.yaml	$.detail.edit	'label' is a required property
 catalog.unknown-variant.yaml	$.variant	'timeline' is not one of ['table', 'cards', 'kanban', 'calendar']
+catalog.record-block-attach-without-column.yaml	$.detail.blocks[0].attach	'column' is a required property
 form.update-without-version.yaml	$.submit	'version' is a dependency of 'update'
 page.block-unknown-key.yaml	$.blocks[0]	Additional properties are not allowed ('config' was unexpected)
 page.no-blocks.yaml	$.blocks	[] should be non-empty

@@ -28,6 +28,11 @@ capabilities:
   - Khối khai role chỉ được truy vấn và chỉ hiện khi token của người xem có vai trò đó; truy vấn luôn gửi kèm header X-Hasura-Role (bỏ trống là user) và luôn đọc lại từ máy chủ.
   - Hasura từ chối câu truy vấn vì cấu hình (validation-failed, data-exception) thì khối báo bằng tiếng Việt, nêu vai trò đã dùng, cột của where và dẫn tới người quản trị sửa cấu hình của gói.
   - link dẫn tới một mục menu khác của cùng gói; mục dành cho vai trò khác thì đường dẫn không hiện.
+  - Biểu đồ của nguồn graphql khai chart.record thì tên nhóm ở mỗi dòng của bảng số liệu là liên kết tới chi tiết dòng
+    của mục danh mục record.item, khóa ở cột record.column (ADR 0068).
+  - Đặt trong chi tiết một dòng của danh mục với attach (ADR 0068) thì khối graphql đọc bảng attach.source chỉ đọc dòng có
+    attach.column bằng khóa của dòng đang xem; điều kiện nằm trong biến gửi đi nên "Xem cách tính" hiện đúng nó. Khối
+    đọc nguồn khác chạy như đứng riêng. Hai dòng về chi tiết dòng này chưa chạy trên trình duyệt.
 limits:
   - Chỉ đọc; không lọc, không chọn kỳ, không tải xuống.
   - Với nguồn graphql, không cộng, đếm hay tính trên trình duyệt và không dùng truy vấn _aggregate của Hasura; mọi con số phải là một cột do gói tính sẵn, thường là view trong migration của gói. Chỉ việc đang chờ chính người xem (workflow counts mine) được đếm trên trình duyệt.

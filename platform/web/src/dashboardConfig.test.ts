@@ -77,6 +77,17 @@ describe("panelQuery", () => {
     });
   });
 
+  it("điều kiện của dòng đang xem nằm trong chính biến gửi đi, cộng vào where của khối", () => {
+    const fixed = { unit_id: { _eq: 7 } };
+    expect(panelQuery(totals, fixed).variables.where).toEqual({ _and: [{ status: { _eq: "active" } }, fixed] });
+    expect(panelQuery(children, fixed).variables.where).toEqual({ _and: [{}, fixed] });
+  });
+
+  it("cột khóa của liên kết tới chi tiết dòng được đọc cùng các cột của biểu đồ", () => {
+    const chart = children.chart && { ...children.chart, record: { item: "units", column: "unit_id" } };
+    expect(panelQuery({ ...children, chart }).query).toContain("{ unit_name score target basis unit_id }");
+  });
+
   it("order_by của gói thay thứ tự mặc định", () => {
     const ordered = {
       ...children,
@@ -116,6 +127,13 @@ describe("dashboardProblems", () => {
       'Tổng: vai trò "Admin" không hợp lệ',
       'Đơn vị con: màu "#f00" không có trong bảng màu',
       "Đơn vị con: một cột khai hai lần trong chart.y",
+    ]);
+  });
+
+  it("cột khóa của liên kết tới chi tiết dòng qua cùng luật tên trước khi vào câu truy vấn", () => {
+    const chart = children.chart && { ...children.chart, record: { item: "units", column: "id } x {" } };
+    expect(dashboardProblems({ title: "x", panels: [{ ...children, chart }] })).toEqual([
+      `${children.title}: "id } x {" không phải tên hợp lệ (chỉ chữ không dấu, số, gạch dưới)`,
     ]);
   });
 

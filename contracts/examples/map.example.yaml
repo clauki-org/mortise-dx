@@ -24,6 +24,8 @@ layers:
     longitude: lon
     title: name
     where: { field: status, equals: active }
+    # Tên điểm dẫn tới chi tiết dòng của mục danh mục `items` (ADR 0068), khóa ở cột item_id.
+    record: { item: items, column: item_id }
     fields:
       - { name: code, label: Mã }
       - { name: group.score, label: Điểm của nhóm, type: number }

@@ -82,8 +82,13 @@ type Render = (config: unknown, basePath: string, app: string, item: string) => 
 // "toString" sẽ khớp với thuộc tính có sẵn của mọi đối tượng. Thành phần mới thêm một dòng ở đây; tên hợp lệ do
 // contracts/app.schema.json liệt kê. Khối trên trang (Block.tsx) vẽ qua cùng bảng này.
 export const COMPONENTS = new Map<string, Render>([
-  ["catalog", (config, basePath) => <Catalog config={config as CatalogConfig} basePath={basePath} />],
-  ["map", (config) => <MapPanel config={config as MapConfig} />],
+  [
+    "catalog",
+    (config, basePath, app, item) => (
+      <Catalog config={config as CatalogConfig} basePath={basePath} app={app} item={item} />
+    ),
+  ],
+  ["map", (config, _basePath, app) => <MapPanel config={config as MapConfig} app={app} />],
   ["form", (config, _basePath, app) => <FormPanel config={config as FormConfig} app={app} />],
   ["cases", (config, basePath) => <Cases config={config as CasesConfig} basePath={basePath} />],
   ["dashboard", (config, _basePath, app) => <DashboardPanel config={config as DashboardConfig} app={app} />],

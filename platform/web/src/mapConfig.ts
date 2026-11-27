@@ -27,6 +27,8 @@ export type Layer = {
   where?: { field: string; equals: string };
   fields?: MapField[];
   color: LayerColor;
+  /** Tên điểm dẫn tới chi tiết dòng của mục danh mục `item`, khóa lấy ở cột `column` (ADR 0068) */
+  record?: { item: string; column: string };
   limit?: number;
 };
 
@@ -70,6 +72,7 @@ const pathsOf = (layer: Layer) => [
   layer.title,
   ...(layer.fields ?? []).map((field) => field.name),
   ...("by" in layer.color ? [layer.color.by] : []),
+  ...(layer.record ? [layer.record.column] : []),
 ];
 
 const ascending = (steps: Step[]) =>
@@ -146,10 +149,12 @@ const ascendingBy = (path: string): Row =>
 
 /**
  * Câu truy vấn của một lớp. Điều kiện where đi qua biến của câu truy vấn, không ghép vào chuỗi. Xin thừa một dòng so
- * với trần để biết lớp còn điểm chưa hiện.
+ * với trần để biết lớp còn điểm chưa hiện. `fixed` là điều kiện của dòng đang xem khi bản đồ là khối trong chi tiết
+ * một dòng (ADR 0068); nó cộng thêm vào where của lớp, không thay.
  */
-export function layerQuery(layer: Layer): { query: string; variables: Record<string, unknown> } {
-  const where = layer.where ? { [layer.where.field]: { _eq: layer.where.equals } } : {};
+export function layerQuery(layer: Layer, fixed?: Row): { query: string; variables: Record<string, unknown> } {
+  const own = layer.where ? { [layer.where.field]: { _eq: layer.where.equals } } : {};
+  const where = fixed ? { _and: [own, fixed] } : own;
   // Không xếp thì CSDL trả dòng theo thứ tự tùy ý, và lớp quá trần hiện một nhóm dòng khác sau mỗi lần tải. Xếp theo
   // tên rồi mọi cột còn lại đang đọc: lớp không khai khóa (view tổng hợp có thể không có cột id), nên hai dòng chỉ
   // còn đổi chỗ khi mọi giá trị hiện ra đều giống nhau.

@@ -21,6 +21,7 @@ import {
 import { Link } from "react-router";
 import { type CatalogNode, display, type Field, keyOf, type Row, type Sort, toneOf } from "./catalog";
 import { VIEW_LABELS, type View } from "./catalogViews";
+import { rowPath } from "./menu";
 import { StatusBadge } from "./StatusBadge";
 import { Blank, keepTogether, TableScroll } from "./TableScroll";
 
@@ -89,7 +90,7 @@ export function RowsTable({ config, columns, rows, path, label, sort, onSort }: 
                   ta={first.type === "number" ? "right" : undefined}
                   style={keepTogether(text) ? { whiteSpace: "nowrap" } : undefined}
                 >
-                  <Anchor component={Link} to={`${path}/${encodeURIComponent(key)}`} fw={600}>
+                  <Anchor component={Link} to={rowPath(path, key)} fw={600}>
                     {text}
                   </Anchor>
                 </Table.Td>
@@ -128,7 +129,7 @@ export function RowsCards({ config, columns, rows, path }: RowsProps) {
         const { key, text } = linkText(config, first, row);
         return (
           <Paper component="li" key={key} withBorder radius="md" p="md">
-            <Anchor component={Link} to={`${path}/${encodeURIComponent(key)}`} fw={800} fz="lg">
+            <Anchor component={Link} to={rowPath(path, key)} fw={800} fz="lg">
               {text}
             </Anchor>
             <Box component="dl" m={0} mt="sm">

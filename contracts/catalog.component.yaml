@@ -5,10 +5,11 @@
 # Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, CatalogRows.tsx,
 # CatalogActions.tsx, catalog.ts, catalogQuery.ts; phần tài liệu ở CatalogDocuments.tsx; nút sửa và thêm dòng con ở
 # CatalogForm.tsx; Kanban, Lịch ở CatalogKanban.tsx, CatalogCalendar.tsx, catalogViews.ts; nút nạp từ tệp ở
-# CatalogImport.tsx, CatalogImportPreview.tsx, catalogImport.ts, catalogImportFile.ts, catalogImportTemplate.ts). Mỗi
-# dòng dưới đây đã được chạy thử trên giao diện, trừ nút sửa và thêm dòng con (ADR 0054, mục Chưa kiểm), Kanban, Lịch
-# (ADR 0066, mục Chưa kiểm) và nút nạp từ tệp (ADR 0064, mục Chưa kiểm); đổi hành vi của thành phần thì sửa tệp này
-# trong cùng pull request.
+# CatalogImport.tsx, CatalogImportPreview.tsx, catalogImport.ts, catalogImportFile.ts, catalogImportTemplate.ts; khối
+# trong chi tiết ở RecordBlocks.tsx). Mỗi dòng dưới đây đã được chạy thử trên giao diện, trừ nút sửa và thêm dòng con
+# (ADR 0054, mục Chưa kiểm), Kanban, Lịch (ADR 0066, mục Chưa kiểm), nút nạp từ tệp (ADR 0064, mục Chưa kiểm) và khối
+# trong chi tiết (ADR 0068, chưa chạy trên trình duyệt); đổi hành vi của thành phần thì sửa tệp này trong cùng pull
+# request.
 
 component: catalog
 summary: Danh sách và màn hình chi tiết của một loại đối tượng cùng các đối tượng con của nó, đọc qua GraphQL theo cấu hình của gói.
@@ -69,7 +70,12 @@ capabilities:
     Hasura chạy lệnh trong một giao dịch nên lỗi ở một dòng thì không dòng nào được thêm (ADR 0064).
   - Phần tài liệu đính kèm của dòng đang xem (detail.documents, ở mọi cấp cha–con) để xem, tải xuống, đính kèm tệp;
     năng lực và giới hạn ở contracts/documents.component.yaml (ADR 0041).
-  - Nơi gọi chỉ đưa cấu hình và địa chỉ gốc; thành phần không cần menu, bảng hay cấu hình nào khác của hệ thống.
+  - Khối trong màn hình chi tiết (detail.blocks, ở mọi cấp cha–con; ADR 0068) là mục menu hay khối của chính gói, vẽ như
+    trên trang, nằm dưới các trường. Có attach thì khối chỉ đọc dòng của attach.source có attach.column bằng khóa của
+    dòng đang xem; không có thì khối chạy như đứng riêng. Danh mục đặt làm khối như vậy cũng lọc danh sách của nó theo
+    dòng đang xem. Liên kết của dòng dựng bằng liên kết chung tới chi tiết dòng (menu.ts).
+  - Nơi gọi đưa cấu hình, địa chỉ gốc, gói và mục; ngoài menu của gói (để tìm mục của detail.blocks), thành phần không
+    cần bảng hay cấu hình nào khác của hệ thống.
 limits:
   - Không xóa dòng. Chỉ sửa dòng đang xem và thêm dòng con của dòng đang xem; danh sách ngoài cùng không có nút thêm
     dòng. Việc ghi khác là khởi tạo quy trình bằng nút gói khai và đính kèm tệp ở phần tài liệu.

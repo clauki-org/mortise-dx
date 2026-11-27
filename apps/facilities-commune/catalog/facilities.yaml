@@ -44,6 +44,14 @@ calendar:
   title: name
 detail:
   title: name
+  # Khối trong chi tiết cơ sở (ADR 0068): bản đồ chỉ có cơ sở này (cột id của bảng cơ sở), và hồ sơ rà soát mà người
+  # xem đã lập cho cơ sở này (biến facilityId mà nút "Lập hồ sơ rà soát" gửi). make check-fast kiểm mục, nguồn và quyền
+  # đọc cột.
+  blocks:
+    - item: location
+      attach: { source: app_facilities_commune_facilities, column: id }
+    - item: reviews
+      attach: { source: facilities-review, column: facilityId }
   # Biến theo workflows/facilities-review.yaml: title hiện trên bảng việc, facilityId để mở lại cơ sở, excessM2 chọn
   # nhánh báo cáo hay công khai ngay khi lập.
   actions:

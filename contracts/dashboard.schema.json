@@ -267,6 +267,10 @@
             }
           }
         },
+        "record": {
+          "description": "Tên nhóm ở mỗi dòng của bảng số liệu dẫn tới chi tiết dòng của danh mục; chỉ với nguồn graphql",
+          "$ref": "#/$defs/record"
+        },
         "details": {
           "description": "Cột chỉ hiện trong bảng số liệu, không vẽ, ví dụ căn cứ hay trích dẫn. Không khai format thì hiện nguyên văn, để mã như 001 không bị đọc thành số.",
           "type": "array",
@@ -291,6 +295,13 @@
       "description": "Tên theo luật của GraphQL. Thành phần ghép tên này vào câu truy vấn, nên ký tự khác sẽ đổi nghĩa của câu.",
       "type": "string",
       "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "record": {
+      "description": "Mở chi tiết dòng (ADR 0068): item là một mục danh mục (component catalog) của chính gói, column là cột của nguồn mang khóa của dòng ngoài cùng của danh mục đó. make check-fast kiểm item và quyền đọc column.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item", "column"],
+      "properties": { "item": { "$ref": "#/$defs/slug" }, "column": { "$ref": "#/$defs/identifier" } }
     },
     "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
     "text": {

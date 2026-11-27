@@ -19,6 +19,7 @@ import { describe, expect, it, vi } from "vitest";
 import { filter, fromValue, mergeMap, never, pipe } from "wonka";
 import { parse as parseYaml } from "yaml";
 import { BlockBoundary, BlockFailure } from "./Block";
+import type { CatalogConfig, RecordBlock } from "./catalog";
 import type { MenuItem } from "./menu";
 import { COMPONENTS, PackagePage } from "./PackagePage";
 import { variantsOf, withVariant } from "./page";
@@ -123,8 +124,12 @@ const DENIED = new CombinedError({
   graphQLErrors: [{ message: "field 'x' not found in type: 'query_root'", extensions: { code: "validation-failed" } }],
 });
 
-/** Client giả: menu luôn trả `menu`, ghi đè luôn rỗng; câu khác trả theo `state`, dựng từ chính câu truy vấn. */
-function fakeClient(menu: MenuItem[], state: DataState): Client {
+/**
+ * Client giả: menu luôn trả `menu`, ghi đè luôn rỗng; dòng đang xem của chi tiết (bí danh s0 của chainQuery) luôn có, để trạng thái dữ
+ * liệu tới được khối trong chi tiết; câu khác trả theo `state`, dựng từ chính câu truy vấn. Biến của mọi câu được ghi
+ * vào `sent` để bài đọc lại điều kiện đã gửi.
+ */
+function fakeClient(menu: MenuItem[], state: DataState, sent: unknown[] = []): Client {
   const answer = (operation: Operation) => {
     const definition = operation.query.definitions[0] as unknown as { selectionSet: SelectionSet };
     const roots = definition.selectionSet.selections.filter((field) => field.kind === "Field");
@@ -136,14 +141,16 @@ function fakeClient(menu: MenuItem[], state: DataState): Client {
     if (roots.some((field) => field.name.value === "platform_config_overrides_by_tenant")) {
       return fromValue({ operation, data: { platform_config_overrides_by_tenant: [] }, stale: false, hasNext: false });
     }
-    if (state === "loading") return never;
-    if (state === "denied") return fromValue({ operation, error: DENIED, stale: false, hasNext: false });
+    sent.push(operation.variables);
+    const host = roots.some((field) => field.alias?.value === "s0");
+    if (state === "loading" && !host) return never;
+    if (state === "denied" && !host) return fromValue({ operation, error: DENIED, stale: false, hasNext: false });
     const data: Record<string, unknown> = {};
     for (const field of roots) {
       const row = field.selectionSet ? rowOf(field.selectionSet) : 1;
       // Một dòng: thẻ số của bảng điều hành đòi đúng một dòng, nguồn trả nhiều dòng là lỗi dữ liệu của gói, có lời
       // báo riêng, không phải lỗi ghép.
-      data[field.alias?.value ?? field.name.value] = state === "rows" ? [row] : [];
+      data[field.alias?.value ?? field.name.value] = state === "rows" || host ? [row] : [];
     }
     return fromValue({ operation, data, stale: false, hasNext: false });
   };
@@ -156,7 +163,7 @@ function fakeClient(menu: MenuItem[], state: DataState): Client {
   return new Client({ url: "/v1/graphql", exchanges: [exchange] });
 }
 
-function render(menu: MenuItem[], path: string, state: DataState, roles: string[]): string {
+function render(menu: MenuItem[], path: string, state: DataState, roles: string[], sent?: unknown[]): string {
   const payload = btoa(JSON.stringify({ realm_access: { roles } }));
   const session = { user: { profile: { tenant: ["xa-a"] } } as unknown as User, getToken: () => `x.${payload}.y` };
   return renderToStaticMarkup(
@@ -164,7 +171,7 @@ function render(menu: MenuItem[], path: string, state: DataState, roles: string[
       <MemoryRouter initialEntries={[path]}>
         <SessionContext value={session}>
           <QueryClientProvider client={new QueryClient()}>
-            <Provider value={fakeClient(menu, state)}>
+            <Provider value={fakeClient(menu, state, sent)}>
               <Routes>
                 <Route path="/apps/:app/:item/*" element={<PackagePage />} />
               </Routes>
@@ -177,6 +184,9 @@ function render(menu: MenuItem[], path: string, state: DataState, roles: string[
 }
 
 const TEST_PAGE = "combination-page";
+const TEST_RECORD = "combination-record";
+// Cột mà khối thử gắn với dòng đang xem; dòng giả có mọi cột bằng 1 nên khóa của dòng là 1.
+const ATTACH_COLUMN = "record_id";
 
 // Thành phần chỉ đọc GraphQL: trạng thái của client giả phải thấy được trên trang (lời báo lỗi, vòng tải), để bài không
 // qua chỉ vì client giả không trả gì.
@@ -195,6 +205,40 @@ const pageItem = (app: string, blocks: { item: string; variant?: string }[]): Me
   on_menu: true,
 });
 
+/** Nguồn đầu tiên của một mục mà khối trong chi tiết gắn được (cùng luật với scripts/check-record-blocks.py). */
+function firstSource(entry: MenuItem): string | undefined {
+  const config = entry.config as Record<string, unknown>;
+  const list = (key: string) => (Array.isArray(config[key]) ? (config[key] as unknown[]) : []);
+  const objects = (key: string) => list(key) as Record<string, unknown>[];
+  if (entry.component === "catalog") return config.source as string;
+  if (entry.component === "map") return objects("layers")[0]?.source as string | undefined;
+  if (entry.component === "dashboard") {
+    const panel = objects("panels").find((candidate) => candidate.graphql);
+    return (panel?.graphql as { field?: string } | undefined)?.field;
+  }
+  if (entry.component === "cases") return list("processes")[0] as string | undefined;
+  return undefined;
+}
+
+/** Mục danh mục thử: một bảng giả, chi tiết dòng chứa đúng một khối. */
+const recordItem = (app: string, block: RecordBlock): MenuItem => ({
+  app,
+  app_name: app,
+  item: TEST_RECORD,
+  label: "Danh mục thử",
+  component: "catalog",
+  config: {
+    title: "Danh mục thử",
+    source: "test_records",
+    fields: [{ name: "name", label: "Tên" }],
+    list: { columns: ["name"] },
+    detail: { blocks: [block] },
+  },
+  roles: null,
+  icon: null,
+  on_menu: true,
+});
+
 type Combination = {
   name: string;
   menu: MenuItem[];
@@ -208,6 +252,8 @@ type Combination = {
   /** Kiểu đã áp và cấu hình gốc của mục, để biết Kanban, Lịch có vẽ thật hay đã về bảng (ADR 0066) */
   variant?: string;
   config?: unknown;
+  /** Điều kiện của dòng đang xem mà một câu GraphQL phải gửi */
+  filter?: string;
 };
 
 /** Mọi tổ hợp mục × vị trí × kiểu × trạng thái dữ liệu của một gói, và trang chứa mọi mục của gói. */
@@ -244,7 +290,38 @@ function combinations(items: MenuItem[]): Combination[] {
           variant,
           config: entry.config,
         });
+        if (entry.component === "page") continue;
+        // Trong chi tiết một dòng (ADR 0068): có attach khi thành phần có nguồn gắn được, và không có attach.
+        const source = firstSource(entry);
+        const places = source ? [{ source, column: ATTACH_COLUMN }, undefined] : [undefined];
+        for (const attach of places) {
+          found.push({
+            name: `${entry.app}/${entry.item} trong chi tiết, ${attach ? "gắn" : "không gắn"}, ${variant ?? "mặc định"}, ${state}`,
+            menu: [...items, recordItem(entry.app, { item: entry.item, variant, attach })],
+            path: `/apps/${entry.app}/${TEST_RECORD}/1`,
+            state,
+            label: entry.label,
+            graphql: GRAPHQL.has(entry.component),
+            component: entry.component,
+            // Theo dõi hồ sơ đọc REST, không chạy khi dựng tĩnh; điều kiện của nó kiểm ở cases.test.ts.
+            filter: attach && entry.component !== "cases" ? `{"${ATTACH_COLUMN}":{"_eq":1}}` : undefined,
+          });
+        }
       }
+    }
+  }
+  // Chi tiết dòng của danh mục thật với khối gói khai (detail.blocks).
+  for (const entry of items.filter((item) => item.component === "catalog")) {
+    const blocks = (entry.config as CatalogConfig).detail?.blocks ?? [];
+    if (blocks.length === 0) continue;
+    for (const state of DATA_STATES) {
+      found.push({
+        name: `${entry.app}/${entry.item} chi tiết dòng với khối của gói, ${state}`,
+        menu: items,
+        path: `/apps/${entry.app}/${entry.item}/1`,
+        state,
+        label: items.find((item) => item.item === blocks[0]?.item)?.label,
+      });
     }
   }
   const app = items[0]?.app ?? "";
@@ -272,7 +349,12 @@ describe("tổ hợp khối", () => {
 
   it.each(ALL.map((combination) => [combination.name, combination] as const))("%s", (_name, combination) => {
     const roles = [...rolesIn(combination.menu)];
-    const html = render(combination.menu, combination.path, combination.state, roles);
+    const sent: unknown[] = [];
+    const html = render(combination.menu, combination.path, combination.state, roles, sent);
+    // Khối gắn với dòng phải gửi điều kiện của dòng trong chính biến của câu truy vấn, không chỉ vẽ được.
+    if (combination.filter) {
+      expect(sent.map((variables) => JSON.stringify(variables)).join("\n")).toContain(combination.filter);
+    }
     expect(html).not.toMatch(/Cấu hình [^<]* sai/);
     // Trang đặt làm khối trong trang thử chỉ hiện lời báo của lớp đỡ trang lồng trang; mục khác phải mở được.
     if (!combination.nested) expect(html).not.toContain("Chưa mở được");

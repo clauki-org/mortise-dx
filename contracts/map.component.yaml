@@ -3,7 +3,7 @@
 #
 # Bản mô tả thành phần bản đồ theo contracts/component.schema.json; `make check-fast` kiểm tệp này.
 # Mã của thành phần ở platform/web/src/ (MapPanel.tsx, MapCanvas.tsx, mapConfig.ts). Mỗi dòng dưới đây đã được chạy
-# thử trên giao diện; đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
+# thử trên giao diện, trừ hai dòng về chi tiết dòng (ADR 0068, chưa chạy trên trình duyệt); đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
 
 component: map
 summary: Các lớp điểm đọc qua GraphQL theo cấu hình của gói, đặt lên nền bản đồ của bản cài (hay nền trơn khi chưa có) và tô màu theo một giá trị, kèm chú giải và danh sách điểm.
@@ -26,6 +26,10 @@ capabilities:
   - Mặc định không có chữ nào trên nền; bản cài chạy `make basemap LABELS=on` thì hiện tên địa danh, tên đường.
   - Có nền thì góc bản đồ luôn ghi "© OpenStreetMap (ODbL)", kể cả ở màn hình hẹp; không thu nhỏ được dưới mức phóng thấp nhất của tệp nền.
   - Bản cài chưa có nền, hay tệp nền hỏng, thì vẽ nền trơn một màu lấy từ theme.
+  - Lớp khai record thì tên điểm trong danh sách điểm và dòng "Điểm đang chọn" dưới khung bản đồ là liên kết tới chi
+    tiết dòng của mục danh mục record.item, khóa ở cột record.column (ADR 0068). Bấm chấm trên khung chỉ chọn điểm.
+  - Đặt trong chi tiết một dòng của danh mục với attach (ADR 0068) thì lớp đọc bảng attach.source chỉ đọc điểm có
+    attach.column bằng khóa của dòng đang xem, cộng vào where của lớp; lớp đọc bảng khác chạy như đứng riêng.
 limits:
   - Chỉ đọc; không thêm, sửa hay di chuyển điểm.
   - Nền chỉ có vùng mà bản cài đã cắt; ngoài vùng đó là nền trống. Cấu hình của gói không chọn hay đổi nền.

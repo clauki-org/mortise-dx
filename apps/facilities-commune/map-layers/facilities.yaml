@@ -61,6 +61,8 @@ layers:
     longitude: longitude
     title: name
     where: { field: status, equals: in_use }
+    # Tên trụ sở dẫn tới chi tiết cơ sở trong danh mục (ADR 0068).
+    record: { item: facilities, column: id }
     fields:
       - { name: code, label: Mã }
       - { name: address, label: Địa chỉ }
@@ -78,6 +80,7 @@ layers:
     longitude: longitude
     title: name
     where: { field: status, equals: surplus }
+    record: { item: facilities, column: id }
     fields:
       - { name: code, label: Mã }
       - { name: address, label: Địa chỉ }

@@ -16,7 +16,9 @@ import {
   type MenuItem,
   menuGroups,
   menuIcon,
+  recordPath,
   rolesOf,
+  rowPath,
   SAMPLE_OWNER,
   visibleItems,
 } from "./menu";
@@ -81,6 +83,11 @@ describe("địa chỉ của mục", () => {
     expect(itemPath(items[0] as MenuItem)).toBe("/apps/example-app/records");
     expect(findItem(items, "example-app", "records")).toBe(items[0]);
     expect(findItem(items, "example-app", "other")).toBeUndefined();
+  });
+
+  it("liên kết chung tới chi tiết dòng mã hóa khóa, để khóa có / hay % mở đúng dòng", () => {
+    expect(recordPath("example-app", "records", "a/b%")).toBe("/apps/example-app/records/a%2Fb%25");
+    expect(rowPath("/apps/x/y", 12)).toBe("/apps/x/y/12");
   });
 });
 

@@ -52,6 +52,15 @@ export function visibleItems(items: MenuItem[], roles: string[]): MenuItem[] {
 export const itemPath = (entry: Pick<MenuItem, "app" | "item">) =>
   `/apps/${encodeURIComponent(entry.app)}/${encodeURIComponent(entry.item)}`;
 
+/**
+ * Liên kết chung tới chi tiết một dòng (ADR 0068): địa chỉ của danh sách cộng khóa đã mã hóa. Danh mục, chấm bản đồ và
+ * dòng bảng điều hành cùng dựng địa chỉ ở đây, để khóa chứa dấu / hay % mở đúng dòng ở mọi nơi.
+ */
+export const rowPath = (listPath: string, key: unknown) => `${listPath}/${encodeURIComponent(String(key))}`;
+
+/** Chi tiết dòng ngoài cùng của mục danh mục `item` trong gói `app`. */
+export const recordPath = (app: string, item: string, key: unknown) => rowPath(itemPath({ app, item }), key);
+
 export const findItem = (items: MenuItem[], app: string, item: string) =>
   items.find((entry) => entry.app === app && entry.item === item);
 

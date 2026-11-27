@@ -101,6 +101,10 @@
           "items": { "$ref": "#/$defs/field" }
         },
         "color": { "$ref": "#/$defs/color" },
+        "record": {
+          "description": "Tên điểm trong danh sách điểm và điểm đang chọn trên bản đồ dẫn tới chi tiết dòng của danh mục",
+          "$ref": "#/$defs/record"
+        },
         "limit": {
           "description": "Số điểm tối đa của lớp. Bỏ trống là 200. Có trần để một lớp không tải cả bảng về trình duyệt.",
           "type": "integer",
@@ -178,6 +182,13 @@
       "description": "Tên theo luật của GraphQL",
       "type": "string",
       "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "record": {
+      "description": "Mở chi tiết dòng (ADR 0068): item là một mục danh mục (component catalog) của chính gói, column là cột của nguồn mang khóa của dòng ngoài cùng của danh mục đó. make check-fast kiểm item và quyền đọc column.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item", "column"],
+      "properties": { "item": { "$ref": "#/$defs/slug" }, "column": { "$ref": "#/$defs/identifier" } }
     },
     "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
     "text": {

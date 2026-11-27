@@ -9,7 +9,7 @@ import { Alert, Anchor, Button, Group, SegmentedControl, Stack, Table, Text } fr
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
-import { useBlock } from "./blockContext";
+import { recordVariable, useBlock } from "./blockContext";
 import { CaseScreen } from "./CaseScreen";
 import {
   type CaseState,
@@ -41,9 +41,12 @@ function CaseList({ config, basePath }: { config: CasesConfig; basePath: string 
   const { steps } = useSteps();
   const [state, setState] = useState<CaseState>("open");
   const [page, setPage] = useState(1);
+  // Trong chi tiết một dòng, chỉ hồ sơ có biến gói gắn bằng khóa của dòng đang xem (ADR 0068); workflow-api lọc, nên
+  // tổng số và phân trang vẫn đúng.
+  const variable = recordVariable(useBlock(), config.processes);
   const cases = useQuery({
-    queryKey: ["cases", config.processes, state, page],
-    queryFn: () => fetchCases(getToken(), config.processes, state, page),
+    queryKey: ["cases", config.processes, state, page, variable?.name, variable?.value],
+    queryFn: () => fetchCases(getToken(), config.processes, state, page, variable),
     placeholderData: keepPreviousData,
   });
   const now = Date.now();

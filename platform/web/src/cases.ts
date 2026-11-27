@@ -61,8 +61,21 @@ export function casesProblems(config: CasesConfig): string[] {
     .map((process) => `"${String(process)}" không phải khóa quy trình`);
 }
 
-export function fetchCases(token: string | undefined, processes: string[], state: CaseState, page: number) {
+/** Biến của hồ sơ phải bằng giá trị này; theo dõi hồ sơ trong chi tiết một dòng lọc theo dòng đang xem (ADR 0068). */
+export type CaseVariable = { name: string; value: string };
+
+export function fetchCases(
+  token: string | undefined,
+  processes: string[],
+  state: CaseState,
+  page: number,
+  variable?: CaseVariable,
+) {
   const query = new URLSearchParams(processes.map((process) => ["process", process]));
+  if (variable) {
+    query.set("variable_name", variable.name);
+    query.set("variable_value", variable.value);
+  }
   query.set("state", state);
   query.set("offset", String((page - 1) * PAGE_SIZE));
   query.set("limit", String(PAGE_SIZE));

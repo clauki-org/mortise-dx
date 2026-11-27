@@ -116,6 +116,9 @@ for item in app.get("menu", []) + app.get("blocks", []):
   # dòng, thêm dòng con (ADR 0054). Chạy một lần cho cả hai loại mục menu, ngoài vòng theo thành phần, để gói có cả
   # biểu mẫu lẫn danh mục không bị báo một lỗi hai lần.
   "${yaml[@]}" scripts/check-form-config.py --app "${app}app.yaml" --configs "$configs"
+  # Khối trong chi tiết dòng của danh mục và liên kết tới chi tiết dòng trỏ tới mục, nguồn và cột đọc được của chính
+  # gói (ADR 0068); một lần cho cả gói vì khối của danh mục là mục bản đồ, bảng điều hành, theo dõi hồ sơ.
+  "${yaml[@]}" scripts/check-record-blocks.py --app "${app}app.yaml" --configs "$configs"
   # Luật ngưỡng (mục `rules`), văn bản cho trợ lý (mục `knowledge`) và bảng phân cấp (mục `authorities`) cũng nằm ở
   # đường dẫn do app.yaml khai.
   for entry in rules:threshold-rule knowledge:knowledge authorities:authority; do
@@ -535,6 +538,98 @@ title: Tổng quan
 blocks: [{ item: stores, variant: kanban }]
 YAML
 echo "ok -- 5 trang sai bị check-page-config.py từ chối đúng luật"
+# Luật của scripts/check-record-blocks.py (ADR 0068): danh mục mẫu với khối trong chi tiết dòng và bản đồ mẫu với liên
+# kết tới chi tiết dòng phải qua với bảng quyền mẫu dưới đây; mỗi cấu hình sai đọc từ stdin thay cho tệp của một mục,
+# phạm đúng một luật và lỗi đúng từng ký tự.
+record_tables='- table: { schema: app_example, name: items }
+  select_permissions:
+    - role: user
+      permission: { columns: "*", filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } } }
+- table: { schema: app_example, name: sites }
+  select_permissions:
+    - role: user
+      permission: { columns: [id, item_id, name, code, lat, lon, status], filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } } }
+- table: { schema: app_example, name: rollup }
+  select_permissions:
+    - role: rollup_reader
+      permission: { columns: [name, lat, lon], filter: { parent_tenant_id: { _eq: X-Hasura-Tenant-Id } } }
+- table: { schema: app_example, name: totals }
+  select_permissions:
+    - role: user
+      permission: { columns: "*", filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } } }'
+record_check() { # MỤC_ĐỌC_TỪ_STDIN (bỏ trống: chỉ các tệp mẫu)
+  local overrides=(--config items=contracts/examples/catalog.example.yaml --config sites=contracts/examples/map.example.yaml
+    --config reports=contracts/examples/dashboard.example.yaml)
+  [[ -n "${1:-}" ]] && overrides+=(--config "$1=/dev/stdin")
+  # Gói mẫu không có mục cases và tệp BPMN của nó không có thật: --bpmn rỗng.
+  "${yaml[@]}" scripts/check-record-blocks.py --app contracts/examples/app.example.yaml \
+    --hasura <(printf '%s\n' "$record_tables") --bpmn "${overrides[@]}" 2>&1
+}
+record_check
+record_rejects() { # MỤC, LỖI_MONG_ĐỢI; cấu hình ở stdin
+  local result
+  result=$(record_check "$1") && result="không bị từ chối"
+  if [[ "$result" != "/dev/stdin: $2" ]]; then
+    echo "check-record-blocks.py phải báo đúng lỗi: $2" >&2
+    echo "Đang nhận: $result" >&2
+    exit 1
+  fi
+}
+record_catalog() { # KHỐI (một dòng YAML)
+  printf 'title: Danh mục\nsource: app_example_items\nfields: [{ name: name, label: Tên }]\n'
+  printf 'list: { columns: [name] }\ndetail:\n  blocks: [%s]\n' "$1"
+}
+record_rejects items "Danh mục: khối 1: không có mục 'nope' trong menu hay blocks của gói" \
+  < <(record_catalog '{ item: nope }')
+record_rejects items "Danh mục: khối 1: mục 'overview' là một trang; trong chi tiết dòng chỉ đặt thành phần" \
+  < <(record_catalog '{ item: overview }')
+record_rejects items "Danh mục: khối 1: map không có kiểu 'kanban' (map, list)" \
+  < <(record_catalog '{ item: sites, variant: kanban }')
+record_rejects items "Danh mục: khối 1: assistant không lọc được theo dòng đang xem, bỏ attach" \
+  < <(record_catalog '{ item: ask, attach: { source: app_example_items, column: id } }')
+record_rejects items "Danh mục: khối 1: attach.source 'app_example_parts' không phải nguồn của khối \
+(app_example_rollup, app_example_sites)" < <(record_catalog '{ item: sites, attach: { source: app_example_parts, column: id } }')
+record_rejects items "Danh mục: khối 1: attach.column: vai trò 'rollup_reader' không đọc được cột 'item_id' của \
+'app_example_rollup'" < <(record_catalog '{ item: sites, attach: { source: app_example_rollup, column: item_id } }')
+record_rejects sites "lớp 'sites': record.item 'reports' không phải mục danh mục của gói" <<'YAML'
+title: Bản đồ
+layers:
+  - { id: sites, label: Điểm, source: app_example_sites, latitude: lat, longitude: lon, title: name,
+      color: { fixed: teal }, record: { item: reports, column: id } }
+YAML
+record_rejects sites "lớp 'sites': record.column: vai trò 'user' không đọc được cột 'owner_id' của 'app_example_sites'" \
+  <<'YAML'
+title: Bản đồ
+layers:
+  - { id: sites, label: Điểm, source: app_example_sites, latitude: lat, longitude: lon, title: name,
+      color: { fixed: teal }, record: { item: items, column: owner_id } }
+YAML
+record_rejects reports "khối 'cases': record chỉ dùng với nguồn graphql" <<'YAML'
+title: Tổng quan
+panels:
+  - id: cases
+    title: Hồ sơ
+    description: Số hồ sơ theo bước.
+    workflow: { process: approval, counts: tenant }
+    chart: { type: bar, x: { column: step, label: Bước }, y: [{ column: open, label: Mở, color: blue }],
+             record: { item: items, column: step } }
+YAML
+# Theo dõi hồ sơ gắn theo biến của quy trình: gói mẫu không có mục cases, nên đối chiếu với gói facilities-commune và
+# BPMN của nó; biến lõi đặt và trường của bước thì workflow-api từ chối lọc.
+cases_rejects() { # BIẾN, LỖI_MONG_ĐỢI
+  local result
+  result=$(printf 'title: Cơ sở\nsource: app_facilities_commune_facilities\nfields: [{ name: name, label: Tên }]
+list: { columns: [name] }\ndetail:\n  blocks: [{ item: reviews, attach: { source: facilities-review, column: %s } }]\n' \
+    "$1" | "${yaml[@]}" scripts/check-record-blocks.py --app apps/facilities-commune/app.yaml \
+    --config facilities=/dev/stdin 2>&1) && result="không bị từ chối"
+  if [[ "$result" != "/dev/stdin: Cơ sở: khối 1: attach.column: '$1' $2, người lập không thấy nên không lọc được" ]]; then
+    echo "check-record-blocks.py phải từ chối lọc hồ sơ theo biến $1. Đang nhận: $result" >&2
+    exit 1
+  fi
+}
+cases_rejects initiator "là biến do lõi đặt"
+cases_rejects decision "là trường của bước trong 'facilities-review'"
+echo "ok -- 11 khối trong chi tiết dòng và liên kết sai bị check-record-blocks.py từ chối đúng luật"
 # Biểu mẫu khai trong danh mục (ADR 0054): danh mục mẫu của hợp đồng phải qua với bảng quyền mẫu dưới đây; mỗi danh mục
 # sai đọc từ stdin phạm đúng một luật của quyền update hay của cột nối về cha, lỗi đúng từng ký tự.
 catalog_form_tables='- table: { schema: app_example, name: items }
