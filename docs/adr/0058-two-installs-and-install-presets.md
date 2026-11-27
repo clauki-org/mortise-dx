@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # 0058. Hai bản cài trên một máy và mẫu cài `make install PRESET=<mẫu>`
 
-- Trạng thái: Đề xuất
+- Trạng thái: Chấp nhận
 - Ngày: 2026-11-27
 
 ## Bối cảnh
