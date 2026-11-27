@@ -262,7 +262,7 @@
     - role: user
       permission:
         columns: &area_summary_columns [tenant_id, working_allowed_m2, shared_allowed_m2, specialized_allowed_m2,
-                                       allowed_m2, in_use_m2, surplus_m2, excess_m2]
+                                       allowed_m2, in_use_m2, surplus_m2, excess_m2, in_use_percent]
         filter: *tenant
     - role: manager
       permission: { columns: *area_summary_columns, filter: *tenant }

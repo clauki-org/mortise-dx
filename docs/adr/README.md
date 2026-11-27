@@ -69,6 +69,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0046](0046-shared-ui-states.md) | Trạng thái đang tải, rỗng, lỗi dùng chung; lỗi đổi sang lời tiếng Việt theo mã | Chấp nhận |
 | [0047](0047-page-header-status-badge-formatting.md) | Đầu trang, nhãn trạng thái, định dạng ngày giờ và số dùng chung | Chấp nhận |
 | [0048](0048-bento-tokens-status-tones-font.md) | Kiểu Bento dịu, bộ nghĩa màu chung, phông Be Vietnam Pro | Chấp nhận |
+| [0049](0049-bento-dashboard.md) | Bảng điều hành dạng lưới Bento, mức độ thẻ, vòng đo, biểu đồ có trần | Chấp nhận |
 
 ## Quyết định còn mở
 

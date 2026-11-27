@@ -44,9 +44,12 @@ thông điệp lỗi đúng từng ký tự, và thông điệp có cả khối 
 - **Khối chính và lưới**: `primary: true` cho tối đa một khối (schema dùng `maxContains`), phải là thẻ số và không
   khai `size: half`. Khối chính hiện đầu tiên, rộng cả hàng, số cỡ `h1` của theme. Các khối xếp theo lưới hai cột trên
   màn hình rộng; `size: half` chiếm nửa hàng, bỏ trống là cả hàng; màn hình hẹp mọi khối rộng cả hàng. Thành phần kiểm
-  lại hai luật của khối chính lúc chạy.
+  lại hai luật của khối chính lúc chạy. Được sửa theo [ADR 0049](0049-bento-dashboard.md): lưới bốn cột theo thứ tự
+  khai, `size` thêm `quarter`; khối chính chỉ là khối đầu tiên, rộng `half` hay `full`; thành phần không đưa khối chính
+  lên đầu nữa.
 - **Biểu đồ**: mỗi thanh ghi số của nó bên phải; ô có số, kể cả 0, luôn có vạch tối thiểu 2px; ô trống không vẽ, chỉ
-  ghi "Chưa có số liệu". Dưới các thanh có thang chung từ 0 tới số lớn nhất. Hai cột số trở lên thì có chú giải màu;
+  ghi "Chưa có số liệu". Dưới các thanh có thang chung từ 0 tới số lớn nhất (tới `chart.max` của gói nếu khai, theo
+  [ADR 0049](0049-bento-dashboard.md)). Hai cột số trở lên thì có chú giải màu;
   một cột số thì ghi nhãn cột số thay cho chú giải. Thanh vẫn vẽ bằng CSS, không thêm thư viện.
 - **Bảng số liệu** của biểu đồ luôn có trong trang, trong mục "Xem bảng số liệu" đóng sẵn. Phần thanh vẫn ẩn khỏi trình
   đọc màn hình; người dùng trình đọc màn hình mở mục đó để đọc bảng có chú thích như ADR 0033. Bảng rộng hơn màn hình

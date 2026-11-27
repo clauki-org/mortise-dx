@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/dashboard.schema.json từ chối: một mức độ có hai phép so. Nếu lọt, người đọc cấu hình
+# phải đoán hai phép nối bằng "và" hay "hoặc"; khoảng giữa hai số thì khai hai mức warn_when, bad_when.
+
+title: Tổng quan
+panels:
+  - id: totals
+    title: Tổng
+    description: Số của đơn vị.
+    graphql: { field: app_example_totals }
+    cards: [{ column: score, label: Điểm, description: Tổng điểm., tone: { warn_when: { gt: 10, lt: 50, label: Thấp } } }]

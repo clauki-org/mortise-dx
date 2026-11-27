@@ -2,11 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Bản mô tả thành phần bảng điều hành theo contracts/component.schema.json; `make check-fast` kiểm tệp này. Mã của
-# thành phần ở platform/web/src/ (DashboardPanel.tsx, DashboardView.tsx, dashboardConfig.ts); luật cấu hình theo gói
+# thành phần ở platform/web/src/ (DashboardPanel.tsx, DashboardView.tsx, DashboardGauge.tsx, dashboardConfig.ts,
+# dashboardBento.ts); luật cấu hình theo gói
 # ở scripts/check-dashboard-config.py. Đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
 
 component: dashboard
-summary: Các khối thẻ số và biểu đồ cột ngang theo cấu hình của gói, đọc qua GraphQL, API quy trình hay API dữ liệu thiết bị bằng token người xem; khối chính hiện số lớn trên cùng, mỗi khối có mục "Xem cách tính" thu gọn ghi cách tính và nguồn để người xem đối chiếu.
+summary: Các khối thẻ số và biểu đồ cột ngang theo cấu hình của gói, đọc qua GraphQL, API quy trình hay API dữ liệu thiết bị bằng token người xem, xếp trên lưới bốn cột theo thứ tự khai; khối chính hiện số lớn ở đầu trang, có thể kèm vòng đo; thẻ số có màu và chữ mức độ theo hằng số của gói; mỗi khối có mục "Xem cách tính" thu gọn ghi cách tính và nguồn để người xem đối chiếu.
 config_schema: dashboard.schema.json
 example: examples/dashboard.example.yaml
 capabilities:
@@ -14,10 +15,13 @@ capabilities:
   - Nguồn workflow với counts tenant hiện số hồ sơ của một quy trình trong đơn vị của người xem do workflow-api đếm (GET /v1/workflow/processes/{process}/counts) - còn mở, đã kết thúc, bước quá hạn, và theo từng bước - không có biến, mã hồ sơ hay tên người; chỉ người có vai trò của một bước của quy trình nhận được số, nên khối thường khai role (ADR 0035).
   - Nguồn workflow với counts mine hiện số việc đang chờ chính người xem của một quy trình, đếm trên trình duyệt từ GET /v1/workflow/tasks, tổng hay theo bước, quá hạn là việc có hạn trước lúc tải; khối tự ghi "Số việc đang chờ bạn" để người xem không nhầm với số của cả đơn vị.
   - Nguồn context hiện số đo mới nhất của các thiết bị của đơn vị (GET /v1/context/entities với type, attrs, limit), mỗi thiết bị có số đo đó một dòng gồm id, value, observedAt; thiết bị thiếu số đo đó không có dòng, không có dòng nào thì khối báo "Chưa có số đo".
-  - Trang xếp các khối theo lưới; khối chính (primary, tối đa một, là thẻ số) hiện đầu tiên, rộng cả hàng, số cỡ lớn; khối khai size half chiếm nửa hàng trên màn hình rộng, màn hình hẹp mọi khối rộng cả hàng.
+  - Trang xếp các khối trên lưới bốn cột của màn hình rộng (size quarter một cột, half hai cột, full cả hàng, bỏ trống là full), hai cột của màn hình vừa, một cột của màn hình hẹp, đúng thứ tự khai nên thứ tự Tab bằng thứ tự nhìn; khối cuối của một hàng chưa đầy được nới ra hết hàng, nên khối bị ẩn theo role không để lại ô trống (ADR 0049).
+  - Khối chính (primary) chỉ là khối đầu tiên của panels, là thẻ số, rộng nửa hàng hay cả hàng, tiêu đề và số cỡ lớn.
+  - Vòng đo (gauge) của khối thẻ số nguồn graphql vẽ một vòng đầy là limit, phần trên 100% là vòng thứ hai bên trong, chữ phần trăm ở giữa; độ dài vòng chỉ đọc cột percent mà gói tính sẵn, value và limit là cột của thẻ trong khối nên số gốc luôn hiện bằng chữ; tên đọc được của vòng gồm label của gói, phần trăm và hai số gốc.
+  - Thẻ số khai tone so số của thẻ với hằng số của gói (warn_when, bad_when, mỗi mức một phép gt, gte, lt, lte và một label); khớp mức nào thì viền và số mang màu của nghĩa warn (cam) hay bad (đỏ) trong bộ nghĩa chung, kèm nhãn chữ label của mức; bad thắng warn; ô trống hay không phải số thì không có mức.
   - Dưới tiêu đề khối chỉ có description, viết bằng lời của người xem; make check-fast từ chối tiêu đề, mô tả, nhãn có tên bảng, view, cột, vai trò, giá trị mã hay tên snake_case mà cấu hình dùng (ADR 0045).
   - Thẻ số (cards) hiện từng cột của đúng một dòng mà nguồn trả, kèm nhãn và đơn vị; nguồn không trả dòng nào thì báo "Chưa có số liệu", trả nhiều hơn một dòng thì báo cấu hình sai thay vì chọn đại một dòng.
-  - Biểu đồ cột ngang (chart, type bar) vẽ mỗi dòng một nhóm, tối đa bốn cột số chung một thang, màu theo bảng màu của theme; mỗi thanh ghi số của nó, giá trị 0 vẫn có vạch ngắn và số 0, dưới các thanh có thang từ 0 tới số lớn nhất. Luôn kèm bảng số liệu có chú thích trong mục "Xem bảng số liệu" mở ra được, đủ cho người dùng trình đọc màn hình và để đối chiếu, gồm cả các cột chỉ để đọc (chart.details); bảng rộng thì cuộn ngang trong khung nhận focus. Với nguồn context, thanh ghi nhãn trong chart.x.choices hay nhãn trục kèm số thứ tự thay cho mã entity; mã gốc nằm trong bảng.
+  - Biểu đồ cột ngang (chart, type bar) vẽ mỗi dòng một nhóm, tối đa bốn cột số chung một thang, màu theo bảng màu của theme; mỗi thanh ghi số của nó, giá trị 0 vẫn có vạch ngắn và số 0, dưới các thanh có thang từ 0 tới chart.max của gói hay, nếu không khai, tới số lớn nhất; giá trị trên chart.max thành thanh đầy, số vẫn ghi đúng. Luôn kèm bảng số liệu có chú thích trong mục "Xem bảng số liệu" mở ra được, đủ cho người dùng trình đọc màn hình và để đối chiếu, gồm cả các cột chỉ để đọc (chart.details); bảng rộng thì cuộn ngang trong khung nhận focus. Với nguồn context, thanh ghi nhãn trong chart.x.choices hay nhãn trục kèm số thứ tự thay cho mã entity; mã gốc nằm trong bảng.
   - Số, dù đến dạng số hay chuỗi thập phân, viết theo kiểu Việt Nam (dấu chấm ngăn hàng nghìn, dấu phẩy thập phân); format integer làm tròn tới hàng đơn vị.
   - Mỗi khối có một mục "Xem cách tính" mở ra được, gồm method của khối, cách tính của từng thẻ (description của thẻ) và phần "Nguồn" gồm loại nguồn, bảng, các cột, vai trò đã dùng và nguyên văn câu truy vấn cùng biến đã gửi; khối nguồn REST ghi đường dẫn đã gửi và cách đếm (thời điểm đếm, phần đếm trên trình duyệt).
   - Khối khai role chỉ được truy vấn và chỉ hiện khi token của người xem có vai trò đó; truy vấn luôn gửi kèm header X-Hasura-Role (bỏ trống là user) và luôn đọc lại từ máy chủ.

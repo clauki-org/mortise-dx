@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Kiểm thử lớp đọc cấu hình của bảng điều hành (dashboardConfig.ts): câu truy vấn sinh từ cấu hình, lỗi cấu hình mà
-// schema không bắt được, khối nào được truy vấn theo vai trò trong token, khối chính lên đầu, cách viết số, độ dài và
-// chữ số của thanh, đầu mút của thang. Cấu hình mẫu
+// schema không bắt được (khối chính, mức độ, vòng đo, trần của thang), khối nào được truy vấn theo vai trò trong
+// token, cách viết số, độ dài và chữ số của thanh, đầu mút của thang. Cấu hình mẫu
 // cùng dạng với contracts/examples/dashboard.example.yaml.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -15,7 +15,6 @@ import {
   dashboardProblems,
   type GraphqlSource,
   numberText,
-  orderedPanels,
   type Panel,
   panelQuery,
   queryErrorText,
@@ -52,6 +51,11 @@ const children: Panel & { graphql: GraphqlSource } = {
   },
 };
 const config: DashboardConfig = { title: "Tổng quan", panels: [totals, children] };
+
+function chart() {
+  if (!children.chart) throw new Error("thiếu biểu đồ mẫu");
+  return children.chart;
+}
 
 describe("panelQuery", () => {
   it("thẻ số xin hai dòng, điều kiện đi qua biến, không xếp", () => {
@@ -115,30 +119,61 @@ describe("dashboardProblems", () => {
     ]);
   });
 
-  it("tối đa một khối chính, là thẻ số và rộng cả hàng", () => {
+  it("khối chính là khối đầu tiên, là thẻ số, rộng ít nhất nửa hàng", () => {
     const main = { ...totals, primary: true };
     expect(dashboardProblems({ title: "x", panels: [main, children] })).toEqual([]);
+    expect(dashboardProblems({ title: "x", panels: [{ ...main, size: "half" }, children] })).toEqual([]);
     expect(
       dashboardProblems({
         title: "x",
         panels: [
-          { ...main, size: "half" },
+          { ...main, size: "quarter" },
           { ...children, primary: true },
+          { ...totals, id: "t2", primary: true },
         ],
       }),
     ).toEqual([
-      "Tổng: khối chính phải là thẻ số và rộng cả hàng",
-      "Đơn vị con: khối chính phải là thẻ số và rộng cả hàng",
-      "có hơn một khối chính",
+      "Tổng: khối chính phải là khối đầu tiên, là thẻ số và rộng ít nhất nửa hàng",
+      "Đơn vị con: khối chính phải là khối đầu tiên, là thẻ số và rộng ít nhất nửa hàng",
+      "Tổng: khối chính phải là khối đầu tiên, là thẻ số và rộng ít nhất nửa hàng",
     ]);
   });
-});
 
-describe("orderedPanels", () => {
-  it("khối chính lên đầu, các khối khác giữ thứ tự khai", () => {
-    const third = { ...totals, id: "third" };
-    const ids = orderedPanels([children, third, { ...totals, primary: true }]).map((panel) => panel.id);
-    expect(ids).toEqual(["totals", "children", "third"]);
+  it("mức độ cần đúng một phép so và chữ; vòng đo đọc cột của thẻ; trần của thang lớn hơn 0", () => {
+    const gauge = { value: "score", limit: "item_count", percent: "score_percent", label: "Điểm" };
+    const good: Panel = {
+      ...totals,
+      gauge,
+      cards: [
+        { column: "item_count", label: "Số", description: "Đếm." },
+        { column: "score", label: "Điểm", description: "Tổng.", tone: { bad_when: { gt: 0, label: "Cao" } } },
+      ],
+    };
+    expect(dashboardProblems({ title: "x", panels: [good, { ...children, chart: { ...chart(), max: 100 } }] })).toEqual(
+      [],
+    );
+    const bad: DashboardConfig = {
+      title: "x",
+      panels: [
+        {
+          ...good,
+          gauge: { ...gauge, limit: "target" },
+          cards: [
+            { column: "a", label: "A", description: "A.", tone: { warn_when: { gt: 1, lt: 5, label: "Lệch" } } },
+            { column: "b", label: "B", description: "B.", tone: { bad_when: { gt: 1, label: " " } } },
+          ],
+        },
+        { ...good, id: "q", title: "Hẹp", size: "quarter" },
+        { ...children, chart: { ...chart(), max: 0 } },
+      ],
+    };
+    expect(dashboardProblems(bad)).toEqual([
+      'Tổng: mức độ của thẻ "A" cần đúng một phép so với một số và có chữ',
+      'Tổng: mức độ của thẻ "B" cần đúng một phép so với một số và có chữ',
+      "Tổng: value, limit của vòng đo phải là cột của một thẻ trong khối",
+      "Hẹp: vòng đo cần nguồn graphql, thẻ số và khối rộng hơn một phần tư hàng",
+      "Đơn vị con: trần của biểu đồ phải là số lớn hơn 0",
+    ]);
   });
 });
 
@@ -203,6 +238,18 @@ describe("barPercents và categoryText", () => {
     ]);
     expect(scaleTop(chart, rows)).toBe(1500.5);
     expect(scaleTop(chart, [{ score: -5, target: null }])).toBe(0);
+  });
+
+  it("trần của gói là đầu mút của thang; số trên trần thành thanh đầy nhưng vẫn ghi đúng số", () => {
+    const capped = { ...chart(), max: 100 };
+    const rows = [{ score: 81, target: 140 }];
+    expect(scaleTop(capped, rows)).toBe(100);
+    expect(barMarks(capped, rows)).toEqual([
+      [
+        { percent: 81, text: "81", drawn: true },
+        { percent: 100, text: "140", drawn: true },
+      ],
+    ]);
   });
 });
 

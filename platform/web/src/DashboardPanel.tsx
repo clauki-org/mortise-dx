@@ -4,20 +4,21 @@
 // Thành phần bảng điều hành: các khối theo cấu hình của gói (contracts/dashboard.schema.json), mỗi khối đọc một nguồn
 // bằng token của người xem, qua GraphQL ở đây hay qua REST ở DashboardRest.tsx (ADR 0035), rồi vẽ bằng
 // DashboardView.tsx. Khối khai vai trò chỉ được truy vấn khi token có vai trò đó (ADR 0033). Các khối xếp theo lưới
-// hai cột trên màn hình rộng, khối chính lên đầu (ADR 0045). Ở đây không có tên bảng hay chữ của một lĩnh vực nào.
+// bốn cột trên màn hình rộng, hai cột trên màn hình vừa, đúng thứ tự khai; khối chính luôn là khối đầu (ADR 0049). Ở
+// đây không có tên bảng hay chữ của một lĩnh vực nào.
 
-import { Alert, Anchor, Loader, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import { Alert, Anchor, Grid, Loader, Paper, Stack, Text, Title } from "@mantine/core";
 import { type ReactNode, useMemo } from "react";
 import { Link } from "react-router";
 import { type CombinedError, useQuery } from "urql";
 import { RestBody } from "./DashboardRest";
 import { CardsView, ChartView, MethodDetails } from "./DashboardView";
+import { panelSpans } from "./dashboardBento";
 import {
   type DashboardConfig,
   dashboardProblems,
   type GraphqlSource,
   limitOf,
-  orderedPanels,
   type Panel,
   panelQuery,
   panelRole,
@@ -48,7 +49,7 @@ function PanelError({ panel, error }: { panel: Panel; error: CombinedError }) {
   );
 }
 
-function GraphqlBody({ panel, link }: { panel: GraphqlPanel; link: ReactNode }) {
+function GraphqlBody({ panel, link, columns }: { panel: GraphqlPanel; link: ReactNode; columns: number }) {
   const request = useMemo(() => panelQuery(panel), [panel]);
   const context = useMemo(() => ({ role: panelRole(panel) }), [panel]);
   // Truy vấn mang vai trò riêng; bộ nhớ đệm của urql không phân biệt vai trò nên luôn đọc lại từ máy chủ.
@@ -64,7 +65,9 @@ function GraphqlBody({ panel, link }: { panel: GraphqlPanel; link: ReactNode }) 
     <>
       {error && <PanelError panel={panel} error={error} />}
       {fetching && !data && <Loader size="sm" aria-label={`Đang tải ${panel.title}`} />}
-      {data && panel.cards && <CardsView cards={panel.cards} rows={shown} large={panel.primary} />}
+      {data && panel.cards && (
+        <CardsView cards={panel.cards} rows={shown} large={panel.primary} columns={columns} gauge={panel.gauge} />
+      )}
       {data && panel.chart && <ChartView chart={panel.chart} rows={shown} title={panel.title} />}
       {panel.chart && rows.length > limitOf(panel) && (
         <Text size="sm">
@@ -77,7 +80,7 @@ function GraphqlBody({ panel, link }: { panel: GraphqlPanel; link: ReactNode }) 
   );
 }
 
-function PanelSection({ panel, app }: { panel: Panel; app: string }) {
+function PanelSection({ panel, app, columns }: { panel: Panel; app: string; columns: number }) {
   const { items } = usePackageMenu();
   // Mục dành cho vai trò khác không có trong danh sách, nên không hiện đường dẫn tới trang không mở được.
   const target = panel.link ? findItem(items, app, panel.link.menu) : undefined;
@@ -86,19 +89,17 @@ function PanelSection({ panel, app }: { panel: Panel; app: string }) {
       {panel.link.label}
     </Anchor>
   );
-  // Khối nửa hàng chỉ nửa hàng trên màn hình rộng; còn lại chiếm cả hàng của lưới.
-  const span = panel.size === "half" ? undefined : { gridColumn: "1 / -1" };
   return (
-    <Paper withBorder radius="md" p="md" component="section" aria-label={panel.title} style={span}>
+    <Paper withBorder radius="md" p="md" component="section" aria-label={panel.title} h="100%">
       <Stack gap="sm">
         <Title order={2} size={panel.primary ? "h3" : "h4"}>
           {panel.title}
         </Title>
         <Text size="sm">{panel.description}</Text>
         {panel.graphql ? (
-          <GraphqlBody panel={panel as GraphqlPanel} link={link} />
+          <GraphqlBody panel={panel as GraphqlPanel} link={link} columns={columns} />
         ) : (
-          <RestBody panel={panel} link={link} />
+          <RestBody panel={panel} link={link} columns={columns} />
         )}
       </Stack>
     </Paper>
@@ -109,7 +110,10 @@ export function DashboardPanel({ config, app }: { config: DashboardConfig; app: 
   const { getToken } = useSession();
   // Token được làm mới vài phút một lần; so theo danh sách vai trò để các khối không bị coi là mới mỗi lần làm mới.
   const roles = rolesOf(getToken()).join(" ");
-  const panels = useMemo(() => orderedPanels(visiblePanels(config, roles.split(" "))), [config, roles]);
+  const panels = useMemo(() => visiblePanels(config, roles.split(" ")), [config, roles]);
+  // Bề rộng tính trên các khối người xem thấy, nên khối bị ẩn theo vai trò không để lại ô trống (dashboardBento.ts).
+  const wide = useMemo(() => panelSpans(panels, 4), [panels]);
+  const medium = useMemo(() => panelSpans(panels, 2), [panels]);
   const problems = dashboardProblems(config);
   if (problems.length > 0) {
     return (
@@ -125,11 +129,14 @@ export function DashboardPanel({ config, app }: { config: DashboardConfig; app: 
       </Title>
       {config.description && <Text>{config.description}</Text>}
       {panels.length === 0 && <Text>Tài khoản đang đăng nhập không có vai trò của khối nào.</Text>}
-      <SimpleGrid cols={{ base: 1, md: 2 }}>
-        {panels.map((panel) => (
-          <PanelSection key={panel.id} panel={panel} app={app} />
+      {/* Lưới 12 phần của Mantine: một cột của lưới bốn cột là 3 phần, của lưới hai cột là 6 phần. */}
+      <Grid gap="md">
+        {panels.map((panel, index) => (
+          <Grid.Col key={panel.id} span={{ base: 12, md: 6 * (medium[index] ?? 2), lg: 3 * (wide[index] ?? 4) }}>
+            <PanelSection panel={panel} app={app} columns={Math.min(wide[index] ?? 4, panel.cards?.length ?? 1)} />
+          </Grid.Col>
         ))}
-      </SimpleGrid>
+      </Grid>
     </Stack>
   );
 }
