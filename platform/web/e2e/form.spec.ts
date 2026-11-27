@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Thành phần biểu mẫu trên trình duyệt (ADR 0030), qua hai biểu mẫu của gói kho vật tư. Cán bộ xã A lập đề nghị cấp
+// Thành phần biểu mẫu trên trình duyệt (ADR 0030), qua hai biểu mẫu của gói kho. Cán bộ xã A lập đề nghị cấp
 // vật tư: chọn kho thì danh sách vật tư đổi theo kho, bấm đúp nút gửi mà chỉ có một hồ sơ, người duyệt xã A thấy hồ sơ
-// kèm các giá trị đã điền, người duyệt xã B không thấy. Quản trị xã A thêm vật tư bằng biểu mẫu thêm dòng: yêu cầu
+// kèm các giá trị đã điền, người duyệt xã B không thấy. Quản trị xã A thêm mặt hàng bằng biểu mẫu thêm dòng: yêu cầu
 // không mang tenant_id, dòng thuộc xã A, quản trị xã B không thấy. Mất phản hồi giữa chừng thì gửi lại nguyên dữ liệu
 // chỉ một hồ sơ, sửa rồi gửi là hồ sơ mới. Cần gói đã cài
 // (`make app-install APP=supplies-commune`); bài tự tạo và tự dọn dữ liệu.
@@ -91,7 +91,7 @@ test("cán bộ xã A lập đề nghị trên web; người duyệt xã A thấ
     await expect(page.getByRole("heading", { level: 1, name: "Lập đề nghị cấp vật tư" })).toBeVisible();
 
     const store = page.getByRole("combobox", { name: "Kho" });
-    const item = page.getByRole("combobox", { name: "Vật tư" });
+    const item = page.getByRole("combobox", { name: "Mặt hàng" });
     await expect(item, "chưa chọn kho thì chưa chọn được vật tư").toBeDisabled();
     // Chọn kho B trước rồi đổi sang kho A: danh sách vật tư phải đổi theo kho và vật tư đã chọn bị xóa.
     await store.click();
@@ -167,7 +167,7 @@ test("cán bộ xã A lập đề nghị trên web; người duyệt xã A thấ
 async function fillRequest(page: Page, storeName: string, itemName: string, title: string) {
   await page.getByRole("combobox", { name: "Kho" }).click();
   await page.getByRole("option", { name: storeName }).click();
-  await page.getByRole("combobox", { name: "Vật tư" }).click();
+  await page.getByRole("combobox", { name: "Mặt hàng" }).click();
   await page.getByRole("option", { name: itemName }).click();
   await page.getByLabel(/Tên đề nghị/).fill(title);
   await page.getByLabel(/Số lượng/).fill("1");
@@ -247,7 +247,7 @@ test("mất phản hồi khi gửi đề nghị: gửi lại nguyên dữ liệu
   }
 });
 
-test("quản trị xã A thêm vật tư bằng biểu mẫu; dòng thuộc xã A dù yêu cầu không mang tenant_id, xã B không thấy", async ({
+test("quản trị xã A thêm mặt hàng bằng biểu mẫu; dòng thuộc xã A dù yêu cầu không mang tenant_id, xã B không thấy", async ({
   page,
   request,
 }) => {
@@ -258,24 +258,24 @@ test("quản trị xã A thêm vật tư bằng biểu mẫu; dòng thuộc xã 
     await addStore(request, code, storeName);
     await page.goto("/");
     await signIn(page, "admin.a");
-    await openMenuItem(page, "Thêm vật tư vào kho");
-    await expect(page.getByRole("heading", { level: 1, name: "Thêm vật tư vào kho" })).toBeVisible();
+    await openMenuItem(page, "Thêm mặt hàng");
+    await expect(page.getByRole("heading", { level: 1, name: "Thêm mặt hàng vào kho" })).toBeVisible();
 
     await page.getByRole("combobox", { name: "Kho" }).click();
     await page.getByRole("option", { name: storeName }).click();
-    await page.getByLabel(/Mã vật tư/).fill(`${code}-v`);
-    await page.getByLabel(/Tên vật tư/).fill(`Vật tư thêm ${code}`);
+    await page.getByLabel(/Mã mặt hàng/).fill(`${code}-v`);
+    await page.getByLabel(/Tên mặt hàng/).fill(`Vật tư thêm ${code}`);
     await page.getByLabel(/Đơn vị tính/).fill("bộ");
     await page.getByRole("combobox", { name: "Loại" }).click();
     await page.getByRole("option", { name: "Thiết bị" }).click();
-    await page.getByLabel(/Số lượng đang có/).fill("4");
+    await page.getByLabel(/Tồn đầu/).fill("4");
 
     const insert = page.waitForRequest(
       (call) => call.method() === "POST" && call.url().includes("/v1/graphql") && /insert_/.test(call.postData() ?? ""),
     );
     await page.getByRole("button", { name: "Thêm" }).click();
     const sent = await insert;
-    await expect(page.getByText("Đã thêm vật tư vào kho.")).toBeVisible();
+    await expect(page.getByText("Đã thêm mặt hàng vào kho.")).toBeVisible();
     expect(sent.headers()["x-hasura-role"]).toBe(ADMIN);
     expect(sent.postDataJSON().variables.object, "trình duyệt không gửi tenant_id").toEqual({
       store_code: code,

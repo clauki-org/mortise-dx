@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Dữ liệu demo HƯ CẤU của kho vật tư hai xã thuộc "Tỉnh Mẫu", theo contracts/seed.schema.json: tên kho, vật tư và
-# số lượng đặt ra để minh họa. `make seed-demo` nạp qua cổng bằng tài khoản quản trị của từng xã
+# Dữ liệu demo HƯ CẤU của kho hai xã thuộc "Tỉnh Mẫu", theo contracts/seed.schema.json: tên kho, mặt hàng, phiếu
+# và số lượng đặt ra để minh họa. Bảng cha đứng trước bảng con; số xuất không vượt tồn, nếu không CSDL từ chối nạp. `make seed-demo` nạp qua cổng bằng tài khoản quản trị của từng xã
 # (scripts/app-seed.py); chạy lại không tạo bản trùng.
 
 xa-a:
@@ -20,6 +20,24 @@ xa-a:
         - { store_code: KHO-A1, code: MUC-IN, name: Hộp mực máy in, unit: hộp, kind: consumable, quantity: 6 }
         - { store_code: KHO-A2, code: MAY-CHIEU, name: Máy chiếu, unit: cái, kind: equipment, quantity: 2 }
         - { store_code: KHO-A2, code: LOA-KEO, name: Loa kéo, unit: cái, kind: equipment, quantity: 1 }
+    - table: receipts
+      key: [code]
+      rows:
+        - { code: PN-A-001, received_on: "2026-11-02", partner: Nhà cung cấp văn phòng phẩm Mẫu }
+    - table: receipt_lines
+      key: [receipt_code, store_code, item_code]
+      rows:
+        - { receipt_code: PN-A-001, store_code: KHO-A1, item_code: GIAY-A4, quantity: 20 }
+        - { receipt_code: PN-A-001, store_code: KHO-A1, item_code: MUC-IN, quantity: 4 }
+    - table: issues
+      key: [code]
+      rows:
+        - { code: PX-A-001, issued_on: "2026-11-05", partner: Bộ phận một cửa }
+    - table: issue_lines
+      key: [issue_code, store_code, item_code]
+      rows:
+        - { issue_code: PX-A-001, store_code: KHO-A1, item_code: GIAY-A4, quantity: 15 }
+        - { issue_code: PX-A-001, store_code: KHO-A2, item_code: MAY-CHIEU, quantity: 1 }
 xa-b:
   account: admin.b
   tables:
@@ -32,3 +50,11 @@ xa-b:
       rows:
         - { store_code: KHO-B1, code: GIAY-A4, name: Giấy in A4, unit: ram, kind: consumable, quantity: 25 }
         - { store_code: KHO-B1, code: MAY-IN, name: Máy in, unit: cái, kind: equipment, quantity: 3 }
+    - table: issues
+      key: [code]
+      rows:
+        - { code: PX-B-001, issued_on: "2026-11-06", partner: Văn phòng xã }
+    - table: issue_lines
+      key: [issue_code, store_code, item_code]
+      rows:
+        - { issue_code: PX-B-001, store_code: KHO-B1, item_code: GIAY-A4, quantity: 5 }

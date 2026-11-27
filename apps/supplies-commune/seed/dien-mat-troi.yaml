@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Dữ liệu demo HƯ CẤU của kho "Công ty Điện mặt trời Mẫu" (doanh nghiệp hư cấu) cho cùng gói kho, theo
+# contracts/seed.schema.json: kho, mặt hàng, phiếu và số lượng đặt ra để minh họa. Tenant `dmt` và tài khoản
+# `admin.dmt` do mẫu cài `dien-mat-troi` tạo (ADR 0058); tệp này không nằm trong `make seed-demo`, mẫu cài trỏ tới
+# nó và nạp bằng scripts/app-seed.py. Chạy lại không tạo bản trùng. Số xuất không vượt tồn, nếu không CSDL từ chối.
+
+dmt:
+  account: admin.dmt
+  tables:
+    - table: stores
+      key: [code]
+      rows:
+        - { code: DMT-K1, name: Kho vật tư lắp đặt, location: "Văn phòng công ty, tầng trệt" }
+        - { code: DMT-K2, name: Kho thiết bị dự phòng, location: Bãi tập kết hư cấu số 2 }
+    - table: items
+      key: [store_code, code]
+      rows:
+        - { store_code: DMT-K1, code: TAM-PIN, name: Tấm pin năng lượng mặt trời, unit: tấm, kind: equipment,
+            quantity: 24 }
+        - { store_code: DMT-K1, code: BIEN-TAN, name: Bộ biến tần (inverter), unit: bộ, kind: equipment, quantity: 3 }
+        - { store_code: DMT-K1, code: CAP-DC, name: Cáp điện một chiều, unit: cuộn, kind: consumable, quantity: 10 }
+        - { store_code: DMT-K2, code: BIEN-TAN, name: Bộ biến tần (inverter), unit: bộ, kind: equipment, quantity: 2 }
+    - table: receipts
+      key: [code]
+      rows:
+        - { code: PN-DMT-001, received_on: "2026-11-03", partner: Nhà cung cấp thiết bị Mẫu }
+    - table: receipt_lines
+      key: [receipt_code, store_code, item_code]
+      rows:
+        - { receipt_code: PN-DMT-001, store_code: DMT-K1, item_code: TAM-PIN, quantity: 36 }
+        - { receipt_code: PN-DMT-001, store_code: DMT-K1, item_code: CAP-DC, quantity: 5 }
+    - table: issues
+      key: [code]
+      rows:
+        - { code: PX-DMT-001, issued_on: "2026-11-10", partner: Đội lắp đặt số 1, note: Công trình mái nhà xưởng hư cấu }
+    - table: issue_lines
+      key: [issue_code, store_code, item_code]
+      rows:
+        - { issue_code: PX-DMT-001, store_code: DMT-K1, item_code: TAM-PIN, quantity: 40 }
+        - { issue_code: PX-DMT-001, store_code: DMT-K1, item_code: BIEN-TAN, quantity: 1 }
+        - { issue_code: PX-DMT-001, store_code: DMT-K1, item_code: CAP-DC, quantity: 4 }

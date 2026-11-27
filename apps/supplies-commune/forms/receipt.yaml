@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Biểu mẫu lập phiếu nhập (dòng cha, ADR 0062) theo contracts/form.schema.json; app.yaml trỏ tới tệp này ở mục
+# menu `receipt` (chỉ quản trị) và `make check-fast` kiểm. Gửi thì thêm một dòng vào bảng receipts; tenant_id do
+# Hasura đặt từ token. Dòng hàng thêm sau, từ màn hình chi tiết của phiếu trong danh mục.
+
+title: Lập phiếu nhập
+description: Lập phiếu rồi mở phiếu trong danh mục để thêm từng dòng hàng.
+role: tenant_admin
+fields:
+  - { name: code, label: Số phiếu, type: string, required: true, max_length: 50 }
+  - { name: received_on, label: Ngày nhập, type: date, required: true }
+  - { name: partner, label: Nhận từ, type: string, max_length: 200 }
+  - { name: note, label: Ghi chú, type: string, multiline: true, max_length: 1000 }
+submit:
+  label: Lập phiếu
+  insert: app_supplies_commune_receipts
+done:
+  message: Đã lập phiếu nhập. Mở phiếu để thêm dòng hàng.
+  menu: receipts

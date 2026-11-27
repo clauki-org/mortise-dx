@@ -46,7 +46,7 @@ test("cán bộ xã A theo dõi đề nghị vừa lập tới khi được duy�
     await openMenuItem(page, "Lập đề nghị cấp vật tư");
     await page.getByRole("combobox", { name: "Kho" }).click();
     await page.getByRole("option", { name: code }).click();
-    await page.getByRole("combobox", { name: "Vật tư" }).click();
+    await page.getByRole("combobox", { name: "Mặt hàng" }).click();
     await page.getByRole("option", { name: code }).click();
     await page.getByLabel(/Tên đề nghị/).fill(title);
     await page.getByLabel(/Số lượng/).fill("2");

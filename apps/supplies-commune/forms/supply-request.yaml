@@ -6,7 +6,7 @@
 # như tên trường. Không có trường approved hay comment: đó là quyết định và ý kiến của người duyệt (ADR 0025).
 
 title: Lập đề nghị cấp vật tư
-description: Chọn kho rồi chọn vật tư trong kho đó. Người duyệt của xã thấy đề nghị trên bảng việc.
+description: Chọn kho rồi chọn mặt hàng trong kho đó. Người duyệt của đơn vị thấy đề nghị trên bảng việc.
 fields:
   - { name: title, label: Tên đề nghị, type: string, required: true, max_length: 200 }
   - name: storeCode
@@ -15,7 +15,7 @@ fields:
     required: true
     source: { table: app_supplies_commune_stores, value: code, label: name }
   - name: itemCode
-    label: Vật tư
+    label: Mặt hàng
     type: choice
     required: true
     source:
@@ -28,10 +28,10 @@ fields:
     type: number
     required: true
     min: 1
-    help: Tính theo đơn vị của vật tư đã chọn, xem ở danh mục Kho vật tư.
+    help: Tính theo đơn vị của mặt hàng đã chọn, xem ở danh mục Kho.
   - { name: reason, label: Lý do, type: string, required: true, multiline: true, max_length: 1000 }
 submit:
   label: Gửi
   process: supply-request
 done:
-  message: Đã gửi đề nghị; người duyệt của xã thấy việc trên bảng việc của họ.
+  message: Đã gửi đề nghị; người duyệt của đơn vị thấy việc trên bảng việc của họ.

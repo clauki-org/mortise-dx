@@ -4,11 +4,14 @@
 # Khai báo gói theo contracts/app.schema.json; `make check-fast` kiểm. Gói chỉ gồm tệp khai báo (ADR 0022):
 # scripts/app.sh đọc tệp này để chạy migration, áp quyền Hasura, deploy quy trình và nạp menu; dữ liệu demo ở
 # seed/demo.yaml.
+#
+# Gói kho dùng chung, không gắn ngành (ADR 0062): cài được cho chính quyền và cho doanh nghiệp. Mã gói, lược đồ và
+# tên bảng giữ như bản đầu (`supplies-commune`) để không làm hỏng bản cài, mẫu cài và kiểm thử đang trỏ tới chúng.
 
 id: supplies-commune
-name: Kho vật tư xã
-version: 0.1.0
-description: Kho vật tư, thiết bị của xã, số lượng đang có trong từng kho và đề nghị cấp vật tư.
+name: Kho
+version: 0.2.0
+description: Kho, mặt hàng, phiếu nhập, phiếu xuất và tồn kho tính trong CSDL; đề nghị cấp vật tư cần người duyệt.
 database:
   schema: app_supplies_commune
   migrations: schema/migrations
@@ -17,17 +20,39 @@ workflows:
   - bpmn/supply-request.bpmn20.xml
 menu:
   - id: stores
-    label: Kho vật tư
+    label: Kho
     component: catalog
     config: catalog/stores.yaml
     icon: list
+  - id: receipts
+    label: Phiếu nhập
+    component: catalog
+    config: catalog/receipts.yaml
+    icon: document
+  - id: issues
+    label: Phiếu xuất
+    component: catalog
+    config: catalog/issues.yaml
+    icon: document
+  - id: receipt
+    label: Lập phiếu nhập
+    component: form
+    config: forms/receipt.yaml
+    icon: form
+    roles: [tenant_admin]
+  - id: issue
+    label: Lập phiếu xuất
+    component: form
+    config: forms/issue.yaml
+    icon: form
+    roles: [tenant_admin]
   - id: supply-request
     label: Lập đề nghị cấp vật tư
     component: form
     config: forms/supply-request.yaml
     icon: form
   - id: item
-    label: Thêm vật tư vào kho
+    label: Thêm mặt hàng
     component: form
     config: forms/item.yaml
     icon: form
