@@ -73,6 +73,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0050](0050-catalog-tones-cards-form-help.md) | Nghĩa màu cho giá trị của danh mục, dạng thẻ, chi tiết dạng lưới ô và dòng gợi ý của biểu mẫu | Chấp nhận |
 | [0051](0051-home-page.md) | Trang chủ: ô lối tắt theo gói và việc đang chờ | Chấp nhận |
 | [0052](0052-catalog-export.md) | Xuất danh sách của danh mục ra CSV, Excel và PDF ngay trong trình duyệt, bằng quyền của người xuất | Chấp nhận |
+| [0053](0053-case-seals-and-timer-deadlines.md) | Niêm phong hồ sơ đã kết thúc bằng băm nối vào nhật ký, và ghi hạn của bước chờ hẹn giờ | Chấp nhận |
 
 ## Quyết định còn mở
 

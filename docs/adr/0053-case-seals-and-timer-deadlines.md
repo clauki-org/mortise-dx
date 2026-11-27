@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # 0053. Niêm phong hồ sơ đã kết thúc bằng băm nối vào nhật ký, và ghi hạn của bước chờ hẹn giờ
 
-- Trạng thái: Đề xuất
+- Trạng thái: Chấp nhận
 - Ngày: 2026-11-27
 
 ## Bối cảnh
