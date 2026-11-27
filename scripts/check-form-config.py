@@ -9,8 +9,8 @@
 # Biểu mẫu mở từ danh mục (detail.edit, add của đối tượng con, ADR 0054) cũng được kiểm: biểu mẫu sửa chỉ
 # sửa cột trong quyền update của vai trò, đọc được khóa, cột version và mọi trường để điền sẵn; biểu mẫu
 # thêm dòng con ghi được cột nối về cha; lệnh chuyển thẻ của Kanban (kanban.move, ADR 0066) kiểm như biểu
-# mẫu sửa chỉ có trường của cột; nút nạp từ tệp (ADR 0064) ghi như nút thêm dòng con và đọc được cột nối, cột unique
-# để kiểm trùng. Thiếu bước này, lỗi chỉ lộ ra khi người dùng bấm Gửi. Thành phần
+# mẫu sửa chỉ có trường của cột; nút nạp từ tệp (ADR 0064) ghi như nút thêm dòng con và đọc được cột
+# nối, cột unique để kiểm trùng. Thiếu bước này, lỗi chỉ lộ ra khi người dùng bấm Gửi. Thành phần
 # kiểm lại luật tên lúc chạy. Gọi từ scripts/contracts.sh: --app <app.yaml>; mặc định đọc BPMN, khai báo
 # bước, quyền Hasura, mọi biểu mẫu trên menu và mọi biểu mẫu trong danh mục theo app.yaml, còn --bpmn,
 # --steps, --hasura, --form, --catalog thay từng phần để kiểm với tệp mẫu.
