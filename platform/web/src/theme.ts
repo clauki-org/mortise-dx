@@ -13,6 +13,7 @@ import {
   isLightColor,
   type MantineColorShade,
   type MantineTheme,
+  ModalHeader,
   Paper,
   Table,
 } from "@mantine/core";
@@ -74,6 +75,10 @@ export function createAppTheme(primaryColor: BrandColor) {
       Card: Card.extend({ defaultProps: { withBorder: true, radius: "md", padding: "lg", shadow: "xs" } }),
       Paper: Paper.extend({ defaultProps: { withBorder: true, radius: "md" } }),
       Table: Table.extend({ defaultProps: { verticalSpacing: "sm", horizontalSpacing: "md" } }),
+      // Đầu hộp thoại của Mantine là thẻ <header>, trình đọc màn hình coi là vùng "banner" thứ hai bên cạnh thanh trên
+      // của trang. Tên hộp đã có từ tiêu đề (aria-labelledby) nên đầu hộp chỉ cần là khối thường: role="none" bỏ vai
+      // trò vùng, giữ nguyên thẻ và kiểu của Mantine (đầu hộp không nhận prop component).
+      ModalHeader: ModalHeader.extend({ defaultProps: { role: "none" } }),
     },
   });
 }
@@ -84,10 +89,13 @@ export function createAppTheme(primaryColor: BrandColor) {
 //   với mọi bảng màu, mà vẫn đọc ra màu của trạng thái.
 // - Nút filled chữ đen sáng lên khi di chuột (xem dưới).
 // - Chữ phụ (dimmed) là gray.7 thay vì gray.6.
+// - Chữ gợi ý trong ô nhập (placeholder, như "Chưa chọn tệp" của ô chọn tệp) mặc định là gray.5, khoảng 2:1; dùng
+//   cùng màu với chữ phụ.
 export const cssVariablesResolver: CSSVariablesResolver = (theme: MantineTheme) => ({
   variables: {},
   light: {
     "--mantine-color-dimmed": `var(--mantine-color-gray-${DIMMED_SHADE})`,
+    "--mantine-color-placeholder": `var(--mantine-color-gray-${DIMMED_SHADE})`,
     ...Object.fromEntries(
       Object.entries(theme.colors).flatMap(([name, shades]) => [
         [`--mantine-color-${name}-light-color`, darken(shades[9], LIGHT_TEXT_DARKEN)],

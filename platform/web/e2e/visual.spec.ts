@@ -3,8 +3,9 @@
 //
 // Chụp và đo các trang của kịch bản demo để so trước và sau khi làm lại giao diện (#188). Mỗi trang mở thẳng bằng
 // đường dẫn, không bấm menu, để cùng bài này chụp được cả khi menu đã đổi. Ảnh toàn trang và báo cáo trợ năng (axe)
-// gắn vào kết quả của Playwright (thư mục test-results), không commit làm ảnh mẫu; báo cáo trợ năng chỉ để đọc, không
-// làm bài hỏng. Chạy ở cỡ laptop 1440×900 (dự án chromium) và cỡ điện thoại (dự án mobile, Pixel 7). Bài cuối đếm
+// gắn vào kết quả của Playwright (thư mục test-results), không commit làm ảnh mẫu. Lỗi trợ năng mức critical, serious
+// theo WCAG 2.1 A, AA làm bài hỏng (#194); báo cáo vẫn ghi mọi lỗi, kể cả mức nhẹ hơn và quy tắc ngoài WCAG, để đọc.
+// Chạy ở cỡ laptop 1440×900 (dự án chromium) và cỡ điện thoại (dự án mobile, Pixel 7). Bài cuối đếm
 // số lần bấm để cán bộ xã A lập một hồ sơ rà soát từ cơ sở, đi qua menu như người dùng; bài tự tạo và tự dọn dữ liệu.
 
 import { writeFile } from "node:fs/promises";
@@ -33,6 +34,10 @@ async function settle(page: Page) {
 
 type Impacts = Record<string, number>;
 
+// Mức WCAG mà epic #185 cam kết (2.0 A, AA và phần thêm của 2.1 AA) và mức lỗi làm bài hỏng.
+const BLOCKING_TAGS = new Set(["wcag2a", "wcag2aa", "wcag21aa"]);
+const BLOCKING_IMPACTS = new Set(["critical", "serious"]);
+
 /** Ghi JSON thành tệp trong thư mục kết quả rồi gắn vào: gắn bằng body thì chỉ báo cáo HTML giữ, không có tệp để chép. */
 async function attachJson(testInfo: TestInfo, name: string, data: object) {
   const path = testInfo.outputPath(name);
@@ -47,30 +52,30 @@ async function capture(page: Page, testInfo: TestInfo, name: string) {
   await page.screenshot({ path: shot, fullPage: true });
   await testInfo.attach(`${file}.png`, { path: shot, contentType: "image/png" });
 
-  // Lỗi khi chạy axe (CSP chặn, trang đổi giữa chừng) chỉ ghi lại: báo cáo trợ năng chưa chặn bài nào (#188).
-  let report: object;
-  try {
-    const result = await new AxeBuilder({ page }).analyze();
-    const impacts: Impacts = {};
-    for (const violation of result.violations) {
-      const impact = violation.impact ?? "unknown";
-      impacts[impact] = (impacts[impact] ?? 0) + 1;
-    }
-    report = {
-      url: page.url(),
-      impacts,
-      violations: result.violations.map((violation) => ({
-        id: violation.id,
-        impact: violation.impact,
-        help: violation.help,
-        helpUrl: violation.helpUrl,
-        targets: violation.nodes.map((node) => node.target.join(" ")),
-      })),
-    };
-  } catch (error) {
-    report = { url: page.url(), error: error instanceof Error ? error.message : String(error) };
+  // Chạy axe với mọi quy tắc để báo cáo đủ; chỉ phần thuộc WCAG 2.1 A, AA ở mức critical, serious mới chặn. Lỗi khi
+  // chạy axe (CSP chặn, trang đổi giữa chừng) làm bài hỏng, kẻo cổng chặn qua mà không kiểm gì.
+  const result = await new AxeBuilder({ page }).analyze();
+  const impacts: Impacts = {};
+  for (const violation of result.violations) {
+    const impact = violation.impact ?? "unknown";
+    impacts[impact] = (impacts[impact] ?? 0) + 1;
   }
-  await attachJson(testInfo, `${file}.axe.json`, report);
+  const violations = result.violations.map((violation) => ({
+    id: violation.id,
+    impact: violation.impact,
+    tags: violation.tags,
+    help: violation.help,
+    helpUrl: violation.helpUrl,
+    targets: violation.nodes.map((node) => node.target.join(" ")),
+  }));
+  await attachJson(testInfo, `${file}.axe.json`, { url: page.url(), impacts, violations });
+
+  const blocking = violations
+    .filter((violation) => BLOCKING_IMPACTS.has(violation.impact ?? ""))
+    .filter((violation) => violation.tags.some((tag) => BLOCKING_TAGS.has(tag)))
+    .map(({ id, impact, targets }) => `${id} (${impact}): ${targets.join(", ")}`);
+  // Mềm: bài đếm số lần bấm còn phải đi tiếp và dọn dữ liệu của nó; bài vẫn đỏ khi kết thúc.
+  expect.soft(blocking, `lỗi trợ năng chặn trên ${file}`).toEqual([]);
 }
 
 async function facilityId(request: APIRequestContext, code: string): Promise<string> {
