@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+# Ví dụ sai của scripts/check-app-manifest.py: trợ lý hỏi văn bản gói không khai ở knowledge.
+
+id: assistant-unknown-document
+knowledge: [rules.yaml]
+menu:
+  - { id: ask, label: Hỏi quy chế, component: assistant, config: ask.yaml }

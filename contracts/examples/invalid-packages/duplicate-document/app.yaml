@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+# Ví dụ sai của scripts/check-app-manifest.py: hai tệp văn bản cùng mã văn bản.
+
+id: duplicate-document
+knowledge: [first.yaml, second.yaml]

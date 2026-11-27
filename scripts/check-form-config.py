@@ -247,6 +247,8 @@ def catalog_problems(node: dict, context: dict, where: str = "") -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--app", required=True)
+    # Thư mục đọc tệp cấu hình của mục menu thay cho thư mục gói (scripts/contracts.sh package --configs).
+    parser.add_argument("--configs")
     parser.add_argument("--bpmn", nargs="*")
     parser.add_argument("--steps", nargs="*")
     parser.add_argument("--hasura", nargs="*")
@@ -269,8 +271,9 @@ def main() -> int:
             forms = [(args.form, None)] if args.form else []
             catalogs = [args.catalog] if args.catalog else []
         else:
-            forms = [(os.path.join(directory, e["config"]), e) for e in menu if e["component"] == "form"]
-            catalogs = [os.path.join(directory, e["config"]) for e in menu if e["component"] == "catalog"]
+            base = args.configs or directory
+            forms = [(os.path.join(base, e["config"]), e) for e in menu if e["component"] == "form"]
+            catalogs = [os.path.join(base, e["config"]) for e in menu if e["component"] == "catalog"]
         errors = []
         for path, entry in forms:
             errors += [f"{path}: {error}" for error in form_problems(read_yaml(path), entry, context)]

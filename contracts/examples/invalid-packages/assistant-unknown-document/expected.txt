@@ -1,0 +1,4 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+# Lỗi scripts/check-app-manifest.py phải in cho ví dụ sai cùng thư mục; scripts/contracts.sh so từng ký tự.
+contracts/examples/invalid-packages/assistant-unknown-document/app.yaml: mục menu ask hỏi văn bản không có trong knowledge: no-such-document

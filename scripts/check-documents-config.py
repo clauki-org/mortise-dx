@@ -85,6 +85,8 @@ def node_problems(node: dict, tables: dict, where: str) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--app", required=True)
+    # Thư mục đọc tệp cấu hình của mục menu thay cho thư mục gói (scripts/contracts.sh package --configs).
+    parser.add_argument("--configs")
     parser.add_argument("--hasura", nargs="*")
     parser.add_argument("--catalog")
     args = parser.parse_args()
@@ -97,7 +99,7 @@ def main() -> int:
             paths = [args.catalog]
         else:
             entries = [e for e in app.get("menu", []) if e["component"] == "catalog"]
-            paths = [os.path.join(directory, e["config"]) for e in entries]
+            paths = [os.path.join(args.configs or directory, e["config"]) for e in entries]
         errors = []
         for path in paths:
             errors += [f"{path}: {error}" for error in node_problems(read_yaml(path), tables, "")]

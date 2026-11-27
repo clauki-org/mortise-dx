@@ -20,9 +20,10 @@
 # bằng biến môi trường APP_SETTINGS (make app-install SETTINGS=tên=giá trị), trước khi băm và deploy
 # (ADR 0019).
 # Tenant tạo sau khi cài gói chưa có gì cho tới khi chạy lại `make app-install`. Biến môi trường lấy từ .env
-# (scripts/app.sh, scripts/seed.sh nạp sẵn); `make check-fast` đã kiểm app.yaml, khai báo bước, cấu hình danh
-# mục, và khóa quy trình không trùng giữa lõi và các gói. Gỡ gói xóa theo tệp đang có trong thư mục gói:
-# đổi tên hay bỏ một quy trình khỏi gói thì gỡ gói trước, nếu không deployment cũ còn lại trong Flowable.
+# (scripts/app.sh, scripts/seed.sh nạp sẵn); trước lệnh install, scripts/app.sh đã chạy mọi bước kiểm của gói
+# (scripts/contracts.sh package), còn `make check-fast` kiểm thêm khóa quy trình không trùng giữa lõi và các
+# gói. Gỡ gói xóa theo tệp đang có trong thư mục gói: đổi tên hay bỏ một quy trình khỏi gói thì gỡ gói
+# trước, nếu không deployment cũ còn lại trong Flowable.
 
 import argparse
 import base64

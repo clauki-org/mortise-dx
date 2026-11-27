@@ -7,7 +7,8 @@
 # xuất lại OpenAPI sau khi đổi route hay model; `token <tệp>` (gọi từ make smoke) kiểm claim
 # của một token thật; `config <thành phần> <tệp>` (gọi từ scripts/app-deploy.py) kiểm tệp cấu hình của một thành
 # phần theo contracts/<thành phần>.schema.json; `assistant-data <gói | core> <tệp>` (cũng từ app-deploy.py) kiểm mục
-# `data` của cấu hình trợ lý với quyền Hasura của chủ sở hữu và chạy câu mẫu qua guard. Các lệnh đó gọi qua đây để
+# `data` của cấu hình trợ lý với quyền Hasura của chủ sở hữu và chạy câu mẫu qua guard; `package <gói>` chạy mọi bước
+# kiểm của một gói, `check` gọi cho từng gói và scripts/app.sh gọi trước khi cài. Các lệnh đó gọi qua đây để
 # phiên bản công cụ kiểm chỉ ghim ở tệp này.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -29,6 +30,109 @@ if [[ -z "$graphql_core" ]]; then
 fi
 data_check=(uv run --quiet --no-project --with pyyaml==6.0.3 --with "graphql-core==$graphql_core" python
   scripts/check-assistant-data.py)
+
+# Kiểm theo schema cho lệnh `package`: lỗi in thành một dòng tiếng Việt chỉ tệp và trường (đường JSONPath), thay cho
+# báo cáo tiếng Anh của check-jsonschema, vì người cài gói đọc lỗi này mà không mở schema. Ví dụ sai ở cuối `check`
+# vẫn so với lỗi gốc của công cụ (contracts/examples/expected-errors.txt).
+schema_check() { # SCHEMA TỆP...
+  local schema="$1" report
+  shift
+  if report=$("${checker[@]}" "$(base_uri "$schema")" --output-format json --schemafile "$schema" "$@"); then
+    return 0
+  fi
+  if ! jq -e .status >/dev/null 2>&1 <<<"$report"; then
+    echo "Không chạy được check-jsonschema với $schema (lỗi ở trên); kiểm uv và bộ đệm gói." >&2
+    exit 1
+  fi
+  # Lỗi của oneOf, anyOf chỉ nói "không khớp nhánh nào"; nhánh gần nhất (best_deep_match) mới chỉ đúng trường sai.
+  jq -r --arg schema "$schema" '
+    (.parse_errors[] | "\(.filename): không đọc được tệp (sai cú pháp YAML hay JSON)"),
+    (.errors[] | (.best_deep_match // .) as $e | "\(.filename): trường \($e.path) sai \($schema): \($e.message)")
+  ' <<<"$report" >&2
+  exit 1
+}
+
+# Mọi bước kiểm của một gói, dùng chung cho `check` (make check-fast, từng gói) và bộ cài (scripts/app.sh, trước khi
+# đụng CSDL). Không gọi Hasura, CSDL hay mạng: quyền Hasura đọc từ tệp hasura/*.yaml của gói. Tệp cấu hình của mục
+# menu (đường `config` trong app.yaml) đọc từ THƯ_MỤC_CẤU_HÌNH, mặc định là thư mục gói; CI đưa cấu hình đã trộn
+# ghi đè (#235) qua đúng các bước này bằng cách trỏ nó tới thư mục chứa tệp đã trộn, cùng đường dẫn tương đối như
+# trong gói. app.yaml, BPMN, khai báo bước, quyền Hasura, luật, văn bản, dữ liệu demo vẫn đọc từ gói; riêng đối chiếu
+# nút danh mục với trường của bước trong check-workflow-steps.py vẫn đọc danh mục của gói.
+package_check() { # THƯ_MỤC_GÓI/ THƯ_MỤC_CẤU_HÌNH/
+  local app="$1" configs="$2" component entry hasura_dir
+  local -a declarations found files hasura
+  shopt -s nullglob globstar
+  schema_check contracts/app.schema.json "${app}app.yaml"
+  # Luật nhiều tệp của app.yaml, trước các bước dưới: tệp thiếu làm chúng dừng bằng traceback.
+  "${yaml[@]}" scripts/check-app-manifest.py --app "${app}app.yaml" --configs "$configs"
+  declarations=("$app"workflows/*.yaml)
+  if ((${#declarations[@]})); then
+    schema_check contracts/workflow.schema.json "${declarations[@]}"
+  fi
+  # Khai báo bước của một gói chỉ đối chiếu với BPMN của chính gói đó.
+  "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}" --packages "$app"
+  # Mọi quyền phải lọc theo tenant trong token; make check-fast còn kiểm chung mọi tệp quyền của lõi và gói.
+  hasura_dir=$("${yaml[@]}" -c '
+import sys, yaml
+print(yaml.safe_load(open(sys.argv[1], encoding="utf-8")).get("hasura", ""))
+' "${app}app.yaml")
+  if [[ -n "$hasura_dir" ]]; then
+    hasura=("$app$hasura_dir"/*.yaml)
+    if ((${#hasura[@]})); then
+      "${yaml[@]}" scripts/hasura-metadata.py lint "${hasura[@]}"
+    fi
+  fi
+  # Cấu hình của thành phần có schema nằm ở đường dẫn do app.yaml khai, không theo tên thư mục cố định, nên phải
+  # đọc app.yaml để biết tệp nào cần kiểm; dò theo tên thư mục sẽ bỏ sót tệp đặt ở chỗ khác.
+  for component in catalog map assistant form cases dashboard; do
+    mapfile -t found < <("${yaml[@]}" -c '
+import os, sys, yaml
+app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
+for item in app.get("menu", []):
+    if item["component"] == sys.argv[2]:
+        print(os.path.join(sys.argv[3], item["config"]))
+' "$app" "$component" "$configs")
+    ((${#found[@]})) || continue
+    schema_check "contracts/$component.schema.json" "${found[@]}"
+    case "$component" in
+      catalog)
+        # Nút của danh mục chỉ mở quy trình của chính gói này (ADR 0026), nên đối chiếu với BPMN của gói.
+        "${yaml[@]}" scripts/check-catalog-actions.py --bpmn "$app"**/*.bpmn20.xml --catalog "${found[@]}"
+        # Phần tài liệu đính kèm đọc và ghi bảng nối của chính gói, trong quyền Hasura của gói (ADR 0041).
+        "${yaml[@]}" scripts/check-documents-config.py --app "${app}app.yaml" --configs "$configs"
+        ;;
+      # Trợ lý dữ liệu chỉ hỏi bảng của chính gói, trong quyền đọc của vai trò user (ADR 0027).
+      assistant) "${data_check[@]}" --owner "${app%/}" "${found[@]}" ;;
+      # Trang theo dõi hồ sơ chỉ liệt kê quy trình của chính gói này (ADR 0032).
+      cases) "${yaml[@]}" scripts/check-cases-config.py --bpmn "$app"**/*.bpmn20.xml --cases "${found[@]}" ;;
+      # Bảng điều hành chỉ đọc bảng của chính gói, trong quyền đọc của vai trò từng khối (ADR 0033).
+      dashboard) "${yaml[@]}" scripts/check-dashboard-config.py --app "${app}app.yaml" --configs "$configs" ;;
+    esac
+  done
+  # Biểu mẫu chỉ gửi tới quy trình hay bảng của chính gói này (ADR 0030), kể cả biểu mẫu khai trong danh mục để sửa
+  # dòng, thêm dòng con (ADR 0054). Chạy một lần cho cả hai loại mục menu, ngoài vòng theo thành phần, để gói có cả
+  # biểu mẫu lẫn danh mục không bị báo một lỗi hai lần.
+  "${yaml[@]}" scripts/check-form-config.py --app "${app}app.yaml" --configs "$configs"
+  # Luật ngưỡng (mục `rules`), văn bản cho trợ lý (mục `knowledge`) và bảng phân cấp (mục `authorities`) cũng nằm ở
+  # đường dẫn do app.yaml khai.
+  for entry in rules:threshold-rule knowledge:knowledge authorities:authority; do
+    mapfile -t files < <("${yaml[@]}" -c '
+import sys, yaml
+app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
+for path in app.get(sys.argv[2], []):
+    print(sys.argv[1] + path)
+' "$app" "${entry%%:*}")
+    if ((${#files[@]})); then
+      schema_check "contracts/${entry#*:}.schema.json" "${files[@]}"
+    fi
+  done
+  # Dữ liệu demo khai báo: chỉ gói không có bộ nạp riêng (seed/load.py) mới dùng định dạng chung, vì make seed-demo
+  # chạy bộ nạp riêng nếu có và bỏ qua demo.yaml của gói đó.
+  if [[ -f "${app}seed/demo.yaml" && ! -f "${app}seed/load.py" ]]; then
+    schema_check contracts/seed.schema.json "${app}seed/demo.yaml"
+  fi
+  echo "ok -- gói ${app%/} qua mọi bước kiểm của gói"
+}
 
 case "$mode" in
   check | write) ;;
@@ -62,9 +166,21 @@ case "$mode" in
     fi
     exec "${data_check[@]}" --owner "$2" "$3"
     ;;
+  package)
+    # Tên gói thành một phần đường dẫn, nên chỉ nhận dạng tên thư mục gói như scripts/app.sh.
+    if [[ ! "${2:-}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ || ! -f "apps/${2:-}/app.yaml" ]] ||
+      { (($# > 2)) && [[ "$3" != --configs || ! -d "${4:-}" || $# -gt 4 ]]; }; then
+      echo "Cách dùng: $0 package <gói có apps/<gói>/app.yaml> [--configs <thư mục cấu hình của mục menu>]." >&2
+      exit 2
+    fi
+    configs="apps/$2/"
+    if (($# == 4)); then configs="${4%/}/"; fi
+    package_check "apps/$2/" "$configs"
+    exit 0
+    ;;
   *)
     echo "Cách dùng: $0 [check | write | token <tệp claim> | service-token <tệp claim> | config <thành phần> <tệp> |" \
-      "assistant-data <gói | core> <tệp>]" >&2
+      "assistant-data <gói | core> <tệp> | package <gói> [--configs <thư mục>]]" >&2
     exit 2
     ;;
 esac
@@ -128,73 +244,11 @@ fi
 "${steps[@]}" --bpmn core/workflow/fixtures/*.bpmn20.xml \
   --steps contracts/examples/workflow.example.yaml core/workflow/fixtures/*.yaml \
   --authorities contracts/examples/authority.example.yaml --rules contracts/examples/threshold-rule.example.yaml
-# Gói thật, nếu đã có. Khai báo bước của một gói chỉ đối chiếu với BPMN của chính gói đó.
+# Gói thật, nếu đã có: mỗi gói qua đúng lệnh `package` mà bộ cài gọi, để hai đường không lệch nhau.
 shopt -s nullglob globstar
-apps=(apps/*/app.yaml)
-if ((${#apps[@]})); then
-  "${checker[@]}" --schemafile contracts/app.schema.json "${apps[@]}"
-fi
-for app in apps/*/; do
-  declarations=("$app"workflows/*.yaml)
-  if ((${#declarations[@]})); then
-    "${checker[@]}" --schemafile contracts/workflow.schema.json "${declarations[@]}"
-  fi
-  "${steps[@]}" --bpmn "$app"**/*.bpmn20.xml --steps "${declarations[@]}" --packages "$app"
-  # Cấu hình của thành phần có schema nằm ở đường dẫn do app.yaml khai, không theo tên thư mục cố định, nên phải
-  # đọc app.yaml để biết tệp nào cần kiểm; dò theo tên thư mục sẽ bỏ sót tệp đặt ở chỗ khác.
-  for component in catalog map assistant form cases dashboard; do
-    mapfile -t configs < <("${yaml[@]}" -c '
-import sys, yaml
-app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
-for item in app.get("menu", []):
-    if item["component"] == sys.argv[2]:
-        print(sys.argv[1] + item["config"])
-' "$app" "$component")
-    if ((${#configs[@]})); then
-      "${checker[@]}" "$(base_uri "contracts/$component.schema.json")" --schemafile "contracts/$component.schema.json" \
-        "${configs[@]}"
-      # Nút của danh mục chỉ mở quy trình của chính gói này (ADR 0026), nên đối chiếu với BPMN của gói.
-      if [[ "$component" == catalog ]]; then
-        "${yaml[@]}" scripts/check-catalog-actions.py --bpmn "$app"**/*.bpmn20.xml --catalog "${configs[@]}"
-        # Phần tài liệu đính kèm đọc và ghi bảng nối của chính gói, trong quyền Hasura của gói (ADR 0041).
-        "${yaml[@]}" scripts/check-documents-config.py --app "${app}app.yaml"
-      fi
-      # Trợ lý dữ liệu chỉ hỏi bảng của chính gói, trong quyền đọc của vai trò user (ADR 0027).
-      if [[ "$component" == assistant ]]; then
-        "${data_check[@]}" --owner "${app%/}" "${configs[@]}"
-      fi
-      # Trang theo dõi hồ sơ chỉ liệt kê quy trình của chính gói này (ADR 0032).
-      if [[ "$component" == cases ]]; then
-        "${yaml[@]}" scripts/check-cases-config.py --bpmn "$app"**/*.bpmn20.xml --cases "${configs[@]}"
-      fi
-      # Bảng điều hành chỉ đọc bảng của chính gói, trong quyền đọc của vai trò từng khối (ADR 0033).
-      if [[ "$component" == dashboard ]]; then
-        "${yaml[@]}" scripts/check-dashboard-config.py --app "${app}app.yaml"
-      fi
-    fi
-  done
-  # Biểu mẫu chỉ gửi tới quy trình hay bảng của chính gói này (ADR 0030), kể cả biểu mẫu khai trong danh mục để sửa
-  # dòng, thêm dòng con (ADR 0054); tệp lấy theo app.yaml như ở trên. Chạy một lần cho cả hai loại mục menu, ngoài vòng
-  # theo thành phần, để gói có cả biểu mẫu lẫn danh mục không bị báo một lỗi hai lần.
-  "${yaml[@]}" scripts/check-form-config.py --app "${app}app.yaml"
-  # Luật ngưỡng (mục `rules`), văn bản cho trợ lý (mục `knowledge`) và bảng phân cấp (mục `authorities`) cũng nằm ở
-  # đường dẫn do app.yaml khai.
-  for entry in rules:threshold-rule knowledge:knowledge authorities:authority; do
-    mapfile -t files < <("${yaml[@]}" -c '
-import sys, yaml
-app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
-for path in app.get(sys.argv[2], []):
-    print(sys.argv[1] + path)
-' "$app" "${entry%%:*}")
-    if ((${#files[@]})); then
-      "${checker[@]}" --schemafile "contracts/${entry#*:}.schema.json" "${files[@]}"
-    fi
-  done
-  # Dữ liệu demo khai báo: chỉ gói không có bộ nạp riêng (seed/load.py) mới dùng định dạng chung, vì make seed-demo
-  # chạy bộ nạp riêng nếu có và bỏ qua demo.yaml của gói đó.
-  if [[ -f "${app}seed/demo.yaml" && ! -f "${app}seed/load.py" ]]; then
-    "${checker[@]}" --schemafile contracts/seed.schema.json "${app}seed/demo.yaml"
-  fi
+for manifest in apps/*/app.yaml; do
+  name="${manifest#apps/}"
+  scripts/contracts.sh package "${name%/app.yaml}"
 done
 # Khóa quy trình là duy nhất trên cả lõi và mọi gói: bộ cài gói (scripts/app-deploy.py) xóa khai báo bước và
 # deployment theo khóa, nên một gói khai trùng khóa với lõi hay gói khác sẽ xóa luôn quy trình của bên kia khi cài
@@ -224,6 +278,45 @@ for case in "${cases[@]}"; do
   fi
 done
 echo "ok -- ${#cases[@]} ví dụ sai bị scripts/check-workflow-steps.py từ chối đúng luật"
+
+# Ví dụ sai của luật nhiều tệp trong app.yaml (scripts/check-app-manifest.py, bước đầu của lệnh `package`): mỗi thư
+# mục trong contracts/examples/invalid-packages/ là một gói tối thiểu phạm đúng một luật, lỗi đúng từng ký tự với
+# expected.txt, như ví dụ sai của khai báo bước ở trên. Thư mục mang tên gói, vì luật id trùng tên thư mục xét nó.
+cases=(contracts/examples/invalid-packages/*/)
+for case in "${cases[@]}"; do
+  if result=$("${yaml[@]}" scripts/check-app-manifest.py --app "${case}app.yaml" 2>&1); then
+    echo "$case phải bị scripts/check-app-manifest.py từ chối mà lại qua." >&2
+    exit 1
+  fi
+  if [[ "$result" != "$(grep -v '^#' "${case}expected.txt")" ]]; then
+    echo "$case phải gây đúng lỗi trong ${case}expected.txt. Đang nhận:" >&2
+    echo "$result" >&2
+    exit 1
+  fi
+done
+echo "ok -- ${#cases[@]} gói sai bị scripts/check-app-manifest.py từ chối đúng luật"
+# Lệnh `package` với --configs (đường CI dùng cho cấu hình đã trộn ghi đè, #235) phải đọc tệp từ thư mục đó và báo
+# lỗi schema bằng một dòng tiếng Việt chỉ tệp và trường: chép cấu hình của gói kho rồi làm hỏng tên bảng của danh mục.
+overlay=$(mktemp -d)
+trap 'rm -rf "$overlay"' EXIT
+cp -R apps/supplies-commune/. "$overlay"
+sed -i.orig 's/^source: app_supplies_commune_stores$/source: app-supplies-commune-stores/' "$overlay/catalog/stores.yaml"
+result=$(scripts/contracts.sh package supplies-commune --configs "$overlay" 2>&1) && result="không bị từ chối"
+if [[ "$result" != *"$overlay/catalog/stores.yaml: trường \$.source sai contracts/catalog.schema.json: "* ]]; then
+  echo "contracts.sh package --configs phải báo trường source sai trong thư mục cấu hình. Đang nhận: $result" >&2
+  exit 1
+fi
+# Lỗi qua được schema thì do bộ kiểm của thành phần bắt; chúng cũng phải đọc từ thư mục --configs, nếu không cấu
+# hình đã trộn bị bỏ qua và bản gốc của gói qua thay nó.
+cp apps/supplies-commune/catalog/stores.yaml "$overlay/catalog/stores.yaml"
+sed -i.orig 's/{ name: code, label: Mã vật tư/{ name: no_such_column, label: Mã vật tư/' "$overlay/forms/item.yaml"
+result=$(scripts/contracts.sh package supplies-commune --configs "$overlay" 2>&1) && result="không bị từ chối"
+if [[ "$result" != *"$overlay/forms/item.yaml: vai trò 'tenant_admin' không được ghi cột 'no_such_column' của "* ]]; then
+  echo "contracts.sh package --configs phải đưa biểu mẫu trong thư mục cấu hình qua check-form-config.py." \
+    "Đang nhận: $result" >&2
+  exit 1
+fi
+echo "ok -- cấu hình hỏng trong thư mục --configs bị lệnh package từ chối, lỗi chỉ tệp và trường"
 
 # Ví dụ sai trong contracts/examples/invalid/ phải bị từ chối. Thiếu bước này, một schema
 # bị nới lỏng vẫn qua mọi ví dụ đúng mà không ai biết nó không còn chặn được gì.

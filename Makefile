@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast deps-check web-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up basemap \
+  check-fast deps-check web-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-check app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up basemap \
   obs-up obs-down obs-check tenant-login
 
 help: ## Liệt kê các lệnh
@@ -122,8 +122,11 @@ seed-demo: ## Nạp dữ liệu demo của các gói (hoặc APP=<gói>) qua c�
 	done; \
 	test -n "$$found" || { echo "Không gói nào có dữ liệu demo (seed/load.py hoặc seed/demo.yaml)." >&2; exit 1; }
 
-app-install: ## Cài một gói Tầng 3 lên lõi đang chạy: make app-install APP=<gói> [SETTINGS=tên=giá trị,...]
+app-install: ## Cài một gói Tầng 3 lên lõi đang chạy, kiểm gói trước như make check-fast: make app-install APP=<gói> [SETTINGS=tên=giá trị,...]
 	@APP_SETTINGS="$(SETTINGS)" scripts/app.sh "$(APP)" install
+
+app-check: ## Kiểm một gói như bước đầu của app-install, không đụng CSDL: make app-check APP=<gói>
+	@scripts/app.sh "$(APP)" check
 
 app-uninstall: ## Gỡ gói, XÓA dữ liệu của gói ở mọi tenant: make app-uninstall APP=<gói> CONFIRM=yes
 	@CONFIRM="$(CONFIRM)" scripts/app.sh "$(APP)" uninstall

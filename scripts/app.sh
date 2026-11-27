@@ -2,29 +2,41 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Cài, gỡ và xem trạng thái một gói Tầng 3 trên lõi đang chạy. Đọc apps/<gói>/app.yaml
+# Cài, gỡ, kiểm và xem trạng thái một gói Tầng 3 trên lõi đang chạy. Đọc apps/<gói>/app.yaml
 # (contracts/app.schema.json) để biết lược đồ, thư mục migration và thư mục metadata Hasura.
 # Migration chạy bằng dbmate với thư mục và bảng theo dõi riêng của gói (ADR 0005); metadata
 # Hasura áp bằng scripts/hasura-metadata.py như bảng của lõi; quy trình, khai báo bước và menu nạp bằng
 # scripts/app-deploy.py cho mọi tenant đang có. Cài: migrate, áp metadata, nạp. Gỡ: xóa phần đã nạp, bỏ đăng ký
 # metadata rồi mới lùi migration, để Hasura không trỏ tới bảng đã xóa. Chạy lại nhiều lần không lỗi; tenant tạo
-# sau khi cài gói thì chạy lại app-install để nhận quy trình và menu của gói.
-# Gọi qua Makefile: make app-install|app-uninstall|app-status APP=<gói>.
+# sau khi cài gói thì chạy lại app-install để nhận quy trình và menu của gói. Trước khi cài, gói qua đúng bộ kiểm của
+# make check-fast (scripts/contracts.sh package); lỗi thì dừng trước khi đụng CSDL. `check` chỉ chạy bộ kiểm đó,
+# không cần lõi đang chạy.
+# Gọi qua Makefile: make app-install|app-uninstall|app-status|app-check APP=<gói>.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+app="${1:-}"
+action="${2:-}"
+manifest="apps/$app/app.yaml"
+if [[ ! "$app" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ || ! -f "$manifest" || ! "$action" =~ ^(install|uninstall|status|check)$ ]]
+then
+  echo "Cách dùng: make app-install|app-uninstall|app-status|app-check APP=<gói>" \
+    "(gói là thư mục trong apps/ có app.yaml)" >&2
+  exit 1
+fi
+# Chỉ kiểm khi cài: gói đang lỗi vẫn phải gỡ được và xem được trạng thái.
+if [[ "$action" == install || "$action" == check ]]; then
+  if ! scripts/contracts.sh package "$app"; then
+    echo "Gói $app chưa cài: sửa lỗi ở trên rồi chạy lại. Chưa có gì được ghi vào CSDL." >&2
+    exit 1
+  fi
+  if [[ "$action" == check ]]; then exit 0; fi
+fi
 # .env do `make env` sinh ra và không có trong repo, nên shellcheck không đọc theo.
 set -a
 # shellcheck source=/dev/null
 source .env
 set +a
-
-app="${1:-}"
-action="${2:-}"
-manifest="apps/$app/app.yaml"
-if [[ ! "$app" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ || ! -f "$manifest" || ! "$action" =~ ^(install|uninstall|status)$ ]]; then
-  echo "Cách dùng: make app-install|app-uninstall|app-status APP=<gói> (gói là thư mục trong apps/ có app.yaml)" >&2
-  exit 1
-fi
 # Gỡ gói xóa lược đồ của gói cùng toàn bộ dữ liệu của mọi tenant trong đó, nên phải xác nhận như make restore.
 if [[ "$action" == uninstall && "${CONFIRM:-}" != yes ]]; then
   echo "Gỡ gói $app sẽ xóa toàn bộ dữ liệu của gói ở mọi tenant, kể cả hồ sơ đang chạy theo quy trình của gói." \
@@ -33,7 +45,8 @@ if [[ "$action" == uninstall && "${CONFIRM:-}" != yes ]]; then
 fi
 
 py=(uv run --quiet --no-project --with pyyaml==6.0.3 python)
-# Ba dòng: lược đồ, thư mục migration, thư mục Hasura; app.yaml đã được kiểm theo schema ở `make check-fast`.
+# Ba dòng: lược đồ, thư mục migration, thư mục Hasura. Khi cài, app.yaml đã qua schema ở trên; gỡ và xem trạng thái
+# dựa vào `make check-fast`.
 { read -r id; read -r schema; read -r migrations; read -r hasura_dir; } < <("${py[@]}" -c '
 import sys, yaml
 app = yaml.safe_load(open(sys.argv[1], encoding="utf-8"))

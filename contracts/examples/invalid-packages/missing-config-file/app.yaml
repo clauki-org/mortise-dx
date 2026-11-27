@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+# Ví dụ sai của scripts/check-app-manifest.py: mục menu trỏ tới tệp không có.
+
+id: missing-config-file
+menu:
+  - { id: items, label: Danh mục, component: catalog, config: catalog/no-such-file.yaml }

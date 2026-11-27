@@ -1,0 +1,4 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+# Lỗi scripts/check-app-manifest.py phải in cho ví dụ sai cùng thư mục; scripts/contracts.sh so từng ký tự.
+contracts/examples/invalid-packages/missing-config-file/app.yaml: menu[0].config: tệp catalog/no-such-file.yaml không có trong contracts/examples/invalid-packages/missing-config-file
