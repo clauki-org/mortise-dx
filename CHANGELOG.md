@@ -57,6 +57,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Gói vận hành hiện trường `field-ops`: khách hàng, điểm lắp đặt trên bản đồ, thiết bị, phiếu công việc có ảnh và biên
   bản, nghiệm thu bốn mắt, sản lượng thấp mở hồ sơ sửa chữa, bảng điều hành; hàm `platform.row_version_attach` ([ADR
   0067](docs/adr/0067-field-operations-package.md)).
+- Bảng con của danh mục có nút "Nạp từ tệp": tải tệp mẫu .xlsx, chọn tệp Excel hay CSV, xem trước lỗi theo dòng và cột
+  rồi thêm mọi dòng trong một lần; gói xã nạp phòng vào một tòa ([ADR
+  0064](docs/adr/0064-import-child-rows-from-file.md)).
 
 ### Changed
 
@@ -103,6 +106,7 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Chữ gợi ý trong ô nhập đạt tương phản AA; hộp thoại không còn tạo vùng banner thứ hai; menu gập trên điện thoại
   không còn nhận Tab. `make e2e` chặn lỗi trợ năng mức nghiêm trọng trên các trang của kịch bản demo và có bài đi kịch
   bản bằng bàn phím.
+- Nút bỏ tệp đã chọn ở ô chọn tệp (đính kèm giấy tờ, nạp từ tệp) có tên cho trình đọc màn hình.
 
 ## [0.1.0] - 2026-11-25
 

@@ -209,7 +209,8 @@ trong repo: [ADR 0003](docs/adr/0003-three-tier-layout.md) và [AGENTS.md](AGENT
 | Dữ liệu nền bản đồ, tải khi `make basemap`, không nằm trong repo | OpenStreetMap qua bản dựng Protomaps | bản dựng ghim trong `platform/web/basemap.pins` | ODbL-1.0 (ghi nguồn trên bản đồ; tệp cắt ra là cơ sở dữ liệu phái sinh, chia sẻ lại thì theo ODbL) |
 | Phông chữ nền bản đồ, chỉ khi `make basemap LABELS=on` | Noto Sans (glyph PBF của basemaps-assets) | commit ghim trong `platform/web/basemap.pins` | OFL-1.1 |
 | Phông chữ của giao diện, đóng gói cùng tệp tĩnh ([ADR 0048](docs/adr/0048-bento-tokens-status-tones-font.md)) | Be Vietnam Pro (`@fontsource/be-vietnam-pro`) | 5.3.0 | OFL-1.1 |
-| Ghi tệp Excel khi xuất danh sách ([ADR 0052](docs/adr/0052-catalog-export.md)) | write-excel-file | 4.1.1 | MIT |
+| Ghi tệp Excel khi xuất danh sách ([ADR 0052](docs/adr/0052-catalog-export.md)) và tệp mẫu khi nạp từ tệp ([ADR 0064](docs/adr/0064-import-child-rows-from-file.md)) | write-excel-file | 4.1.1 | MIT |
+| Đọc tệp Excel khi nạp dòng con từ tệp ([ADR 0064](docs/adr/0064-import-child-rows-from-file.md)) | read-excel-file | 9.3.14 | MIT (fflate, saxen, unzipper-esm, worker-f: MIT; graceful-fs: BlueOak-1.0.0, chỉ ở bản Node) |
 | Dựng tệp PDF khi xuất danh sách, kèm font Roboto ([ADR 0052](docs/adr/0052-catalog-export.md)) | pdfmake | 0.3.14 | MIT (font Roboto: Apache-2.0; sax: BlueOak-1.0.0) |
 
 Từng thành phần và công cụ phát triển làm gì, cấu hình ở đâu, xem thế nào: [docs/tools.md](docs/tools.md).

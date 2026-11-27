@@ -9,7 +9,8 @@
 # Biểu mẫu mở từ danh mục (detail.edit, add của đối tượng con, ADR 0054) cũng được kiểm: biểu mẫu sửa chỉ
 # sửa cột trong quyền update của vai trò, đọc được khóa, cột version và mọi trường để điền sẵn; biểu mẫu
 # thêm dòng con ghi được cột nối về cha; lệnh chuyển thẻ của Kanban (kanban.move, ADR 0066) kiểm như biểu
-# mẫu sửa chỉ có trường của cột. Thiếu bước này, lỗi chỉ lộ ra khi người dùng bấm Gửi. Thành phần
+# mẫu sửa chỉ có trường của cột; nút nạp từ tệp (ADR 0064) ghi như nút thêm dòng con và đọc được cột
+# nối, cột unique để kiểm trùng. Thiếu bước này, lỗi chỉ lộ ra khi người dùng bấm Gửi. Thành phần
 # kiểm lại luật tên lúc chạy. Gọi từ scripts/contracts.sh: --app <app.yaml>; mặc định đọc BPMN, khai báo
 # bước, quyền Hasura, mọi biểu mẫu trên menu và mọi biểu mẫu trong danh mục theo app.yaml, còn --bpmn,
 # --steps, --hasura, --form, --catalog thay từng phần để kiểm với tệp mẫu.
@@ -227,6 +228,39 @@ def move_problems(node: dict, context: dict) -> list[str]:
     return [f"kanban.move: {error}" for error in errors]
 
 
+def import_problems(child: dict, context: dict, at: str) -> list[str]:
+    """Nút nạp từ tệp (ADR 0064): ghi như nút thêm dòng con, cộng quyền đọc để kiểm trùng trước khi gửi."""
+    load = child["import"]
+    form, role = load["form"], load["form"].get("role", "user")
+    if form["submit"].get("insert") != child["source"]:
+        return [f"{at}: biểu mẫu phải thêm dòng vào '{child['source']}' (submit.insert)"]
+    names = [field["name"] for field in form["fields"]]
+    errors = [f"{at}: {e}" for e in form_problems(form, None, context)]
+    errors += [f"{at}: {e}" for e in via_problems(form, child["via"], role, context["tables"])]
+    if child["via"] in names:
+        errors.append(f"{at}: cột '{child['via']}' nhận khóa của dòng cha, không khai thành trường")
+    # Ô của bảng tính không chọn được từ một bảng khác, và đúng/sai không có cách gõ chung.
+    for field in form["fields"]:
+        if "source" in field or field["type"] == "boolean":
+            errors.append(f"{at}: trường '{field['name']}' không nạp từ tệp được (source hay boolean)")
+    if "menu" in form["done"]:
+        errors.append(f"{at}: done.menu không dùng cho biểu mẫu mở từ danh mục")
+    unique = load.get("unique")
+    if unique is None:
+        return errors
+    if unique not in names:
+        return [*errors, f"{at}: unique '{unique}' không phải trường của biểu mẫu"]
+    # Kiểm trùng đọc dòng con đã có theo cột nối và cột unique bằng vai trò của biểu mẫu; thiếu quyền đọc thì
+    # mọi lần nạp dừng ở bước kiểm trùng.
+    readable = permission(context["tables"].get(child["source"], {}), "select_permissions", role)
+    if readable is None:
+        return [*errors, f"{at}: vai trò '{role}' không đọc được '{child['source']}' để kiểm trùng"]
+    for column in dict.fromkeys([child["via"], unique]):
+        if readable.get("columns") != "*" and column not in readable.get("columns", []):
+            errors.append(f"{at}: vai trò '{role}' không đọc được cột '{column}' của '{child['source']}'")
+    return errors
+
+
 def catalog_problems(node: dict, context: dict, where: str = "") -> list[str]:
     """Biểu mẫu trong danh mục: đích đúng bảng của danh sách, done.menu không dùng (hộp thoại tự đóng)."""
     detail = node.get("detail") or {}
@@ -254,6 +288,8 @@ def catalog_problems(node: dict, context: dict, where: str = "") -> list[str]:
                 errors.append(f"{at}: cột '{child['via']}' nhận khóa của dòng cha, không khai thành trường")
             if "menu" in form["done"]:
                 errors.append(f"{at}: done.menu không dùng cho biểu mẫu mở từ danh mục")
+        if child.get("import"):
+            errors += import_problems(child, context, f"{inner}nút '{child['import']['label']}'")
         errors += catalog_problems(child, context, inner)
     return errors
 

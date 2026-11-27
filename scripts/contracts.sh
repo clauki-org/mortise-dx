@@ -529,6 +529,11 @@ catalog_form_tables='- table: { schema: app_example, name: items }
         filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
         check: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
 - table: { schema: app_example, name: parts }
+  select_permissions:
+    - role: user
+      permission:
+        columns: [id, item_id, name, installed_on]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
   insert_permissions:
     - role: user
       permission:
@@ -639,7 +644,57 @@ fields: [{ name: created_at, label: Ngày tạo, choices: [{ value: a, label: A 
 list: { columns: [created_at] }
 kanban: { field: created_at, move: { version: updated_at } }
 YAML
-echo "ok -- 6 danh mục có biểu mẫu sai bị check-form-config.py từ chối đúng luật"
+# Nút nạp từ tệp (ADR 0064) kiểm trùng bằng cách đọc cột unique của dòng con đã có; vai trò không đọc được cột đó thì
+# mọi lần nạp dừng ở bước kiểm trùng.
+tables="${catalog_form_tables/columns: \[id, item_id, name, installed_on\]/columns: [id, item_id, installed_on]}" \
+  catalog_form_rejects "parts: nút 'Nạp từ tệp': vai trò 'user' không đọc được cột 'name' của 'app_example_parts'" \
+  <<'YAML'
+title: Danh mục
+source: app_example_items
+fields: [{ name: name, label: Tên }]
+list: { columns: [name] }
+detail:
+  children:
+    - id: parts
+      label: Thành phần
+      via: item_id
+      source: app_example_parts
+      fields: [{ name: installed_on, label: Ngày lắp }]
+      list: { columns: [installed_on] }
+      import:
+        label: Nạp từ tệp
+        max_rows: 10
+        unique: name
+        form:
+          title: Nạp
+          fields: [{ name: name, label: Tên, type: string }]
+          submit: { label: Nạp, insert: app_example_parts }
+          done: { message: Đã nạp }
+YAML
+tables="${catalog_form_tables/columns: \[item_id, name, installed_on\]/columns: [item_id, name, installed_on, used]}" \
+  catalog_form_rejects "parts: nút 'Nạp từ tệp': trường 'used' không nạp từ tệp được (source hay boolean)" <<'YAML'
+title: Danh mục
+source: app_example_items
+fields: [{ name: name, label: Tên }]
+list: { columns: [name] }
+detail:
+  children:
+    - id: parts
+      label: Thành phần
+      via: item_id
+      source: app_example_parts
+      fields: [{ name: name, label: Tên }]
+      list: { columns: [name] }
+      import:
+        label: Nạp từ tệp
+        max_rows: 10
+        form:
+          title: Nạp
+          fields: [{ name: name, label: Tên, type: string }, { name: used, label: Đã dùng, type: boolean }]
+          submit: { label: Nạp, insert: app_example_parts }
+          done: { message: Đã nạp }
+YAML
+echo "ok -- 8 danh mục có biểu mẫu sai bị check-form-config.py từ chối đúng luật"
 # Luật của scripts/check-documents-config.py, như của biểu mẫu ở trên: danh mục mẫu của hợp đồng phải qua với bảng quyền
 # mẫu dưới đây, và mỗi danh mục sai đọc từ stdin phạm đúng một luật, lỗi đúng từng ký tự.
 documents_tables='- table: { schema: app_example, name: item_documents }

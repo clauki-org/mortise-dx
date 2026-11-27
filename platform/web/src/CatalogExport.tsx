@@ -113,7 +113,7 @@ function tenantOf(profile: Record<string, unknown>): string {
   return Array.isArray(tenant) && typeof tenant[0] === "string" ? tenant[0] : "";
 }
 
-function download(blob: Blob, name: string) {
+export function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;

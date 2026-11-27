@@ -143,3 +143,5 @@ page.block-unknown-key.yaml	$.blocks[0]	Additional properties are not allowed ('
 page.no-blocks.yaml	$.blocks	[] should be non-empty
 catalog.kanban-without-config.yaml	$	'kanban' is a required property
 catalog.calendar-unknown-key.yaml	$.calendar	Additional properties are not allowed ('end' was unexpected)
+catalog.import-missing-max-rows.yaml	$.detail.children[0].import	'max_rows' is a required property
+catalog.import-too-many-rows.yaml	$.detail.children[0].import.max_rows	1001 is greater than the maximum of 1000
