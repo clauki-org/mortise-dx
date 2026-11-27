@@ -9,6 +9,7 @@
 import os
 
 import yaml
+from app_entries import entries
 
 # Ghi văn bản của một chủ sở hữu (gói, hay `core`) cho mọi tenant. Văn bản và đoạn không còn trong tệp bị
 # xóa, để chạy lại sau khi sửa tệp cho kết quả như trên dữ liệu trắng; dòng không đổi thì không ghi, để nhật
@@ -90,7 +91,7 @@ def menu_problems(directory: str, app: dict, known: set[str]) -> list[str]:
 def assistant_configs(directory: str, app: dict) -> list[dict]:
     """Mục menu `assistant` của gói, kèm nội dung tệp cấu hình (`content`) và đường dẫn tệp (`path`)."""
     found = []
-    for entry in app.get("menu", []):
+    for entry in entries(app):
         if entry["component"] == "assistant":
             path = os.path.join(directory, entry["config"])
             with open(path, encoding="utf-8") as file:

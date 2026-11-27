@@ -9,6 +9,10 @@
   "properties": {
     "title": { "description": "Tiêu đề của trang", "$ref": "#/$defs/text" },
     "description": { "description": "Đoạn giới thiệu dưới tiêu đề", "$ref": "#/$defs/text" },
+    "variant": {
+      "description": "Kiểu trình bày (ADR 0061): full hiện đoạn giới thiệu và lời mô tả của từng khối; compact chỉ hiện tên khối, con số và mục \"Xem cách tính\", hợp với khối đặt trên trang tổng quan. Bỏ trống là full; giá trị giao diện không biết cũng là full.",
+      "enum": ["full", "compact"]
+    },
     "panels": {
       "description": "Các khối theo đúng thứ tự hiện trên lưới bốn cột, cũng là thứ tự Tab; chỉ khối đầu tiên được là khối chính (primary)",
       "type": "array",

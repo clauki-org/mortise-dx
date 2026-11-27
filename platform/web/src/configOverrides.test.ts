@@ -205,6 +205,7 @@ const entry = (app: string, item: string, extra: Partial<MenuItem> = {}): MenuIt
   config: catalog,
   roles: null,
   icon: null,
+  on_menu: true,
   ...extra,
 });
 

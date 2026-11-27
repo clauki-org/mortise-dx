@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/page.schema.json từ chối: trang không có khối nào (ADR 0061).
+# Nếu lọt, mục menu mở ra một trang chỉ có tiêu đề và gói tưởng đã khai nội dung.
+
+title: Tổng quan
+blocks: []

@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Ví dụ app.yaml hợp lệ theo contracts/app.schema.json; `make check-fast` kiểm tệp này.
-# Gói thật nằm ở apps/<id>/app.yaml.
+# Gói thật nằm ở apps/<id>/app.yaml. Mục `overview` là trang gồm khối (examples/page.example.yaml, ADR 0061); khối
+# `sites` chỉ đặt trên trang đó, không lên menu.
 
 id: example
 name: Gói ví dụ
@@ -41,3 +42,13 @@ menu:
     component: assistant
     config: assistant/ask.yaml
     icon: chat
+  - id: overview
+    label: Tổng quan
+    component: page
+    config: pages/overview.yaml
+    icon: home
+blocks:
+  - id: sites
+    label: Địa điểm
+    component: map
+    config: map-layers/sites.yaml

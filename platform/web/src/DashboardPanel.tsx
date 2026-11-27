@@ -28,6 +28,8 @@ import {
 } from "./dashboardConfig";
 import { findItem, itemPath, rolesOf } from "./menu";
 import { usePackageMenu } from "./PackagePage";
+import { PageHeader } from "./PageHeader";
+import { variantOf } from "./page";
 import { ErrorNotice } from "./States";
 import { useSession } from "./session";
 
@@ -80,7 +82,9 @@ function GraphqlBody({ panel, link, columns }: { panel: GraphqlPanel; link: Reac
   );
 }
 
-function PanelSection({ panel, app, columns }: { panel: Panel; app: string; columns: number }) {
+type SectionProps = { panel: Panel; app: string; columns: number; compact: boolean };
+
+function PanelSection({ panel, app, columns, compact }: SectionProps) {
   const { items } = usePackageMenu();
   // Mục dành cho vai trò khác không có trong danh sách, nên không hiện đường dẫn tới trang không mở được.
   const target = panel.link ? findItem(items, app, panel.link.menu) : undefined;
@@ -95,7 +99,8 @@ function PanelSection({ panel, app, columns }: { panel: Panel; app: string; colu
         <Title order={2} size={panel.primary ? "h3" : "h4"}>
           {panel.title}
         </Title>
-        <Text size="sm">{panel.description}</Text>
+        {/* Kiểu gọn (ADR 0061) bỏ lời mô tả, giữ con số và mục "Xem cách tính" để số vẫn giải thích được. */}
+        {!compact && <Text size="sm">{panel.description}</Text>}
         {panel.graphql ? (
           <GraphqlBody panel={panel as GraphqlPanel} link={link} columns={columns} />
         ) : (
@@ -122,18 +127,22 @@ export function DashboardPanel({ config, app }: { config: DashboardConfig; app: 
       </Alert>
     );
   }
+  const compact = variantOf("dashboard", config.variant) === "compact";
   return (
     <Stack>
-      <Title order={1} size="h2">
-        {config.title}
-      </Title>
-      {config.description && <Text>{config.description}</Text>}
+      <PageHeader title={config.title} />
+      {config.description && !compact && <Text>{config.description}</Text>}
       {panels.length === 0 && <Text>Tài khoản đang đăng nhập không có vai trò của khối nào.</Text>}
       {/* Lưới 12 phần của Mantine: một cột của lưới bốn cột là 3 phần, của lưới hai cột là 6 phần. */}
       <Grid gap="md">
         {panels.map((panel, index) => (
           <Grid.Col key={panel.id} span={{ base: 12, md: 6 * (medium[index] ?? 2), lg: 3 * (wide[index] ?? 4) }}>
-            <PanelSection panel={panel} app={app} columns={Math.min(wide[index] ?? 4, panel.cards?.length ?? 1)} />
+            <PanelSection
+              panel={panel}
+              app={app}
+              columns={Math.min(wide[index] ?? 4, panel.cards?.length ?? 1)}
+              compact={compact}
+            />
           </Grid.Col>
         ))}
       </Grid>

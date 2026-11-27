@@ -7,13 +7,16 @@
 // một lĩnh vực nào.
 
 import { Alert, Stack } from "@mantine/core";
+import { useState } from "react";
 import { useLocation, useSearchParams } from "react-router";
+import { useBlock } from "./blockContext";
 import { CatalogExport } from "./CatalogExport";
 import { CatalogRecord } from "./CatalogRecord";
 import { CatalogTable } from "./CatalogTable";
 import { type CatalogConfig, configProblems, problemText, resolvePath } from "./catalog";
-import { readState, writeState } from "./catalogQuery";
+import { emptyState, readState, writeState } from "./catalogQuery";
 import { PageHeader } from "./PageHeader";
+import { variantOf } from "./page";
 
 type Props = {
   config: CatalogConfig;
@@ -21,9 +24,32 @@ type Props = {
   basePath: string;
 };
 
+/**
+ * Danh sách đặt trong một khối của trang (ADR 0061): trạng thái tìm, lọc, trang nằm trong bộ nhớ vì thanh địa chỉ là
+ * của trang và có thể có khối danh mục khác cùng trang. Dòng vẫn dẫn tới màn hình chi tiết dưới địa chỉ của mục.
+ */
+function BlockList({ config, basePath }: Props) {
+  const [state, setState] = useState(emptyState);
+  return (
+    <Stack>
+      <PageHeader title={config.title} />
+      <CatalogTable
+        config={config}
+        label={config.title}
+        path={basePath}
+        state={state}
+        onChange={setState}
+        views
+        defaultView={variantOf("catalog", config.variant)}
+      />
+    </Stack>
+  );
+}
+
 export function Catalog({ config, basePath }: Props) {
   const { pathname } = useLocation();
   const [params, setParams] = useSearchParams();
+  const block = useBlock();
   const problems = configProblems(config);
   if (problems.length > 0) {
     return (
@@ -32,6 +58,7 @@ export function Catalog({ config, basePath }: Props) {
       </Alert>
     );
   }
+  if (block) return <BlockList config={config} basePath={basePath} />;
   // Đọc địa chỉ thô của trình duyệt thay vì tham số của router: router đổi %2F thành / trước khi trả tham số, nên
   // một khóa chứa dấu / sẽ bị hiểu thành hai đoạn đường dẫn.
   const segments = pathname.slice(basePath.length).split("/").filter(Boolean).map(decodeURIComponent);
@@ -48,6 +75,7 @@ export function Catalog({ config, basePath }: Props) {
           state={state}
           onChange={(next) => setParams(writeState(next))}
           views
+          defaultView={variantOf("catalog", config.variant)}
         />
       </Stack>
     );

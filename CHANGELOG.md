@@ -47,6 +47,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Trang "Ứng dụng" cho quản trị org: bật, tắt từng gói cho cả org bằng một nút; tắt thì menu, trang chủ và khối của
   gói ẩn ở mọi đơn vị, dữ liệu giữ nguyên; gói đang được gói khác cần thì không tắt được ([ADR
   0065](docs/adr/0065-package-on-off.md)).
+- Trang gồm khối: gói khai khối và trang trong `app.yaml`, mỗi thành phần có kiểu trình bày; trang Tổng quan của gói
+  cơ sở vật chất xã ([ADR 0061](docs/adr/0061-block-composition.md)).
 
 ### Changed
 

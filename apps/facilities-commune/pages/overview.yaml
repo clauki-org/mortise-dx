@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Trang "Tổng quan" của gói, theo contracts/page.schema.json (ADR 0061): số diện tích chính (khối `summary` khai ở
+# `blocks` của app.yaml), bản đồ trụ sở và danh mục cơ sở ở dạng thẻ, đều là mục của chính gói. `make check-fast` kiểm
+# schema và scripts/check-page-config.py kiểm mục, kiểu của từng khối.
+
+title: Tổng quan cơ sở vật chất
+description: Diện tích của xã, trụ sở trên bản đồ và danh mục cơ sở trên một trang.
+blocks:
+  - item: summary
+    variant: compact
+  - item: map
+  - item: facilities
+    variant: cards

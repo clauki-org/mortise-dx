@@ -34,6 +34,7 @@ const entry = (item: string, roles: string[] | null, more: Partial<MenuItem> = {
   config: {},
   roles,
   icon: null,
+  on_menu: true,
   ...more,
 });
 
@@ -123,6 +124,13 @@ describe("nhóm trên menu", () => {
       ["Gói Một", false, ["a1"]],
       ["Gói Hai", false, ["z1"]],
     ]);
+  });
+
+  it("khối chỉ đặt trên trang (on_menu false) không lên thanh bên hay trang chủ nhưng vẫn tìm được theo địa chỉ", () => {
+    const items = [entry("page", null), entry("block", null, { on_menu: false })];
+    expect(summary(menuGroups(first, items)).slice(1)).toEqual([["Gói ví dụ", false, ["page"]]]);
+    expect(summary(homeGroups(items))).toEqual([["Gói ví dụ", false, ["page"]]]);
+    expect(findItem(items, "example-app", "block")?.item).toBe("block");
   });
 
   it("không có mục của gói thì chỉ còn nhóm dùng chung", () => {

@@ -9,6 +9,7 @@ import { Alert, Anchor, Button, Group, SegmentedControl, Stack, Table, Text } fr
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
+import { useBlock } from "./blockContext";
 import { CaseScreen } from "./CaseScreen";
 import {
   type CaseState,
@@ -128,6 +129,7 @@ function CaseList({ config, basePath }: { config: CasesConfig; basePath: string 
 
 export function Cases({ config, basePath }: { config: CasesConfig; basePath: string }) {
   const { pathname } = useLocation();
+  const block = useBlock();
   const problems = casesProblems(config);
   if (problems.length > 0) {
     return (
@@ -136,8 +138,9 @@ export function Cases({ config, basePath }: { config: CasesConfig; basePath: str
       </Alert>
     );
   }
-  // Đọc địa chỉ thô như danh mục: router giải mã %2F trước khi trả tham số.
-  const segments = pathname.slice(basePath.length).split("/").filter(Boolean).map(decodeURIComponent);
+  // Đọc địa chỉ thô như danh mục: router giải mã %2F trước khi trả tham số. Trong một khối của trang (ADR 0061), địa
+  // chỉ là của trang nên chỉ có danh sách; hồ sơ vẫn mở dưới địa chỉ của mục.
+  const segments = block ? [] : pathname.slice(basePath.length).split("/").filter(Boolean).map(decodeURIComponent);
   if (segments.length === 1) {
     return <CaseScreen key={segments[0]} id={segments[0] ?? ""} basePath={basePath} title={config.title} />;
   }

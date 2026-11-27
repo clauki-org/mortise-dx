@@ -26,9 +26,11 @@ type Props = {
   fixed?: Record<string, unknown>;
   /** Cho đổi sang dạng thẻ (ADR 0050); chỉ danh sách ngoài cùng bật, bảng đối tượng con giữ dạng bảng */
   views?: boolean;
+  /** Kiểu khi người xem chưa chọn (`variant` của danh mục, ADR 0061) */
+  defaultView?: "table" | "cards";
 };
 
-export function CatalogTable({ config, label, path, state, onChange, fixed, views = false }: Props) {
+export function CatalogTable({ config, label, path, state, onChange, fixed, views = false, defaultView }: Props) {
   const columns = config.list.columns.map((name) => fieldOf(config, name)).filter((field) => field !== undefined);
   const size = pageSize(config);
   const sort = sortOf(config, state);
@@ -40,7 +42,7 @@ export function CatalogTable({ config, label, path, state, onChange, fixed, view
   });
   const rows = data?.rows.slice(0, size) ?? [];
   const hasNext = (data?.rows.length ?? 0) > size;
-  const cards = views && state.view === "cards";
+  const cards = views && (state.view ?? defaultView) === "cards";
   const filtering = state.search.trim() !== "" || Object.keys(state.filters).length > 0;
 
   // Đổi điều kiện tìm, lọc hay thứ tự thì về trang đầu: trang đang xem có thể không còn tồn tại.
@@ -95,7 +97,10 @@ export function CatalogTable({ config, label, path, state, onChange, fixed, view
             cards={cards}
             sort={sort}
             // Đổi kiểu hiển thị giữ trang đang xem: cùng dòng, chỉ khác cách vẽ.
-            onView={(next) => onChange({ ...state, view: next ? "cards" : undefined })}
+            onView={(next) => {
+              const view = next ? "cards" : "table";
+              onChange({ ...state, view: view === (defaultView ?? "table") ? undefined : view });
+            }}
             onSort={(next) => change({ sort: next })}
           />
         )}

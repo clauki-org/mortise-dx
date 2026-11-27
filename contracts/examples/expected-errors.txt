@@ -16,10 +16,11 @@ app.path-escapes-package.yaml	$.menu[0].config	'../../core/keycloak/realm.yaml' 
 app.path-is-url.yaml	$.menu[0].config	'http://no-such-host.invalid/items.yaml' does not match '^(?!.*(^|/)\\\\.\\\\.?(/|$))[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$'
 app.requires-not-slug.yaml	$.requires[0]	'Example Base' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
 app.settings-unsafe-value.yaml	$.settings.approval_limit	'1000 || true' is not valid under any of the given schemas
-app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'dashboard', 'rules', 'assistant', 'cases']
+app.unknown-component.yaml	$.menu[0].component	'no-such-component' is not one of ['catalog', 'form', 'map', 'tasks', 'dashboard', 'rules', 'assistant', 'cases', 'page']
 app.unknown-field.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
 app.unknown-icon.yaml	$.menu[0].icon	'no-such-icon' is not one of ['home', 'list', 'form', 'map', 'chart', 'chat', 'inbox', 'document', 'folder', 'settings']
 app.version-leading-zero.yaml	$.version	'01.0.0' does not match '^(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)$'
+app.block-with-icon.yaml	$.blocks[0]	{'id': 'sites', 'label': 'Địa điểm', 'component': 'map', 'config': 'map-layers/sites.yaml', 'icon': 'map'} should not be valid under {'required': ['icon']}
 assistant.blank-intro.yaml	$.intro	'   ' does not match '\\\\S'
 assistant.document-not-slug.yaml	$.documents[0]	'knowledge/example-rules.yaml' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
 assistant.duplicate-document.yaml	$.documents	['example-rules', 'example-rules'] has non-unique elements
@@ -131,4 +132,7 @@ branding.low-contrast-color.json	$.color	'teal' is not one of ['blue', 'indigo',
 branding.missing-short-name.json	$	'short_name' is a required property
 catalog.add-form-unknown-field-type.yaml	$.detail.children[0].add.form.fields[0].type	'no-such-type' is not one of ['string', 'number', 'integer', 'boolean', 'date', 'choice']
 catalog.edit-missing-label.yaml	$.detail.edit	'label' is a required property
+catalog.unknown-variant.yaml	$.variant	'kanban' is not one of ['table', 'cards']
 form.update-without-version.yaml	$.submit	'version' is a dependency of 'update'
+page.block-unknown-key.yaml	$.blocks[0]	Additional properties are not allowed ('config' was unexpected)
+page.no-blocks.yaml	$.blocks	[] should be non-empty

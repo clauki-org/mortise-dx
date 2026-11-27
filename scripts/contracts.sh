@@ -84,11 +84,12 @@ print(yaml.safe_load(open(sys.argv[1], encoding="utf-8")).get("hasura", ""))
   fi
   # Cấu hình của thành phần có schema nằm ở đường dẫn do app.yaml khai, không theo tên thư mục cố định, nên phải
   # đọc app.yaml để biết tệp nào cần kiểm; dò theo tên thư mục sẽ bỏ sót tệp đặt ở chỗ khác.
-  for component in catalog map assistant form cases dashboard; do
+  # Khối (`blocks`, ADR 0061) qua cùng bước kiểm như mục menu: cùng dạng, cùng bảng menu_items.
+  for component in catalog map assistant form cases dashboard page; do
     mapfile -t found < <("${yaml[@]}" -c '
 import os, sys, yaml
 app = yaml.safe_load(open(sys.argv[1] + "app.yaml", encoding="utf-8"))
-for item in app.get("menu", []):
+for item in app.get("menu", []) + app.get("blocks", []):
     if item["component"] == sys.argv[2]:
         print(os.path.join(sys.argv[3], item["config"]))
 ' "$app" "$component" "$configs")
@@ -107,6 +108,8 @@ for item in app.get("menu", []):
       cases) "${yaml[@]}" scripts/check-cases-config.py --bpmn "$app"**/*.bpmn20.xml --cases "${found[@]}" ;;
       # Bảng điều hành chỉ đọc bảng của chính gói, trong quyền đọc của vai trò từng khối (ADR 0033).
       dashboard) "${yaml[@]}" scripts/check-dashboard-config.py --app "${app}app.yaml" --configs "$configs" ;;
+      # Khối của trang là mục của chính gói, không phải trang, kiểu có trong schema của thành phần (ADR 0061).
+      page) "${yaml[@]}" scripts/check-page-config.py --app "${app}app.yaml" ;;
     esac
   done
   # Biểu mẫu chỉ gửi tới quy trình hay bảng của chính gói này (ADR 0030), kể cả biểu mẫu khai trong danh mục để sửa
@@ -201,6 +204,9 @@ esac
 "${checker[@]}" --schemafile contracts/form.schema.json contracts/examples/form.example.yaml
 "${checker[@]}" --schemafile contracts/cases.schema.json contracts/examples/cases.example.yaml
 "${checker[@]}" --schemafile contracts/dashboard.schema.json contracts/examples/dashboard.example.yaml
+"${checker[@]}" --schemafile contracts/page.schema.json contracts/examples/page.example.yaml
+# Trang mẫu trỏ tới mục và khối của gói mẫu: mục có thật, không phải trang, kiểu có trong schema của thành phần (ADR 0061).
+"${yaml[@]}" scripts/check-page-config.py --app contracts/examples/app.example.yaml --page contracts/examples/page.example.yaml
 "${checker[@]}" --schemafile contracts/assistant.schema.json contracts/examples/assistant.example.yaml \
   contracts/examples/assistant-data.example.yaml
 "${data_check[@]}" --owner core contracts/examples/assistant-data.example.yaml
@@ -360,6 +366,7 @@ reject contracts/map.schema.json contracts/examples/invalid/map.*.yaml
 reject contracts/form.schema.json contracts/examples/invalid/form.*.yaml
 reject contracts/cases.schema.json contracts/examples/invalid/cases.*.yaml
 reject contracts/dashboard.schema.json contracts/examples/invalid/dashboard.*.yaml
+reject contracts/page.schema.json contracts/examples/invalid/page.*.yaml
 reject contracts/assistant.schema.json contracts/examples/invalid/assistant.*.yaml
 reject contracts/knowledge.schema.json contracts/examples/invalid/knowledge.*.yaml
 reject contracts/threshold-rule.schema.json contracts/examples/invalid/threshold-rule.*.yaml
@@ -375,11 +382,11 @@ for file in contracts/examples/invalid/*; do
     token-claims.*.json | service-token-claims.*.json | device-message.*.json | app.*.yaml | workflow.*.yaml | catalog.*.yaml | \
     documents.*.yaml | component.*.yaml | branding.*.json | \
     threshold-rule.*.yaml | authority.*.yaml | assistant.*.yaml | knowledge.*.yaml | seed.*.yaml | map.*.yaml | form.*.yaml | \
-    cases.*.yaml | dashboard.*.yaml) ;;
+    cases.*.yaml | dashboard.*.yaml | page.*.yaml) ;;
     *)
       echo "$file không được kiểm: tên phải theo mẫu" \
         "<token-claims|service-token-claims|device-message|branding>.<lỗi>.json hoặc" \
-        "<app|workflow|catalog|documents|map|form|cases|dashboard|component|threshold-rule|authority|assistant|knowledge|seed>.<lỗi>.yaml." >&2
+        "<app|workflow|catalog|documents|map|form|cases|dashboard|page|component|threshold-rule|authority|assistant|knowledge|seed>.<lỗi>.yaml." >&2
       exit 1
       ;;
   esac
@@ -460,6 +467,35 @@ submit: { label: Lưu, update: app_example_items, version: updated_at }
 done: { message: Đã lưu }
 YAML
 echo "ok -- 7 biểu mẫu và tệp quyền sai bị check-form-config.py từ chối đúng luật"
+# Luật của scripts/check-page-config.py (ADR 0061) cũng phải chặn được thật: mỗi trang sai đọc từ stdin, đối chiếu với
+# gói mẫu, phạm đúng một luật và lỗi đúng từng ký tự.
+page_rejects() { # LỖI_MONG_ĐỢI, trang ở stdin
+  local result
+  result=$("${yaml[@]}" scripts/check-page-config.py --app contracts/examples/app.example.yaml --page /dev/stdin 2>&1) &&
+    result="không bị từ chối"
+  if [[ "$result" != "/dev/stdin: $1" ]]; then
+    echo "check-page-config.py phải báo đúng lỗi: $1" >&2
+    echo "Đang nhận: $result" >&2
+    exit 1
+  fi
+}
+page_rejects "khối 1: không có mục 'nope' trong menu hay blocks của gói" <<'YAML'
+title: Tổng quan
+blocks: [{ item: nope }]
+YAML
+page_rejects "khối 1: mục 'overview' là một trang; trang không chứa trang" <<'YAML'
+title: Tổng quan
+blocks: [{ item: overview }]
+YAML
+page_rejects "khối 1: catalog không có kiểu 'kanban' (table, cards)" <<'YAML'
+title: Tổng quan
+blocks: [{ item: items, variant: kanban }]
+YAML
+page_rejects "khối 1: assistant không có kiểu 'compact' (thành phần này chưa có kiểu nào, bỏ variant)" <<'YAML'
+title: Tổng quan
+blocks: [{ item: ask, variant: compact }]
+YAML
+echo "ok -- 4 trang sai bị check-page-config.py từ chối đúng luật"
 # Biểu mẫu khai trong danh mục (ADR 0054): danh mục mẫu của hợp đồng phải qua với bảng quyền mẫu dưới đây; mỗi danh mục
 # sai đọc từ stdin phạm đúng một luật của quyền update hay của cột nối về cha, lỗi đúng từng ký tự.
 catalog_form_tables='- table: { schema: app_example, name: items }

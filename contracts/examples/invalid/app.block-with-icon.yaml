@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/app.schema.json từ chối: khối (`blocks`, ADR 0061) có `icon`. Khối không lên thanh
+# bên nên biểu tượng không bao giờ hiện; nếu lọt, gói tưởng khối có chỗ trên menu.
+
+id: example
+name: Gói ví dụ
+version: 0.1.0
+database:
+  schema: app_example
+  migrations: schema/migrations
+blocks:
+  - id: sites
+    label: Địa điểm
+    component: map
+    config: map-layers/sites.yaml
+    icon: map

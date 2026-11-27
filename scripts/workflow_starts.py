@@ -13,6 +13,7 @@ import os
 import xml.etree.ElementTree as ET
 
 import yaml
+from app_entries import entries
 from workflow_fields import fields_api
 
 BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
@@ -47,9 +48,7 @@ def package_files(packages: list[str]) -> tuple[list[str], list[str]]:
         app = _load(os.path.join(package, "app.yaml"))
         rules += [os.path.join(package, path) for path in app.get("rules", [])]
         catalogs += [
-            os.path.join(package, item["config"])
-            for item in app.get("menu", [])
-            if item["component"] == "catalog"
+            os.path.join(package, item["config"]) for item in entries(app) if item["component"] == "catalog"
         ]
     return rules, catalogs
 

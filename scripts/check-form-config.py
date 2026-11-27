@@ -21,6 +21,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 import yaml
+from app_entries import entries
 from form_permissions import permission, tables_of, tenant_columns
 
 BPMN = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
@@ -263,10 +264,10 @@ def main() -> int:
             "bpmn": bpmn_by_key(args.bpmn or [os.path.join(directory, p) for p in app.get("workflows", [])]),
             "steps": [read_yaml(p) for p in args.steps or sorted(glob.glob(f"{directory}/workflows/*.yaml"))],
             "tables": tables_of(args.hasura or (sorted(glob.glob(f"{hasura}/*.yaml")) if hasura else [])),
-            "menu": {entry["id"] for entry in app.get("menu", [])},
+            "menu": {entry["id"] for entry in entries(app)},
             "decision_variables": load_decisions(),
         }
-        menu = app.get("menu", [])
+        menu = entries(app)
         if args.form or args.catalog:
             forms = [(args.form, None)] if args.form else []
             catalogs = [args.catalog] if args.catalog else []

@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Khối số liệu chính của trang "Tổng quan" (pages/overview.yaml, ADR 0061), theo contracts/dashboard.schema.json; app.yaml
+# khai ở `blocks` nên không có mục riêng trên menu. Khối diện tích chép từ dashboards/overview.yaml (cùng view, cùng
+# cách tính); bảng điều hành đầy đủ vẫn là mục `dashboard`. `make check-fast` kiểm như mọi bảng điều hành của gói.
+
+title: Diện tích nhà làm việc
+panels:
+  - id: area
+    title: Diện tích nhà làm việc của xã
+    description: >-
+      Xã được phép dùng bao nhiêu mét vuông nhà làm việc, đang dùng bao nhiêu và vượt bao nhiêu, tính chung cho mọi
+      trụ sở của xã.
+    method: >-
+      View area_summary, mỗi xã một dòng. Tiêu chuẩn tính trên tổng diện tích của mọi trụ sở xã đang dùng (Điều 3
+      khoản 3 NĐ 155/2025/NĐ-CP, sửa bởi Điều 2 NĐ 369/2026/NĐ-CP), không tính riêng từng cơ sở. Phần trăm của vòng
+      đo là cột in_use_percent của view: đang dùng chia được phép, nhân 100, làm tròn tới hàng đơn vị; xã chưa có diện
+      tích được phép thì không có phần trăm.
+    size: half
+    primary: true
+    graphql: { field: app_facilities_commune_area_summary }
+    # Phần trăm do view tính (in_use_percent); một vòng đầy là diện tích được phép, phần vượt thành vòng thứ hai.
+    gauge:
+      value: in_use_m2
+      limit: allowed_m2
+      percent: in_use_percent
+      label: Đang dùng so với diện tích được phép
+    cards:
+      - column: allowed_m2
+        label: Diện tích được phép
+        unit: m²
+        description: >-
+          Làm việc theo biên chế (số người nhân mức m² của dòng phụ lục NĐ 369/2026/NĐ-CP) cộng sử dụng chung bằng
+          phần làm việc (Điều 6 khoản 2 điểm a NĐ 155, sửa bởi NĐ 369; phần bù theo Tiêu chuẩn quốc gia chưa tính)
+          cộng chuyên dùng do cấp có thẩm quyền quyết định.
+      - column: in_use_m2
+        label: Đang dùng
+        unit: m²
+        description: Tổng diện tích thông thủy của mọi phòng thuộc các cơ sở đang dùng của xã.
+      - column: excess_m2
+        label: Phần vượt tiêu chuẩn, định mức
+        unit: m²
+        description: Đang dùng trừ được phép, không nhỏ hơn 0.
+        # Phần vượt nào cũng là vượt tiêu chuẩn, định mức: không có mức cảnh báo ở giữa.
+        tone: { bad_when: { gt: 0, label: Vượt định mức } }
+      - column: surplus_m2
+        label: Cơ sở dôi dư
+        unit: m²
+        description: Tổng diện tích thông thủy của phòng thuộc cơ sở dôi dư; tính riêng, không vào phần vượt.
+    link:
+      menu: facilities
+      label: >-
+        Xem danh mục cơ sở. Cán bộ chỉ thấy cơ sở mình được phân công, còn số trên đây tính cho cả xã.

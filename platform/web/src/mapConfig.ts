@@ -38,7 +38,7 @@ export type Area = { name: string; outline: Position[] };
 /** Các vùng cố định của cấu hình (ranh giới...), vẽ dưới điểm; mapAreas.ts dựng hình và tìm vùng chứa điểm. */
 export type Areas = { label: string; color: Swatch; items: Area[] };
 
-export type MapConfig = { title: string; layers: Layer[]; areas?: Areas; note?: string };
+export type MapConfig = { title: string; variant?: string; layers: Layer[]; areas?: Areas; note?: string };
 
 export type Row = Record<string, unknown>;
 

@@ -8,6 +8,10 @@
   "required": ["title", "layers"],
   "properties": {
     "title": { "description": "Tiêu đề của trang bản đồ", "$ref": "#/$defs/text" },
+    "variant": {
+      "description": "Kiểu trình bày (ADR 0061): map là khung bản đồ kèm danh sách điểm; list chỉ có chú giải và danh sách điểm, không nạp MapLibre, hợp với màn hình hẹp hay khối nhỏ. Bỏ trống là map; giá trị giao diện không biết cũng là map.",
+      "enum": ["map", "list"]
+    },
     "layers": {
       "description": "Các lớp điểm, mỗi lớp một bảng",
       "type": "array",

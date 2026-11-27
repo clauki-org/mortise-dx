@@ -10,6 +10,7 @@ summary: Các lớp điểm đọc qua GraphQL theo cấu hình của gói, đ�
 config_schema: map.schema.json
 example: examples/map.example.yaml
 capabilities:
+  - Kiểu trình bày chọn bằng variant (ADR 0061), map (mặc định) có khung bản đồ; list chỉ có chú giải và danh sách điểm, không nạp MapLibre.
   - Mỗi lớp đọc một bảng hay view; mỗi dòng có tọa độ (latitude, longitude, WGS 84) thành một điểm mang tên lấy từ title.
   - Lọc dòng của lớp theo một cột bằng một giá trị (where).
   - Tô màu cả lớp một màu (color.fixed), hoặc theo giá trị số của một cột qua các bậc tăng dần (color.by, color.steps); dòng chưa có giá trị hiện màu xám.

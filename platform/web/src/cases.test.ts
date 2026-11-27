@@ -98,6 +98,7 @@ describe("đường tới hồ sơ vừa lập", () => {
     config,
     roles: null,
     icon: null,
+    on_menu: true,
   });
 
   it("chỉ mục cases của cùng gói liệt kê quy trình đó", () => {

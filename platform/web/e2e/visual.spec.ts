@@ -94,6 +94,8 @@ async function facilityId(request: APIRequestContext, code: string): Promise<str
 // Các trang cán bộ xã A (user.a) mở trong kịch bản demo; đường dẫn là /apps/<gói>/<mục menu> (menu.ts).
 const PAGES: { name: string; path: (request: APIRequestContext) => Promise<string> | string }[] = [
   { name: "home", path: () => "/" },
+  // Trang gồm khối (ADR 0061): bảng điều hành gọn, bản đồ, danh mục dạng thẻ trên một trang, ở cả hai cỡ màn hình.
+  { name: "overview", path: () => "/apps/facilities-commune/overview" },
   { name: "dashboard", path: () => "/apps/facilities-commune/dashboard" },
   { name: "facilities", path: () => "/apps/facilities-commune/facilities" },
   { name: "facilities-cards", path: () => "/apps/facilities-commune/facilities?view=cards" },
