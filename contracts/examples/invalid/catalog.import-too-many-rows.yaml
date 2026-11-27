@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị từ chối: số dòng tối đa mỗi lần nạp có trần 1.000, cùng trần với thành phần danh mục.
+title: Danh mục
+source: app_example_items
+fields: [{ name: name, label: Tên }]
+list: { columns: [name] }
+detail:
+  children:
+    - id: parts
+      label: Thành phần
+      via: item_id
+      source: app_example_parts
+      fields: [{ name: name, label: Tên }]
+      list: { columns: [name] }
+      import:
+        label: Nạp từ tệp
+        max_rows: 1001
+        form:
+          title: Nạp
+          fields: [{ name: name, label: Tên, type: string }]
+          submit: { label: Nạp, insert: app_example_parts }
+          done: { message: Đã nạp }

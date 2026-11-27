@@ -272,6 +272,26 @@
             },
             "form": { "$ref": "form.schema.json" }
           }
+        },
+        "import": {
+          "description": "Nút nạp nhiều dòng con từ tệp Excel (.xlsx) hay CSV UTF-8, cạnh nút thêm dòng con (ADR 0064). Biểu mẫu có submit.insert trỏ tới bảng của loại con; mỗi trường là một cột của tệp, tiêu đề cột là nhãn của trường; tệp mẫu .xlsx sinh từ các trường này. Mỗi dòng được kiểm như biểu mẫu nhập tay, rồi mọi dòng gửi trong một lệnh thêm: có dòng lỗi thì không dòng nào được thêm. Cột via nhận khóa của dòng cha, không là trường. Trường không dùng source hay kiểu boolean. Nút chỉ hiện khi token có vai trò form.role (bỏ trống là user).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["label", "max_rows", "form"],
+          "properties": {
+            "label": { "description": "Chữ trên nút", "$ref": "#/$defs/text" },
+            "max_rows": {
+              "description": "Số dòng dữ liệu tối đa mỗi lần nạp; tệp nhiều dòng hơn bị từ chối cả tệp",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "unique": {
+              "description": "Trường không được trùng giữa các dòng của tệp, và với dòng con đã có của cùng dòng cha; kiểm trước khi gửi bằng vai trò của biểu mẫu",
+              "$ref": "#/$defs/identifier"
+            },
+            "form": { "$ref": "form.schema.json" }
+          }
         }
       }
     },

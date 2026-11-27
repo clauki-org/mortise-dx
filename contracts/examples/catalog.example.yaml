@@ -111,6 +111,19 @@ detail:
             - { name: installed_on, label: Ngày lắp, type: date }
           submit: { label: Thêm, insert: app_example_parts }
           done: { message: Đã thêm thành phần. }
+      # Nạp nhiều thành phần từ tệp (ADR 0064): tiêu đề cột là nhãn của trường; tên không được trùng trong tệp hay với
+      # thành phần đã có của dòng cha.
+      import:
+        label: Nạp từ tệp
+        max_rows: 200
+        unique: name
+        form:
+          title: Nạp thành phần từ tệp
+          fields:
+            - { name: name, label: Tên, type: string, required: true }
+            - { name: installed_on, label: Ngày lắp, type: date }
+          submit: { label: Nạp, insert: app_example_parts }
+          done: { message: Đã nạp thành phần. }
       detail:
         children:
           - id: checks

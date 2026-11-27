@@ -44,11 +44,21 @@ export type Edit = { label: string; form: FormConfig };
 /** Nút thêm dòng con: biểu mẫu có submit.insert trỏ tới bảng của loại con; cột via nhận khóa của dòng cha. */
 export type Add = { label: string; parent?: string; form: FormConfig };
 
+/**
+ * Nút nạp nhiều dòng con từ tệp Excel hay CSV (ADR 0064): biểu mẫu có submit.insert trỏ tới bảng của loại con; mỗi
+ * trường là một cột của tệp, nhãn là tiêu đề cột. Cột via nhận khóa của dòng cha; unique là trường không được trùng
+ * trong tệp và với dòng con đã có.
+ */
+export type Import = { label: string; max_rows: number; unique?: string; form: FormConfig };
+
+/** Trần số dòng mỗi lần nạp, cùng giá trị với maximum của max_rows trong contracts/catalog.schema.json. */
+export const IMPORT_ROWS_CEILING = 1000;
+
 /** Nút khởi tạo quy trình cho dòng đang xem: tên biến của quy trình -> khóa hoặc trường của dòng (ADR 0026). */
 export type Action = { id: string; label: string; process: string; variables: Record<string, string> };
 
 /** Loại đối tượng con: khai như cha, thêm tên ngắn dùng trong đường dẫn và cột chứa khóa của cha. */
-export type Child = CatalogNode & { id: string; label: string; via: string; add?: Add };
+export type Child = CatalogNode & { id: string; label: string; via: string; add?: Add; import?: Import };
 
 /** Cấu hình gói đưa cho thành phần: loại đối tượng ngoài cùng, kèm tiêu đề, kiểu và mục của Kanban, Lịch (ADR 0066). */
 export type CatalogConfig = CatalogNode & {
@@ -176,6 +186,36 @@ function addProblems(parent: CatalogNode, child: Child): string[] {
   return problems;
 }
 
+/**
+ * Lỗi của nút nạp từ tệp. Trường chọn từ bảng (source) cần đọc bảng cho từng dòng, ô đúng/sai không có cách gõ chung
+ * trong bảng tính; cả hai không nạp được nên bị từ chối ngay thay vì để mọi dòng của tệp cùng lỗi.
+ */
+function importProblems(child: Child): string[] {
+  const load = child.import;
+  if (!load) return [];
+  const at = `nút "${load.label}"`;
+  const problems = formProblems(load.form).map((problem) => `${at}: ${problem}`);
+  if (load.form.submit?.insert !== child.source) {
+    problems.push(`${at}: biểu mẫu phải thêm dòng vào bảng ${child.source} (submit.insert)`);
+  }
+  const fields = Array.isArray(load.form.fields) ? load.form.fields : [];
+  if (fields.some((field) => field.name === child.via)) {
+    problems.push(`${at}: cột ${child.via} nhận khóa của dòng cha, không khai thành trường`);
+  }
+  for (const field of fields) {
+    if (field.source || field.type === "boolean") {
+      problems.push(`${at}: trường "${field.label}" không nạp từ tệp được (source hay boolean)`);
+    }
+  }
+  if (!Number.isInteger(load.max_rows) || load.max_rows < 1 || load.max_rows > IMPORT_ROWS_CEILING) {
+    problems.push(`${at}: max_rows phải từ 1 tới ${IMPORT_ROWS_CEILING}`);
+  }
+  if (load.unique !== undefined && !fields.some((field) => field.name === load.unique)) {
+    problems.push(`${at}: unique "${load.unique}" không phải trường của biểu mẫu`);
+  }
+  return problems;
+}
+
 /** Nút trỏ tới trường chưa khai thì biến của quy trình nhận giá trị trống; báo ngay thay vì đợi người dùng bấm. */
 function actionProblems(config: CatalogNode, names: string[]): string[] {
   const problems: string[] = [];
@@ -210,7 +250,9 @@ export function configProblems(config: CatalogNode): string[] {
     if (ids.indexOf(id) !== ids.lastIndexOf(id)) problems.push(`hai loại đối tượng con cùng tên ngắn "${id}"`);
   }
   const nested = children.flatMap((child) =>
-    [...addProblems(config, child), ...configProblems(child)].map((p) => `${child.label}: ${p}`),
+    [...addProblems(config, child), ...importProblems(child), ...configProblems(child)].map(
+      (p) => `${child.label}: ${p}`,
+    ),
   );
   return [...problems, ...nested];
 }

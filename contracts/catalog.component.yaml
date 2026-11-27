@@ -4,9 +4,11 @@
 # Bản mô tả thành phần danh mục theo contracts/component.schema.json; `make check-fast` kiểm tệp này.
 # Mã của thành phần ở platform/web/src/ (Catalog.tsx, CatalogRecord.tsx, CatalogTable.tsx, CatalogRows.tsx,
 # CatalogActions.tsx, catalog.ts, catalogQuery.ts; phần tài liệu ở CatalogDocuments.tsx; nút sửa và thêm dòng con ở
-# CatalogForm.tsx; Kanban, Lịch ở CatalogKanban.tsx, CatalogCalendar.tsx, catalogViews.ts). Mỗi dòng dưới đây đã được
-# chạy thử trên giao diện, trừ nút sửa và thêm dòng con (ADR 0054, mục Chưa kiểm) và Kanban, Lịch (ADR 0066, mục Chưa
-# kiểm); đổi hành vi của thành phần thì sửa tệp này trong cùng pull request.
+# CatalogForm.tsx; Kanban, Lịch ở CatalogKanban.tsx, CatalogCalendar.tsx, catalogViews.ts; nút nạp từ tệp ở
+# CatalogImport.tsx, CatalogImportPreview.tsx, catalogImport.ts, catalogImportFile.ts, catalogImportTemplate.ts). Mỗi
+# dòng dưới đây đã được chạy thử trên giao diện, trừ nút sửa và thêm dòng con (ADR 0054, mục Chưa kiểm), Kanban, Lịch
+# (ADR 0066, mục Chưa kiểm) và nút nạp từ tệp (ADR 0064, mục Chưa kiểm); đổi hành vi của thành phần thì sửa tệp này
+# trong cùng pull request.
 
 component: catalog
 summary: Danh sách và màn hình chi tiết của một loại đối tượng cùng các đối tượng con của nó, đọc qua GraphQL theo cấu hình của gói.
@@ -57,12 +59,23 @@ capabilities:
     của dòng cha (add.parent, bỏ trống là tiêu đề). Biểu mẫu theo contracts/form.schema.json, khai ngay trong cấu
     hình danh mục. Nút chỉ hiện khi token có vai trò form.role (bỏ trống là user). Lưu được thì hộp đóng, hiện
     done.message và đọc lại dòng hay bảng con (ADR 0054).
+  - Nút nạp từ tệp (import của đối tượng con) đứng cạnh nút thêm dòng con, mở hộp thoại để tải tệp mẫu .xlsx sinh từ
+    các trường của biểu mẫu (trang dữ liệu chỉ có dòng tiêu đề, trang hướng dẫn ghi kiểu, giới hạn, giá trị được nhận
+    của từng cột); chọn tệp .xlsx hay CSV UTF-8 (có hoặc không BOM, dấu phẩy hay chấm phẩy). Tiêu đề cột khớp theo
+    nhãn hay tên trường; ô số, ô ngày của Excel đọc theo kiểu Excel, số gõ dạng chữ nhận dấu phẩy thập phân, ngày gõ
+    dạng ngày/tháng/năm, lựa chọn nhận nhãn hay giá trị. Mỗi dòng kiểm như biểu mẫu nhập tay; trường unique kiểm trùng
+    trong tệp và với dòng con đã có của dòng cha. Xem trước ghi lỗi bằng chữ theo dòng (số dòng của bảng tính) và cột.
+    Không còn lỗi thì mọi dòng gửi trong một lệnh thêm bằng vai trò của biểu mẫu, cột via mang khóa của dòng cha;
+    Hasura chạy lệnh trong một giao dịch nên lỗi ở một dòng thì không dòng nào được thêm (ADR 0064).
   - Phần tài liệu đính kèm của dòng đang xem (detail.documents, ở mọi cấp cha–con) để xem, tải xuống, đính kèm tệp;
     năng lực và giới hạn ở contracts/documents.component.yaml (ADR 0041).
   - Nơi gọi chỉ đưa cấu hình và địa chỉ gốc; thành phần không cần menu, bảng hay cấu hình nào khác của hệ thống.
 limits:
   - Không xóa dòng. Chỉ sửa dòng đang xem và thêm dòng con của dòng đang xem; danh sách ngoài cùng không có nút thêm
     dòng. Việc ghi khác là khởi tạo quy trình bằng nút gói khai và đính kèm tệp ở phần tài liệu.
+  - Nạp từ tệp chỉ thêm dòng mới, không sửa dòng đã có; tối đa max_rows dòng (trần 1.000) và 5 MB mỗi tệp; chỉ trang
+    đầu của tệp .xlsx được đọc; không nhận .xls, trường chọn từ bảng (source) hay kiểu boolean. Tệp .xlsx có phần nén
+    giải ra từ 512 KB bị từ chối, vì thư viện giải nén phần đó trong Web Worker mà CSP của giao diện chặn.
   - Nút sửa, nút thêm hiện cho mọi token có vai trò của biểu mẫu, kể cả người mà quyền theo dòng của Hasura không cho
     ghi dòng đó; lần lưu của họ không khớp dòng nào hay bị từ chối, và được báo bằng lời.
   - Mỗi danh sách đọc một bảng; không hiện cột của bảng khác, kể cả tên của đối tượng cha. Cột qua quan hệ chỉ hiện ở

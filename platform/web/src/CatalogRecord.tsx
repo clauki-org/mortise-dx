@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Màn hình chi tiết của thành phần danh mục: mọi trường của một dòng theo thứ tự gói khai, xếp thành lưới ô (ADR
-// 0050), bảng của từng loại đối tượng con (detail.children) kèm nút thêm dòng con, nút sửa dòng (detail.edit, ADR
-// 0054), nút khởi tạo quy trình (detail.actions), tài liệu đính kèm (detail.documents) và đường về các đối tượng cha. Catalog.tsx mở màn hình này sau khi đã kiểm cấu hình và đọc đường dẫn thành các chặng
+// 0050), bảng của từng loại đối tượng con (detail.children) kèm nút thêm dòng con và nút nạp từ tệp (ADR 0064), nút
+// sửa dòng (detail.edit, ADR 0054), nút khởi tạo quy trình (detail.actions), tài liệu đính kèm (detail.documents) và
+// đường về các đối tượng cha. Catalog.tsx mở màn hình này sau khi đã kiểm cấu hình và đọc đường dẫn thành các chặng
 // từ đối tượng ngoài cùng tới dòng đang xem.
 
 import { Alert, Anchor, Box, Breadcrumbs, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
@@ -13,6 +14,7 @@ import { useQuery } from "urql";
 import { CatalogActions } from "./CatalogActions";
 import { CatalogDocuments } from "./CatalogDocuments";
 import { CatalogForm } from "./CatalogForm";
+import { CatalogImport } from "./CatalogImport";
 import { CellValue } from "./CatalogRows";
 import { CatalogTable } from "./CatalogTable";
 import {
@@ -57,14 +59,26 @@ function Children({ child, path, parentKey, parent }: ChildrenProps) {
         <Title order={2} size="h4">
           {child.label}
         </Title>
-        {child.add && (
-          <CatalogForm
-            label={child.add.label}
-            form={child.add.form}
-            target={{ kind: "insert", via: child.via, parentKey, shown: parent }}
-            onSaved={() => setAdded((count) => count + 1)}
-          />
-        )}
+        <Group align="flex-start">
+          {child.import && (
+            <CatalogImport
+              id={child.id}
+              config={child.import}
+              table={child.source}
+              via={child.via}
+              parentKey={parentKey}
+              onSaved={() => setAdded((count) => count + 1)}
+            />
+          )}
+          {child.add && (
+            <CatalogForm
+              label={child.add.label}
+              form={child.add.form}
+              target={{ kind: "insert", via: child.via, parentKey, shown: parent }}
+              onSaved={() => setAdded((count) => count + 1)}
+            />
+          )}
+        </Group>
       </Group>
       <CatalogTable
         key={added}

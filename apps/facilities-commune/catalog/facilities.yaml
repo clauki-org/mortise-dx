@@ -6,10 +6,10 @@
 # hasura/tables.yaml (<lược đồ>_<bảng>); cột khai ở đây phải nằm trong quyền đọc của vai trò `user` ở tệp đó.
 # Khóa của cơ sở và tòa là id vì bảng con nối về cha bằng uuid (facility_id, building_id). Nút "Lập hồ sơ rà soát"
 # mở quy trình bpmn/facilities-review.bpmn20.xml cho cơ sở đang xem (ADR 0026).
-# Nút "Sửa" và "Thêm tòa", "Thêm phòng" mở biểu mẫu khai ngay trong tệp này (ADR 0054), gửi bằng vai trò user: quyền
-# insert, update của vai trò đó ở hasura/tables.yaml chỉ cho cán bộ phụ trách (custodian) của cơ sở ghi, nên người
-# duyệt cũng thấy nút nhưng lệnh của họ không khớp dòng nào và được báo. updated_at do trigger của
-# 20261127180000_row_updated_at.sql đặt; biểu mẫu sửa so cột này để không ghi đè lần sửa của người khác.
+# Nút "Sửa" và "Thêm tòa", "Thêm phòng", "Nạp từ tệp" mở biểu mẫu khai ngay trong tệp này (ADR 0054, 0064), gửi bằng
+# vai trò user: quyền insert, update của vai trò đó ở hasura/tables.yaml chỉ cho cán bộ phụ trách (custodian) của cơ
+# sở ghi, nên người duyệt cũng thấy nút nhưng lệnh của họ không khớp dòng nào hay bị từ chối, và được báo. updated_at
+# do trigger của 20261127180000_row_updated_at.sql đặt; biểu mẫu sửa so cột này để không ghi đè lần sửa của người khác.
 
 title: Cơ sở nhà, đất
 source: app_facilities_commune_facilities
@@ -179,6 +179,19 @@ detail:
                     help: Đo lọt lòng tường, đơn vị m², tối đa hai chữ số thập phân.
                 submit: { label: Thêm, insert: app_facilities_commune_rooms }
                 done: { message: Đã thêm phòng. }
+            # Nạp danh sách phòng của tòa từ tệp Excel hay CSV (ADR 0064), cùng trường và luật với "Thêm phòng". Mã
+            # phòng không được trùng trong tệp hay với phòng đã có của tòa, như UNIQUE (tenant_id, building_id, code)
+            # của bảng. Tòa có hơn 200 phòng thì nạp thành nhiều tệp.
+            import:
+              label: Nạp từ tệp
+              max_rows: 200
+              unique: code
+              form:
+                title: Nạp phòng từ tệp
+                role: user
+                fields: *room_fields
+                submit: { label: Nạp, insert: app_facilities_commune_rooms }
+                done: { message: Đã nạp phòng. }
             detail:
               title: name
               edit:
