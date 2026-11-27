@@ -8,7 +8,7 @@
 import { namedFlavor } from "@protomaps/basemaps";
 import type { Protocol } from "pmtiles";
 import { describe, expect, it, vi } from "vitest";
-import { basemapLayers, basemapStyle, loadBasemap, parseBasemap } from "./basemap";
+import { basemapLayers, basemapStyle, inExtent, loadBasemap, parseBasemap } from "./basemap";
 
 const respond = (body: string, contentType: string, status = 200): typeof fetch =>
   vi.fn(async () => new Response(body, { status, headers: { "content-type": contentType } }));
@@ -62,6 +62,15 @@ describe("basemapStyle", () => {
     for (const layer of symbols) expect(layer.layout?.["icon-image"]).toBeUndefined();
     expect(style.glyphs).toBe("https://mortise.example/basemap/fonts/{fontstack}/{range}.pbf");
     expect(style).not.toHaveProperty("sprite");
+  });
+});
+
+describe("inExtent", () => {
+  it("chỉ nhận tọa độ trong vùng đã cắt, kể cả trên cạnh", () => {
+    const extent: [number, number, number, number] = [106.37, 20.405, 106.46, 20.475];
+    expect(inExtent(extent, 106.4, 20.44)).toBe(true);
+    expect(inExtent(extent, 106.46, 20.475)).toBe(true);
+    expect(inExtent(extent, 0.25, 0.5)).toBe(false);
   });
 });
 

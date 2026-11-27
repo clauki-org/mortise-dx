@@ -3,7 +3,7 @@
 #
 # Nguồn của nền bản đồ mà `make basemap` (scripts/basemap.sh) tải lúc cài, ADR 0056. Mỗi dòng TÊN=giá trị.
 # - SOURCE: bản dựng theo ngày của Protomaps (dữ liệu OpenStreetMap, ODbL), chỉ đọc phần của vùng bằng yêu cầu Range.
-# - BBOX, MINZOOM, MAXZOOM: vùng và mức phóng mặc định, là vùng của dữ liệu demo (ADR 0020). Bản cài thật đặt vùng
+# - BBOX, MINZOOM, MAXZOOM: vùng và mức phóng mặc định, là vùng mà dữ liệu demo dùng (#226). Bản cài thật đặt vùng
 #   của mình bằng BBOX=... khi gọi lệnh.
 # - SHA256: băm của tệp cắt ra với đúng SOURCE, BBOX, MINZOOM, MAXZOOM và image go-pmtiles trong compose.yaml; cắt hai
 #   lần ra cùng một tệp (thử ngày 2026-11-27). Đổi một trong các giá trị đó thì băm đổi, phải ghi lại.

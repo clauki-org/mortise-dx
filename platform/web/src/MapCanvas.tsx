@@ -19,7 +19,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Protocol } from "pmtiles";
 import { useEffect, useRef, useState } from "react";
-import { type LoadedBasemap, loadBasemap } from "./basemap";
+import { inExtent, type LoadedBasemap, loadBasemap } from "./basemap";
 import type { Point } from "./mapConfig";
 import { ErrorNotice, Loading } from "./States";
 
@@ -132,13 +132,17 @@ export default function MapCanvas({ points, selected, onSelect }: Props) {
     };
   }, [map, points, selected, onSelect]);
 
-  // Chỉ căn khung khi tập điểm đổi, không căn lại khi người xem chọn một điểm sau khi đã kéo, phóng bản đồ.
+  // Chỉ căn khung khi tập điểm đổi, không căn lại khi người xem chọn một điểm sau khi đã kéo, phóng bản đồ. Có nền thì
+  // chỉ căn theo điểm trong vùng đã cắt: bản đồ không thu nhỏ được dưới mức thấp nhất của nền, nên căn cả một điểm ở xa
+  // sẽ đặt khung vào chỗ trống, không thấy điểm nào. Điểm ngoài vùng vẫn có trong danh sách điểm.
   useEffect(() => {
     if (!map || points.length === 0) return;
+    const extent = basemap?.extent;
+    const inside = extent ? points.filter((point) => inExtent(extent, point.longitude, point.latitude)) : points;
     const bounds = new LngLatBounds();
-    for (const point of points) bounds.extend([point.longitude, point.latitude]);
+    for (const point of inside.length > 0 ? inside : points) bounds.extend([point.longitude, point.latitude]);
     map.fitBounds(bounds, { padding: 48, maxZoom: 14, animate: false });
-  }, [map, points]);
+  }, [map, points, basemap]);
 
   if (failure !== undefined) {
     return (
@@ -173,7 +177,13 @@ function Attribution() {
       style={{ borderTopLeftRadius: 4 }}
     >
       ©{" "}
-      <Anchor href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" inherit>
+      <Anchor
+        href="https://www.openstreetmap.org/copyright"
+        target="_blank"
+        rel="noreferrer"
+        underline="always"
+        inherit
+      >
         OpenStreetMap
       </Anchor>{" "}
       (ODbL)

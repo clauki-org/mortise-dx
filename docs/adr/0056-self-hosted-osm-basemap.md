@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 - Trạng thái: Chấp nhận
 - Ngày: 2026-11-27
-- Sửa: [ADR 0024](0024-map-component.md) (phần nền trơn)
+- Sửa đổi: [ADR 0024](0024-map-component.md) (phần nền trơn)
 
 ## Bối cảnh
 
@@ -47,7 +47,7 @@ Kiểu vẽ đã xét: viết tay một kiểu tối thiểu, hay dùng gói `@p
   - Vùng khác vùng ghim: `make basemap BBOX=... SHA256=...`; lần đầu không có băm thì lệnh cắt, in băm rồi dừng, để
     người vận hành kiểm tệp trước khi ghim.
   - `LABELS=on` tải thêm phông Noto Sans dạng glyph PBF (OFL-1.1) từ gói mã nguồn của kho `protomaps/basemaps-assets`
-    tại một commit ghim, kiểm SHA-256, chỉ giải nén ba bộ phông kiểu vẽ dùng và giấy phép.
+    tại một commit ghim, kiểm SHA-256, giải nén vào thư mục tạm và chỉ giữ ba bộ phông kiểu vẽ dùng cùng giấy phép.
 - **Phục vụ cùng origin:** compose gắn thư mục đó vào `/usr/share/nginx/html/basemap` của web, chỉ đọc; nginx có
   `location /basemap/` trả 404 khi thiếu tệp (không rơi xuống `index.html`), không giữ trong bộ nhớ đệm. Tile đọc bằng
   yêu cầu Range qua `connect-src 'self'`, phông qua `default-src 'self'`: CSP không đổi. `scripts/compose.sh up` tạo
@@ -62,10 +62,10 @@ Kiểu vẽ đã xét: viết tay một kiểu tối thiểu, hay dùng gói `@p
 - **Ghi nguồn:** có nền thì góc bản đồ luôn có dòng "© OpenStreetMap (ODbL)" là chữ của trang, liên kết tới trang bản
   quyền của OpenStreetMap; không dùng nút ghi nguồn của MapLibre vì nút đó thu thành biểu tượng ở màn hình hẹp và nhận
   HTML.
-- **Vùng mặc định** là vùng của dữ liệu demo: `106.37,20.405,106.46,20.475`, mức phóng 12 tới 15, một vùng nông thôn
+- **Vùng mặc định** là vùng mà dữ liệu demo dùng (#226): `106.37,20.405,106.46,20.475`, mức phóng 12 tới 15, một vùng nông thôn
   đồng bằng khoảng 9 × 8 km, có đường liên xã, kênh và một sông nhỏ uốn khúc, xóm dọc đường, ruộng. Chọn vì ít người
   biết và không có công trình nổi bật; khung dừng ở phía bắc một thị trấn và phía nam một con sông lớn gần đó. Ranh
-  giới, tên xã và vị trí trụ sở trên vùng này là hư cấu ([ADR 0020](0020-facility-locations.md)).
+  giới, tên xã và vị trí trụ sở mà #226 đặt trên vùng này là hư cấu ([ADR 0020](0020-facility-locations.md)).
 
 Đã chạy thử ngày 2026-11-27:
 
@@ -86,7 +86,7 @@ Kiểu vẽ đã xét: viết tay một kiểu tối thiểu, hay dùng gói `@p
   pull request, kèm ngày kiểm.
 - **Hình dạng thật vẫn nhận ra được.** Không có chữ, nhưng sông, đường và khu dân cư là của một nơi có thật; người
   quen vùng có thể nhận ra, nhất là khi thu nhỏ tới mức 12 (thấy thêm mép một thành phố và một con sông lớn ở phía
-  tây bắc). Vì vậy tên, ranh giới và vị trí trên nền chỉ là hư cấu và bản đồ ghi rõ điều đó (ADR 0020).
+  tây bắc). Vì vậy tên, ranh giới và vị trí demo trên nền phải là hư cấu, và bản đồ của gói ghi rõ điều đó (#226).
 - **ODbL:** tệp cắt ra là một cơ sở dữ liệu phái sinh của OpenStreetMap; chia sẻ lại tệp đó thì theo ODbL. Repo không
   chứa tệp nào; ghi nguồn luôn hiện khi dùng nền.
 - Image của `web` không đổi; thêm một thư mục gắn vào và một dịch vụ công cụ chỉ chạy khi gọi. Hai thư viện mới chỉ

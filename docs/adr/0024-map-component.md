@@ -32,7 +32,8 @@ Nguồn nền đã xét:
 ## Quyết định
 
 - **Nền trơn.** Một lớp nền một màu lấy từ theme, không tải ảnh hay dữ liệu bản đồ từ máy chủ nào. Thêm nguồn nền là
-  một quyết định sau, kèm cách cấu hình CSP theo bản cài.
+  một quyết định sau, kèm cách cấu hình CSP theo bản cài. Được sửa theo [ADR 0056](0056-self-hosted-osm-basemap.md):
+  bản cài chạy `make basemap` có nền OpenStreetMap dạng PMTiles cùng origin, CSP không đổi; chưa có thì vẫn nền trơn.
 - **MapLibre GL JS 6.18.0 (BSD-3-Clause)** dùng trực tiếp, không qua lớp bọc React. Mã của nó chỉ được nạp khi mở
   trang bản đồ.
 - **Worker của MapLibre chạy cùng origin.** Vite build tệp worker của MapLibre thành một module ES trong `assets/`,

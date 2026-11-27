@@ -70,10 +70,13 @@ if [[ "$labels" == on ]]; then
   curl -fsSL --retry 2 -o "$staging/fonts.tar.gz" "$fonts_url" || fail "Không tải được phông chữ từ $fonts_url."
   got=$(sha256sum "$staging/fonts.tar.gz" | cut -d' ' -f1)
   [[ "$got" == "$(pin FONTS_SHA256)" ]] || fail "SHA-256 của gói phông là $got, khác băm ghim; không dùng gói này."
-  # Chỉ lấy ba bộ phông mà kiểu vẽ dùng và giấy phép của chúng; không lấy script hay tệp khác trong gói.
-  tar -xzf "$staging/fonts.tar.gz" -C "$staging" --strip-components=1 --no-same-owner --no-same-permissions \
-    --wildcards '*/fonts/Noto Sans Regular/*' '*/fonts/Noto Sans Medium/*' '*/fonts/Noto Sans Italic/*' \
-    '*/fonts/OFL.txt'
+  # Giải nén cả gói vào thư mục tạm (GNU tar và bsdtar của macOS cùng hiểu cách gọi này), rồi chỉ giữ ba bộ phông mà
+  # kiểu vẽ dùng và giấy phép của chúng; script và tệp khác của gói không vào thư mục web phục vụ.
+  mkdir "$staging/assets" "$staging/fonts"
+  tar -xzf "$staging/fonts.tar.gz" -C "$staging/assets"
+  for font in "Noto Sans Regular" "Noto Sans Medium" "Noto Sans Italic" OFL.txt; do
+    mv "$staging"/assets/*/fonts/"$font" "$staging/fonts/" || fail "Gói phông thiếu $font; kiểm FONTS trong $pins."
+  done
 fi
 
 printf '{"tiles": "region.pmtiles", "labels": %s}\n' "$([[ "$labels" == on ]] && echo true || echo false)" \

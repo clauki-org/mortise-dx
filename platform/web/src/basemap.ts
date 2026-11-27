@@ -12,8 +12,11 @@ import { PMTiles, type Protocol, TileType } from "pmtiles";
 /** Nội dung basemap.json do `make basemap` ghi: tên tệp PMTiles trong /basemap/ và có hiện chữ địa danh hay không. */
 export type Basemap = { tiles: string; labels: boolean };
 
-/** Kiểu vẽ và mức phóng nhỏ nhất có dữ liệu, đọc từ phần đầu của tệp PMTiles. */
-export type LoadedBasemap = { style: StyleSpecification; minZoom: number; center: [number, number] };
+/** [kinh độ nhỏ nhất, vĩ độ nhỏ nhất, kinh độ lớn nhất, vĩ độ lớn nhất] của vùng đã cắt. */
+export type Extent = [number, number, number, number];
+
+/** Kiểu vẽ, mức phóng nhỏ nhất có dữ liệu và vùng đã cắt, đọc từ phần đầu của tệp PMTiles. */
+export type LoadedBasemap = { style: StyleSpecification; minZoom: number; center: [number, number]; extent: Extent };
 
 export const BASEMAP_DIR = "/basemap/";
 
@@ -27,6 +30,10 @@ const TILES = /^[A-Za-z0-9][A-Za-z0-9._-]*\.pmtiles$/;
 // Lớp dữ liệu luôn ẩn. Khối nhà: điểm của gói phải nằm trên nền không chỉ ra được công trình có thật nào. Ranh giới
 // hành chính: gói tự vẽ ranh giới của mình (ADR 0020), hai bộ ranh giới chồng nhau thì người xem không biết tin bộ nào.
 const HIDDEN_SOURCE_LAYERS = new Set(["buildings", "boundaries"]);
+
+/** Một tọa độ nằm trong vùng đã cắt hay không. */
+export const inExtent = ([minLon, minLat, maxLon, maxLat]: Extent, longitude: number, latitude: number) =>
+  longitude >= minLon && longitude <= maxLon && latitude >= minLat && latitude <= maxLat;
 
 /** Đọc basemap.json; sai một trường là bỏ cả tệp, bản đồ dùng nền trơn. */
 export function parseBasemap(value: unknown): Basemap | null {
@@ -98,6 +105,7 @@ export async function loadBasemap(protocol: Protocol, fetcher: typeof fetch = fe
       style: basemapStyle(basemap, origin),
       minZoom: header.minZoom,
       center: [header.centerLon, header.centerLat],
+      extent: [header.minLon, header.minLat, header.maxLon, header.maxLat],
     };
   } catch (error) {
     console.warn("Không đọc được nền bản đồ; vẽ nền trơn.", error);

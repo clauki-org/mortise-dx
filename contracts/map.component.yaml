@@ -26,6 +26,7 @@ capabilities:
 limits:
   - Chỉ đọc; không thêm, sửa hay di chuyển điểm.
   - Nền chỉ có vùng mà bản cài đã cắt; ngoài vùng đó là nền trống. Cấu hình của gói không chọn hay đổi nền.
+  - Có nền thì khung chỉ căn theo các điểm nằm trong vùng đã cắt; điểm ở ngoài vẫn có trong danh sách nhưng có thể nằm ngoài khung. Không thu nhỏ được dưới mức phóng thấp nhất của nền, nên màn hình hẹp có thể không thấy hết mọi điểm cùng lúc.
   - Chỉ có điểm; không vẽ đường, vùng hay cụm điểm.
   - Mỗi lớp tối đa limit dòng (mặc định 200, trần 1000); lớp nhiều dòng hơn chỉ hiện các dòng đầu theo thứ tự tên (title) rồi các cột còn lại, và báo ra.
   - Lọc chỉ theo một cột bằng một giá trị; không có ô lọc hay tìm cho người xem.
