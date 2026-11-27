@@ -11,7 +11,7 @@ SHELL := /bin/sh
 export MORTISE_VENVS ?= $(HOME)/.cache/mortise-dx
 
 .PHONY: help env up down reset ps logs seed smoke migrate-new migrate-status backup restore lint test contracts \
-  check-fast deps-check web-check overrides-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-check app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up basemap \
+  check-fast deps-check web-check overrides-check e2e audit-verify seal-verify backup-under-load files-verify hooks heal-check restore-drill app-install app-check app-uninstall app-status app-smoke otp device-add device-remove simulate archive cold-query cold-verify seed-demo ai-up assistant-eval basemap \
   obs-up obs-down obs-check tenant-login
 
 help: ## Liệt kê các lệnh
@@ -78,6 +78,12 @@ simulate: ## Chạy bộ giả lập thiết bị demo, gửi số đo mỗi 5 g
 
 ai-up: env ## Chạy Ollama (profile ai), tải mô hình ghim trong core/ollama/models.txt và kiểm digest; lần đầu cần mạng
 	@scripts/ai.sh
+
+# Đo trợ lý hỏi văn bản bằng bộ câu hỏi có đáp án của gói (docs/assistant-eval.md); câu tới mô hình chờ từng câu một.
+# ONLY=<mã,...> chạy một phần, kết quả ghi là không đủ bộ.
+assistant-eval: ## Đo trợ lý hỏi văn bản trên lõi đang chạy: make assistant-eval [APP=facilities-commune] [ONLY=<mã câu,...>] [OUT=<thư mục>]
+	@uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/assistant-eval.py \
+	  apps/$(or $(APP),facilities-commune)/tests/assistant-questions.yaml $(if $(ONLY),--only "$(ONLY)") $(if $(OUT),--out "$(OUT)")
 
 basemap: env ## Cắt nền bản đồ OpenStreetMap của vùng ghim (hay BBOX=...), kiểm SHA-256, đặt cho web; LABELS=on hiện chữ; lần đầu cần mạng
 	@BBOX="$(BBOX)" MINZOOM="$(MINZOOM)" MAXZOOM="$(MAXZOOM)" SHA256="$(SHA256)" LABELS="$(LABELS)" scripts/basemap.sh
@@ -182,6 +188,7 @@ check-fast: lint ## Giấy phép, cú pháp compose, shell, YAML, Python, hợp 
 	uvx ruff==0.17.6 format --no-cache --check --config core/workflow-api/pyproject.toml scripts apps
 	@scripts/contracts.sh check
 	uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py lint
+	uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/assistant-eval.py --check apps/*/tests/assistant-questions.yaml
 	$(if $(DECLARATIVE_APPS),@scripts/check-declarative.sh $(DECLARATIVE_APPS))
 	@# Ghim phiên bản và giấy phép phụ thuộc, không hỏi registry (ADR 0039); để cuối để các bước trên vẫn báo kết quả.
 	@python3 scripts/deps-check.py --offline

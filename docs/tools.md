@@ -286,7 +286,8 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   (`ASSISTANT_LLM_*` trong `.env`) gọi `{địa chỉ}/chat/completions` với JSON Schema; khai thiếu thì 503 chỉ biến
   còn thiếu. Dữ liệu gửi ra ngoài khi đó: bổ sung của [ADR 0021](adr/0021-document-assistant.md).
 - **Xem:** `make test` (mô hình giả, bảng ca của guard); `make smoke` kiểm cả khi Ollama tắt và khi đang chạy, và
-  kiểm guard trên mục mẫu `/apps/core/ask-data-example`.
+  kiểm guard trên mục mẫu `/apps/core/ask-data-example`; `make assistant-eval` đo trích đúng, từ chối đúng và độ
+  trễ trên bộ câu hỏi của gói ([docs/assistant-eval.md](assistant-eval.md)).
 
 ## Giám sát (profile `observability`, tùy chọn)
 

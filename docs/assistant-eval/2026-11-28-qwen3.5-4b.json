@@ -1,0 +1,858 @@
+{
+  "meta": {
+    "date": "2026-11-28T01:13:28+07:00",
+    "complete": true,
+    "question_set": "apps/facilities-commune/tests/assistant-questions.yaml",
+    "question_set_sha256": "c5a863c2263b4f67df7674a90c8863138aa0b0c03f3f64642afa8ef410e15690",
+    "commit": "a8ef49d",
+    "models": [
+      {
+        "host": null,
+        "location": "local",
+        "name": "qwen3.5:4b",
+        "provider": "ollama"
+      }
+    ],
+    "pinned_model": "qwen3.5:4b sha256:a9d0a3e1d8c91732a3812becd31f8d4a8ff57414903f226306069f0437e2ac50",
+    "machine": {
+      "cpu": "Intel(R) Core(TM) 7 240H",
+      "cpus": 16,
+      "ram_gib": 30.4,
+      "os": "Linux 7.0.0-44-generic"
+    },
+    "service_settings": "ASSISTANT_MIN_SCORE=0.35, ASSISTANT_TOP_PASSAGES=4, ASSISTANT_NUM_PREDICT=400, ASSISTANT_TIMEOUT_SECONDS=150"
+  },
+  "summary": {
+    "citation_correct": 15,
+    "answerable": 28,
+    "number_correct": 6,
+    "number_questions": 11,
+    "refusal_correct": 6,
+    "out_of_scope": 6,
+    "failed": 4,
+    "errors": 0,
+    "refused_by": {
+      "retrieval": 7,
+      "model": 0,
+      "verify": 2
+    },
+    "by_kind": {
+      "direct": {
+        "correct": 10,
+        "failed": 4,
+        "refused": 2,
+        "total": 16
+      },
+      "paraphrase": {
+        "refused": 6,
+        "total": 6
+      },
+      "superseded": {
+        "correct": 5,
+        "refused": 1,
+        "total": 6
+      },
+      "out-of-scope": {
+        "correct": 6,
+        "total": 6
+      }
+    },
+    "latency_all_s": {
+      "count": 34,
+      "median": 11.1,
+      "p90": 56.7
+    },
+    "latency_model_s": {
+      "count": 22,
+      "median": 17.6,
+      "p90": 57.6
+    }
+  },
+  "results": [
+    {
+      "id": "excess-threshold",
+      "kind": "direct",
+      "question": "Phần diện tích lớn hơn so với tiêu chuẩn, định mức vượt quá bao nhiêu m² thì cơ quan tiếp nhận phải đăng tải thông tin?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-3"
+      ],
+      "numbers": [
+        "300"
+      ],
+      "refuse": false,
+      "http_status": 502,
+      "verdict": "failed",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [],
+      "answer": null,
+      "reason": "Mô hình dừng giữa chừng vì hết số token được sinh; người vận hành tăng ASSISTANT_NUM_PREDICT trong compose.yaml rồi chạy make up.",
+      "model": null,
+      "seconds": 56.3
+    },
+    {
+      "id": "posting-period",
+      "kind": "direct",
+      "question": "Thời hạn đăng tải thông tin trên Cổng thông tin điện tử là bao nhiêu ngày?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-3"
+      ],
+      "numbers": [
+        "30"
+      ],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-3a-cl-3"
+      ],
+      "answer": "30 ngày",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 45.6
+    },
+    {
+      "id": "first-review",
+      "kind": "direct",
+      "question": "Kỳ rà soát đầu tiên được thực hiện khi nào?",
+      "expect": [
+        "nd-369-2026/art-3b-cl-1"
+      ],
+      "numbers": [
+        "2027"
+      ],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-3b-cl-1"
+      ],
+      "answer": "Kỳ rà soát đầu tiên được thực hiện trong quý I năm 2027.",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 54.3
+    },
+    {
+      "id": "first-review-cutoff",
+      "kind": "direct",
+      "question": "Thời điểm chốt số liệu của kỳ rà soát đầu tiên là ngày nào?",
+      "expect": [
+        "nd-369-2026/art-3b-cl-1"
+      ],
+      "numbers": [
+        "2027"
+      ],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-3b-cl-1"
+      ],
+      "answer": "01 tháng 01 năm 2027",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 13.4
+    },
+    {
+      "id": "stability-period",
+      "kind": "direct",
+      "question": "Tiêu chuẩn, định mức trụ sở làm việc được xác định theo kỳ ổn định bao nhiêu năm?",
+      "expect": [
+        "nd-369-2026/art-3b-cl-1",
+        "nd-369-2026/art-3b-cl-4"
+      ],
+      "numbers": [
+        "5"
+      ],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-3b-cl-1"
+      ],
+      "answer": "05 năm",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 13.7
+    },
+    {
+      "id": "merger-review-deadline",
+      "kind": "direct",
+      "question": "Sau khi sáp nhập, cơ quan tiếp nhận phải rà soát trụ sở trong thời hạn bao lâu kể từ ngày tiếp nhận?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-1"
+      ],
+      "numbers": [
+        "6"
+      ],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-3a-cl-1"
+      ],
+      "answer": "06 tháng",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 15.4
+    },
+    {
+      "id": "transfer-review-deadline",
+      "kind": "direct",
+      "question": "Điều chuyển trụ sở do thay đổi cơ quan quản lý thì cơ quan tiếp nhận phải rà soát trong thời hạn bao lâu?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-4"
+      ],
+      "numbers": [
+        "3"
+      ],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-3a-cl-4"
+      ],
+      "answer": "03 tháng",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 18.0
+    },
+    {
+      "id": "posting-content",
+      "kind": "direct",
+      "question": "Thông tin đăng tải về trụ sở làm việc cần nêu rõ những nội dung gì?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-3"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 502,
+      "verdict": "failed",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [],
+      "answer": null,
+      "reason": "Mô hình dừng giữa chừng vì hết số token được sinh; người vận hành tăng ASSISTANT_NUM_PREDICT trong compose.yaml rồi chạy make up.",
+      "model": null,
+      "seconds": 69.0
+    },
+    {
+      "id": "no-taker",
+      "kind": "direct",
+      "question": "Hết thời hạn đăng tải mà không có đơn vị có nhu cầu tiếp nhận phù hợp thì xử lý thế nào?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-3",
+        "nd-369-2026/art-3b-cl-3"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 502,
+      "verdict": "failed",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [],
+      "answer": null,
+      "reason": "Mô hình dừng giữa chừng vì hết số token được sinh; người vận hành tăng ASSISTANT_NUM_PREDICT trong compose.yaml rồi chạy make up.",
+      "model": null,
+      "seconds": 56.3
+    },
+    {
+      "id": "stable-area",
+      "kind": "direct",
+      "question": "Diện tích được ổn định trong kỳ bao gồm những phần nào?",
+      "expect": [
+        "nd-369-2026/art-3b-cl-2"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-3b-cl-2"
+      ],
+      "answer": "Diện tích được ổn định trong kỳ là toàn bộ diện tích trụ sở làm việc, cơ sở hoạt động sự nghiệp được cơ quan, người có thẩm quyền quyết định giao quản lý, sử dụng, bao gồm: a) Diện tích theo tiêu chuẩn, định mức quy định tại Nghị định này; b) Phần diện tích lớn hơn so với tiêu chuẩn, định mức đã được cơ quan, người có thẩm quyền quyết định cho phép tiếp tục quản lý, sử dụng theo quy định tại Điều 3a và Điều này.",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 17.2
+    },
+    {
+      "id": "stability-exceptions",
+      "kind": "direct",
+      "question": "Những trường hợp nào thì diện tích của cơ quan không được ổn định trong 05 năm?",
+      "expect": [
+        "nd-369-2026/art-3b-cl-4"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-3b-cl-4"
+      ],
+      "answer": "Sắp xếp tổ chức bộ máy, sắp xếp đơn vị hành chính theo quyết định của cấp có thẩm quyền; Thay đổi chức năng, nhiệm vụ, cơ cấu tổ chức làm thay đổi tiêu chuẩn, định mức; Phát sinh yêu cầu đặc thù về nhiệm vụ, chuyển đổi số, chuyển đổi công năng, bảo đảm quốc phòng, an ninh, bảo mật hoặc an toàn thông tin làm thay đổi nhu cầu sử dụng diện tích; Có cơ quan, tổ chức, đơn vị có nhu cầu tiếp nhận phù hợp và có văn bản đề nghị tiếp nhận phần diện tích vượt tiêu chuẩn, định mức.",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 23.2
+    },
+    {
+      "id": "request-content",
+      "kind": "direct",
+      "question": "Văn bản đề nghị của đơn vị có nhu cầu tiếp nhận phải thuyết minh rõ những gì?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-3"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "refused",
+      "refused_by": "verify",
+      "model_called": true,
+      "cited": [],
+      "answer": null,
+      "reason": "Câu trả lời không qua bước kiểm: Câu trả lời có số không có trong câu được trích (1, 11, 12).",
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 62.2
+    },
+    {
+      "id": "office-room",
+      "kind": "direct",
+      "question": "Phòng làm việc quy định tại Nghị định là phòng theo thiết kế hay theo cơ cấu tổ chức?",
+      "expect": [
+        "nd-155-2025/art-3-cl-4"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-155-2025/art-3-cl-4"
+      ],
+      "answer": "theo thiết kế",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 4.6
+    },
+    {
+      "id": "standard-purpose",
+      "kind": "direct",
+      "question": "Tiêu chuẩn, định mức sử dụng trụ sở làm việc được dùng làm căn cứ để làm gì?",
+      "expect": [
+        "nd-155-2025/art-3-cl-1"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-155-2025/art-3-cl-1"
+      ],
+      "answer": "lập kế hoạch và dự toán ngân sách",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 6.1
+    },
+    {
+      "id": "effective-date",
+      "kind": "direct",
+      "question": "Nghị định 369/2026/NĐ-CP có hiệu lực thi hành từ ngày nào?",
+      "expect": [
+        "nd-369-2026/art-11-cl-1"
+      ],
+      "numbers": [
+        "11",
+        "2026"
+      ],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "refused",
+      "refused_by": "verify",
+      "model_called": true,
+      "cited": [],
+      "answer": null,
+      "reason": "Câu trả lời không qua bước kiểm: Câu trả lời có số không có trong câu được trích (369).",
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 6.4
+    },
+    {
+      "id": "under-threshold",
+      "kind": "direct",
+      "question": "Phần diện tích lớn hơn tiêu chuẩn, định mức không vượt quá 300 m² thì cơ quan tiếp nhận được xử lý thế nào?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-2",
+        "nd-369-2026/art-3a-cl-4",
+        "nd-369-2026/art-3b-cl-3"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 502,
+      "verdict": "failed",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [],
+      "answer": null,
+      "reason": "Mô hình dừng giữa chừng vì hết số token được sinh; người vận hành tăng ASSISTANT_NUM_PREDICT trong compose.yaml rồi chạy make up.",
+      "model": null,
+      "seconds": 56.7
+    },
+    {
+      "id": "everyday-publish-threshold",
+      "kind": "paraphrase",
+      "question": "Trụ sở dư hơn 300 m² so với tiêu chuẩn thì có phải công khai không?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-3",
+        "nd-369-2026/art-3a-cl-4",
+        "nd-369-2026/art-3b-cl-3"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "refused",
+      "refused_by": "retrieval",
+      "model_called": false,
+      "cited": [],
+      "answer": null,
+      "reason": "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời.",
+      "model": null,
+      "seconds": 0.0
+    },
+    {
+      "id": "everyday-publish-days",
+      "kind": "paraphrase",
+      "question": "Phải công khai thông tin trụ sở dư diện tích trong bao nhiêu ngày?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-3"
+      ],
+      "numbers": [
+        "30"
+      ],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "refused",
+      "refused_by": "retrieval",
+      "model_called": false,
+      "cited": [],
+      "answer": null,
+      "reason": "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời.",
+      "model": null,
+      "seconds": 0.0
+    },
+    {
+      "id": "everyday-publish-where",
+      "kind": "paraphrase",
+      "question": "Thông tin về trụ sở thừa diện tích phải đăng ở trang web nào?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-3"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "refused",
+      "refused_by": "retrieval",
+      "model_called": false,
+      "cited": [],
+      "answer": null,
+      "reason": "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời.",
+      "model": null,
+      "seconds": 0.0
+    },
+    {
+      "id": "everyday-merger-check",
+      "kind": "paraphrase",
+      "question": "Xã mới sáp nhập nhận trụ sở cũ thì bao lâu phải kiểm tra lại diện tích?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-1"
+      ],
+      "numbers": [
+        "6"
+      ],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "refused",
+      "refused_by": "retrieval",
+      "model_called": false,
+      "cited": [],
+      "answer": null,
+      "reason": "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời.",
+      "model": null,
+      "seconds": 0.0
+    },
+    {
+      "id": "everyday-review-cycle",
+      "kind": "paraphrase",
+      "question": "Bao lâu thì phải rà soát lại diện tích trụ sở một lần?",
+      "expect": [
+        "nd-369-2026/art-3b-cl-1"
+      ],
+      "numbers": [
+        "5"
+      ],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "refused",
+      "refused_by": "retrieval",
+      "model_called": false,
+      "cited": [],
+      "answer": null,
+      "reason": "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời.",
+      "model": null,
+      "seconds": 0.0
+    },
+    {
+      "id": "everyday-keep-small-excess",
+      "kind": "paraphrase",
+      "question": "Trụ sở thừa chưa tới 300 m² thì xã có được giữ lại dùng không?",
+      "expect": [
+        "nd-369-2026/art-3a-cl-2",
+        "nd-369-2026/art-3a-cl-4",
+        "nd-369-2026/art-3b-cl-3"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "refused",
+      "refused_by": "retrieval",
+      "model_called": false,
+      "cited": [],
+      "answer": null,
+      "reason": "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời.",
+      "model": null,
+      "seconds": 0.0
+    },
+    {
+      "id": "amended-several-posts",
+      "kind": "superseded",
+      "question": "Một người giữ nhiều chức danh, chức vụ thì được áp dụng tiêu chuẩn nào?",
+      "expect": [
+        "nd-369-2026/art-2-cl-1"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-2-cl-1"
+      ],
+      "answer": "áp dụng tiêu chuẩn, định mức cao nhất",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 12.9
+    },
+    {
+      "id": "amended-unlisted-posts",
+      "kind": "superseded",
+      "question": "Chức danh chưa được quy định cụ thể tại Phụ lục thì xác định tiêu chuẩn, định mức căn cứ vào đâu?",
+      "expect": [
+        "nd-369-2026/art-2-cl-1"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-2-cl-1"
+      ],
+      "answer": "căn cứ quy định, quyết định, kết luận hoặc thông báo của cơ quan, người có thẩm quyền về chức danh, chức vụ đó tương đương với chức danh, chức vụ nào quy định tại Phụ lục ban hành kèm theo Nghị định này hoặc tương đương nhóm, bậc nào tại Quy định số 368-QĐ/TW (được điều chỉnh theo Kết luận số 31-KL/TW) để xác định tiêu chuẩn, định mức diện tích làm việc tương ứng.",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 18.1
+    },
+    {
+      "id": "amended-structures",
+      "kind": "superseded",
+      "question": "Diện tích làm việc có tính diện tích của vật kiến trúc gắn liền với đất không?",
+      "expect": [
+        "nd-369-2026/art-2-cl-2"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-2-cl-2"
+      ],
+      "answer": "Không",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 9.2
+    },
+    {
+      "id": "amended-clear-dimension",
+      "kind": "superseded",
+      "question": "Diện tích làm việc được tính theo kích thước nào, có tính cầu thang và nhà để xe không?",
+      "expect": [
+        "nd-369-2026/art-2-cl-2"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-2-cl-2"
+      ],
+      "answer": "Diện tích làm việc được tính theo kích thước thông thủy, không bao gồm cầu thang, thang máy, thang thoát hiểm, ram dốc, nhà để xe.",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 11.2
+    },
+    {
+      "id": "amended-total-area",
+      "kind": "superseded",
+      "question": "Tiêu chuẩn, định mức để giao, điều chuyển được tính theo tổng diện tích của toàn bộ trụ sở hay từng trụ sở?",
+      "expect": [
+        "nd-369-2026/art-2-cl-2"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": null,
+      "model_called": true,
+      "cited": [
+        "nd-369-2026/art-2-cl-2"
+      ],
+      "answer": "tổng diện tích của toàn bộ trụ sở",
+      "reason": null,
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 11.0
+    },
+    {
+      "id": "repealed-clause-5",
+      "kind": "superseded",
+      "question": "Khoản 5 Điều 3 Nghị định 155/2025/NĐ-CP còn hiệu lực không?",
+      "expect": [
+        "nd-369-2026/art-10-cl-3"
+      ],
+      "numbers": [],
+      "refuse": false,
+      "http_status": 200,
+      "verdict": "refused",
+      "refused_by": "retrieval",
+      "model_called": false,
+      "cited": [],
+      "answer": null,
+      "reason": "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời.",
+      "model": null,
+      "seconds": 0.0
+    },
+    {
+      "id": "out-base-salary",
+      "kind": "out-of-scope",
+      "question": "Lương cơ sở hiện nay là bao nhiêu?",
+      "expect": [],
+      "numbers": [],
+      "refuse": true,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": "retrieval",
+      "model_called": false,
+      "cited": [],
+      "answer": null,
+      "reason": "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời.",
+      "model": null,
+      "seconds": 0.0
+    },
+    {
+      "id": "out-land-certificate",
+      "kind": "out-of-scope",
+      "question": "Thủ tục cấp sổ đỏ cho hộ gia đình gồm những bước nào?",
+      "expect": [],
+      "numbers": [],
+      "refuse": true,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": "retrieval",
+      "model_called": false,
+      "cited": [],
+      "answer": null,
+      "reason": "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời.",
+      "model": null,
+      "seconds": 0.0
+    },
+    {
+      "id": "out-chairman-area",
+      "kind": "out-of-scope",
+      "question": "Chủ tịch Ủy ban nhân dân xã được bao nhiêu m² diện tích làm việc?",
+      "expect": [],
+      "numbers": [],
+      "refuse": true,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": "model",
+      "model_called": true,
+      "cited": [],
+      "answer": null,
+      "reason": "Các đoạn tìm được không đủ để trả lời câu hỏi này.",
+      "model": {
+        "name": "qwen3.5:4b",
+        "provider": "ollama",
+        "location": "local",
+        "host": null
+      },
+      "seconds": 57.6
+    },
+    {
+      "id": "out-penalty",
+      "kind": "out-of-scope",
+      "question": "Mức phạt khi sử dụng trụ sở làm việc sai mục đích là bao nhiêu?",
+      "expect": [],
+      "numbers": [],
+      "refuse": true,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": "retrieval",
+      "model_called": false,
+      "cited": [],
+      "answer": null,
+      "reason": "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời.",
+      "model": null,
+      "seconds": 0.0
+    },
+    {
+      "id": "out-official-car",
+      "kind": "out-of-scope",
+      "question": "Xe ô tô phục vụ công tác của xã được trang bị theo tiêu chuẩn nào?",
+      "expect": [],
+      "numbers": [],
+      "refuse": true,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": "retrieval",
+      "model_called": false,
+      "cited": [],
+      "answer": null,
+      "reason": "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời.",
+      "model": null,
+      "seconds": 0.0
+    },
+    {
+      "id": "out-lease-excess",
+      "kind": "out-of-scope",
+      "question": "Phần diện tích vượt tiêu chuẩn, định mức có được cho thuê để thu tiền không?",
+      "expect": [],
+      "numbers": [],
+      "refuse": true,
+      "http_status": 200,
+      "verdict": "correct",
+      "refused_by": "retrieval",
+      "model_called": false,
+      "cited": [],
+      "answer": null,
+      "reason": "Không tìm thấy đoạn nào trong các văn bản được hỏi đủ gần câu hỏi; trợ lý không trả lời.",
+      "model": null,
+      "seconds": 0.0
+    }
+  ]
+}

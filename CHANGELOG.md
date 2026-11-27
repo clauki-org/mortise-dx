@@ -60,6 +60,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Bảng con của danh mục có nút "Nạp từ tệp": tải tệp mẫu .xlsx, chọn tệp Excel hay CSV, xem trước lỗi theo dòng và cột
   rồi thêm mọi dòng trong một lần; gói xã nạp phòng vào một tòa ([ADR
   0064](docs/adr/0064-import-child-rows-from-file.md)).
+- `make assistant-eval` đo trợ lý hỏi văn bản trên bộ câu hỏi có đáp án của gói: trích đúng, từ chối đúng, độ trễ;
+  lượt đầu 2026-11-28 ghi ở [docs/assistant-eval.md](docs/assistant-eval.md).
 
 ### Changed
 

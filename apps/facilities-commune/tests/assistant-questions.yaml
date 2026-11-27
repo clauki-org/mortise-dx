@@ -1,0 +1,172 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bộ câu hỏi có đáp án cho trợ lý hỏi văn bản của gói (docs/assistant-eval.md): `make assistant-eval` gửi từng câu
+# tới /v1/assistant/questions với văn bản của `assistant`, rồi chấm theo `expect`. Đáp án là mã đoạn
+# `<văn bản>/<đoạn>` trong knowledge/; câu trả lời đúng khi trích ít nhất một đoạn trong `expect` và có mọi số ở
+# `numbers`. `refuse: true` là câu phải từ chối. `kind` chỉ để chia kết quả:
+# - direct: hỏi bằng chữ của văn bản;
+# - paraphrase: hỏi bằng từ thường ngày, khác chữ của văn bản ("công khai" thay cho "đăng tải");
+# - superseded: hỏi điều mà NĐ 369/2026 đã sửa hay bãi bỏ, đáp án là đoạn đang có hiệu lực;
+# - out-of-scope: văn bản không nói, kể cả câu gần chủ đề (diện tích của chủ tịch xã nằm ở Phụ lục, chưa nạp).
+# Đáp án đọc từ nguyên văn trong knowledge/; sửa đoạn ở đó thì soát lại các câu trỏ tới nó (`--check` kiểm mã đoạn).
+
+assistant: assistant/ask-documents.yaml
+questions:
+  - id: excess-threshold
+    kind: direct
+    question: >-
+      Phần diện tích lớn hơn so với tiêu chuẩn, định mức vượt quá bao nhiêu m² thì cơ quan tiếp nhận phải đăng tải
+      thông tin?
+    expect: [nd-369-2026/art-3a-cl-3]
+    numbers: ["300"]
+  - id: posting-period
+    kind: direct
+    question: Thời hạn đăng tải thông tin trên Cổng thông tin điện tử là bao nhiêu ngày?
+    expect: [nd-369-2026/art-3a-cl-3]
+    numbers: ["30"]
+  - id: first-review
+    kind: direct
+    question: Kỳ rà soát đầu tiên được thực hiện khi nào?
+    expect: [nd-369-2026/art-3b-cl-1]
+    numbers: ["2027"]
+  - id: first-review-cutoff
+    kind: direct
+    question: Thời điểm chốt số liệu của kỳ rà soát đầu tiên là ngày nào?
+    expect: [nd-369-2026/art-3b-cl-1]
+    numbers: ["2027"]
+  - id: stability-period
+    kind: direct
+    question: Tiêu chuẩn, định mức trụ sở làm việc được xác định theo kỳ ổn định bao nhiêu năm?
+    expect: [nd-369-2026/art-3b-cl-1, nd-369-2026/art-3b-cl-4]
+    numbers: ["5"]
+  - id: merger-review-deadline
+    kind: direct
+    question: >-
+      Sau khi sáp nhập, cơ quan tiếp nhận phải rà soát trụ sở trong thời hạn bao lâu kể từ ngày tiếp nhận?
+    expect: [nd-369-2026/art-3a-cl-1]
+    numbers: ["6"]
+  - id: transfer-review-deadline
+    kind: direct
+    question: >-
+      Điều chuyển trụ sở do thay đổi cơ quan quản lý thì cơ quan tiếp nhận phải rà soát trong thời hạn bao lâu?
+    expect: [nd-369-2026/art-3a-cl-4]
+    numbers: ["3"]
+  - id: posting-content
+    kind: direct
+    question: Thông tin đăng tải về trụ sở làm việc cần nêu rõ những nội dung gì?
+    expect: [nd-369-2026/art-3a-cl-3]
+  - id: no-taker
+    kind: direct
+    question: Hết thời hạn đăng tải mà không có đơn vị có nhu cầu tiếp nhận phù hợp thì xử lý thế nào?
+    expect: [nd-369-2026/art-3a-cl-3, nd-369-2026/art-3b-cl-3]
+  - id: stable-area
+    kind: direct
+    question: Diện tích được ổn định trong kỳ bao gồm những phần nào?
+    expect: [nd-369-2026/art-3b-cl-2]
+  - id: stability-exceptions
+    kind: direct
+    question: Những trường hợp nào thì diện tích của cơ quan không được ổn định trong 05 năm?
+    expect: [nd-369-2026/art-3b-cl-4]
+  - id: request-content
+    kind: direct
+    question: Văn bản đề nghị của đơn vị có nhu cầu tiếp nhận phải thuyết minh rõ những gì?
+    expect: [nd-369-2026/art-3a-cl-3]
+  - id: office-room
+    kind: direct
+    question: Phòng làm việc quy định tại Nghị định là phòng theo thiết kế hay theo cơ cấu tổ chức?
+    expect: [nd-155-2025/art-3-cl-4]
+  - id: standard-purpose
+    kind: direct
+    question: Tiêu chuẩn, định mức sử dụng trụ sở làm việc được dùng làm căn cứ để làm gì?
+    expect: [nd-155-2025/art-3-cl-1]
+  - id: effective-date
+    kind: direct
+    question: Nghị định 369/2026/NĐ-CP có hiệu lực thi hành từ ngày nào?
+    expect: [nd-369-2026/art-11-cl-1]
+    numbers: ["11", "2026"]
+  - id: under-threshold
+    kind: direct
+    question: >-
+      Phần diện tích lớn hơn tiêu chuẩn, định mức không vượt quá 300 m² thì cơ quan tiếp nhận được xử lý thế nào?
+    expect: [nd-369-2026/art-3a-cl-2, nd-369-2026/art-3a-cl-4, nd-369-2026/art-3b-cl-3]
+  - id: everyday-publish-threshold
+    kind: paraphrase
+    question: Trụ sở dư hơn 300 m² so với tiêu chuẩn thì có phải công khai không?
+    expect: [nd-369-2026/art-3a-cl-3, nd-369-2026/art-3a-cl-4, nd-369-2026/art-3b-cl-3]
+  - id: everyday-publish-days
+    kind: paraphrase
+    question: Phải công khai thông tin trụ sở dư diện tích trong bao nhiêu ngày?
+    expect: [nd-369-2026/art-3a-cl-3]
+    numbers: ["30"]
+  - id: everyday-publish-where
+    kind: paraphrase
+    question: Thông tin về trụ sở thừa diện tích phải đăng ở trang web nào?
+    expect: [nd-369-2026/art-3a-cl-3]
+  - id: everyday-merger-check
+    kind: paraphrase
+    question: Xã mới sáp nhập nhận trụ sở cũ thì bao lâu phải kiểm tra lại diện tích?
+    expect: [nd-369-2026/art-3a-cl-1]
+    numbers: ["6"]
+  - id: everyday-review-cycle
+    kind: paraphrase
+    question: Bao lâu thì phải rà soát lại diện tích trụ sở một lần?
+    expect: [nd-369-2026/art-3b-cl-1]
+    numbers: ["5"]
+  - id: everyday-keep-small-excess
+    kind: paraphrase
+    question: Trụ sở thừa chưa tới 300 m² thì xã có được giữ lại dùng không?
+    expect: [nd-369-2026/art-3a-cl-2, nd-369-2026/art-3a-cl-4, nd-369-2026/art-3b-cl-3]
+  # NĐ 155/2025 khoản 2 Điều 3 ghi "tiêu chuẩn cao nhất"; NĐ 369/2026 sửa thành "tiêu chuẩn, định mức cao nhất".
+  - id: amended-several-posts
+    kind: superseded
+    question: Một người giữ nhiều chức danh, chức vụ thì được áp dụng tiêu chuẩn nào?
+    expect: [nd-369-2026/art-2-cl-1]
+  # Phần chức danh không có trong Phụ lục: bản cũ xác định theo mức lương, hệ số phụ cấp chức vụ; bản sửa căn cứ
+  # Quy định số 368-QĐ/TW.
+  - id: amended-unlisted-posts
+    kind: superseded
+    question: Chức danh chưa được quy định cụ thể tại Phụ lục thì xác định tiêu chuẩn, định mức căn cứ vào đâu?
+    expect: [nd-369-2026/art-2-cl-1]
+  # Bản sửa khoản 3 Điều 3 thêm "diện tích của vật kiến trúc và các tài sản khác gắn liền với đất (trừ nhà)".
+  - id: amended-structures
+    kind: superseded
+    question: Diện tích làm việc có tính diện tích của vật kiến trúc gắn liền với đất không?
+    expect: [nd-369-2026/art-2-cl-2]
+  - id: amended-clear-dimension
+    kind: superseded
+    question: Diện tích làm việc được tính theo kích thước nào, có tính cầu thang và nhà để xe không?
+    expect: [nd-369-2026/art-2-cl-2]
+  - id: amended-total-area
+    kind: superseded
+    question: >-
+      Tiêu chuẩn, định mức để giao, điều chuyển được tính theo tổng diện tích của toàn bộ trụ sở hay từng trụ sở?
+    expect: [nd-369-2026/art-2-cl-2]
+  - id: repealed-clause-5
+    kind: superseded
+    question: Khoản 5 Điều 3 Nghị định 155/2025/NĐ-CP còn hiệu lực không?
+    expect: [nd-369-2026/art-10-cl-3]
+  - id: out-base-salary
+    kind: out-of-scope
+    question: Lương cơ sở hiện nay là bao nhiêu?
+    refuse: true
+  - id: out-land-certificate
+    kind: out-of-scope
+    question: Thủ tục cấp sổ đỏ cho hộ gia đình gồm những bước nào?
+    refuse: true
+  - id: out-chairman-area
+    kind: out-of-scope
+    question: Chủ tịch Ủy ban nhân dân xã được bao nhiêu m² diện tích làm việc?
+    refuse: true
+  - id: out-penalty
+    kind: out-of-scope
+    question: Mức phạt khi sử dụng trụ sở làm việc sai mục đích là bao nhiêu?
+    refuse: true
+  - id: out-official-car
+    kind: out-of-scope
+    question: Xe ô tô phục vụ công tác của xã được trang bị theo tiêu chuẩn nào?
+    refuse: true
+  - id: out-lease-excess
+    kind: out-of-scope
+    question: Phần diện tích vượt tiêu chuẩn, định mức có được cho thuê để thu tiền không?
+    refuse: true
