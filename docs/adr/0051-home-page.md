@@ -28,16 +28,17 @@ hai: người duyệt bấm thẳng vào việc trên trang mở đầu; cán b�
 ## Quyết định
 
 - Đường dẫn `/` vẽ trang chủ (`platform/web/src/Home.tsx`) thay vì chuyển sang `/tasks`. Tiêu đề cấp 1 "Trang chủ".
-- Khối đầu "Việc đang chờ bạn": mọi việc mà `GET /v1/workflow/tasks` trả cho người đăng nhập, không cắt bớt, xếp theo
+- Khối "Việc đang chờ bạn": mọi việc mà `GET /v1/workflow/tasks` trả cho người đăng nhập, không cắt bớt, xếp theo
   hạn như bảng việc. Mỗi việc là một liên kết tới `/tasks/<mã>` mà chữ chỉ là tên hồ sơ, tính như `TaskList`
   (`recordTitle`); bước, nhãn hạn và người gửi đứng ngoài liên kết. Nhờ vậy liên kết có cùng tên truy cập ở hai trang,
   bài e2e tìm việc theo tên không phải đổi. Dùng chung khóa bộ nhớ đệm `["tasks"]` với bảng việc. Liên kết "Mở Việc của
   tôi" dẫn tới bảng việc, nơi có bộ lọc theo hạn.
-- Sau đó là một ô cho mỗi nhóm menu của gói, theo đúng thứ tự và chữ của thanh bên: tiêu đề cấp 2 là tên nhóm (tên gói),
+- Một ô cho mỗi nhóm menu của gói, theo đúng thứ tự và chữ của thanh bên: tiêu đề cấp 2 là tên nhóm (tên gói),
   mỗi mục là một lối tắt cùng nhãn, địa chỉ và biểu tượng như mục menu. Ô đọc từ menu mà thanh bên đã tải
   (`usePackageMenu`), gom bằng cùng một hàm (`packageGroups` trong `menu.ts`), nên Tầng 2 không có chữ hay biểu tượng
   riêng của gói nào. Nhóm dùng chung và nhóm mẫu của lõi (thu gọn trên thanh bên) không có ô.
-- Màn hình rộng: ô của gói xếp hai cột dưới khối việc. Màn hình hẹp: khối việc đứng trước, các ô xếp chồng.
+- Ô của gói đứng trên khối việc: ô có chiều cao cố định, còn danh sách việc không cắt bớt và có thể dài hàng trăm
+  việc; đặt ô dưới thì lối tắt bị đẩy xuống cuối trang. Màn hình rộng: ô xếp hai cột. Màn hình hẹp: các ô xếp chồng.
 - Menu: nhóm "Chung" có "Trang chủ" đứng đầu, rồi "Việc của tôi". Sửa [ADR 0044](0044-menu-groups-and-icons.md): danh
   mục ý nghĩa biểu tượng thêm `home` (trang chủ), không có từ của lĩnh vực nào; `contracts/app.schema.json`,
   `MENU_ICONS` và bảng hình (`IconHome` của Tabler Icons) đổi cùng lúc, `menu.test.ts` so danh mục của schema với

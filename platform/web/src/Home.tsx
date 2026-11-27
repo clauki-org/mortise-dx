@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Trang chủ, điểm vào sau khi đăng nhập (ADR 0051): trên cùng là mọi việc đang chờ người đăng nhập, mỗi việc một liên
-// kết mang đúng chữ như ở "Việc của tôi" (TaskList.tsx); dưới là một ô cho mỗi nhóm menu của gói với lối tắt tới các
-// trang của nhóm. Chữ của ô lấy từ menu mà thanh bên đã tải (menu.ts), nên ở đây không có tên gói hay chữ của lĩnh vực.
+// Trang chủ, điểm vào sau khi đăng nhập (ADR 0051): trên là một ô cho mỗi nhóm menu của gói với lối tắt tới các trang
+// của nhóm; dưới là mọi việc đang chờ người đăng nhập, mỗi việc một liên kết mang đúng chữ như ở "Việc của tôi"
+// (TaskList.tsx). Chữ của ô lấy từ menu mà thanh bên đã tải (menu.ts), nên ở đây không có tên gói hay chữ của lĩnh vực.
 
 import { Alert, Anchor, Box, Button, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
@@ -140,8 +140,7 @@ export function Home() {
   const groups = homeGroups(packages.items);
   return (
     <Stack>
-      <PageHeader title="Trang chủ" description="Việc đang chờ bạn và lối vào các gói của đơn vị." />
-      <TasksSection />
+      <PageHeader title="Trang chủ" description="Lối vào các gói của đơn vị và việc đang chờ bạn." />
       {/* Lỗi đọc menu đã báo ở cuối thanh bên; ở đây chỉ không có ô. */}
       {!packages.loaded && packages.fetching ? (
         <Loading what="menu của các gói" />
@@ -154,6 +153,8 @@ export function Home() {
           </SimpleGrid>
         )
       )}
+      {/* Danh sách việc không cắt bớt nên có thể rất dài; đứng sau các ô để lối tắt không bị đẩy xuống cuối trang. */}
+      <TasksSection />
     </Stack>
   );
 }
