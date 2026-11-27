@@ -7,7 +7,8 @@
 // cho gói. Cần gói đã cài (`make app-install APP=facilities-commune`); bài tự tạo và tự dọn dữ liệu nên không cần
 // `make seed-demo`.
 
-import { type APIRequestContext, expect, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { readSheet } from "read-excel-file/node";
 import { graphql, openMenuItem, signIn, subOf, uniqueTitle } from "./support.ts";
 
 const ADMIN = "tenant_admin";
@@ -115,6 +116,153 @@ test("cán bộ xã A mở danh mục cơ sở từ menu của gói, chỉ thấ
   } finally {
     const problems = await cleanUp(request, created);
     // Bài đã hỏng thì lỗi gốc là lỗi cần đọc: ném lỗi dọn ở đây sẽ thay mất nó, nên chỉ in ra.
+    if (passed) {
+      expect(problems, "dọn dữ liệu kiểm thử").toEqual([]);
+    } else if (problems.length > 0) {
+      console.warn(`Dọn dữ liệu kiểm thử chưa xong:\n${problems.join("\n")}`);
+    }
+  }
+});
+
+/** Bấm "Xuất", chọn một định dạng, trả tên tệp gợi ý và nội dung tệp tải về. */
+async function exportAs(page: Page, format: string): Promise<{ name: string; content: Buffer }> {
+  await page.getByRole("button", { name: "Xuất", exact: true }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("menuitem", { name: format }).click(),
+  ]);
+  const chunks: Buffer[] = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk as Buffer);
+  return { name: download.suggestedFilename(), content: Buffer.concat(chunks) };
+}
+
+/** Đọc CSV theo RFC 4180 (nháy kép bọc ô, "" là một dấu nháy, CRLF giữa các dòng) thành các dòng ô. */
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (quoted) {
+      if (char === '"' && text[index + 1] === '"') {
+        cell += '"';
+        index += 1;
+      } else if (char === '"') quoted = false;
+      else cell += char;
+    } else if (char === '"') quoted = true;
+    else if (char === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (char === "\r" && text[index + 1] === "\n") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      index += 1;
+    } else cell += char;
+  }
+  return rows;
+}
+
+test("cán bộ xã A xuất danh mục cơ sở ra CSV, Excel và PDF: mọi dòng đang lọc, khớp màn hình và API", async ({
+  page,
+  request,
+}) => {
+  const code = uniqueTitle("xuat").replaceAll(" ", "-");
+  // Hơn một trang (cỡ trang mặc định 20): tệp phải có mọi dòng khớp tìm, không chỉ trang đang xem. Một tên bắt đầu
+  // bằng "=" và có dấu phẩy: tệp phải bọc nháy kép và thêm ' để bảng tính không chạy như công thức.
+  const count = 22;
+  const created: Facility[] = [];
+  let passed = false;
+  try {
+    const sub = await subOf(request, "user.a");
+    for (let index = 1; index <= count; index += 1) {
+      const suffix = String(index).padStart(2, "0");
+      const name = index === 2 ? `=Trụ sở kiểm thử, ${code}` : `Trụ sở kiểm thử ${suffix}`;
+      const id = await facility(request, "admin.a", `${code}-a${suffix}`, name);
+      created.push({ admin: "admin.a", id });
+      await graphql(
+        request,
+        "admin.a",
+        `mutation($f: uuid!, $u: String!) { insert_${PREFIX}_facility_assignments_one(object: {facility_id: $f, user_id: $u, duty: "custodian"}) { id } }`,
+        { f: id, u: sub },
+        ADMIN,
+      );
+    }
+    created.push({
+      admin: "admin.a",
+      id: await facility(request, "admin.a", `${code}-c`, `Trụ sở chưa phân công ${code}`),
+    });
+    created.push({ admin: "admin.b", id: await facility(request, "admin.b", `${code}-b`, `Trụ sở xã khác ${code}`) });
+
+    await page.goto("/");
+    await signIn(page, "user.a");
+    await openMenuItem(page, "Cơ sở nhà, đất");
+    await page.getByRole("textbox", { name: "Tìm" }).fill(code);
+    await page.getByRole("button", { name: "Tìm" }).click();
+    await expect(page.getByRole("link", { name: `${code}-a01` })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Trang sau" })).toBeEnabled();
+    const screen = await page
+      .locator("table tbody tr")
+      .evaluateAll((rows) => rows.map((row) => [...row.querySelectorAll("td")].map((cell) => cell.textContent ?? "")));
+
+    const csv = await exportAs(page, "CSV");
+    expect(csv.name).toMatch(/^co-so-nha-dat-\d{4}-\d{2}-\d{2}\.csv$/);
+    const raw = csv.content.toString("utf8");
+    expect(raw.startsWith("\uFEFF"), "tệp bắt đầu bằng BOM UTF-8").toBe(true);
+    const lines = parseCsv(raw.slice(1));
+    const blank = lines.findIndex((line) => line.length === 1 && line[0] === "");
+    const meta = new Map(lines.slice(0, blank).map(([key = "", value = ""]) => [key, value]));
+    const [columns, ...data] = lines.slice(blank + 1);
+
+    expect(meta.get("Người xuất")).toBe("user.a");
+    expect(meta.get("Đơn vị")).toBe("xa-a");
+    expect(meta.get("Nguồn")).toBe(`${PREFIX}_facilities`);
+    expect(meta.get("Điều kiện")).toContain(`Tìm "${code}"`);
+    expect(meta.get("Số dòng")).toBe(String(count));
+    expect(columns).toEqual(["Mã", "Tên cơ sở", "Địa chỉ", "Tình trạng"]);
+
+    // Cùng thứ tự và cùng các dòng API trả cho user.a; cơ sở chưa phân công và cơ sở xã B không có.
+    const { rows } = await graphql<{ rows: { code: string }[] }>(
+      request,
+      "user.a",
+      `query($code: String!) { rows: ${PREFIX}_facilities(where: {code: {_like: $code}}, order_by: [{code: asc}, {id: asc}]) { code } }`,
+      { code: `${code}%` },
+    );
+    expect(data.map((line) => line[0])).toEqual(rows.map((row) => row.code));
+    expect(data).toHaveLength(count);
+
+    // Trang đầu trên màn hình khớp từng ô với 20 dòng đầu của tệp; riêng tên bắt đầu bằng "=" có thêm dấu '. Ô trống
+    // trên màn hình là gạch mờ kèm chữ ẩn "Chưa có" cho trình đọc màn hình (TableScroll.tsx), trong tệp là ô rỗng.
+    expect(screen).toHaveLength(20);
+    const shown = screen.map((cells) =>
+      cells.map((cell) => (cell === "—Chưa có" ? "" : /^[=+\-@]/.test(cell) ? `'${cell}` : cell)),
+    );
+    expect(data.slice(0, 20)).toEqual(shown);
+    expect(data.some((line) => line[1]?.startsWith("'=Trụ sở kiểm thử, "))).toBe(true);
+
+    // Excel: cùng phần đầu và cùng các dòng với CSV; ô chữ là chữ nên tên bắt đầu bằng "=" giữ nguyên, không thêm '.
+    const xlsx = await exportAs(page, "Excel (.xlsx)");
+    expect(xlsx.name).toMatch(/^co-so-nha-dat-\d{4}-\d{2}-\d{2}\.xlsx$/);
+    const sheet = (await readSheet(xlsx.content)).map((row) => row.map((cell) => (cell === null ? "" : String(cell))));
+    const sheetBlank = sheet.findIndex((row) => row.every((cell) => cell === ""));
+    expect(new Map(sheet.slice(0, sheetBlank).map(([key = "", value = ""]) => [key, value])).get("Số dòng")).toBe(
+      String(count),
+    );
+    const [sheetColumns, ...sheetData] = sheet.slice(sheetBlank + 1);
+    expect(sheetColumns).toEqual(columns);
+    expect(sheetData).toEqual(data.map((line) => line.map((cell) => cell.replace(/^'(?=[=+\-@])/, ""))));
+
+    // PDF: tệp tải về là PDF; dựng được nghĩa là thư viện chạy được dưới CSP của bản cài (script-src 'self').
+    const pdf = await exportAs(page, "PDF");
+    expect(pdf.name).toMatch(/^co-so-nha-dat-\d{4}-\d{2}-\d{2}\.pdf$/);
+    expect(pdf.content.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    expect(pdf.content.length).toBeGreaterThan(10_000);
+    await expect(page.getByText("Không xuất được tệp")).toHaveCount(0);
+    passed = true;
+  } finally {
+    const problems = await cleanUp(request, created);
     if (passed) {
       expect(problems, "dọn dữ liệu kiểm thử").toEqual([]);
     } else if (problems.length > 0) {

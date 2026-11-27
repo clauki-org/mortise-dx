@@ -35,6 +35,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   tượng ([ADR 0044](docs/adr/0044-menu-groups-and-icons.md)).
 - Danh mục có nhãn trạng thái màu theo `tone` của gói, công tắc Bảng/Thẻ và trang chi tiết dạng lưới ô; trường biểu
   mẫu có dòng gợi ý `help` ([ADR 0050](docs/adr/0050-catalog-tones-cards-form-help.md)).
+- Danh sách của thành phần danh mục xuất được ra CSV, Excel và PDF: mọi dòng khớp tìm, lọc đang xem, bằng quyền của
+  người xuất, đầu tệp ghi nguồn, đơn vị, thời điểm và người xuất ([ADR 0052](docs/adr/0052-catalog-export.md)).
 
 ### Changed
 

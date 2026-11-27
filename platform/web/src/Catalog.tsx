@@ -8,6 +8,7 @@
 
 import { Alert, Stack } from "@mantine/core";
 import { useLocation, useSearchParams } from "react-router";
+import { CatalogExport } from "./CatalogExport";
 import { CatalogRecord } from "./CatalogRecord";
 import { CatalogTable } from "./CatalogTable";
 import { type CatalogConfig, configProblems, problemText, resolvePath } from "./catalog";
@@ -35,15 +36,17 @@ export function Catalog({ config, basePath }: Props) {
   // một khóa chứa dấu / sẽ bị hiểu thành hai đoạn đường dẫn.
   const segments = pathname.slice(basePath.length).split("/").filter(Boolean).map(decodeURIComponent);
   if (segments.length === 0) {
+    const state = readState(params);
     return (
       <Stack>
-        <PageHeader title={config.title} />
+        {/* Nút xuất chỉ ở danh sách ngoài cùng; bảng đối tượng con trong màn hình chi tiết không xuất (ADR 0052). */}
+        <PageHeader title={config.title} action={<CatalogExport config={config} state={state} />} />
         <CatalogTable
           config={config}
           label={config.title}
           path={basePath}
-          state={readState(params)}
-          onChange={(state) => setParams(writeState(state))}
+          state={state}
+          onChange={(next) => setParams(writeState(next))}
           views
         />
       </Stack>
