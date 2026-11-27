@@ -66,6 +66,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   báo, không ghi đè ([ADR 0054](docs/adr/0054-edit-and-add-child-from-catalog.md)).
 - Bản đồ có nền OpenStreetMap tự lưu trữ (`make basemap`), mặc định không chữ, luôn ghi nguồn ODbL; chưa có tệp nền
   thì nền trơn ([ADR 0056](docs/adr/0056-self-hosted-osm-basemap.md)).
+- Bản đồ trụ sở demo: ranh giới, tên ba xã tự vẽ trên nền bản đồ, trụ sở nằm trong ranh giới, ghi rõ là hư cấu ([ADR
+  0020](docs/adr/0020-facility-locations.md)).
 
 ### Removed
 
