@@ -67,6 +67,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   lượt đầu 2026-11-28 ghi ở [docs/assistant-eval.md](docs/assistant-eval.md).
 - Chạy hai bản cài độc lập trên một máy (tên dự án, cổng, tên máy trong `.env`) và dựng một org bằng `make install
   PRESET=chinh-quyen|dien-mat-troi` ([ADR 0058](docs/adr/0058-two-installs-and-install-presets.md)).
+- Gói cơ sở vật chất xã: hồ sơ rà soát sang bước công khai thì sinh tin công khai; xã cùng tỉnh xem "Tin công khai" và
+  đăng ký nhận phần diện tích vượt trong hạn (sau hạn CSDL từ chối); ở bước trình, người trình chọn đơn vị nhận từ
+  danh sách xếp theo thứ tự ưu tiên thay vì gõ tay ([ADR 0069](docs/adr/0069-public-notices-and-receive-requests.md)).
 
 ### Changed
 
