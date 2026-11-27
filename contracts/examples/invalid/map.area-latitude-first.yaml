@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/map.schema.json từ chối: đỉnh ghi [vĩ độ, kinh độ] thay vì [kinh độ, vĩ độ], nên số thứ
+# hai (105.82) vượt miền của vĩ độ.
+
+title: Bản đồ
+layers:
+  - { id: sites, label: Điểm, source: app_example_sites, latitude: lat, longitude: lon, title: name, color: { fixed: teal } }
+areas:
+  label: Khu vực
+  color: indigo
+  items:
+    - name: Khu 1
+      outline: [[105.80, 21.00], [21.00, 105.82], [105.82, 21.02]]

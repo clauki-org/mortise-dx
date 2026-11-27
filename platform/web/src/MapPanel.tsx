@@ -9,6 +9,7 @@ import { Alert, Button, ColorSwatch, Group, Paper, Stack, Table, Text, Title } f
 import { Component, lazy, type ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "urql";
 import {
+  type Areas,
   fieldText,
   type Layer,
   layerQuery,
@@ -92,6 +93,18 @@ function Legend({ layer }: { layer: Layer }) {
           <Text size="sm">{item.label}</Text>
         </Group>
       ))}
+    </Group>
+  );
+}
+
+/** Chú giải của vùng: tên mọi vùng, để người không xem được bản đồ vẫn biết bản đồ có những vùng nào. */
+function AreaLegend({ areas }: { areas: Areas }) {
+  return (
+    <Group gap={6}>
+      <ColorSwatch color={swatch(areas.color)} size={14} aria-hidden />
+      <Text size="sm">
+        {areas.label}: {areas.items.map((area) => area.name).join(", ")}
+      </Text>
     </Group>
   );
 }
@@ -187,10 +200,12 @@ export function MapPanel({ config }: { config: MapConfig }) {
       <Paper withBorder radius="md">
         <CanvasBoundary>
           <Suspense fallback={<Loading what="bản đồ" />}>
-            <MapCanvas points={points} selected={selected} onSelect={setSelected} />
+            <MapCanvas points={points} areas={config.areas} selected={selected} onSelect={setSelected} />
           </Suspense>
         </CanvasBoundary>
       </Paper>
+      {config.note && <Text size="sm">{config.note}</Text>}
+      {config.areas && <AreaLegend areas={config.areas} />}
       {layers.map((layer) => (
         <LayerSection key={layer.id} layer={layer} selected={selected} onPoints={onPoints} />
       ))}

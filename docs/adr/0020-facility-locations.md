@@ -49,8 +49,20 @@ Cách cho tỉnh thấy vị trí đã xét:
   - Chỉ vai trò `rollup_reader` đọc, lọc `parent_tenant_id` bằng tenant trong token, như `area_rollup`.
   - Không có tòa, phòng, diện tích từng cơ sở, phân công, hay cơ sở dôi dư.
   - Cơ sở chưa có tọa độ vẫn có dòng, để tỉnh biết xã nào còn thiếu.
-- **Dữ liệu demo hư cấu cả tọa độ:** mọi cơ sở nằm trong vài km quanh điểm vĩ độ 0, kinh độ 0, giữa biển, để
-  không trỏ vào địa điểm có thật nào.
+- **Dữ liệu demo hư cấu cả vị trí.** Ban đầu mọi cơ sở nằm trong vài km quanh điểm vĩ độ 0, kinh độ 0, giữa biển.
+  Sửa ngày 2026-11-27 (#226), khi bản đồ có nền OpenStreetMap thật ([ADR 0056](0056-self-hosted-osm-basemap.md)):
+  - Nền là một vùng nông thôn đồng bằng có thật, khung `106.37,20.405,106.46,20.475` ghim trong
+    `platform/web/basemap.pins`; lý do chọn vùng ở ADR 0056. Bản đồ của bản demo không có chữ địa danh nào.
+  - Ranh giới và tên ba xã của "Tỉnh Mẫu" là đa giác tự vẽ trong cấu hình bản đồ của gói
+    (`map-layers/facilities.yaml`, mục `areas` của `contracts/map.schema.json`), không theo ranh giới hành chính nào có
+    thật; kiểu vẽ của nền bỏ ranh giới hành chính thật để hai bộ ranh giới không chồng nhau.
+  - Mỗi cơ sở trong `seed/demo.yaml` nằm trong ranh giới của xã mình, cách cạnh ranh giới ít nhất 300 m, và theo dữ
+    liệu của tệp nền (tile mức 15, đo ngày 2026-11-27): cách 15 tới 30 m một con đường không phải ngõ xóm (OpenStreetMap
+    ghi `unclassified` hay `tertiary`); không có ngõ xóm (`residential`, `service`) trong vòng 120 m và không quá năm
+    đoạn đường trong vòng 250 m, tức không nằm giữa một cụm dân cư; không có nhà, điểm quan tâm hay khu đất (trường học,
+    công nghiệp, khu dân cư) nào trong vòng 500 m; cách sông, kênh ít nhất 40 m. Từng vị trí được xem lại trên ảnh
+    chụp ở mức phóng 15,5: nằm ven đường giữa đồng.
+  - Bản đồ luôn ghi dưới khung rằng ranh giới, tên xã và vị trí trụ sở là hư cấu.
 
 ## Hệ quả
 
@@ -62,3 +74,7 @@ Cách cho tỉnh thấy vị trí đã xét:
 - **Bản cài đã nạp demo trước đây** nhận tọa độ khi chạy lại `make seed-demo`: `seed/load.py` ghi tọa độ cho cơ sở đã
   có khi khác `demo.yaml`.
 - **Chưa có bản đồ trên giao diện.** Thành phần bản đồ Tầng 2 đọc các cột và view này là bước sau của #113.
+- **"Chỗ trống" chỉ đúng theo dữ liệu OpenStreetMap.** Vùng nông thôn này có rất ít nhà được vẽ trên OpenStreetMap,
+  nên một vị trí không có nhà trong dữ liệu vẫn có thể trùng nhà hay công trình có thật ngoài thực địa. Hình sông,
+  đường của vùng cũng có thể được người quen vùng nhận ra (ADR 0056); vì vậy mọi tên và vị trí demo trên nền chỉ là
+  hư cấu.

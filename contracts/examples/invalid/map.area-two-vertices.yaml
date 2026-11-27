@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/map.schema.json từ chối: đường viền của vùng chỉ có hai đỉnh, không thành một vùng.
+
+title: Bản đồ
+layers:
+  - { id: sites, label: Điểm, source: app_example_sites, latitude: lat, longitude: lon, title: name, color: { fixed: teal } }
+areas:
+  label: Khu vực
+  color: indigo
+  items:
+    - name: Khu 1
+      outline: [[105.80, 21.00], [105.82, 21.00]]

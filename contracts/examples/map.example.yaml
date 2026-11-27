@@ -3,9 +3,19 @@
 #
 # Ví dụ cấu hình bản đồ hợp lệ theo contracts/map.schema.json; `make check-fast` kiểm tệp này. Lớp đầu tô điểm theo
 # một giá trị đọc qua quan hệ (group.score) theo ba bậc; lớp sau một màu, chỉ truy vấn khi token có vai trò
-# rollup_reader. Gói thật đặt tệp trong thư mục của gói (map-layers/).
+# rollup_reader. Hai vùng cố định tô dưới điểm, kèm một dòng ghi chú. Gói thật đặt tệp trong thư mục của gói
+# (map-layers/).
 
 title: Bản đồ
+note: Ranh giới chỉ để minh họa.
+areas:
+  label: Khu vực
+  color: indigo
+  items:
+    - name: Khu 1
+      outline: [[105.80, 21.00], [105.82, 21.00], [105.82, 21.02], [105.80, 21.02]]
+    - name: Khu 2
+      outline: [[105.82, 21.00], [105.84, 21.00], [105.83, 21.02]]
 layers:
   - id: sites
     label: Điểm đang dùng

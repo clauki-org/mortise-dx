@@ -172,7 +172,7 @@ def load_tenant(tenant: str, spec: dict) -> int:
             facility_id, added = insert(access, "facilities", fields), added + 1
         elif "location" in facility and stored[facility["code"]] != point(facility["location"]):
             # Cơ sở nạp trước khi gói có cột tọa độ: ghi thêm vị trí, không đụng cột khác. Hasura và YAML
-            # cùng đọc 0.021500 thành một số thực, nên chạy lại không ghi lại vị trí không đổi.
+            # cùng đọc 20.444500 thành một số thực, nên chạy lại không ghi lại vị trí không đổi.
             place(access, facility_id, facility["location"])
             placed += 1
         # Phân công cả cho cơ sở đã có từ lần nạp trước, khi gói chưa có bảng phân công.

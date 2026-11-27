@@ -6,6 +6,51 @@
 # đang dùng của một xã cùng một màu; cơ sở dôi dư không tính vào phần vượt nên có lớp riêng màu xám (ADR 0020).
 
 title: Bản đồ trụ sở
+note: Ranh giới, tên xã và vị trí trụ sở là hư cấu, chỉ để minh họa.
+# Ranh giới ba xã của "Tỉnh Mẫu" tự vẽ trên vùng nền ghim trong platform/web/basemap.pins, không theo ranh giới hành
+# chính nào có thật (ADR 0020). Mỗi đỉnh là [kinh độ, vĩ độ]; tọa độ trụ sở trong seed/demo.yaml nằm trong đúng xã.
+areas:
+  label: Ranh giới xã (hư cấu)
+  color: indigo
+  items:
+    - name: Xã A
+      outline:
+        - [106.375, 20.468]
+        - [106.388, 20.470]
+        - [106.401, 20.470]
+        - [106.398, 20.452]
+        - [106.403, 20.437]
+        - [106.399, 20.421]
+        - [106.402, 20.410]
+        - [106.386, 20.411]
+        - [106.376, 20.414]
+        - [106.378, 20.440]
+    - name: Xã B
+      outline:
+        - [106.401, 20.470]
+        - [106.415, 20.471]
+        - [106.427, 20.470]
+        - [106.431, 20.455]
+        - [106.426, 20.440]
+        - [106.430, 20.424]
+        - [106.428, 20.410]
+        - [106.414, 20.409]
+        - [106.402, 20.410]
+        - [106.399, 20.421]
+        - [106.403, 20.437]
+        - [106.398, 20.452]
+    - name: Xã C
+      outline:
+        - [106.427, 20.470]
+        - [106.442, 20.469]
+        - [106.455, 20.466]
+        - [106.453, 20.440]
+        - [106.456, 20.415]
+        - [106.442, 20.411]
+        - [106.428, 20.410]
+        - [106.430, 20.424]
+        - [106.426, 20.440]
+        - [106.431, 20.455]
 layers:
   # Hai lớp của xã truy vấn với vai trò mặc định `user` của giao diện (ADR 0023), nên ai cũng chỉ thấy cơ sở mình được
   # phân công (quyền ở hasura/tables.yaml), kể cả lãnh đạo và quản trị xã.

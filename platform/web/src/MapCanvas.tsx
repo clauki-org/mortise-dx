@@ -20,7 +20,8 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Protocol } from "pmtiles";
 import { useEffect, useRef, useState } from "react";
 import { inExtent, type LoadedBasemap, loadBasemap } from "./basemap";
-import type { Point } from "./mapConfig";
+import { areaCenter, framePositions, withAreas } from "./mapAreas";
+import type { Areas, Point } from "./mapConfig";
 import { ErrorNotice, Loading } from "./States";
 
 // Mặc định MapLibre tìm tệp worker cạnh mã của nó trong node_modules; sau khi build, mã nằm trong assets/ nên phải
@@ -34,13 +35,15 @@ addProtocol("pmtiles", protocol.tile);
 
 type Props = {
   points: Point[];
+  areas?: Areas;
   selected?: string;
   onSelect: (key: string) => void;
 };
 
-// Màu nền lấy từ theme đang dùng: MapLibre cần một màu cụ thể, không đọc được biến CSS.
-const background = () =>
-  getComputedStyle(document.documentElement).getPropertyValue("--mantine-color-gray-1").trim() || "white";
+// Màu lấy từ theme đang dùng: MapLibre cần một màu cụ thể, không đọc được biến CSS.
+const themeColor = (name: string, fallback: string) =>
+  getComputedStyle(document.documentElement).getPropertyValue(`--mantine-color-${name}`).trim() || fallback;
+const background = () => themeColor("gray-1", "white");
 
 const plainStyle = (): StyleSpecification => ({
   version: 8,
@@ -59,6 +62,27 @@ function useBasemap() {
     };
   }, []);
   return basemap;
+}
+
+/**
+ * Tên vùng đặt giữa vùng. Là chữ HTML chứ không phải lớp chữ của MapLibre: lớp chữ cần tệp phông dạng glyph mà bản
+ * cài không chữ không có. Ẩn với trình đọc màn hình và không bấm được, vì chú giải dưới bản đồ đã đọc tên mọi vùng.
+ */
+function areaLabel(name: string): HTMLDivElement {
+  const element = document.createElement("div");
+  element.className = "mortise-map-area";
+  element.textContent = name;
+  element.setAttribute("aria-hidden", "true");
+  Object.assign(element.style, {
+    pointerEvents: "none",
+    fontSize: "14px",
+    fontWeight: "700",
+    color: "var(--mantine-color-dark-9)",
+    // Viền trắng quanh chữ giữ tương phản trên mọi màu nền bên dưới.
+    textShadow: "0 0 3px white, 0 0 3px white, 0 0 2px white",
+    whiteSpace: "nowrap",
+  });
+  return element;
 }
 
 function markerElement(point: Point, onSelect: (key: string) => void): HTMLButtonElement {
@@ -81,7 +105,7 @@ function markerElement(point: Point, onSelect: (key: string) => void): HTMLButto
   return element;
 }
 
-export default function MapCanvas({ points, selected, onSelect }: Props) {
+export default function MapCanvas({ points, areas, selected, onSelect }: Props) {
   const container = useRef<HTMLElement>(null);
   const [map, setMap] = useState<MapLibre>();
   const [failure, setFailure] = useState<unknown>();
@@ -93,7 +117,9 @@ export default function MapCanvas({ points, selected, onSelect }: Props) {
     try {
       created = new MapLibre({
         container: container.current,
-        style: basemap?.style ?? plainStyle(),
+        style: withAreas(basemap?.style ?? plainStyle(), areas, (swatch, shade) =>
+          themeColor(`${swatch}-${shade}`, "gray"),
+        ),
         center: basemap?.center ?? [0, 0],
         // Không cho thu nhỏ quá mức thấp nhất có trong tệp nền: thu nhỏ hơn thì nền trống, và người xem không còn
         // thấy vùng nào quanh các điểm.
@@ -118,7 +144,17 @@ export default function MapCanvas({ points, selected, onSelect }: Props) {
       observer.disconnect();
       created.remove();
     };
-  }, [basemap]);
+  }, [basemap, areas]);
+
+  useEffect(() => {
+    if (!map || !areas) return;
+    const labels = areas.items.map((area) =>
+      new Marker({ element: areaLabel(area.name) }).setLngLat(areaCenter(area.outline)).addTo(map),
+    );
+    return () => {
+      for (const label of labels) label.remove();
+    };
+  }, [map, areas]);
 
   useEffect(() => {
     if (!map) return;
@@ -136,13 +172,15 @@ export default function MapCanvas({ points, selected, onSelect }: Props) {
   // chỉ căn theo điểm trong vùng đã cắt: bản đồ không thu nhỏ được dưới mức thấp nhất của nền, nên căn cả một điểm ở xa
   // sẽ đặt khung vào chỗ trống, không thấy điểm nào. Điểm ngoài vùng vẫn có trong danh sách điểm.
   useEffect(() => {
-    if (!map || points.length === 0) return;
+    if (!map) return;
     const extent = basemap?.extent;
     const inside = extent ? points.filter((point) => inExtent(extent, point.longitude, point.latitude)) : points;
+    const positions = framePositions(inside.length > 0 ? inside : points, areas);
+    if (positions.length === 0) return;
     const bounds = new LngLatBounds();
-    for (const point of inside.length > 0 ? inside : points) bounds.extend([point.longitude, point.latitude]);
+    for (const position of positions) bounds.extend(position);
     map.fitBounds(bounds, { padding: 48, maxZoom: 14, animate: false });
-  }, [map, points, basemap]);
+  }, [map, points, areas, basemap]);
 
   if (failure !== undefined) {
     return (
