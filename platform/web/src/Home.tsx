@@ -5,11 +5,11 @@
 // kết mang đúng chữ như ở "Việc của tôi" (TaskList.tsx); dưới là một ô cho mỗi nhóm menu của gói với lối tắt tới các
 // trang của nhóm. Chữ của ô lấy từ menu mà thanh bên đã tải (menu.ts), nên ở đây không có tên gói hay chữ của lĩnh vực.
 
-import { Anchor, Box, Button, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import { Alert, Anchor, Box, Button, Group, Paper, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useId } from "react";
 import { Link } from "react-router";
-import { type MenuGroup, packageGroups } from "./menu";
+import { homeGroups, type MenuGroup } from "./menu";
 import { MenuIconShape } from "./menuIcons";
 import { usePackageMenu } from "./PackagePage";
 import { PageHeader } from "./PageHeader";
@@ -102,7 +102,7 @@ function TasksSection() {
   const { getToken } = useSession();
   // Cùng khóa với TaskList: chuyển qua lại giữa trang chủ và "Việc của tôi" không tải lại danh sách.
   const tasks = useQuery({ queryKey: ["tasks"], queryFn: () => fetchTasks(getToken()) });
-  const { steps } = useSteps();
+  const { steps, error: stepsError } = useSteps();
   const headingId = useId();
   return (
     <Paper component="section" withBorder radius="md" p="lg" aria-labelledby={headingId}>
@@ -119,6 +119,11 @@ function TasksSection() {
           Mở Việc của tôi
         </Anchor>
       </Group>
+      {stepsError && (
+        <Alert color="yellow" title="Không đọc được khai báo của bước" mb="xs">
+          Liên kết tạm hiện tên bước thay cho tên hồ sơ. Tải lại trang; nếu vẫn lỗi, báo người quản trị.
+        </Alert>
+      )}
       {tasks.isPending ? (
         <Loading what="danh sách việc" />
       ) : tasks.isError ? (
@@ -132,8 +137,7 @@ function TasksSection() {
 
 export function Home() {
   const packages = usePackageMenu();
-  // Nhóm mẫu của lõi chỉ để thử, thanh bên đã thu gọn nó; trang chủ chỉ dẫn tới việc thật của các gói.
-  const groups = packageGroups(packages.items).filter((group) => !group.collapsible);
+  const groups = homeGroups(packages.items);
   return (
     <Stack>
       <PageHeader title="Trang chủ" description="Việc đang chờ bạn và lối vào các gói của đơn vị." />

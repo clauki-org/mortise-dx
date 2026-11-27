@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import appSchema from "../../../contracts/app.schema.json?raw";
 import {
   findItem,
+  homeGroups,
   isActive,
   itemPath,
   MENU_ICONS,
@@ -110,6 +111,18 @@ describe("nhóm trên menu", () => {
   it("dòng chưa có tên gói (nạp trước khi bảng có cột) dùng mã gói làm tên nhóm", () => {
     expect(menuGroups(first, [entry("x", null, { app_name: null })])[1]?.label).toBe("example-app");
     expect(menuGroups(first, [entry("x", null, { app_name: "  " })])[1]?.label).toBe("example-app");
+  });
+
+  it("trang chủ có ô cho nhóm của gói theo thứ tự của menu, không có ô cho nhóm mẫu của lõi", () => {
+    const items = [
+      entry("s1", null, { app: SAMPLE_OWNER, app_name: "Mẫu thử" }),
+      entry("a1", null, { app: "alpha", app_name: "Gói Một" }),
+      entry("z1", null, { app: "zeta", app_name: "Gói Hai" }),
+    ];
+    expect(summary(homeGroups(items))).toEqual([
+      ["Gói Một", false, ["a1"]],
+      ["Gói Hai", false, ["z1"]],
+    ]);
   });
 
   it("không có mục của gói thì chỉ còn nhóm dùng chung", () => {

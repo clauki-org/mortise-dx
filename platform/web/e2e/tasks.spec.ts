@@ -63,6 +63,8 @@ test("người duyệt của đơn vị B không thấy, không mở, không duy
   await tasksLoaded;
   // Trang chủ liệt kê mọi việc đang chờ, như "Việc của tôi" (ADR 0051).
   await expect(page.getByRole("heading", { level: 1, name: "Trang chủ" })).toBeVisible();
+  // Tiêu đề hiện trước danh sách; chờ số việc hiện ra để khẳng định "không thấy" trên danh sách đã vẽ xong.
+  await expect(page.getByText(/^\d+ việc$/)).toBeVisible();
   await expect(page.getByText("Xã B (Tỉnh Mẫu)")).toBeVisible();
   await expect(page.getByRole("link", { name: title })).toHaveCount(0);
 

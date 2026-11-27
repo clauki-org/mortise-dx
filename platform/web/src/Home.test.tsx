@@ -64,6 +64,9 @@ describe("WaitingTasks", () => {
     expect(page).toContain("Người gửi: user.a");
     expect(page).toContain("Quá hạn");
     expect(page).toContain("Không đặt hạn");
+    // Mỗi việc là một mục của danh sách thật (ul > li), để trình đọc màn hình đọc được số việc.
+    expect(page.match(/<ul[\s>]/g)).toHaveLength(1);
+    expect(page.match(/<li[\s>]/g)).toHaveLength(3);
   });
 
   it("không cắt bớt: mọi việc đều có liên kết", () => {

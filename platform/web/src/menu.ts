@@ -97,6 +97,9 @@ export function packageGroups(items: MenuItem[]): MenuGroup[] {
   return [...groups.values()];
 }
 
+/** Nhóm có ô trên trang chủ: nhóm mẫu của lõi chỉ để thử, thanh bên đã thu gọn nó, nên trang chủ không dẫn tới. */
+export const homeGroups = (items: MenuItem[]) => packageGroups(items).filter((group) => !group.collapsible);
+
 /** Nhóm của thanh bên: `first` (màn hình dùng chung) đứng đầu, rồi nhóm của các gói, nhóm mẫu của lõi đứng cuối. */
 export function menuGroups(first: MenuGroup, items: MenuItem[]): MenuGroup[] {
   const all = packageGroups(items);
