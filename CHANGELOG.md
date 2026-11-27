@@ -42,6 +42,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   0053](docs/adr/0053-case-seals-and-timer-deadlines.md)).
 - Trường tùy chỉnh (phần CSDL và API): quản trị org định nghĩa trường chữ, số, ngày, lựa chọn cho bảng của gói; CSDL
   từ chối khóa lạ, sai kiểu, thiếu trường bắt buộc ([ADR 0059](docs/adr/0059-custom-fields.md)).
+- Quản trị org đổi nhãn, ẩn hiện, thứ tự cột, trường, khối và ngưỡng thẻ số cho cả org; cài lại gói vẫn giữ, xóa phần
+  chỉnh là về mặc định ([ADR 0060](docs/adr/0060-config-overrides.md)).
 
 ### Changed
 
