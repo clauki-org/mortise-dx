@@ -52,7 +52,7 @@ export function DueBadge({ due, now }: { due: string | null; now: number }) {
   if (due === null) return <StatusBadge tone="neutral">Không đặt hạn</StatusBadge>;
   const { text, overdue } = dueText(due, now);
   return (
-    <StatusBadge tone={overdue ? "overdue" : "active"} title={formatDateTime(due)}>
+    <StatusBadge tone={overdue ? "bad" : "info"} title={formatDateTime(due)}>
       {text}
     </StatusBadge>
   );
@@ -135,7 +135,7 @@ export function TaskList() {
                 {shown.map((task) => (
                   <Table.Tr key={task.id}>
                     <Table.Td>
-                      <Anchor component={Link} to={`/tasks/${encodeURIComponent(task.id)}`} fw={500}>
+                      <Anchor component={Link} to={`/tasks/${encodeURIComponent(task.id)}`} fw={600}>
                         {recordTitle(task, stepOf(steps, task))}
                       </Anchor>
                       <Group gap={6}>

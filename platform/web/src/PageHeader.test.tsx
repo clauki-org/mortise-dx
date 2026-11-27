@@ -2,15 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Kiểm đầu trang và nhãn trạng thái dùng chung: tiêu đề là h1 duy nhất, giữ nguyên chữ của cấu hình; đường về, mô tả,
-// việc chính đứng đúng chỗ; mỗi nghĩa của StatusBadge một màu riêng; vùng cuộn của bảng có nhãn và tiêu điểm. Dựng ra HTML bằng react-dom/server.
+// việc chính đứng đúng chỗ; mỗi nghĩa của StatusBadge một màu riêng và luôn có chữ; vùng cuộn của bảng có nhãn và tiêu điểm. Dựng ra HTML bằng react-dom/server.
 
 import { MantineProvider } from "@mantine/core";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { PageHeader } from "./PageHeader";
-import { StatusBadge, type Tone } from "./StatusBadge";
+import { StatusBadge } from "./StatusBadge";
 import { Blank, keepTogether, TableScroll } from "./TableScroll";
+import { TONES } from "./tones";
 
 const render = (node: ReactNode) => renderToStaticMarkup(<MantineProvider>{node}</MantineProvider>);
 
@@ -37,12 +38,15 @@ describe("PageHeader", () => {
 });
 
 describe("StatusBadge", () => {
-  it("mỗi nghĩa một màu", () => {
-    const tones: Tone[] = ["overdue", "active", "done", "neutral"];
-    const colors = tones.map(
+  it("mỗi nghĩa một màu, theo bộ nghĩa chung", () => {
+    const colors = TONES.map(
       (tone) => render(<StatusBadge tone={tone}>x</StatusBadge>).match(/color-(\w+)-light/)?.[1],
     );
-    expect(colors).toEqual(["red", "blue", "green", "gray"]);
+    expect(colors).toEqual(["red", "orange", "blue", "green", "gray"]);
+  });
+
+  it("luôn hiện chữ, màu không là tín hiệu duy nhất", () => {
+    expect(render(<StatusBadge tone="bad">Quá hạn</StatusBadge>)).toContain("Quá hạn");
   });
 });
 
