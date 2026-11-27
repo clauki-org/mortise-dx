@@ -12,6 +12,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ### Added
 
+- Khối trong chi tiết một dòng của danh mục: bản đồ, bảng điều hành, danh sách, hồ sơ chỉ hiện dữ liệu của dòng đang
+  xem; tên điểm trên bản đồ và dòng bảng điều hành mở chi tiết dòng
+  ([ADR 0068](docs/adr/0068-blocks-in-record-detail.md)).
 - Truy vết phân tán, mặc định tắt: `MORTISE_TRACING=on` cùng `make obs-up` cho xem trong Grafana từng chặng của một
   yêu cầu qua cổng tới dịch vụ tự viết, Flowable, Scorpio, CSDL (Jaeger, không lưu chuỗi truy vấn hay header;
   [ADR 0038](docs/adr/0038-distributed-tracing.md)).

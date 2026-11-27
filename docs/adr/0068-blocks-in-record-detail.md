@@ -68,7 +68,7 @@ của gói; liên kết chỉ tới dòng ngoài cùng, vì dòng con cần khó
   kiện áp lên mọi điểm của khối.
 - Bài kiểm tổ hợp (`blocks.test.tsx`) thêm vị trí "trong chi tiết dòng", có và không có attach, cùng chi tiết dòng của
   danh mục thật với khối gói khai; với danh mục, bản đồ, bảng điều hành có attach, bài đòi điều kiện của dòng có trong
-  biến đã gửi. 600 tổ hợp khi chạy ngày 2026-11-28. Theo dõi hồ sơ đọc REST nên điều kiện của nó kiểm ở `cases.test.ts`
+  biến đã gửi. 1264 bài của `blocks.test.tsx` khi chạy ngày 2026-11-28. Theo dõi hồ sơ đọc REST nên điều kiện của nó kiểm ở `cases.test.ts`
   và kiểm thử của workflow-api.
 - workflow-api gửi điều kiện biến cho Flowable với kiểu chuỗi; biến lưu dạng số chưa kiểm là có khớp hay không, nên gói
   gắn theo biến chuỗi (khóa uuid hay mã). Lọc theo biến đọc trường của bước từ phiên bản mới nhất; hồ sơ lập trên phiên bản cũ có trường khác vẫn lọc được theo
