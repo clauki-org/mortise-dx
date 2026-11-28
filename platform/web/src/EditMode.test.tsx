@@ -8,13 +8,22 @@
 import { MantineProvider } from "@mantine/core";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { Client, Provider } from "urql";
 import { describe, expect, it } from "vitest";
 import { EditPanel } from "./EditMode";
 import { type Change, changeKey } from "./editDraft";
 import type { MenuItem } from "./menu";
 
+// Phần "Trường tùy chỉnh" của danh mục đọc định nghĩa qua urql; dựng tĩnh không chạy truy vấn nên client không cần
+// trả lời gì, chỉ cần có mặt.
+const client = new Client({ url: "/v1/graphql", exchanges: [] });
+
 const html = (node: ReactNode) =>
-  renderToStaticMarkup(<MantineProvider>{node}</MantineProvider>).replace(/<style[^>]*>[^<]*<\/style>/g, "");
+  renderToStaticMarkup(
+    <MantineProvider>
+      <Provider value={client}>{node}</Provider>
+    </MantineProvider>,
+  ).replace(/<style[^>]*>[^<]*<\/style>/g, "");
 
 const item = (id: string, component: string, config: unknown): MenuItem => ({
   app: "a",
@@ -94,6 +103,10 @@ describe("EditPanel", () => {
     expect(out).toContain("Nhãn của cột &quot;Mã&quot;");
     expect(out).toContain("Hiện cột &quot;Tình trạng&quot; trong danh sách");
     expect(out).toContain("Chưa có thay đổi chờ lưu.");
+    // Định nghĩa trường tùy chỉnh nằm trong chế độ Chỉnh sửa của danh mục (ADR 0059), có ghi rằng nó lưu ngay.
+    expect(out).toContain("<legend");
+    expect(out).toContain(">Trường tùy chỉnh</legend>");
+    expect(out).toContain("được lưu ngay");
   });
 
   it("thay đổi chờ lưu và lời từ chối của CSDL hiện thành chữ", () => {
@@ -118,6 +131,7 @@ describe("EditPanel", () => {
     expect(out).toContain("Ẩn trường &quot;Tùy chọn&quot;");
     expect(out).not.toContain("Ẩn trường &quot;Bắt buộc&quot;");
     expect(out).toContain("Nhãn của trường &quot;Bắt buộc&quot;");
+    expect(out).not.toContain(">Trường tùy chỉnh</legend>");
   });
 
   it("bảng điều hành: tiêu đề khối, ngưỡng kèm phép so và số của gói", () => {

@@ -21,8 +21,8 @@ import {
 import { Link } from "react-router";
 import { type CatalogNode, display, type Field, keyOf, type Row, type Sort, toneOf } from "./catalog";
 import { VIEW_LABELS, type View } from "./catalogViews";
-import { rowPath } from "./menu";
 import { type CustomField, customValue, displayField } from "./customFields";
+import { rowPath } from "./menu";
 import { StatusBadge } from "./StatusBadge";
 import { Blank, keepTogether, TableScroll } from "./TableScroll";
 

@@ -1,17 +1,16 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Hộp thoại "Trường tùy chỉnh" cho quản trị org (ADR 0059): chọn một bảng của danh mục, xem các trường đã định nghĩa,
-// thêm trường (mã, nhãn, kiểu, lựa chọn, bắt buộc), sửa nhãn, lựa chọn, bắt buộc, và xóa. Catalog.tsx đặt nút ở đầu
-// danh sách; CustomFieldsEditor dùng riêng được ở nơi khác (chế độ Chỉnh sửa) chỉ với gói và danh sách bảng. Nút chỉ
-// hiện cho tenant_admin của tenant không có cha; Hasura và trigger của platform.custom_fields vẫn là nơi chặn cuối.
+// Phần "Trường tùy chỉnh" của chế độ Chỉnh sửa (ADR 0059, ADR 0070): chọn một bảng của danh mục, xem các trường đã
+// định nghĩa, thêm trường (mã, nhãn, kiểu, lựa chọn, bắt buộc), sửa nhãn, lựa chọn, bắt buộc, và xóa. EditSections.tsx
+// đặt phần này trong bảng chỉnh của mục danh mục, nên chỉ quản trị org (tenant_admin của tenant không có cha) thấy;
+// Hasura và trigger của platform.custom_fields vẫn là nơi chặn cuối.
 
 import {
   Alert,
   Button,
   Checkbox,
   Group,
-  Modal,
   Select,
   Stack,
   Table,
@@ -22,7 +21,6 @@ import {
 } from "@mantine/core";
 import { type FormEvent, useState } from "react";
 import { useClient } from "urql";
-import { useOrgAdmin } from "./AppsPage";
 import { type CustomField, KIND_LABELS, KINDS } from "./customFields";
 import {
   ADMIN_CONTEXT,
@@ -265,7 +263,7 @@ function ConfirmDelete({
 
 type EditorProps = { app: string; tables: CatalogTableRef[] };
 
-/** Thân hộp thoại; nơi gọi đưa gói (cột app của định nghĩa) và các bảng chọn được, bảng đầu được chọn sẵn. */
+/** Phần định nghĩa trường; nơi gọi đưa gói (cột app của định nghĩa) và các bảng chọn được, bảng đầu được chọn sẵn. */
 export function CustomFieldsEditor({ app, tables }: EditorProps) {
   const [source, setSource] = useState(tables[0]?.source ?? "");
   const { fields, settled } = useCustomFields(source);
@@ -338,28 +336,5 @@ export function CustomFieldsEditor({ app, tables }: EditorProps) {
         onCancel={() => setEditing(undefined)}
       />
     </Stack>
-  );
-}
-
-/** Nút mở hộp thoại; không hiện với người không phải quản trị org hay khi danh mục không có bảng nào. */
-export function CustomFieldsButton({ app, tables }: EditorProps) {
-  const admin = useOrgAdmin();
-  const [open, setOpen] = useState(false);
-  if (admin !== true || tables.length === 0 || app === "") return null;
-  return (
-    <>
-      <Button variant="default" onClick={() => setOpen(true)}>
-        Trường tùy chỉnh
-      </Button>
-      <Modal
-        opened={open}
-        onClose={() => setOpen(false)}
-        title="Trường tùy chỉnh"
-        size="xl"
-        closeButtonProps={{ "aria-label": "Đóng hộp thoại" }}
-      >
-        {open && <CustomFieldsEditor app={app} tables={tables} />}
-      </Modal>
-    </>
   );
 }

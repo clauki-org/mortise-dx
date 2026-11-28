@@ -73,9 +73,9 @@ capabilities:
     không qua fields; bảng có định nghĩa thì danh sách dạng bảng và thẻ có thêm cột sau các cột của list.columns, màn
     hình chi tiết có thêm ô, tệp xuất có thêm cột cùng thứ tự; giá trị đọc từ cột custom, hiện theo kiểu (chữ, số, ngày,
     lựa chọn). Khóa của trường đã xóa bị bỏ qua.
-  - Quản trị org (tenant_admin của tenant không có cha) có nút "Trường tùy chỉnh" ở đầu danh sách ngoài cùng, mở hộp
-    thoại chọn một bảng của danh mục (cả bảng con), xem, thêm (mã, nhãn, kiểu, lựa chọn, bắt buộc), sửa nhãn, lựa chọn,
-    bắt buộc, và xóa trường; lời từ chối của CSDL hiện nguyên lý do.
+  - Trong chế độ Chỉnh sửa của mục danh mục (ADR 0070), quản trị org (tenant_admin của tenant không có cha) có phần
+    Trường tùy chỉnh để chọn một bảng của danh mục (cả bảng con), xem, thêm (mã, nhãn, kiểu, lựa chọn, bắt buộc), sửa
+    nhãn, lựa chọn, bắt buộc, và xóa trường; ghi ngay, không qua bản nháp; lời từ chối của CSDL hiện nguyên lý do.
   - Phần tài liệu đính kèm của dòng đang xem (detail.documents, ở mọi cấp cha–con) để xem, tải xuống, đính kèm tệp;
     năng lực và giới hạn ở contracts/documents.component.yaml (ADR 0041).
   - Khối trong màn hình chi tiết (detail.blocks, ở mọi cấp cha–con; ADR 0068) là mục menu hay khối của chính gói, vẽ như

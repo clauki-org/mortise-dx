@@ -6,18 +6,16 @@
 // chỉ gốc, mọi đường dẫn bên dưới địa chỉ gốc do thành phần tự đọc. Ở đây không có tên bảng, tên cột hay chữ của
 // một lĩnh vực nào.
 
-import { Alert, Group, Stack } from "@mantine/core";
+import { Alert, Stack } from "@mantine/core";
 import { useState } from "react";
-import { useLocation, useParams, useSearchParams } from "react-router";
+import { useLocation, useSearchParams } from "react-router";
 import { recordWhere, useBlock } from "./blockContext";
 import { CatalogExport } from "./CatalogExport";
 import { CatalogRecord } from "./CatalogRecord";
 import { CatalogTable } from "./CatalogTable";
-import { CustomFieldsButton } from "./CustomFieldsDialog";
 import { type CatalogConfig, configProblems, problemText, resolvePath } from "./catalog";
 import { emptyState, readState, writeState } from "./catalogQuery";
 import { viewOf, viewProblems, viewsOf } from "./catalogViews";
-import { catalogTables } from "./customFieldsAdmin";
 import { PageHeader } from "./PageHeader";
 
 /** Kiểu của danh sách ngoài cùng: kiểu vẽ được và kiểu mặc định; Kanban, Lịch thiếu mục cấu hình thì về bảng. */
@@ -67,8 +65,6 @@ function BlockList({ config, basePath }: Pick<Props, "config" | "basePath">) {
 export function Catalog({ config, basePath, app, item }: Props) {
   const { pathname } = useLocation();
   const [params, setParams] = useSearchParams();
-  // Gói của mục menu, cột app của định nghĩa trường tùy chỉnh (ADR 0059); lấy từ đường dẫn /apps/<gói>/<mục>.
-  const { app = "" } = useParams();
   const block = useBlock();
   const problems = [...configProblems(config), ...viewProblems(config)];
   if (problems.length > 0) {
@@ -90,12 +86,7 @@ export function Catalog({ config, basePath, app, item }: Props) {
         <PageHeader
           title={config.title}
           description={config.description}
-          action={
-            <Group align="flex-start">
-              <CustomFieldsButton app={app} tables={catalogTables(config)} />
-              <CatalogExport config={config} state={state} />
-            </Group>
-          }
+          action={<CatalogExport config={config} state={state} />}
         />
         <CatalogTable
           config={config}

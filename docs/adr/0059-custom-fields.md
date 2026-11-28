@@ -76,8 +76,9 @@ Chọn cách thứ ba.
   - Danh mục (bảng, thẻ), chi tiết và tệp xuất có thêm cột, ô sau các trường của gói. Biểu mẫu sửa, thêm dòng có thêm
     ô theo kiểu; lệnh sửa gộp giá trị lên `custom` vừa đọc lại và chỉ gửi khi một ô tùy chỉnh đổi.
   - Lời từ chối của trigger hiện nguyên lý do, cả ở biểu mẫu của gói.
-  - Quản trị org định nghĩa trường trong hộp thoại "Trường tùy chỉnh" mở từ danh sách ngoài cùng của danh mục. Hộp thoại
-    liệt kê mọi bảng của danh mục vì trình duyệt không đọc được `platform.custom_field_tables`; bảng chưa bật bị khóa
+  - Quản trị org định nghĩa trường ở phần "Trường tùy chỉnh" trong chế độ Chỉnh sửa của mục danh mục (ADR 0070); mỗi
+    lần thêm, sửa, xóa ghi ngay, không qua bản nháp và nút "Lưu" của chế độ Chỉnh sửa, vì định nghĩa là dữ liệu của
+    bảng riêng chứ không phải phần ghi đè cấu hình. Phần này liệt kê mọi bảng của danh mục vì trình duyệt không đọc được `platform.custom_field_tables`; bảng chưa bật bị khóa
     ngoại từ chối, lời báo nói rõ.
   - Kanban, Lịch và nạp từ tệp chưa có trường tùy chỉnh; trường bắt buộc làm mọi dòng của tệp nạp bị từ chối.
 - `make smoke` chạy `platform/schema/tests/custom_fields.sql` (trigger, ràng buộc, tenant gốc, trong giao dịch rồi

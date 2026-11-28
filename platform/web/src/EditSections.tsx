@@ -9,7 +9,10 @@
 import { ActionIcon, Button, Checkbox, Group, NativeSelect, NumberInput, Stack, Text, TextInput } from "@mantine/core";
 import { IconArrowDown, IconArrowUp } from "@tabler/icons-react";
 import { type ReactNode, useState } from "react";
+import { CustomFieldsEditor } from "./CustomFieldsDialog";
+import type { CatalogConfig } from "./catalog";
 import { ITEM_TARGET, type ItemOverride, type OverrideKind } from "./configOverrides";
+import { catalogTables } from "./customFieldsAdmin";
 import { type Change, menuMoveChanges, moveChanges } from "./editDraft";
 import {
   blockCandidates,
@@ -413,6 +416,22 @@ export function DashboardSection({ entry, own, add }: SectionProps) {
           </Stack>
         );
       })}
+    </Fieldset>
+  );
+}
+
+/**
+ * Trường tùy chỉnh của các bảng trong danh mục (ADR 0059). Định nghĩa là dòng của platform.custom_fields chứ không
+ * phải phần ghi đè cấu hình, nên mỗi lần thêm, sửa, xóa ghi ngay; đưa vào bản nháp thì "Hoàn tác" phải xóa dòng đã có
+ * giá trị trong dữ liệu.
+ */
+export function CustomFieldsSection({ entry }: { entry: MenuItem }) {
+  return (
+    <Fieldset legend="Trường tùy chỉnh">
+      <Text size="sm" c="dimmed">
+        Thêm, sửa, xóa trường ở đây được lưu ngay, không qua nút "Lưu" và "Hoàn tác" ở trên.
+      </Text>
+      <CustomFieldsEditor app={entry.app} tables={catalogTables(entry.config as CatalogConfig)} />
     </Fieldset>
   );
 }

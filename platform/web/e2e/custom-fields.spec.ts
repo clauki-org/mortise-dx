@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Trường tùy chỉnh trên trình duyệt (ADR 0059), qua gói cơ sở vật chất xã: quản trị tỉnh (tenant gốc) mở hộp thoại
-// "Trường tùy chỉnh" từ danh mục cơ sở và thêm một trường lựa chọn; gửi giá trị sai kiểu qua API thì CSDL từ
-// chối kèm lý do; cán bộ phụ trách xã A chọn giá trị trong biểu mẫu "Sửa", danh mục và màn hình chi tiết hiện giá trị đó.
+// Trường tùy chỉnh trên trình duyệt (ADR 0059), qua gói cơ sở vật chất xã: quản trị tỉnh (tenant gốc) mở phần
+// "Trường tùy chỉnh" trong chế độ Chỉnh sửa của danh mục cơ sở và thêm một trường lựa chọn; gửi giá trị sai kiểu qua
+// API thì CSDL từ chối kèm lý do; cán bộ phụ trách xã A chọn giá trị trong biểu mẫu "Sửa", danh mục và màn hình chi tiết hiện giá trị đó.
 // Trường không bắt buộc: một trường bắt buộc còn sót lại khi bài hỏng giữa chừng sẽ chặn mọi lần thêm cơ sở ở các xã
 // của tỉnh. Mã trường mang tiền tố e2e_cf_ và được dọn trước và sau bài. Cần gói đã cài
 // (`make app-install APP=facilities-commune`).
@@ -65,12 +65,14 @@ test("quản trị tỉnh thêm trường lựa chọn, CSDL từ chối giá tr
       ADMIN,
     );
 
-    // Quản trị tỉnh thêm trường từ hộp thoại của danh mục; bảng đầu (cơ sở) được chọn sẵn.
+    // Quản trị tỉnh thêm trường ở phần "Trường tùy chỉnh" của chế độ Chỉnh sửa; bảng đầu (cơ sở) được chọn sẵn.
     await page.goto("/");
     await signIn(page, "admin.tinh");
     await openMenuItem(page, "Cơ sở nhà, đất");
-    await page.getByRole("button", { name: "Trường tùy chỉnh" }).click();
-    const dialog = page.getByRole("dialog", { name: "Trường tùy chỉnh" });
+    await page.getByRole("button", { name: "Chỉnh sửa" }).click();
+    const dialog = page
+      .getByRole("region", { name: "Chỉnh sửa trang" })
+      .getByRole("group", { name: "Trường tùy chỉnh" });
     await dialog.getByRole("textbox", { name: "Mã" }).fill(fieldCode);
     await dialog.getByRole("textbox", { name: "Nhãn" }).fill(label);
     await dialog.getByRole("combobox", { name: "Kiểu" }).click();
