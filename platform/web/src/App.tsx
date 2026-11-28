@@ -17,6 +17,7 @@ import { Brand } from "./Brand";
 import { NotFound, RouteError } from "./Errors";
 import { createGraphqlClient } from "./graphql";
 import { Home } from "./Home";
+import { PackageDraftPage } from "./PackageDraftPage";
 import { PackagePage } from "./PackagePage";
 import { Shell } from "./Shell";
 import { ErrorNotice } from "./States";
@@ -53,6 +54,8 @@ const createRouter = () =>
             { path: "tasks/:taskId", element: <TaskScreen /> },
             // Bật, tắt gói của org (ADR 0065); không nằm dưới apps/ để không trùng địa chỉ của mục menu của gói.
             { path: "packages", element: <AppsPage /> },
+            // Soạn bản nháp cấu hình gói của quản trị đơn vị (ADR 0071), cũng ngoài apps/ vì không thuộc gói nào.
+            { path: "package-drafts", element: <PackageDraftPage /> },
             // Mục menu của gói; phần đường dẫn sau mục do thành phần của mục tự đọc (ví dụ dòng chi tiết của danh mục).
             { path: "apps/:app/:item/*", element: <PackagePage /> },
             { path: "*", element: <NotFound /> },

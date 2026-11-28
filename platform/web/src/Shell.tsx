@@ -14,6 +14,7 @@ import { Brand } from "./Brand";
 import { MenuNav } from "./MenuNav";
 import { type MenuGroup, type MenuLink, menuGroups } from "./menu";
 import { usePackageMenu } from "./PackagePage";
+import { canDraft } from "./packageDraft";
 import { addPasskey, canAddPasskey } from "./passkey";
 import { useSession } from "./session";
 import { TenantInfo } from "./TenantInfo";
@@ -26,11 +27,13 @@ const SHARED_LINKS: MenuLink[] = [
 ];
 // Trang bật, tắt gói chỉ dành cho quản trị org (ADR 0065); người khác mở đường dẫn thì trang tự báo không có quyền.
 const APPS_LINK: MenuLink = { to: "/packages", label: "Ứng dụng", icon: "settings" };
+// Soạn bản nháp cấu hình gói dành cho mọi quản trị đơn vị, kể cả đơn vị con (ADR 0071), không chỉ quản trị org.
+const DRAFT_LINK: MenuLink = { to: "/package-drafts", label: "Soạn cấu hình gói", icon: "form" };
 
-const sharedGroup = (orgAdmin: boolean): MenuGroup => ({
+const sharedGroup = (orgAdmin: boolean, drafter: boolean): MenuGroup => ({
   id: "",
   label: "Chung",
-  links: orgAdmin ? [...SHARED_LINKS, APPS_LINK] : SHARED_LINKS,
+  links: [...SHARED_LINKS, ...(drafter ? [DRAFT_LINK] : []), ...(orgAdmin ? [APPS_LINK] : [])],
   collapsible: false,
 });
 
@@ -59,7 +62,7 @@ export function Shell() {
   const { pathname, search } = useLocation();
   const packages = usePackageMenu();
   const orgAdmin = useOrgAdmin() === true;
-  const groups = menuGroups(sharedGroup(orgAdmin), packages.items);
+  const groups = menuGroups(sharedGroup(orgAdmin, canDraft(user.access_token)), packages.items);
   // Dưới cỡ `sm` thanh bên đóng chỉ bị đẩy ra ngoài màn hình, các liên kết vẫn nhận Tab mà người dùng không thấy tiêu
   // điểm ở đâu. `inert` bỏ cả thanh khỏi thứ tự Tab và cây trợ năng cho tới khi mở menu.
   const narrow = useMatches({ base: true, sm: false }, { getInitialValueInEffect: false });

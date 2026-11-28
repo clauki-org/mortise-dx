@@ -94,4 +94,14 @@ của dịch vụ (`assistant.model`) và trường thời gian của phản h�
 - Prompt dài hơn bản đầu (tài liệu nền tảng, lập luận): 13.767 token vào ở lượt đầu, 16.449 ở lượt sửa với
   `gemini-3.5-flash-lite`; 13.039 token với `qwen3.5:4b`, đọc mất 283,7 giây trên máy phát triển (đo 2026-11-28), nên
   mô hình tại chỗ càng không kịp hạn. `ASSISTANT_DRAFT_NUM_CTX` là 24.576 cho đủ lượt sửa.
-- Chưa có giao diện cho đường này, và trợ lý chưa soạn migration, quyền Hasura hay BPMN; cả hai ngoài phạm vi #117.
+- Trợ lý chưa soạn migration, quyền Hasura hay BPMN; việc đó ngoài phạm vi #117.
+
+## Bổ sung: màn hình cho quản trị đơn vị
+
+Đường này có màn hình "Soạn cấu hình gói" (`/package-drafts`) trong nhóm "Chung" của menu, như trang "Ứng dụng"
+([ADR 0065](0065-package-on-off.md)), vì nó không thuộc gói nào. Mục hiện cho mọi token có `tenant_admin`, kể cả
+quản trị đơn vị con, không chỉ quản trị org như trang "Ứng dụng": dịch vụ cho mọi `tenant_admin` soạn. Mở thẳng đường
+dẫn mà không có vai trò thì màn hình báo không có quyền; dịch vụ vẫn tự trả 403. Màn hình gửi một nhu cầu mỗi lần,
+không phải hội thoại nhiều lượt, và không cài hay xem trước bản nháp trong component: nó hiện kết luận của bước kiểm,
+lỗi, tệp còn phải viết, lập luận (câu giải thích của mô hình ghi là chưa kiểm) và nội dung từng tệp kèm nút tải về.
+Tên tệp tải về giữ thư mục (`catalog__requests.yaml`) vì hai tệp cùng tên ở hai thư mục là chuyện thường.

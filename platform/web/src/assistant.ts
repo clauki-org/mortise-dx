@@ -86,7 +86,7 @@ export function configProblems(config: unknown): string[] {
  * Mô hình chạy ở đâu: qua API thì câu hỏi và phần prompt đi kèm rời máy chủ của bản cài (ADR 0021, ADR 0034), nên
  * ghi cả tên máy của API.
  */
-const modelWhere = (model: ModelInfo) =>
+export const modelWhere = (model: ModelInfo) =>
   model.location === "local" ? "chạy tại chỗ" : `qua API ${model.host ?? "bên ngoài"}`;
 
 /** Dòng cho người hỏi văn bản biết câu trả lời đến từ mô hình nào và câu hỏi đã đi đâu. */
