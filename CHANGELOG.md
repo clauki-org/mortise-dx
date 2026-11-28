@@ -99,6 +99,8 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Trợ lý soạn bản nháp cấu hình gói cho quản trị đơn vị (`POST /v1/assistant/package-drafts`): gõ nhu cầu, nhận
   `app.yaml` và cấu hình thành phần đã kiểm theo luật của bộ kiểm gói, kèm lập luận nối đoạn nhu cầu với công dụng
   trong `contracts/` và danh sách tệp còn phải viết; mỗi lần soạn có một dòng nhật ký; không tự cài (ADR 0071).
+- Màn hình "Soạn cấu hình gói" cho quản trị đơn vị: gõ nhu cầu, xem bản nháp, lỗi, lập luận chọn component và tải
+  từng tệp về (ADR 0071).
 
 ### Removed
 
