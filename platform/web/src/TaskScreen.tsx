@@ -11,14 +11,15 @@ import type Form from "@rjsf/core";
 import { Form as MantineForm } from "@rjsf/mantine";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { formatDateTime } from "./format";
 import { formValidator } from "./formValidator";
 import { PageHeader } from "./PageHeader";
+import { type FormContext, SourceChoice } from "./SourceChoice";
 import { ErrorNotice, Loading } from "./States";
 import { useSession } from "./session";
-import { detailRows, recordTitle, stepOf, useSteps } from "./steps";
+import { caseContext, detailRows, recordTitle, stepOf, stepUi, useSteps } from "./steps";
 import { DelegatedBadge, DueBadge } from "./TaskList";
 import { completeTask, fetchTasks, type StepConfig, type Task } from "./workflow";
 
@@ -30,6 +31,8 @@ const HIDDEN_PREFIX = "authority_";
 // Ô nhập của Mantine đã tự hiện lỗi dưới ô; danh sách lỗi riêng của rjsf dưới mỗi trường sẽ lặp lại cùng lỗi đó.
 const NoFieldErrorList = () => null;
 const TEMPLATES = { FieldErrorTemplate: NoFieldErrorList };
+// Ô chọn của trường khai ở sources (stepUi); vai trò của truy vấn nằm trong ui:options của từng ô.
+const WIDGETS = { sourceChoice: SourceChoice };
 
 // Nhãn của một biến: tiêu đề của trường cùng tên trong biểu mẫu của bước. Biến không có nhãn (biến kỹ thuật, quyết
 // định của bước trước) không hiện, để người xử lý không phải đọc tên biến thô.
@@ -86,6 +89,7 @@ function Decision({ task, step }: { task: Task; step: StepConfig }) {
   const form = useRef<Form>(null);
   // Nút vừa bấm; rjsf gọi onSubmit với dữ liệu đã kiểm (gồm cả giá trị mặc định của schema) chứ không nhận tham số.
   const chosen = useRef<StepConfig["actions"][number] | null>(null);
+  const context: FormContext = useMemo(() => ({ values: caseContext(task), role: "user" }), [task]);
   const complete = useMutation({
     mutationFn: ({ variables }: { action: string; variables: Record<string, unknown> }) =>
       completeTask(getToken(), task.id, variables),
@@ -112,7 +116,9 @@ function Decision({ task, step }: { task: Task; step: StepConfig }) {
         <MantineForm
           ref={form}
           schema={step.form as RJSFSchema}
-          uiSchema={{ ...(step.ui as UiSchema), "ui:submitButtonOptions": { norender: true } }}
+          uiSchema={{ ...(stepUi(step) as UiSchema), "ui:submitButtonOptions": { norender: true } }}
+          formContext={context}
+          widgets={WIDGETS}
           validator={formValidator}
           onSubmit={(event) => chosen.current && send(chosen.current, event.formData ?? {})}
           showErrorList={false}

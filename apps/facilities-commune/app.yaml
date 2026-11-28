@@ -64,6 +64,19 @@ menu:
     component: assistant
     config: assistant/ask-documents.yaml
     icon: chat
+  # Tin công khai của hồ sơ rà soát và đăng ký nhận của đơn vị cùng tỉnh (ADR 0069): bản sao của tin trên cổng tỉnh;
+  # thứ tự ưu tiên, mẫu tin do view của gói tính. Người duyệt của xã đăng tin cho hồ sơ đang công khai ở mục sau.
+  - id: notices
+    label: Tin công khai
+    component: catalog
+    config: catalog/notices.yaml
+    icon: document
+  - id: notice-new
+    label: Đăng tin công khai
+    component: form
+    config: forms/notice.yaml
+    icon: form
+    roles: [manager]
   # Cán bộ theo dõi hồ sơ rà soát mình đã lập (ADR 0032). Không gồm hồ sơ kiểm tra kho lưu trữ: hồ sơ đó do tài khoản
   # dịch vụ mở, không có người lập nào.
   - id: reviews

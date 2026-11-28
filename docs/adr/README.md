@@ -87,6 +87,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0068](0068-blocks-in-record-detail.md) | Khối trong chi tiết một dòng, lọc theo dòng đang xem, liên kết chung tới chi tiết dòng | Chấp nhận |
 | [0064](0064-import-child-rows-from-file.md) | Nạp dòng con từ tệp Excel hay CSV, xem trước lỗi theo dòng, thêm trong một lệnh | Chấp nhận |
 | [0058](0058-two-installs-and-install-presets.md) | Hai bản cài trên một máy và mẫu cài | Chấp nhận |
+| [0069](0069-public-notices-and-receive-requests.md) | Tin công khai, đăng ký nhận và danh sách xếp theo thứ tự ưu tiên trong quy trình rà soát | Chấp nhận |
 
 ## Quyết định còn mở
 

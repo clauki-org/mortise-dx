@@ -17,6 +17,7 @@ import { CatalogForm } from "./CatalogForm";
 import { CatalogImport } from "./CatalogImport";
 import { CellValue } from "./CatalogRows";
 import { CatalogTable } from "./CatalogTable";
+import { CatalogText } from "./CatalogText";
 import {
   type CatalogConfig,
   type Child,
@@ -175,17 +176,27 @@ export function CatalogRecord({ config, basePath, steps, app, item }: Props) {
       />
       {/* Mỗi trường một ô (ADR 0050): danh sách định nghĩa để trình đọc màn hình đọc nhãn rồi giá trị như bảng dọc cũ. */}
       <SimpleGrid component="dl" cols={{ base: 1, sm: 2, lg: 3 }} spacing="sm" m={0}>
-        {node.fields.map((field) => (
-          <Paper key={field.name} withBorder radius="md" px="md" py="sm">
-            <Text component="dt" size="sm" c="dimmed">
-              {field.label}
-            </Text>
-            <Box component="dd" m={0} mt={4} fw={600} style={{ overflowWrap: "anywhere" }}>
-              <CellValue field={field} value={fieldValue(row, field.name)} />
-            </Box>
-          </Paper>
-        ))}
+        {/* Trường của detail.text hiện riêng bên dưới, nguyên các dòng; trong ô lưới nó mất xuống dòng. */}
+        {node.fields
+          .filter((field) => field.name !== node.detail?.text?.field)
+          .map((field) => (
+            <Paper key={field.name} withBorder radius="md" px="md" py="sm">
+              <Text component="dt" size="sm" c="dimmed">
+                {field.label}
+              </Text>
+              <Box component="dd" m={0} mt={4} fw={600} style={{ overflowWrap: "anywhere" }}>
+                <CellValue field={field} value={fieldValue(row, field.name)} />
+              </Box>
+            </Paper>
+          ))}
       </SimpleGrid>
+      {node.detail?.text && (
+        <CatalogText
+          block={node.detail.text}
+          value={fieldValue(row, node.detail.text.field)}
+          recordKey={row[keyOf(node)]}
+        />
+      )}
       {node.detail?.blocks && (
         <RecordBlocks
           blocks={node.detail.blocks}

@@ -218,9 +218,10 @@ SQL
     check "Bước của tỉnh: manager.tinh không thấy bước trình của xã A" "[$(step_of "$province" "$manager_tinh")]" "[]"
     # Trường của bước (ADR 0031): decision là trường của bước quyết định, người trình không ghi sẵn được.
     check "Người trình không gửi được nội dung quyết định khi hoàn thành bước trình" \
-      "$(complete "$manager" "$above" '{"recipient": "Đơn vị kiểm thử", "submitted": true, "decision": "Đặt sẵn"}')" 400
+      "$(complete "$manager" "$above" '{"submitted": true, "decision": "Đặt sẵn"}')" 400
     for instance in "$above" "$later" "$province"; do
-      complete "$manager" "$instance" '{"recipient": "Đơn vị kiểm thử", "submitted": true}' >/dev/null
+      # Không đơn vị nào đăng ký nên không có đơn vị nhận; chọn đơn vị nhận ở tests/notices.sh.
+      complete "$manager" "$instance" '{"submitted": true}' >/dev/null
     done
     check "Trình xong: hồ sơ A sang bước quyết định, manager.a thấy, admin.a không thấy" \
       "$(step_of "$above") [$(step_of "$above" "$admin_a")]" "decide []"

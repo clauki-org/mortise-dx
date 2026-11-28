@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: tiền tố tên tệp của khối chữ có dấu cách và dấu gạch chéo.
+# Nếu lọt, tên tệp tải về đổi theo hệ điều hành, có thể thành đường dẫn thư mục.
+
+title: Đối tượng
+source: app_example_items
+fields:
+  - { name: code, label: Mã }
+  - { name: body, label: Nội dung }
+list:
+  columns: [code]
+detail:
+  text: { field: body, title: Văn bản, download: "van ban/mau" }

@@ -72,7 +72,9 @@ ghi khi hồ sơ vào bước đó, như mọi bước chờ hẹn giờ, không
     <sequenceFlow id="toPublishRejected" sourceRef="publish_decision" targetRef="rejected_publish"/>
     <endEvent id="rejected_publish" name="Trả lại"/>
 
-    <!-- Thời gian công khai: không có việc nào cho người dùng, hết hạn thì Flowable tự chuyển sang bước trình. -->
+    <!-- Thời gian công khai: không có việc nào cho người dùng, hết hạn thì Flowable tự chuyển sang bước trình. Trong
+         thời hạn này người duyệt của xã đăng tin, đơn vị cùng tỉnh đăng ký nhận qua Hasura; trigger của gói so now()
+         với hạn mà workflow-api ghi cho bước này (id publication, ADR 0069), nên đổi id bước là phải sửa migration. -->
     <intermediateCatchEvent id="publication" name="Công khai">
       <timerEventDefinition>
         <timeDuration>{{publication_period}}</timeDuration>
@@ -82,6 +84,7 @@ ghi khi hồ sơ vào bước đó, như mọi bước chờ hẹn giờ, không
 
     <userTask id="submit" name="Trình người có thẩm quyền" flowable:candidateGroups="manager">
       <extensionElements>
+        <!-- recipient: nhãn của đăng ký được chọn trong view request_board (workflows/facilities-review.yaml). -->
         <flowable:formProperty id="recipient"/>
         <flowable:formProperty id="comment"/>
         <flowable:formProperty id="submitted"/>

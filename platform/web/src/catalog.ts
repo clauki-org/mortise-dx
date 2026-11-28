@@ -28,6 +28,8 @@ export type Choice = { value: string; label: string; tone?: Tone };
 export type CatalogNode = {
   source: string;
   key?: string;
+  /** Bảng mà biểu mẫu sửa, thêm dòng ghi vào khi source là view đọc chéo đơn vị dựng trên bảng đó (ADR 0069) */
+  writes?: string;
   fields: Field[];
   list: {
     columns: string[];
@@ -43,6 +45,7 @@ export type CatalogNode = {
     documents?: DocumentsConfig;
     edit?: Edit;
     blocks?: RecordBlock[];
+    text?: TextBlock;
   };
 };
 
@@ -51,6 +54,9 @@ export type RecordBlock = { item: string; variant?: string; attach?: Attach };
 
 /** Nút sửa dòng đang xem: biểu mẫu có submit.update trỏ tới bảng của chính loại đối tượng này (ADR 0054). */
 export type Edit = { label: string; form: FormConfig };
+
+/** Một trường chữ dài hiện nguyên dòng trên màn hình chi tiết, kèm nút tải về thành tệp .txt (tên tệp: download-khóa). */
+export type TextBlock = { field: string; title: string; download: string };
 
 /** Nút thêm dòng con: biểu mẫu có submit.insert trỏ tới bảng của loại con; cột via nhận khóa của dòng cha. */
 export type Add = { label: string; parent?: string; form: FormConfig };
@@ -74,6 +80,7 @@ export type Child = CatalogNode & { id: string; label: string; via: string; add?
 /** Cấu hình gói đưa cho thành phần: loại đối tượng ngoài cùng, kèm tiêu đề, kiểu và mục của Kanban, Lịch (ADR 0066). */
 export type CatalogConfig = CatalogNode & {
   title: string;
+  description?: string;
   variant?: string;
   kanban?: KanbanConfig;
   calendar?: CalendarConfig;
@@ -84,6 +91,8 @@ export type Sort = { field: string; direction?: "asc" | "desc" };
 export type Row = Record<string, unknown>;
 
 export const keyOf = (config: CatalogNode) => config.key ?? "id";
+/** Bảng mà biểu mẫu của loại đối tượng này ghi vào: writes nếu khai, không thì chính bảng của danh sách. */
+export const writesOf = (config: CatalogNode) => config.writes ?? config.source;
 export const pageSize = (config: CatalogNode) => config.list.page_size ?? 20;
 export const fieldOf = (config: CatalogNode, name: string) => config.fields.find((field) => field.name === name);
 // Schema buộc list.columns có ít nhất một cột; khóa chỉ là giá trị dự phòng để kiểu không phải mang undefined.
@@ -125,6 +134,7 @@ function nodeProblems(config: CatalogNode): string[] {
     ["list.filters", config.list.filters ?? []],
     ["list.sort", config.list.sort ? [config.list.sort.field] : []],
     ["detail.title", config.detail?.title ? [config.detail.title] : []],
+    ["detail.text", config.detail?.text ? [config.detail.text.field] : []],
   ];
   for (const [where, list] of used) {
     for (const name of list) {
@@ -164,16 +174,17 @@ function nodeProblems(config: CatalogNode): string[] {
 }
 
 /**
- * Biểu mẫu mở từ danh mục ghi vào đúng bảng của danh sách nó đứng cạnh: trỏ sang bảng khác thì danh sách không đổi
- * sau khi lưu, và khóa của dòng đang xem bị so với cột của một bảng khác.
+ * Biểu mẫu mở từ danh mục ghi vào đúng bảng của danh sách nó đứng cạnh (hay bảng writes mà view của danh sách dựng
+ * trên đó): trỏ sang bảng khác thì danh sách không đổi sau khi lưu, và khóa của dòng đang xem bị so với cột của một
+ * bảng khác.
  */
 function editProblems(config: CatalogNode): string[] {
   const edit = config.detail?.edit;
   if (!edit) return [];
   const at = `nút "${edit.label}"`;
   const problems = formProblems(edit.form).map((problem) => `${at}: ${problem}`);
-  if (edit.form.submit?.update !== config.source) {
-    problems.push(`${at}: biểu mẫu phải sửa bảng ${config.source} của danh sách này (submit.update)`);
+  if (edit.form.submit?.update !== writesOf(config)) {
+    problems.push(`${at}: biểu mẫu phải sửa bảng ${writesOf(config)} của danh sách này (submit.update)`);
   }
   return problems;
 }
@@ -184,8 +195,8 @@ function addProblems(parent: CatalogNode, child: Child): string[] {
   if (!add) return [];
   const at = `nút "${add.label}"`;
   const problems = formProblems(add.form).map((problem) => `${at}: ${problem}`);
-  if (add.form.submit?.insert !== child.source) {
-    problems.push(`${at}: biểu mẫu phải thêm dòng vào bảng ${child.source} (submit.insert)`);
+  if (add.form.submit?.insert !== writesOf(child)) {
+    problems.push(`${at}: biểu mẫu phải thêm dòng vào bảng ${writesOf(child)} (submit.insert)`);
   }
   if (add.form.fields?.some((field) => field.name === child.via)) {
     problems.push(`${at}: cột ${child.via} nhận khóa của dòng cha, không khai thành trường`);

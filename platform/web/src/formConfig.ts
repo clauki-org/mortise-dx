@@ -15,6 +15,8 @@ export type Source = {
   label: string;
   where?: { column: string; field: string };
   limit?: number;
+  /** Cột xếp thứ tự tăng dần thay cho nhãn; chỉ danh sách chọn của bước quy trình khai (contracts/workflow.schema.json) */
+  order?: string;
 };
 
 export type FormField = {
@@ -228,7 +230,8 @@ export function sourceQuery(source: Source, parent: unknown): { query: string; v
       `{ rows: ${source.table}(where: $where, order_by: $order_by, limit: $limit) { ${columns.join(" ")} } }`,
     variables: {
       where,
-      order_by: columns.map((column) => ({ [column]: "asc" })),
+      // Thứ tự gói khai (ví dụ thứ tự ưu tiên do view tính) phải giữ nguyên; không khai thì xếp theo nhãn.
+      order_by: source.order ? [{ [source.order]: "asc" }] : columns.map((column) => ({ [column]: "asc" })),
       limit: sourceLimit(source) + 1,
     },
   };

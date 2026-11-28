@@ -39,6 +39,22 @@ function notNullError(message: string, fields: FieldName[]): string {
   );
 }
 
+const CHECK_PREFIX = "Check constraint violation. ";
+
+/**
+ * Lời báo của lỗi CHECK. Ràng buộc CHECK của bảng mang thông điệp chuẩn của PostgreSQL ("new row for relation …"),
+ * không nói được cho người nhập; trigger của gói báo lý do bằng chữ của gói với cùng mã lỗi (ví dụ đã hết hạn nhận),
+ * thì hiện nguyên lý do đó. Đo trên hasura/graphql-engine v2.51.4-ce ngày 2026-11-28: Hasura ghép tiền tố trên với
+ * thông điệp của PostgreSQL.
+ */
+function checkError(message: string): string {
+  const reason = message.startsWith(CHECK_PREFIX) ? message.slice(CHECK_PREFIX.length).trim() : "";
+  if (reason === "" || reason.startsWith("new row for relation")) {
+    return "Một giá trị không hợp lệ theo luật của bảng (ví dụ số âm). Sửa giá trị rồi gửi lại.";
+  }
+  return reason;
+}
+
 /**
  * Lời báo cho người gửi. Phân theo mã lỗi của Hasura (extensions.code) rồi theo đầu thông điệp của PostgreSQL mà
  * Hasura chép lại; lỗi không nhận ra thì hiện nguyên văn, vì giấu đi thì người quản trị không biết sửa gì. Mã và
@@ -66,7 +82,7 @@ export function insertError(failure: InsertFailure, role: string, fields: FieldN
       // Hasura gán mã permission-error cho cả ràng buộc CHECK của bảng lẫn `check` của quyền; chỉ đầu thông điệp phân
       // biệt hai lỗi. Không tách ra thì người nhập số âm bị bảo đi xin quyền.
       if (message.startsWith("Check constraint violation")) {
-        return "Một giá trị không hợp lệ theo luật của bảng (ví dụ số âm). Sửa giá trị rồi gửi lại.";
+        return checkError(message);
       }
       return `Tài khoản không được thêm dòng này với vai trò ${role}. Báo người quản trị cấp quyền.`;
     case "validation-failed":

@@ -312,11 +312,12 @@ check "Xóa cơ sở thì phân công của nó đi theo" "$(gql "$admin_a" "$le
 # false.
 menu='{ platform_menu_items(where: {app: {_eq: "facilities-commune"}}, order_by: {position: asc}) {
   tenant_id item component config on_menu } }'
-check "Menu của gói: user.a thấy trang tổng quan, danh mục, bản đồ, hỏi dữ liệu, hỏi văn bản, hồ sơ rà soát, bảng điều hành, khối số chính và khối vị trí cơ sở kèm cấu hình, chỉ của xã mình" \
+check "Menu của gói: user.a thấy trang tổng quan, danh mục, bản đồ, hỏi dữ liệu, hỏi văn bản, tin công khai, đăng tin, hồ sơ rà soát, bảng điều hành, khối số chính và khối vị trí cơ sở kèm cấu hình, chỉ của xã mình" \
   "$(gql "$token_a" "$menu" | jq -c '[.data.platform_menu_items[] | [.tenant_id, .item, .component, .config.title, .on_menu]]')" \
   '[["xa-a","overview","page","Tổng quan cơ sở vật chất",true],["xa-a","facilities","catalog","Cơ sở nhà, đất",true],'\
 '["xa-a","map","map","Bản đồ trụ sở",true],["xa-a","ask-data","assistant",null,true],'\
-'["xa-a","ask-documents","assistant",null,true],["xa-a","reviews","cases","Hồ sơ rà soát đã lập",true],'\
+'["xa-a","ask-documents","assistant",null,true],["xa-a","notices","catalog","Tin công khai",true],'\
+'["xa-a","notice-new","form","Đăng tin công khai",true],["xa-a","reviews","cases","Hồ sơ rà soát đã lập",true],'\
 '["xa-a","dashboard","dashboard","Bảng điều hành cơ sở vật chất xã",true],'\
 '["xa-a","summary","dashboard","Diện tích nhà làm việc",false],'\
 '["xa-a","location","map","Vị trí trên bản đồ",false]]'
@@ -544,5 +545,8 @@ apps/facilities-commune/tests/custom-fields.sh || fail=1
 
 # Quy trình rà soát (ngưỡng, công khai có hẹn giờ, trình) ở tệp riêng; thời hạn công khai dài thì bỏ qua phần chờ.
 apps/facilities-commune/tests/workflow.sh || fail=1
+
+# Tin công khai, đăng ký nhận, thứ tự ưu tiên và chọn đơn vị nhận (ADR 0069); cũng chỉ chạy với thời hạn ngắn.
+apps/facilities-commune/tests/notices.sh || fail=1
 
 exit $fail

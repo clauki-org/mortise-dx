@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/workflow.schema.json từ chối: danh sách chọn của bước không khai cột mã hồ sơ.
+# Nếu lọt, ô chọn liệt kê dòng của mọi hồ sơ trong tenant, người xử lý chọn nhầm mục của hồ sơ khác.
+
+process: core-approval
+steps:
+  review:
+    form:
+      type: object
+      properties:
+        comment: { type: string, title: Ý kiến }
+    sources:
+      comment: { table: app_example_rows, value: code, label: name, role: manager }
+    actions:
+      - id: approve
+        label: Duyệt
+        variables:
+          approved: true

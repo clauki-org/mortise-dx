@@ -8,12 +8,14 @@
   "required": ["title", "source", "fields", "list"],
   "properties": {
     "title": { "description": "Tiêu đề màn hình danh sách", "$ref": "#/$defs/text" },
+    "description": { "description": "Một đoạn hướng dẫn hiện dưới tiêu đề màn hình danh sách", "$ref": "#/$defs/text" },
     "variant": {
       "description": "Kiểu trình bày của danh sách ngoài cùng (ADR 0061, ADR 0066): bảng, thẻ (ADR 0050), bảng Kanban theo một trường có choices, hay lịch theo một trường ngày. Kiểu kanban cần mục kanban, kiểu calendar cần mục calendar. Người xem vẫn đổi được bằng nút chọn kiểu; trang (page) chọn kiểu riêng cho khối. Bỏ trống là table; giá trị giao diện không biết, hay kiểu thiếu mục cấu hình của nó, cũng là table.",
       "enum": ["table", "cards", "kanban", "calendar"]
     },
     "source": { "$ref": "#/$defs/source" },
     "key": { "$ref": "#/$defs/key" },
+    "writes": { "$ref": "#/$defs/writes" },
     "fields": { "$ref": "#/$defs/fields" },
     "list": { "$ref": "#/$defs/list" },
     "detail": { "$ref": "#/$defs/detail" },
@@ -86,6 +88,10 @@
     },
     "source": {
       "description": "Trường gốc GraphQL của bảng trong Hasura: <lược đồ>_<bảng>",
+      "$ref": "#/$defs/identifier"
+    },
+    "writes": {
+      "description": "Bảng mà biểu mẫu sửa dòng (detail.edit) hay thêm dòng con (add) ghi vào, khi source là một view đọc chéo đơn vị dựng trên bảng đó (ADR 0069): <lược đồ>_<bảng>. Khóa của dòng (key) phải cùng tên ở cả hai. Bỏ trống là source.",
       "$ref": "#/$defs/identifier"
     },
     "key": {
@@ -207,6 +213,17 @@
         "documents": {
           "description": "Phần tài liệu đính kèm của dòng đang xem (ADR 0041). Schema nằm ở tệp riêng vì phần này là một thành phần có bản mô tả riêng (contracts/documents.component.yaml); scripts/contracts.sh kiểm với --base-uri để tên tệp dưới đây trỏ về contracts/ thay vì địa chỉ trong $id.",
           "$ref": "documents.schema.json"
+        },
+        "text": {
+          "description": "Một trường chữ dài, ví dụ văn bản mẫu do view của gói dựng từ dữ liệu (ADR 0069), hiện riêng dưới phần chi tiết, giữ nguyên xuống dòng, kèm nút tải về thành tệp .txt UTF-8. Trường phải khai trong fields; nó không hiện lại trong lưới ô. Chữ không được tính hay sửa trên trình duyệt.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["field", "title", "download"],
+          "properties": {
+            "field": { "$ref": "#/$defs/identifier" },
+            "title": { "description": "Tiêu đề của khối", "$ref": "#/$defs/text" },
+            "download": { "description": "Tiền tố tên tệp tải về: <tiền tố>-<khóa của dòng>.txt", "$ref": "#/$defs/slug" }
+          }
         }
       }
     },
@@ -262,6 +279,7 @@
         },
         "source": { "$ref": "#/$defs/source" },
         "key": { "$ref": "#/$defs/key" },
+        "writes": { "$ref": "#/$defs/writes" },
         "fields": { "$ref": "#/$defs/fields" },
         "list": { "$ref": "#/$defs/list" },
         "detail": { "$ref": "#/$defs/detail" },

@@ -264,3 +264,24 @@ describe("display", () => {
     expect(display({ name: "d", label: "Ngày", type: "date" }, "không phải ngày")).toBe("không phải ngày");
   });
 });
+
+describe("khối chữ của màn hình chi tiết (detail.text)", () => {
+  const base: CatalogConfig = {
+    title: "Văn bản",
+    source: "app_example_docs",
+    fields: [
+      { name: "code", label: "Mã" },
+      { name: "body", label: "Nội dung" },
+    ],
+    list: { columns: ["code"] },
+  };
+
+  it("trường của khối phải khai trong fields", () => {
+    expect(
+      configProblems({ ...base, detail: { text: { field: "body", title: "Văn bản", download: "van-ban" } } }),
+    ).toEqual([]);
+    expect(
+      configProblems({ ...base, detail: { text: { field: "missing", title: "Văn bản", download: "van-ban" } } }),
+    ).toEqual(['detail.text dùng trường "missing" chưa khai trong fields']);
+  });
+});

@@ -48,6 +48,7 @@ catalog.no-columns.yaml	$.list.columns	[] should be non-empty
 catalog.no-fields.yaml	$.fields	[] should be non-empty
 catalog.page-size-too-large.yaml	$.list.page_size	101 is greater than the maximum of 100
 catalog.source-not-identifier.yaml	$.source	'app_example_items { no_such_column }' does not match '^[A-Za-z_][A-Za-z0-9_]*$'
+catalog.text-download-not-slug.yaml	$.detail.text.download	'van ban/mau' does not match '^[a-z0-9]+(-[a-z0-9]+)*$'
 catalog.unknown-field-type.yaml	$.fields[0].type	'no-such-type' is not one of ['text', 'number', 'date', 'datetime']
 catalog.unknown-key.yaml	$	Additional properties are not allowed ('no_such_key' was unexpected)
 catalog.unknown-sort-direction.yaml	$.list.sort.direction	'no-such-direction' is not one of ['asc', 'desc']
@@ -119,6 +120,7 @@ workflow.form-reserved-variable.yaml	$.steps.review.form.properties	'tenant' sho
 workflow.missing-process.yaml	$	'process' is a required property
 workflow.no-actions.yaml	$.steps.review.actions	[] should be non-empty
 workflow.no-steps.yaml	$.steps	{} should be non-empty
+workflow.source-without-case.yaml	$.steps.review.sources.comment	'case' is a required property
 workflow.reserved-variable.yaml	$.steps.review.actions[0].variables	'initiator' should not be valid under {'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}
 workflow.title-reserved-variable.yaml	$.steps.review.title	'initiator' should not be valid under {'enum': ['initiator', 'initiatorName', 'tenant', 'idempotencyKey']}
 assistant.data-tenant-column.yaml	$.data.sources[0].columns[0].name	'tenant_id' should not be valid under {'const': 'tenant_id'}

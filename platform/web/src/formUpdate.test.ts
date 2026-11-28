@@ -96,7 +96,8 @@ describe("lệnh sửa", () => {
     expect(
       updateError(failure("permission-error", "check constraint of an update permission has failed"), "user"),
     ).toBe("Tài khoản không được sửa dòng này như vậy với vai trò user. Báo người quản trị cấp quyền.");
-    expect(updateError(failure("permission-error", "Check constraint violation. x"), "user")).toBe(
+    const check = 'Check constraint violation. new row for relation "rooms" violates check constraint "rooms_area"';
+    expect(updateError(failure("permission-error", check), "user")).toBe(
       "Một giá trị không hợp lệ theo luật của bảng (ví dụ số âm). Sửa giá trị rồi gửi lại.",
     );
     expect(updateError({ networkError: new Error("x"), graphQLErrors: [] }, "user")).toBe(
@@ -133,6 +134,20 @@ describe("lỗi cấu hình", () => {
       'nút "Sửa": biểu mẫu phải sửa bảng app_example_items của danh sách này (submit.update)',
       'Thành phần: nút "Thêm": cột item_id nhận khóa của dòng cha, không khai thành trường',
       'Thành phần: nút "Thêm": parent "missing" không phải khóa hay trường đã khai của dòng cha',
+    ]);
+  });
+
+  it("danh sách đọc view đọc chéo đơn vị: biểu mẫu ghi bảng writes, không ghi chính view", () => {
+    const viaView: CatalogConfig = {
+      ...catalog,
+      source: "app_example_item_board",
+      writes: "app_example_items",
+      detail: { edit: { label: "Sửa", form: edit } },
+    };
+    expect(configProblems(viaView)).toEqual([]);
+    const onView = { ...edit, submit: { ...edit.submit, update: "app_example_item_board" } };
+    expect(configProblems({ ...viaView, detail: { edit: { label: "Sửa", form: onView } } })).toEqual([
+      'nút "Sửa": biểu mẫu phải sửa bảng app_example_items của danh sách này (submit.update)',
     ]);
   });
 });

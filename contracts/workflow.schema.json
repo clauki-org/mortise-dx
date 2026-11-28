@@ -70,9 +70,41 @@
             "menu": { "$ref": "#/$defs/slug" },
             "variable": { "$ref": "#/$defs/variable" }
           }
+        },
+        "sources": {
+          "description": "Trường của biểu mẫu chọn từ một bảng hay view của gói qua GraphQL thay vì gõ tay (ADR 0069). Khóa là tên trường trong form; danh sách chỉ gồm dòng có cột case bằng mã hồ sơ của việc, đọc bằng vai trò role, xếp theo cột order (bỏ trống là theo nhãn). Giá trị gửi đi là chữ của cột value. Hasura vẫn lọc dòng theo token; `make check-fast` kiểm bảng, cột với quyền Hasura của gói.",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/variable" },
+          "additionalProperties": { "$ref": "#/$defs/source" }
         }
       }
     },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["table", "value", "label", "case", "role"],
+      "properties": {
+        "table": { "description": "Trường gốc GraphQL của bảng: <lược đồ>_<bảng>", "$ref": "#/$defs/identifier" },
+        "value": { "description": "Cột làm giá trị gửi đi (dạng chữ)", "$ref": "#/$defs/identifier" },
+        "label": { "description": "Cột làm nhãn hiện ra", "$ref": "#/$defs/identifier" },
+        "case": {
+          "description": "Cột chứa mã hồ sơ (process instance): chỉ dòng có cột này bằng mã hồ sơ của việc mới hiện",
+          "$ref": "#/$defs/identifier"
+        },
+        "order": {
+          "description": "Cột xếp thứ tự tăng dần, ví dụ thứ tự ưu tiên do view của gói tính; bỏ trống là theo nhãn",
+          "$ref": "#/$defs/identifier"
+        },
+        "role": {
+          "description": "Vai trò Hasura gửi kèm truy vấn (header X-Hasura-Role), thường là vai trò của bước",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "empty": { "description": "Chữ hiện khi danh sách trống, ví dụ cách xử lý khi không có mục nào", "$ref": "#/$defs/text" },
+        "limit": { "description": "Số mục tối đa. Bỏ trống là 200.", "type": "integer", "minimum": 1, "maximum": 500 }
+      }
+    },
+    "identifier": { "description": "Tên theo luật của GraphQL", "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
     "action": {
       "type": "object",
       "additionalProperties": false,
