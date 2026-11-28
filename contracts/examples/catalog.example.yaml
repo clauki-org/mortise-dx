@@ -54,6 +54,11 @@ calendar:
   title: name
 detail:
   title: name
+  # Khối `sites` (bản đồ) trong chi tiết dòng, kiểu danh sách, chỉ đọc điểm có item_id bằng khóa của dòng (ADR 0068).
+  blocks:
+    - item: sites
+      variant: list
+      attach: { source: app_example_sites, column: item_id }
   actions:
     - id: request
       label: Đề nghị kiểm tra

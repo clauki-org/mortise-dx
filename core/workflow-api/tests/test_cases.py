@@ -91,6 +91,64 @@ def test_list_filters_by_tenant_and_initiator_at_flowable(client, sent):
     assert len(sent) == 1
 
 
+def test_list_filters_by_a_visible_variable_at_flowable(client, sent, monkeypatch):
+    monkeypatch.setattr(flowable, "definition", lambda _key, _tenant: APPROVAL)
+    query = "process=core-approval&variable_name=title&variable_value=Duy%E1%BB%87t"
+    response = client.get(f"/v1/workflow/cases?{query}")
+    assert response.status_code == 200
+    assert sent[0][1]["variables"][1] == {
+        "name": "title",
+        "value": "Duyệt",
+        "operation": "equals",
+        "type": "string",
+    }
+    assert [item["id"] for item in response.json()["items"]] == ["p1"]
+
+
+def test_rows_without_the_filtered_value_are_dropped_again(client, sent, monkeypatch):
+    # Flowable bỏ qua khóa lọc ở một phiên bản sau thì dòng khác giá trị vẫn không ra.
+    monkeypatch.setattr(flowable, "definition", lambda _key, _tenant: APPROVAL)
+    query = "process=core-approval&variable_name=title&variable_value=khac"
+    assert client.get(f"/v1/workflow/cases?{query}").json()["items"] == []
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "process=core-approval&variable_name=comment&variable_value=x",
+        "process=core-approval&variable_name=initiator&variable_value=u-b",
+        "process=core-approval&variable_name=authority_review&variable_value=manager",
+        "variable_name=title&variable_value=x",
+        "process=core-approval&variable_name=title",
+        "process=core-approval&variable_value=x",
+    ],
+)
+def test_filter_on_hidden_or_incomplete_variable_is_400(client, sent, monkeypatch, query):
+    monkeypatch.setattr(flowable, "definition", lambda _key, _tenant: APPROVAL)
+    response = client.get(f"/v1/workflow/cases?{query}")
+    assert response.status_code == 400
+    assert response.json()["error"].startswith("Tham số không hợp lệ: variable_")
+    assert sent == []
+
+
+def test_filter_on_a_definition_with_steps_but_no_declared_fields_is_400(client, sent, monkeypatch):
+    # Danh sách không trả biến nào cho định nghĩa này (visible_variables), nên không lọc được theo biến nào.
+    legacy = Definition(decisions=frozenset(), authorities=frozenset(), nodes={"review": ("task", "Duyệt")})
+    monkeypatch.setattr(flowable, "definition", lambda _key, _tenant: legacy)
+    query = "process=core-approval&variable_name=approved&variable_value=true"
+    assert client.get(f"/v1/workflow/cases?{query}").status_code == 400
+    assert sent == []
+
+
+def test_filter_on_a_process_the_tenant_lacks_still_lists(client, sent, monkeypatch):
+    def missing(key, _tenant):
+        raise Denied(404, f"Tenant chưa có quy trình '{key}'.")
+
+    monkeypatch.setattr(flowable, "definition", missing)
+    query = "process=core-approval&variable_name=title&variable_value=Duy%E1%BB%87t"
+    assert client.get(f"/v1/workflow/cases?{query}").status_code == 200
+
+
 def test_list_hides_step_fields_and_core_variables(client, sent):
     item = client.get("/v1/workflow/cases").json()["items"][0]
     assert item["variables"] == {"title": "Duyệt"}

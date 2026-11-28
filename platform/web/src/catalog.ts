@@ -6,6 +6,7 @@
 // ở catalogQuery.ts; phần hiển thị ở Catalog.tsx, CatalogRecord.tsx và CatalogTable.tsx. Không có React ở đây để
 // kiểm thử được bằng hàm thuần.
 
+import type { Attach } from "./blockContext";
 import type { CalendarConfig, KanbanConfig } from "./catalogViews";
 import { type DocumentsConfig, documentsProblems } from "./documents";
 import { formatDate, formatDateTime, formatNumber } from "./format";
@@ -35,8 +36,18 @@ export type CatalogNode = {
     sort?: Sort;
     page_size?: number;
   };
-  detail?: { title?: string; children?: Child[]; actions?: Action[]; documents?: DocumentsConfig; edit?: Edit };
+  detail?: {
+    title?: string;
+    children?: Child[];
+    actions?: Action[];
+    documents?: DocumentsConfig;
+    edit?: Edit;
+    blocks?: RecordBlock[];
+  };
 };
+
+/** Khối trong chi tiết dòng (ADR 0068): mục của chính gói, kiểu, và cách gắn với dòng đang xem. */
+export type RecordBlock = { item: string; variant?: string; attach?: Attach };
 
 /** Nút sửa dòng đang xem: biểu mẫu có submit.update trỏ tới bảng của chính loại đối tượng này (ADR 0054). */
 export type Edit = { label: string; form: FormConfig };

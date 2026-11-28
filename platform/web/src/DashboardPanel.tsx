@@ -11,6 +11,7 @@ import { Alert, Anchor, Grid, Loader, Paper, Stack, Text, Title } from "@mantine
 import { type ReactNode, useMemo } from "react";
 import { Link } from "react-router";
 import { type CombinedError, useQuery } from "urql";
+import { recordWhere, useBlock } from "./blockContext";
 import { RestBody } from "./DashboardRest";
 import { CardsView, ChartView, MethodDetails } from "./DashboardView";
 import { panelSpans } from "./dashboardBento";
@@ -26,7 +27,7 @@ import {
   type Row,
   visiblePanels,
 } from "./dashboardConfig";
-import { findItem, itemPath, rolesOf } from "./menu";
+import { findItem, itemPath, recordPath, rolesOf } from "./menu";
 import { usePackageMenu } from "./PackagePage";
 import { PageHeader } from "./PageHeader";
 import { variantOf } from "./page";
@@ -51,8 +52,20 @@ function PanelError({ panel, error }: { panel: Panel; error: CombinedError }) {
   );
 }
 
-function GraphqlBody({ panel, link, columns }: { panel: GraphqlPanel; link: ReactNode; columns: number }) {
-  const request = useMemo(() => panelQuery(panel), [panel]);
+type BodyProps = { panel: GraphqlPanel; app: string; link: ReactNode; columns: number };
+
+function GraphqlBody({ panel, app, link, columns }: BodyProps) {
+  // Khối trong chi tiết một dòng chỉ đếm dòng thuộc dòng đó khi gói gắn bảng của khối (ADR 0068); so theo chuỗi để
+  // điều kiện tạo mới mỗi lần vẽ không làm truy vấn bị coi là mới.
+  const fixed = JSON.stringify(recordWhere(useBlock(), panel.graphql.field) ?? null);
+  const request = useMemo(() => panelQuery(panel, JSON.parse(fixed) ?? undefined), [panel, fixed]);
+  const record = panel.chart?.record;
+  const rowLink = record
+    ? (row: Row) => {
+        const key = row[record.column];
+        return key === null || key === undefined || key === "" ? undefined : recordPath(app, record.item, key);
+      }
+    : undefined;
   const context = useMemo(() => ({ role: panelRole(panel) }), [panel]);
   // Truy vấn mang vai trò riêng; bộ nhớ đệm của urql không phân biệt vai trò nên luôn đọc lại từ máy chủ.
   const [{ data, fetching, error }] = useQuery<{ rows: Row[] }>({
@@ -70,7 +83,7 @@ function GraphqlBody({ panel, link, columns }: { panel: GraphqlPanel; link: Reac
       {data && panel.cards && (
         <CardsView cards={panel.cards} rows={shown} large={panel.primary} columns={columns} gauge={panel.gauge} />
       )}
-      {data && panel.chart && <ChartView chart={panel.chart} rows={shown} title={panel.title} />}
+      {data && panel.chart && <ChartView chart={panel.chart} rows={shown} title={panel.title} rowLink={rowLink} />}
       {panel.chart && rows.length > limitOf(panel) && (
         <Text size="sm">
           Nguồn có hơn {limitOf(panel)} dòng; chỉ hiện {limitOf(panel)} dòng đầu.
@@ -102,7 +115,7 @@ function PanelSection({ panel, app, columns, compact }: SectionProps) {
         {/* Kiểu gọn (ADR 0061) bỏ lời mô tả, giữ con số và mục "Xem cách tính" để số vẫn giải thích được. */}
         {!compact && <Text size="sm">{panel.description}</Text>}
         {panel.graphql ? (
-          <GraphqlBody panel={panel as GraphqlPanel} link={link} columns={columns} />
+          <GraphqlBody panel={panel as GraphqlPanel} app={app} link={link} columns={columns} />
         ) : (
           <RestBody panel={panel} link={link} columns={columns} />
         )}

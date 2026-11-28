@@ -9,7 +9,7 @@
 import { Alert, Stack } from "@mantine/core";
 import { useState } from "react";
 import { useLocation, useSearchParams } from "react-router";
-import { useBlock } from "./blockContext";
+import { recordWhere, useBlock } from "./blockContext";
 import { CatalogExport } from "./CatalogExport";
 import { CatalogRecord } from "./CatalogRecord";
 import { CatalogTable } from "./CatalogTable";
@@ -33,14 +33,19 @@ type Props = {
   config: CatalogConfig;
   /** Địa chỉ của trang chứa thành phần, không có dấu / ở cuối. Danh sách nằm ở đây, chi tiết nằm bên dưới. */
   basePath: string;
+  /** Gói và mục của danh mục: chi tiết dòng tìm khối của gói (detail.blocks, ADR 0068) theo đây */
+  app: string;
+  item: string;
 };
 
 /**
  * Danh sách đặt trong một khối của trang (ADR 0061): trạng thái tìm, lọc, trang nằm trong bộ nhớ vì thanh địa chỉ là
  * của trang và có thể có khối danh mục khác cùng trang. Dòng vẫn dẫn tới màn hình chi tiết dưới địa chỉ của mục.
+ * Trong chi tiết một dòng (ADR 0068), danh sách chỉ có dòng thuộc dòng đang xem khi gói gắn bảng này.
  */
-function BlockList({ config, basePath }: Props) {
+function BlockList({ config, basePath }: Pick<Props, "config" | "basePath">) {
   const [state, setState] = useState(emptyState);
+  const fixed = recordWhere(useBlock(), config.source);
   return (
     <Stack>
       <PageHeader title={config.title} />
@@ -51,12 +56,13 @@ function BlockList({ config, basePath }: Props) {
         state={state}
         onChange={setState}
         {...listViews(config)}
+        fixed={fixed}
       />
     </Stack>
   );
 }
 
-export function Catalog({ config, basePath }: Props) {
+export function Catalog({ config, basePath, app, item }: Props) {
   const { pathname } = useLocation();
   const [params, setParams] = useSearchParams();
   const block = useBlock();
@@ -98,5 +104,5 @@ export function Catalog({ config, basePath }: Props) {
     );
   }
   // Mỗi dòng một cây riêng: chuyển sang dòng khác thì trạng thái tìm, lọc, trang của các bảng con bắt đầu lại.
-  return <CatalogRecord key={pathname} config={config} basePath={basePath} steps={steps} />;
+  return <CatalogRecord key={pathname} config={config} basePath={basePath} steps={steps} app={app} item={item} />;
 }

@@ -69,7 +69,8 @@ test("cán bộ xã A sửa cơ sở, sửa đồng thời bị báo không ghi 
     await dialog.getByRole("textbox", { name: "Địa chỉ" }).fill("Thôn 9, xã A");
     await dialog.getByRole("button", { name: "Lưu" }).click();
     await expect(page.getByText("Đã lưu cơ sở.")).toBeVisible();
-    await expect(page.getByText("Thôn 9, xã A")).toBeVisible();
+    // Ô của màn hình chi tiết, không phải dòng của khối bản đồ cơ sở (ADR 0068) cũng có cột địa chỉ.
+    await expect(page.getByRole("definition").getByText("Thôn 9, xã A")).toBeVisible();
     expect((await facility(request, "user.a", facilityId))?.address).toBe("Thôn 9, xã A");
 
     // Sửa đồng thời: biểu mẫu mở rồi, người khác (ở đây cùng tài khoản qua API) đổi tên trước khi lưu.

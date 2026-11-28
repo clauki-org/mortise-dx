@@ -308,16 +308,18 @@ check "Xóa cơ sở thì phân công của nó đi theo" "$(gql "$admin_a" "$le
 
 
 # Menu của gói (app.yaml, nạp khi cài): mỗi tenant thấy mục của mình kèm nội dung cấu hình danh mục, không thấy dòng
-# của tenant khác. Khối `summary` (mục `blocks`, ADR 0061) nằm cùng bảng, đứng sau mục menu, on_menu false.
+# của tenant khác. Khối `summary`, `location` (mục `blocks`, ADR 0061, 0068) nằm cùng bảng, đứng sau mục menu, on_menu
+# false.
 menu='{ platform_menu_items(where: {app: {_eq: "facilities-commune"}}, order_by: {position: asc}) {
   tenant_id item component config on_menu } }'
-check "Menu của gói: user.a thấy trang tổng quan, danh mục, bản đồ, hỏi dữ liệu, hỏi văn bản, hồ sơ rà soát, bảng điều hành và khối số chính kèm cấu hình, chỉ của xã mình" \
+check "Menu của gói: user.a thấy trang tổng quan, danh mục, bản đồ, hỏi dữ liệu, hỏi văn bản, hồ sơ rà soát, bảng điều hành, khối số chính và khối vị trí cơ sở kèm cấu hình, chỉ của xã mình" \
   "$(gql "$token_a" "$menu" | jq -c '[.data.platform_menu_items[] | [.tenant_id, .item, .component, .config.title, .on_menu]]')" \
   '[["xa-a","overview","page","Tổng quan cơ sở vật chất",true],["xa-a","facilities","catalog","Cơ sở nhà, đất",true],'\
 '["xa-a","map","map","Bản đồ trụ sở",true],["xa-a","ask-data","assistant",null,true],'\
 '["xa-a","ask-documents","assistant",null,true],["xa-a","reviews","cases","Hồ sơ rà soát đã lập",true],'\
 '["xa-a","dashboard","dashboard","Bảng điều hành cơ sở vật chất xã",true],'\
-'["xa-a","summary","dashboard","Diện tích nhà làm việc",false]]'
+'["xa-a","summary","dashboard","Diện tích nhà làm việc",false],'\
+'["xa-a","location","map","Vị trí trên bản đồ",false]]'
 check "Menu của gói: user.b chỉ thấy mục của xã mình" \
   "$(gql "$token_b" "$menu" | jq -c '[.data.platform_menu_items[].tenant_id] | unique')" '["xa-b"]'
 

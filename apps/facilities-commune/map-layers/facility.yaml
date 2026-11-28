@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Bản đồ một cơ sở, theo contracts/map.schema.json: khối `location` của app.yaml, đặt trong chi tiết cơ sở của
+# catalog/facilities.yaml với attach theo cột id (ADR 0068), nên chỉ hiện chấm của cơ sở đang xem. Một lớp duy nhất
+# đọc bảng cơ sở, để điều kiện của dòng áp lên mọi điểm của bản đồ này. Đứng riêng thì là mọi cơ sở người xem được
+# phân công.
+
+title: Vị trí trên bản đồ
+note: Vị trí là hư cấu, chỉ để minh họa.
+layers:
+  - id: facility
+    label: Điểm của cơ sở
+    source: app_facilities_commune_facilities
+    latitude: latitude
+    longitude: longitude
+    title: name
+    fields:
+      - { name: code, label: Mã }
+      - { name: address, label: Địa chỉ }
+    color: { fixed: teal }
+    limit: 50

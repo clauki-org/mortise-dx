@@ -69,6 +69,14 @@ describe("layerQuery", () => {
     ]);
   });
 
+  it("điều kiện của dòng đang xem cộng vào where của lớp, cột khóa của liên kết được đọc", () => {
+    const fixed = { item_id: { _eq: "a/1" } };
+    const linked: Layer = { ...sites, record: { item: "items", column: "item_id" } };
+    const { query, variables } = layerQuery(linked, fixed);
+    expect(variables.where).toEqual({ _and: [{ status: { _eq: "active" } }, fixed] });
+    expect(query).toContain("{ lat lon name group { score } item_id }");
+  });
+
   it("không có where thì lấy mọi dòng, theo trần của lớp", () => {
     expect(layerQuery({ ...summary, limit: 5 }).variables).toMatchObject({ where: {}, limit: 6 });
   });

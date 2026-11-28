@@ -7,8 +7,9 @@
 // 0049). Tách khỏi DashboardPanel.tsx (đọc dữ liệu) để kiểm thử được
 // cách vẽ bằng react-dom/server. Ở đây không có tên bảng hay chữ của một lĩnh vực nào.
 
-import { Alert, Box, Code, Flex, Group, Paper, SimpleGrid, Stack, Table, Text } from "@mantine/core";
+import { Alert, Anchor, Box, Code, Flex, Group, Paper, SimpleGrid, Stack, Table, Text } from "@mantine/core";
 import type { ReactNode } from "react";
+import { Link } from "react-router";
 import { GaugeView } from "./DashboardGauge";
 import { cardLevel } from "./dashboardBento";
 import {
@@ -202,6 +203,16 @@ function Bars({ chart, rows, ordinal }: { chart: Chart; rows: Row[]; ordinal: bo
   );
 }
 
+/** Tên nhóm ở bảng số liệu: liên kết chung tới chi tiết dòng khi khối khai chart.record (ADR 0068). */
+function RowName({ text, to }: { text: string; to?: string }) {
+  if (!to) return <>{text}</>;
+  return (
+    <Anchor component={Link} to={to}>
+      {text}
+    </Anchor>
+  );
+}
+
 /**
  * Biểu đồ cột ngang và bảng số liệu của nó. Bảng là bản đọc được của biểu đồ, luôn có trong trang, thu gọn trong
  * "Xem bảng số liệu" vì các thanh đã ghi số.
@@ -212,6 +223,7 @@ export function ChartView({
   title,
   empty = NO_DATA,
   ordinal = false,
+  rowLink,
 }: {
   chart: Chart;
   rows: Row[];
@@ -219,6 +231,8 @@ export function ChartView({
   empty?: string;
   /** Giá trị trục là mã máy (ví dụ mã entity): thanh ghi số thứ tự thay cho mã khi choices không có nhãn */
   ordinal?: boolean;
+  /** Địa chỉ chi tiết dòng của một dòng số liệu (chart.record, ADR 0068); undefined thì tên nhóm chỉ là chữ */
+  rowLink?: (row: Row) => string | undefined;
 }) {
   if (rows.length === 0) return <Text>{empty}.</Text>;
   return (
@@ -244,7 +258,9 @@ export function ChartView({
               {rows.map((row, index) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: như ở Bars, dòng không có khóa riêng
                 <Table.Tr key={index}>
-                  <Table.Th scope="row">{categoryText(chart, row[chart.x.column])}</Table.Th>
+                  <Table.Th scope="row">
+                    <RowName text={categoryText(chart, row[chart.x.column])} to={rowLink?.(row)} />
+                  </Table.Th>
                   {chart.y.map((series) => (
                     <Table.Td key={series.column}>{numberText(row[series.column])}</Table.Td>
                   ))}

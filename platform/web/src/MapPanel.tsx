@@ -5,9 +5,11 @@
 // khung bản đồ (MapCanvas.tsx, nạp khi cần) và danh sách điểm của từng lớp. Danh sách đi kèm để người không xem được
 // bản đồ, hay trình duyệt không có WebGL, vẫn đọc đủ các điểm. Ở đây không có tên bảng hay chữ của một lĩnh vực nào.
 
-import { Alert, Button, ColorSwatch, Group, Paper, Stack, Table, Text, Title } from "@mantine/core";
+import { Alert, Anchor, Button, ColorSwatch, Group, Paper, Stack, Table, Text, Title } from "@mantine/core";
 import { Component, lazy, type ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
 import { useQuery } from "urql";
+import { recordWhere, useBlock } from "./blockContext";
 import {
   type Areas,
   fieldText,
@@ -24,7 +26,7 @@ import {
   valueAt,
   visibleLayers,
 } from "./mapConfig";
-import { rolesOf } from "./menu";
+import { recordPath, rolesOf } from "./menu";
 import { PageHeader } from "./PageHeader";
 import { variantOf } from "./page";
 import { Empty, ErrorNotice, Loading } from "./States";
@@ -66,7 +68,10 @@ const swatch = (color: string) => `var(--mantine-color-${color}-6)`;
 
 /** Một lớp: đọc dòng với vai trò của lớp, đổi thành điểm; danh sách điểm của lớp hiện ngay dưới tên lớp. */
 function useLayer(layer: Layer) {
-  const { query, variables } = useMemo(() => layerQuery(layer), [layer]);
+  // Khối trong chi tiết một dòng chỉ đọc điểm của dòng đó khi gói gắn bảng của lớp (ADR 0068). So theo chuỗi để điều
+  // kiện tạo mới mỗi lần vẽ không làm truy vấn bị coi là mới.
+  const fixed = JSON.stringify(recordWhere(useBlock(), layer.source) ?? null);
+  const { query, variables } = useMemo(() => layerQuery(layer, JSON.parse(fixed) ?? undefined), [layer, fixed]);
   // Truy vấn mang vai trò riêng; bộ nhớ đệm của urql không phân biệt vai trò nên luôn đọc lại từ máy chủ.
   const context = useMemo(() => (layer.role ? { role: layer.role } : {}), [layer.role]);
   const [{ data, fetching, error }, reload] = useQuery<{ rows: Row[] }>({
@@ -110,9 +115,21 @@ function AreaLegend({ areas }: { areas: Areas }) {
   );
 }
 
-type LayerProps = { layer: Layer; selected?: string; onPoints: (id: string, points: Point[]) => void };
+/** Tên điểm; lớp khai record thì là liên kết chung tới chi tiết dòng (ADR 0068), khóa trống thì chỉ là chữ. */
+function PointName({ point, app }: { point: Point; app: string }) {
+  const record = point.layer.record;
+  const key = record ? valueAt(point.row, record.column) : undefined;
+  if (!record || key === null || key === undefined || key === "") return <>{point.title}</>;
+  return (
+    <Anchor component={Link} to={recordPath(app, record.item, key)}>
+      {point.title}
+    </Anchor>
+  );
+}
 
-function LayerSection({ layer, selected, onPoints }: LayerProps) {
+type LayerProps = { layer: Layer; app: string; selected?: string; onPoints: (id: string, points: Point[]) => void };
+
+function LayerSection({ layer, app, selected, onPoints }: LayerProps) {
   const { points, unplaced, more, fetching, error, reload } = useLayer(layer);
   // Báo điểm lên khung bản đồ chung mỗi khi tập điểm của lớp đổi.
   useEffect(() => onPoints(layer.id, points), [layer.id, points, onPoints]);
@@ -154,7 +171,9 @@ function LayerSection({ layer, selected, onPoints }: LayerProps) {
             <Table.Tbody>
               {points.map((point) => (
                 <Table.Tr key={point.key} bg={point.key === selected ? "gray.1" : undefined}>
-                  <Table.Td>{point.title}</Table.Td>
+                  <Table.Td>
+                    <PointName point={point} app={app} />
+                  </Table.Td>
                   <Table.Td>
                     <Group gap={6} wrap="nowrap">
                       <ColorSwatch color={swatch(point.color)} size={12} aria-hidden />
@@ -174,7 +193,7 @@ function LayerSection({ layer, selected, onPoints }: LayerProps) {
   );
 }
 
-export function MapPanel({ config }: { config: MapConfig }) {
+export function MapPanel({ config, app }: { config: MapConfig; app: string }) {
   const { getToken } = useSession();
   const [byLayer, setByLayer] = useState<Record<string, Point[]>>({});
   const [selected, setSelected] = useState<string>();
@@ -188,6 +207,8 @@ export function MapPanel({ config }: { config: MapConfig }) {
   const roles = rolesOf(getToken()).join(" ");
   const layers = useMemo(() => visibleLayers(config, roles.split(" ")), [config, roles]);
   const points = useMemo(() => layers.flatMap((layer) => byLayer[layer.id] ?? []), [layers, byLayer]);
+  // Bấm một chấm chỉ chọn nó (khung bản đồ không chứa liên kết); liên kết tới chi tiết dòng hiện dưới khung.
+  const chosen = points.find((point) => point.key === selected);
   if (problems.length > 0) {
     return (
       <Alert color="red" title="Cấu hình bản đồ sai">
@@ -209,10 +230,15 @@ export function MapPanel({ config }: { config: MapConfig }) {
           </CanvasBoundary>
         </Paper>
       )}
+      {chosen?.layer.record && (
+        <Text size="sm">
+          Điểm đang chọn: <PointName point={chosen} app={app} />
+        </Text>
+      )}
       {config.note && <Text size="sm">{config.note}</Text>}
       {config.areas && <AreaLegend areas={config.areas} />}
       {layers.map((layer) => (
-        <LayerSection key={layer.id} layer={layer} selected={selected} onPoints={onPoints} />
+        <LayerSection key={layer.id} layer={layer} app={app} selected={selected} onPoints={onPoints} />
       ))}
     </Stack>
   );

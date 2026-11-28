@@ -692,6 +692,43 @@
             }
           },
           {
+            "description": "Chỉ hồ sơ có biến này bằng variable_value; cần process (ADR 0068)",
+            "in": "query",
+            "name": "variable_name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Chỉ hồ sơ có biến này bằng variable_value; cần process (ADR 0068)",
+              "title": "Variable Name"
+            }
+          },
+          {
+            "in": "query",
+            "name": "variable_value",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Variable Value"
+            }
+          },
+          {
             "in": "header",
             "name": "authorization",
             "required": false,

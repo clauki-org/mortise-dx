@@ -16,19 +16,33 @@ def _initiator(sub: str) -> list[dict[str, str]]:
     return [{"name": "initiator", "value": sub, "operation": "equals", "type": "string"}]
 
 
-def _owned(raw: dict, tenant: str, initiator: str) -> bool:
-    """Hồ sơ (historic process instance kèm biến) thuộc `tenant` và do `initiator` lập."""
+def _owned(raw: dict, tenant: str, initiator: str, variable: tuple[str, str] | None = None) -> bool:
+    """Hồ sơ (historic process instance kèm biến) thuộc `tenant`, do `initiator` lập, có biến lọc nếu có."""
     variables = {v["name"]: v.get("value") for v in raw.get("variables", [])}
-    return raw.get("tenantId") == tenant and variables.get("initiator") == initiator
+    matches = variable is None or str(variables.get(variable[0])) == variable[1]
+    return raw.get("tenantId") == tenant and variables.get("initiator") == initiator and matches
 
 
 def cases(
-    tenant: str, initiator: str, processes: list[str], finished: bool | None, start: int, size: int
+    tenant: str,
+    initiator: str,
+    processes: list[str],
+    finished: bool | None,
+    start: int,
+    size: int,
+    variable: tuple[str, str] | None = None,
 ) -> tuple[int, list[dict]]:
-    """Một trang hồ sơ do `initiator` lập trong `tenant`, mới nhất trước, kèm biến; trả (tổng, trang)."""
+    """Một trang hồ sơ do `initiator` lập trong `tenant`, mới nhất trước, kèm biến; trả (tổng, trang).
+
+    `variable` (tên, giá trị) chỉ giữ hồ sơ có biến đó bằng giá trị đó (ADR 0068). Lọc ở Flowable để tổng
+    và trang đúng; lọc lại trên dòng trả về như với người lập.
+    """
+    filters = _initiator(initiator)
+    if variable:
+        filters.append({"name": variable[0], "value": variable[1], "operation": "equals", "type": "string"})
     query: dict[str, object] = {
         "tenantId": tenant,
-        "variables": _initiator(initiator),
+        "variables": filters,
         "includeProcessVariables": True,
         "sort": "startTime",
         "order": "desc",
@@ -42,7 +56,7 @@ def cases(
     response = flowable._call("POST", "/query/historic-process-instances", json=query)
     flowable._ensure_ok(response, "đọc hồ sơ")
     page = response.json()
-    return page["total"], [raw for raw in page["data"] if _owned(raw, tenant, initiator)]
+    return page["total"], [raw for raw in page["data"] if _owned(raw, tenant, initiator, variable)]
 
 
 def case(instance_id: str, tenant: str, initiator: str) -> dict | None:

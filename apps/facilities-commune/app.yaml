@@ -83,3 +83,8 @@ blocks:
     label: Diện tích nhà làm việc
     component: dashboard
     config: dashboards/summary.yaml
+  # Bản đồ một cơ sở, đặt trong chi tiết cơ sở của danh mục (detail.blocks, ADR 0068).
+  - id: location
+    label: Vị trí cơ sở
+    component: map
+    config: map-layers/facility.yaml

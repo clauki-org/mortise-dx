@@ -4,7 +4,7 @@
 // Kiểm thử phần thuần của thành phần theo dõi hồ sơ (ADR 0032): lỗi cấu hình, tên hồ sơ và dòng thông tin theo khai
 // báo bước, nhãn nhóm xử lý của tenant cha, đường tới hồ sơ vừa lập.
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type CaseSummary,
   type CasesConfig,
@@ -13,6 +13,7 @@ import {
   casesPathFor,
   casesProblems,
   caseTitle,
+  fetchCases,
   groupLabel,
   processSteps,
 } from "./cases";
@@ -110,5 +111,25 @@ describe("đường tới hồ sơ vừa lập", () => {
     expect(casesPathFor(items, "goi", "supply-request", "p/1")).toBe("/apps/goi/cases-item/p%2F1");
     expect(casesPathFor(items, "goi", "other", "p1")).toBeUndefined();
     expect(casesPathFor([menu("goi", "cases", null)], "goi", "supply-request", "p1")).toBeUndefined();
+  });
+});
+
+describe("fetchCases", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("gửi biến lọc của dòng đang xem cùng quy trình, trạng thái và trang (ADR 0068)", async () => {
+    const fetch = vi.fn(async (_url: unknown, _init?: RequestInit) => Response.json({ total: 0, items: [] }));
+    vi.stubGlobal("fetch", fetch);
+    await fetchCases("t", ["review"], "open", 2, { name: "recordId", value: "a/1" });
+    const url = new URL(String(fetch.mock.calls[0]?.[0]), "http://x");
+    expect(url.pathname).toBe("/v1/workflow/cases");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      process: "review",
+      variable_name: "recordId",
+      variable_value: "a/1",
+      state: "open",
+      offset: "20",
+      limit: "20",
+    });
   });
 });

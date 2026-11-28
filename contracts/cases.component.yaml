@@ -14,6 +14,10 @@ capabilities:
   - Tên hồ sơ lấy từ biến mà khai báo bước của quy trình chỉ ở `title`; quy trình không khai thì hiện lúc lập.
   - Màn hình một hồ sơ ở /apps/<gói>/<mục>/<mã hồ sơ> có thông tin theo `details` của các bước, bước đang chờ cùng vai trò hay đơn vị đang xử lý và đã có người nhận chưa, các bước đã qua theo thời gian (kể cả bước chờ hẹn giờ) và kết quả theo tên sự kiện kết thúc trong BPMN.
   - Biểu mẫu khởi tạo quy trình và nút của danh mục hiện đường dẫn "Xem hồ sơ vừa lập" khi gói có mục cases liệt kê quy trình đó.
+  - Đặt trong chi tiết một dòng của danh mục với attach (ADR 0068) thì attach.source là một quy trình của processes,
+    attach.column là tên biến; chỉ hồ sơ có biến đó bằng khóa của dòng đang xem, lọc ở workflow-api nên tổng và trang
+    đúng. Chỉ lọc được theo biến người lập thấy (không phải biến lõi đặt hay trường của bước), so như chuỗi, nên biến
+    lưu dạng số chưa kiểm là có khớp hay không. Chưa chạy trên trình duyệt.
 limits:
   - Chỉ đọc; không rút, không sửa hồ sơ đã lập.
   - Không hiện tên hay tài khoản của người xử lý, chỉ vai trò và đơn vị.

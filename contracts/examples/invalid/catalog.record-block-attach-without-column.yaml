@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Mortise DX contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ví dụ SAI, phải bị contracts/catalog.schema.json từ chối: khối trong chi tiết dòng gắn với một nguồn mà không nói
+# cột nào mang khóa của dòng (ADR 0068). Nếu lọt, khối không biết lọc theo cột nào.
+
+title: Danh mục
+source: app_example_items
+fields:
+  - name: name
+    label: Tên
+list:
+  columns: [name]
+detail:
+  blocks:
+    - item: sites
+      attach: { source: app_example_sites }

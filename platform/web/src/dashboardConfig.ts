@@ -34,6 +34,8 @@ export type Chart = {
   x: { column: string; label: string; choices?: { value: string; label: string }[] };
   y: Series[];
   details?: { column: string; label: string; format?: Card["format"] }[];
+  /** Tên nhóm ở bảng số liệu dẫn tới chi tiết dòng của mục danh mục `item`, khóa ở cột `column` (ADR 0068) */
+  record?: { item: string; column: string };
 };
 
 export type GraphqlSource = {
@@ -103,7 +105,12 @@ export function columnsOf(panel: Panel): string[] {
   const chart = panel.chart;
   const gauge = panel.gauge ? [panel.gauge.value, panel.gauge.limit, panel.gauge.percent] : [];
   const names = chart
-    ? [chart.x.column, ...chart.y.map((series) => series.column), ...(chart.details ?? []).map((d) => d.column)]
+    ? [
+        chart.x.column,
+        ...chart.y.map((series) => series.column),
+        ...(chart.details ?? []).map((d) => d.column),
+        ...(chart.record ? [chart.record.column] : []),
+      ]
     : [...(panel.cards ?? []).map((card) => card.column), ...gauge];
   return [...new Set(names)];
 }
@@ -196,8 +203,13 @@ const orderEntry = (column: string, direction: "asc" | "desc" = "asc"): Row => (
  * Câu truy vấn của một khối nguồn graphql. Điều kiện where đi qua biến, không ghép vào chuỗi. Thẻ số xin hai dòng
  * để biết nguồn trả nhiều hơn một dòng; biểu đồ xin thừa một dòng so với trần để biết còn dòng chưa hiện.
  */
-export function panelQuery(panel: Panel & { graphql: GraphqlSource }): PanelQuery {
+/**
+ * Câu truy vấn của một khối nguồn graphql. `fixed` là điều kiện của dòng đang xem khi bảng điều hành là khối trong chi
+ * tiết một dòng (ADR 0068): nó nằm trong chính biến gửi đi, nên "Xem cách tính" hiện đúng điều kiện đã lọc.
+ */
+export function panelQuery(panel: Panel & { graphql: GraphqlSource }, fixed?: Row): PanelQuery {
   const { field, where, order_by } = panel.graphql;
+  const own = where ? { [where.field]: { _eq: where.equals } } : {};
   // Không xếp thì CSDL trả dòng theo thứ tự tùy ý và biểu đồ quá trần hiện nhóm dòng khác sau mỗi lần tải; mặc định
   // xếp theo trục x rồi các cột còn lại để thứ tự chỉ đổi khi giá trị đổi.
   const order = order_by
@@ -210,7 +222,7 @@ export function panelQuery(panel: Panel & { graphql: GraphqlSource }): PanelQuer
       `query($where: ${field}_bool_exp!, $order_by: [${field}_order_by!], $limit: Int!) ` +
       `{ rows: ${field}(where: $where, order_by: $order_by, limit: $limit) { ${columnsOf(panel).join(" ")} } }`,
     variables: {
-      where: where ? { [where.field]: { _eq: where.equals } } : {},
+      where: fixed ? { _and: [own, fixed] } : own,
       order_by: order,
       limit: panel.chart ? limitOf(panel) + 1 : 2,
     },

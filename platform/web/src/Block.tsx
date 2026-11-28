@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 Mortise DX contributors
 // SPDX-License-Identifier: Apache-2.0
 //
-// Một khối trên trang (ADR 0061): vẽ thành phần của một mục menu hay khối của gói với cấu hình của mục, kiểu chọn ở
-// trang đè lên kiểu của mục. Mỗi khối có ranh giới lỗi riêng: lỗi lúc vẽ một khối chỉ thành lời báo chung (States.tsx)
-// trong khối đó, các khối khác và khung trang vẫn chạy. Không có ranh giới này thì lỗi lên tới màn hình lỗi của router
-// và cả trang mất.
+// Một khối trên trang (ADR 0061) hay trong chi tiết một dòng (ADR 0068): vẽ thành phần của một mục menu hay khối của
+// gói với cấu hình của mục, kiểu chọn ở nơi đặt đè lên kiểu của mục. Mỗi khối có ranh giới lỗi riêng: lỗi lúc vẽ một
+// khối chỉ thành lời báo chung (States.tsx) trong khối đó, các khối khác và khung trang vẫn chạy. Không có ranh giới
+// này thì lỗi lên tới màn hình lỗi của router và cả trang mất.
 
 import { Alert, Paper, Stack } from "@mantine/core";
 import { Component, type ReactNode } from "react";
-import { BlockContext } from "./blockContext";
+import { type Attach, BlockContext, type RecordPlace } from "./blockContext";
 import { itemPath, type MenuItem } from "./menu";
 import { COMPONENTS } from "./PackagePage";
 import { withVariant } from "./page";
@@ -53,13 +53,24 @@ function BlockBody({ entry, variant }: { entry: MenuItem; variant?: string }) {
   return <>{render(config, itemPath(entry), entry.app, entry.item)}</>;
 }
 
-/** Khối của mục `entry`; `variant` là kiểu chọn ở trang, bỏ trống thì dùng kiểu trong cấu hình của mục. */
-export function Block({ entry, variant }: { entry: MenuItem; variant?: string }) {
+type BlockProps = {
+  entry: MenuItem;
+  variant?: string;
+  /** Dòng đang xem khi khối nằm trong chi tiết một dòng (ADR 0068) */
+  record?: RecordPlace;
+  attach?: Attach;
+};
+
+/**
+ * Khối của mục `entry`; `variant` là kiểu chọn ở trang hay ở chi tiết dòng, bỏ trống thì dùng kiểu trong cấu hình
+ * của mục.
+ */
+export function Block({ entry, variant, record, attach }: BlockProps) {
   return (
     <Paper withBorder radius="md" p="md" component="section" aria-label={entry.label}>
       <Stack>
         <BlockBoundary label={entry.label}>
-          <BlockContext value={{ app: entry.app, item: entry.item }}>
+          <BlockContext value={{ app: entry.app, item: entry.item, record, attach }}>
             <BlockBody entry={entry} variant={variant} />
           </BlockContext>
         </BlockBoundary>

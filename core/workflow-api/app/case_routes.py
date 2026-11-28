@@ -14,7 +14,7 @@ from pydantic import StringConstraints
 from . import flowable, history, sealing
 from .auth import caller_from_token
 from .cases import STATES, current_of, summary, timeline
-from .policy import Caller, Denied, check_person
+from .policy import Caller, Denied, check_person, visible_variables
 from .schemas import CaseDetail, CaseList, error_responses
 
 router = APIRouter()
@@ -22,6 +22,8 @@ router = APIRouter()
 CallerDep = Annotated[Caller, Depends(caller_from_token)]
 # Khóa quy trình là id của <process> trong BPMN; mẫu chặn chuỗi lạ trước khi gửi sang Flowable.
 ProcessKey = Annotated[str, StringConstraints(pattern=r"^[A-Za-z_][A-Za-z0-9_.-]{0,254}$")]
+# Tên biến lọc hồ sơ theo luật tên biến của contracts/workflow.schema.json.
+VariableName = Annotated[str, StringConstraints(pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")]
 # Mọi lý do không thấy hồ sơ (không tồn tại, của tenant khác, của người khác) cùng một câu và cùng mã, để mã
 # hồ sơ đoán được không cho biết hồ sơ có tồn tại hay không.
 NOT_FOUND = "Không tìm thấy hồ sơ."
@@ -41,10 +43,18 @@ def my_cases(
     ] = "all",
     offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    variable_name: Annotated[
+        VariableName | None,
+        Query(description="Chỉ hồ sơ có biến này bằng variable_value; cần process (ADR 0068)"),
+    ] = None,
+    variable_value: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
 ) -> dict:
     """Hồ sơ do người gọi lập trong tenant của mình, mới nhất trước, kèm bước đang chờ."""
     check_person(caller)
-    total, raws = history.cases(caller.tenant, caller.sub, process or [], STATES[state], offset, limit)
+    variable = _variable_filter(caller, process or [], variable_name, variable_value)
+    total, raws = history.cases(
+        caller.tenant, caller.sub, process or [], STATES[state], offset, limit, variable
+    )
     definitions = {raw["id"]: flowable.definition_of(raw["processDefinitionId"]) for raw in raws}
     current = _current(caller, raws, definitions)
     items = [
@@ -57,6 +67,39 @@ def my_cases(
         for raw in raws
     ]
     return {"total": total, "items": items}
+
+
+def _variable_filter(
+    caller: Caller, processes: list[str], name: str | None, value: str | None
+) -> tuple[str, str] | None:
+    """Biến lọc hồ sơ, chỉ trong các biến người lập được thấy (policy.visible_variables).
+
+    Lọc theo biến của bước (ý kiến, quyết định) hay biến lõi đặt thì số hồ sơ khớp cho người lập đoán được
+    giá trị mà họ không được xem, nên bị từ chối theo đúng luật ẩn biến của danh sách. Trường của bước đọc
+    từ phiên bản mới nhất của từng quy trình; vì vậy cần process.
+    """
+    if name is None and value is None:
+        return None
+    if name is None or value is None:
+        raise Denied(400, "Tham số không hợp lệ: variable_name và variable_value phải đi cùng nhau.")
+    if not processes:
+        raise Denied(400, "Tham số không hợp lệ: variable_name cần ít nhất một process.")
+    # Không định nghĩa nào vẫn xét biến lõi đặt: định nghĩa rỗng chỉ còn luật đó.
+    definitions = [flowable.Definition(decisions=frozenset(), authorities=frozenset())]
+    for key in processes:
+        try:
+            definitions.append(flowable.definition(key, caller.tenant))
+        except Denied as error:
+            # Tenant chưa có quy trình này thì không có hồ sơ nào của nó để lộ; trả như khi không lọc.
+            if error.status != 404:
+                raise
+    for definition in definitions:
+        has_steps = any(kind == "task" for kind, _ in definition.nodes.values())
+        if name not in visible_variables({name: value}, definition.fields, has_steps):
+            raise Denied(
+                400, f"Tham số không hợp lệ: variable_name '{name}' không phải biến người lập được xem."
+            )
+    return name, value
 
 
 @router.get(
