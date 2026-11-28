@@ -88,6 +88,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0064](0064-import-child-rows-from-file.md) | Nạp dòng con từ tệp Excel hay CSV, xem trước lỗi theo dòng, thêm trong một lệnh | Chấp nhận |
 | [0058](0058-two-installs-and-install-presets.md) | Hai bản cài trên một máy và mẫu cài | Chấp nhận |
 | [0069](0069-public-notices-and-receive-requests.md) | Tin công khai, đăng ký nhận và danh sách xếp theo thứ tự ưu tiên trong quy trình rà soát | Chấp nhận |
+| [0070](0070-in-page-edit-mode.md) | Chế độ Chỉnh sửa trên trang: bản nháp trên trình duyệt, ghi từng thay đổi | Chấp nhận |
 
 ## Quyết định còn mở
 

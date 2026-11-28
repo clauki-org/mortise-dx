@@ -34,6 +34,9 @@ list:
   columns: [code, name, address, status]
   search: [code, name, address]
   filters: [status]
+# Kiểu mặc định của danh sách; khai ra để quản trị org đổi được kiểu ở chế độ Chỉnh sửa (ADR 0070), vì ghi đè chỉ đổi
+# khóa variant mà cấu hình của gói đã có.
+variant: table
 # Kiểu Kanban và Lịch của danh sách (ADR 0066), chọn bằng nút "Kiểu hiển thị". Tình trạng không do quy trình nào đặt,
 # nên cán bộ phụ trách chuyển được thẻ giữa hai cột; lệnh chuyển dùng cùng quyền update và cột updated_at như nút "Sửa".
 kanban:

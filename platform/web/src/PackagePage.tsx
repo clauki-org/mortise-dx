@@ -21,6 +21,7 @@ import { applyOverrides } from "./configEffective";
 import type { ItemOverride } from "./configOverrides";
 import { DashboardPanel } from "./DashboardPanel";
 import type { DashboardConfig } from "./dashboardConfig";
+import { EditMode } from "./EditMode";
 import { NotFound } from "./Errors";
 import { FormPanel } from "./FormPanel";
 import type { FormConfig } from "./formConfig";
@@ -124,6 +125,12 @@ export function PackagePage() {
     );
   }
   const basePath = itemPath(entry);
-  // key theo mục: chuyển sang mục khác thì thành phần bắt đầu lại, không giữ trạng thái của mục cũ.
-  return <Fragment key={basePath}>{render(entry.config, basePath, entry.app, entry.item)}</Fragment>;
+  // key theo mục: chuyển sang mục khác thì thành phần và bản nháp của chế độ Chỉnh sửa bắt đầu lại, không giữ trạng
+  // thái của mục cũ.
+  return (
+    <Fragment key={basePath}>
+      <EditMode app={entry.app} item={entry.item} />
+      {render(entry.config, basePath, entry.app, entry.item)}
+    </Fragment>
+  );
 }

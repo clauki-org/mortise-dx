@@ -14,6 +14,7 @@ import { type DashboardConfig, dashboardProblems } from "./dashboardConfig";
 import { type FormConfig, formProblems } from "./formConfig";
 import { type MapConfig, mapProblems } from "./mapConfig";
 import type { MenuItem } from "./menu";
+import { pageProblems } from "./page";
 
 export type Warn = (message: string) => void;
 
@@ -26,6 +27,8 @@ const PROBLEMS = new Map<string, (config: unknown) => string[]>([
   ["map", (config) => mapProblems(config as MapConfig)],
   ["cases", (config) => casesProblems(config as CasesConfig)],
   ["assistant", assistantProblems],
+  // Trang mất hết khối (gỡ, ẩn mọi khối) thì báo cấu hình trang sai; về bản gốc thay vì làm trống trang.
+  ["page", pageProblems],
 ]);
 
 /** Lỗi của cấu hình theo hàm kiểm của thành phần; hàm kiểm giả định cấu hình đúng schema nên có thể ném lỗi. */
@@ -37,12 +40,20 @@ function problemsOf(component: string, config: unknown): string[] {
   }
 }
 
+/**
+ * Kết quả trộn kèm lý do bị bỏ qua và lỗi theo hàm kiểm của thành phần. Chế độ Chỉnh sửa gọi trước khi lưu để báo
+ * ngay điều mà sau khi lưu chỉ còn là một dòng ở console.
+ */
+export function checkedConfig(component: string, base: unknown, overrides: Override[]) {
+  const { config, ignored } = mergeConfig(component, base, overrides);
+  return { config, ignored, problems: problemsOf(component, config) };
+}
+
 /** Cấu hình thành phần nhận: bản trộn nếu qua được bước kiểm, không thì bản gốc. */
 export function effectiveConfig(component: string, base: unknown, overrides: Override[], warn: Warn): unknown {
   if (overrides.length === 0) return base;
-  const { config, ignored } = mergeConfig(component, base, overrides);
+  const { config, ignored, problems } = checkedConfig(component, base, overrides);
   for (const reason of ignored) warn(`Bỏ qua phần chỉnh cấu hình: ${reason}`);
-  const problems = problemsOf(component, config);
   if (problems.length === 0) return config;
   warn(`Phần chỉnh làm cấu hình hỏng, dùng cấu hình gốc của gói: ${problems.join("; ")}`);
   return base;
