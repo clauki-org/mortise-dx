@@ -4,7 +4,9 @@
 # Nhật ký câu hỏi (ADR 0021, bước 6): mỗi câu hỏi đã qua bước kiểm đầu vào một dòng trong
 # platform.assistant_questions, ghi bằng vai trò CSDL `assistant` chỉ được thêm dòng. Không ghi được thì
 # main.py không trả câu trả lời: câu hỏi nào cũng phải có dấu vết. Câu hỏi dữ liệu (ADR 0027, ADR 0034) ghi
-# câu truy vấn và số dòng, không ghi dòng kết quả; câu do mô hình viết ghi thêm mô hình và số lượt.
+# câu truy vấn và số dòng, không ghi dòng kết quả; câu do mô hình viết ghi thêm mô hình và số lượt. Bản nháp
+# cấu hình gói (ADR 0071) ghi vào platform.assistant_package_drafts: nhu cầu, đường dẫn tệp và số lỗi, không
+# ghi nội dung tệp.
 
 import json
 import logging
@@ -16,7 +18,7 @@ from pg8000.exceptions import DatabaseError, InterfaceError
 from .config import settings
 from .errors import Denied
 from .retrieval import Caller
-from .schemas import Answer, DataAnswer, DataQuery, DataQuestion, Question
+from .schemas import Answer, DataAnswer, DataQuery, DataQuestion, PackageDraft, Question
 
 log = logging.getLogger("assistant.journal")
 # pg8000.native không có instrumentation của OpenTelemetry: span tự viết quanh lần ghi nhật ký (ADR 0038),
@@ -30,6 +32,14 @@ INSERT INTO platform.assistant_questions
 VALUES (:tenant, :sub, :app, CAST(:documents AS text[]), :question, :outcome, :answer, :reason,
     CAST(:citations AS jsonb), :model, :model_provider, :model_host, :duration_ms, :item, :query, :row_count,
     :attempts)
+"""
+
+INSERT_DRAFT = """
+INSERT INTO platform.assistant_package_drafts
+    (tenant_id, asked_by, need, outcome, reason, files, problem_count, model, model_provider, model_host,
+    attempts, duration_ms)
+VALUES (:tenant, :sub, :need, :outcome, :reason, CAST(:files AS text[]), :problem_count, :model,
+    :model_provider, :model_host, :attempts, :duration_ms)
 """
 
 
@@ -147,13 +157,41 @@ def record_data_question(
     _write(caller, params)
 
 
+def record_draft(
+    caller: Caller,
+    need: str,
+    duration_ms: int,
+    draft: PackageDraft | None,
+    failure: str = "",
+    attempts: int | None = None,
+) -> None:
+    """Ghi một lần soạn bản nháp: `draft` là bản nháp hay lời từ chối; None kèm `failure` khi lỗi chặn trả
+    lời, khi đó `attempts` là số lượt mô hình đã trả trước lỗi."""
+    params = {
+        "tenant": caller.tenant,
+        "sub": caller.sub,
+        "need": need,
+        "outcome": draft.outcome if draft else "failed",
+        "reason": draft.reason if draft else failure,
+        "files": [f.path for f in draft.files] if draft else [],
+        "problem_count": len(draft.problems) if draft else 0,
+        # Từ cấu hình như record(): dòng lỗi trước khi gọi được mô hình vẫn ghi yêu cầu lẽ ra đi tới đâu.
+        "model": settings.model,
+        "model_provider": settings.llm_provider,
+        "model_host": settings.llm_host,
+        "attempts": draft.attempts if draft else attempts,
+        "duration_ms": duration_ms,
+    }
+    _write(caller, params, INSERT_DRAFT)
+
+
 @_tracer.start_as_current_span(
     "postgres INSERT",
     kind=trace.SpanKind.CLIENT,
     attributes={"db.system.name": "postgresql", "db.operation.name": "INSERT"},
     record_exception=False,
 )
-def _write(caller: Caller, params: dict) -> None:
+def _write(caller: Caller, params: dict, insert: str = INSERT) -> None:
     try:
         connection = _connect()
     except (InterfaceError, DatabaseError) as error:
@@ -163,7 +201,7 @@ def _write(caller: Caller, params: dict) -> None:
         # Nhật ký thay đổi (core.audit_row) đọc người làm từ mortise.actor, chỉ sống trong giao dịch hiện tại.
         connection.run("BEGIN")
         connection.run("SELECT set_config('mortise.actor', :actor, true)", actor=caller.sub)
-        connection.run(INSERT, **params)
+        connection.run(insert, **params)
         connection.run("COMMIT")
     except (InterfaceError, DatabaseError) as error:
         log.error("CSDL từ chối ghi nhật ký câu hỏi: %s", error)

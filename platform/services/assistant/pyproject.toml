@@ -25,6 +25,11 @@ dependencies = [
   "opentelemetry-instrumentation-fastapi==0.66b2",
   "opentelemetry-instrumentation-logging==0.66b2",
   "opentelemetry-instrumentation-httpx==0.66b2",
+  # Bản nháp cấu hình gói (ADR 0071) được kiểm theo contracts/ như `make check-fast`: cùng bản jsonschema mà
+  # check-jsonschema 0.29.4 (scripts/contracts.sh) dùng, cùng bản PyYAML mà các script của repo ghim. Lệch bản thì
+  # bản nháp "hợp lệ" ở dịch vụ có thể bị check-fast từ chối.
+  "pyyaml==6.0.3",
+  "jsonschema==4.26.0",
 ]
 
 [dependency-groups]

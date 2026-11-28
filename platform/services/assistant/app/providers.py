@@ -52,7 +52,15 @@ class OpenAICompatible:
         )
         return parse_reply(content, "API mô hình")
 
-    def chat(self, messages: list[dict], schema: dict, name: str, timeout: float) -> str | None:
+    def chat(
+        self,
+        messages: list[dict],
+        schema: dict,
+        name: str,
+        timeout: float,
+        max_tokens: int | None = None,
+        context_tokens: int | None = None,
+    ) -> str | None:
         """Nội dung mô hình sinh theo `schema` (tên `name` trong `response_format`), hay None khi không có."""
         body = {
             "model": self._model,
@@ -64,7 +72,7 @@ class OpenAICompatible:
             "temperature": 0,
             # `max_tokens` thay vì `max_completion_tokens`: tên cũ được nhiều máy chủ tương thích nhận
             # hơn. Máy chủ nào từ chối thì trả 400, log bên dưới ghi lý do của nó.
-            "max_tokens": settings.num_predict,
+            "max_tokens": max_tokens or settings.num_predict,
         }
         started = time.monotonic()
         response = self._post(body, timeout)
@@ -137,7 +145,15 @@ class Unconfigured:
     def generate(self, question: str, sentences: list[Sentence]) -> dict:
         raise Denied(503, self.problem)
 
-    def chat(self, messages: list[dict], schema: dict, name: str, timeout: float) -> str | None:
+    def chat(
+        self,
+        messages: list[dict],
+        schema: dict,
+        name: str,
+        timeout: float,
+        max_tokens: int | None = None,
+        context_tokens: int | None = None,
+    ) -> str | None:
         raise Denied(503, self.problem)
 
 

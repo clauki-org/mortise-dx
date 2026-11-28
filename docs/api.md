@@ -154,6 +154,30 @@ Câu hỏi dữ liệu cũng có một dòng ở `platform_assistant_questions`:
 đã chạy hay bị từ chối, `row_count` là số dòng trả về; dòng kết quả không được lưu. Câu mẫu chạy không qua mô hình nên `model` và
 `attempts` trống. Câu gõ tự do ghi mô hình theo cấu hình và `attempts`; `query` trống khi mô hình không viết câu nào.
 
+Bản nháp cấu hình gói ([ADR 0071](adr/0071-package-config-drafts.md)) đi qua `POST /v1/assistant/package-drafts`
+với thân `{"need": "..."}`; chỉ token có vai trò `tenant_admin` gọi được, người khác nhận 403. Mô hình soạn `app.yaml`
+và tệp cấu hình của từng mục menu, khối từ [docs/packages.md](packages.md), bản mô tả và ví dụ trong `contracts/`;
+dịch vụ kiểm theo những luật của bộ kiểm gói (`scripts/contracts.sh package`) áp được cho một gói chỉ gồm các tệp đó,
+có lỗi thì mô hình sửa một lần trong cùng hạn `ASSISTANT_TIMEOUT_SECONDS`. Phản hồi có `outcome` (`drafted`: mọi tệp
+qua bước kiểm; `invalid`: còn lỗi, xem `problems` và `reason`; `refused`: mô hình nói không soạn được), `files`
+(đường dẫn trong gói, thành phần, nội dung YAML), `problems`, `to_write` (tệp `app.yaml` khai như BPMN mà bản nháp
+không có, viết trước khi cài), `choices` (mỗi mục một danh sách lập luận: `need` là đoạn của nhu cầu, đã kiểm có trong
+nhu cầu; `capability` là câu chép từ `contracts/<thành phần>.component.yaml`; `why` là câu mô hình viết, không qua
+bước kiểm nào), `model`, `attempts`. Bản nháp không có migration, quyền Hasura, BPMN hay văn bản nên chưa cài được
+ngay; dịch vụ không ghi gì vào `apps/`. Lỗi của mô hình theo cùng mã như câu gõ tự do; `contracts/` hay
+`docs/packages.md` không đọc được là 503; trần token sinh là `ASSISTANT_DRAFT_NUM_PREDICT`.
+
+Mỗi lần soạn sau bước kiểm đầu vào có một dòng ở `platform_assistant_package_drafts`: người gọi, nhu cầu, `outcome`
+(thêm `failed` khi lỗi chặn trả lời), lý do, đường dẫn các tệp, số lỗi, mô hình theo cấu hình, số lượt, thời gian;
+không lưu nội dung tệp. Không ghi được dòng thì không trả bản nháp (503). Chỉ `tenant_admin` đọc được, chỉ dòng của
+tenant mình. Kết quả demo trên gói thứ hai: [docs/assistant-eval/](assistant-eval/2026-11-28-package-draft-gemini-3.5-flash-lite.md).
+
+```bash
+curl -fsS -X POST http://localhost:9080/v1/assistant/package-drafts \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"need":"Cần danh sách đối tượng có mã, tên, trạng thái và một biểu mẫu để thêm đối tượng mới."}'
+```
+
 Văn bản cho trợ lý hỏi văn bản (`contracts/knowledge.schema.json`, [ADR 0021](adr/0021-document-assistant.md)) nằm ở
 `platform_knowledge_documents` (một dòng mỗi văn bản: tên, nguồn, băm và ngày tải bản gốc) và
 `platform_knowledge_passages` (một dòng mỗi đoạn: `label` là nhãn vị trí, `text` là nguyên văn, `position` là thứ tự

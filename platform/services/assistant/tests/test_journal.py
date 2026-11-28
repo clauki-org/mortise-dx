@@ -3,7 +3,7 @@
 #
 # Kiểm thử cách ghi một dòng nhật ký câu hỏi bằng kết nối giả: người làm đặt trong cùng giao dịch (nhật ký
 # thay đổi đọc nó), câu trích ghi dạng JSON, lỗi ghi là 503 chứ không lặng lẽ bỏ qua, lỗi khi đóng kết nối
-# không đè lên kết quả của lần ghi.
+# không đè lên kết quả của lần ghi. Bản nháp cấu hình gói ghi vào bảng riêng, không kèm nội dung tệp.
 
 import json
 from dataclasses import replace
@@ -21,7 +21,10 @@ from app.schemas import (
     DataQuery,
     DataQuestion,
     DataTable,
+    DraftFile,
+    DraftProblem,
     ModelInfo,
+    PackageDraft,
     Question,
 )
 from tests.passages import AMENDMENT, USER_A
@@ -257,4 +260,42 @@ def test_failed_free_text_question_records_the_configured_model(monkeypatch):
         "llm.example.test",
         None,
         None,
+    )
+
+
+def test_package_draft_is_written_to_its_own_table_without_file_contents(monkeypatch):
+    connection = FakeConnection()
+    monkeypatch.setattr(journal, "_connect", lambda: connection)
+    draft = PackageDraft(
+        outcome="invalid",
+        reason="còn lỗi",
+        files=[DraftFile(path="app.yaml", component=None, content="id: x\n")],
+        problems=[DraftProblem(path="app.yaml", message="lỗi")],
+        to_write=[],
+        choices=[],
+        model=ModelInfo(name="m", provider="ollama", location="local", host=None),
+        attempts=2,
+    )
+    journal.record_draft(USER_A, "Cần một danh mục.", 50, draft)
+    sql, params = connection.runs[2]
+    assert "platform.assistant_package_drafts" in sql
+    assert (params["outcome"], params["files"], params["problem_count"], params["attempts"]) == (
+        "invalid",
+        ["app.yaml"],
+        1,
+        2,
+    )
+    assert "id: x" not in json.dumps(params, ensure_ascii=False)
+
+
+def test_failed_package_draft_keeps_the_turns_so_far(monkeypatch):
+    connection = FakeConnection()
+    monkeypatch.setattr(journal, "_connect", lambda: connection)
+    journal.record_draft(USER_A, "Cần một danh mục.", 50, None, "Mô hình trả sai dạng.", 1)
+    params = connection.runs[2][1]
+    assert (params["outcome"], params["reason"], params["files"], params["attempts"]) == (
+        "failed",
+        "Mô hình trả sai dạng.",
+        [],
+        1,
     )

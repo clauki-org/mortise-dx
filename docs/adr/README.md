@@ -86,6 +86,7 @@ Trạng thái, Bối cảnh, Quyết định, Hệ quả. Chúng giải thích v
 | [0067](0067-field-operations-package.md) | Gói vận hành hiện trường: cột sửa cuối qua hàm của nền tảng, việc sửa chữa do luật mở là hồ sơ | Chấp nhận |
 | [0064](0064-import-child-rows-from-file.md) | Nạp dòng con từ tệp Excel hay CSV, xem trước lỗi theo dòng, thêm trong một lệnh | Chấp nhận |
 | [0058](0058-two-installs-and-install-presets.md) | Hai bản cài trên một máy và mẫu cài | Chấp nhận |
+| [0071](0071-package-config-drafts.md) | Bản nháp cấu hình gói cho quản trị đơn vị: mô hình soạn app.yaml và cấu hình thành phần từ `docs/packages.md` và `contracts/`; dịch vụ kiểm theo luật của bộ kiểm gói, sửa tối đa một lần; lập luận nối đoạn nhu cầu đã kiểm với câu công dụng chép từ hợp đồng; nhật ký mỗi lần soạn; không tự cài; dùng mô hình qua API theo quyết định của người phụ trách vì mô hình tại chỗ quá chậm (đo) | Chấp nhận |
 
 ## Quyết định còn mở
 

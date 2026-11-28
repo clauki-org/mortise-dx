@@ -53,7 +53,7 @@ devices/              thiết bị: bộ giả lập và danh sách thiết bị
 deploy/               triển khai lên máy chủ demo: script kéo tag phát hành mới, unit systemd (ADR 0036)
 scripts/              lệnh hỗ trợ, gọi từ Makefile
 docs/                 adr/ quyết định kiến trúc, api.md API của lõi, tools.md công cụ sử dụng, restore-drill.md
-                      diễn tập khôi phục, assistant-eval.md đo trợ lý hỏi văn bản
+                      diễn tập khôi phục, assistant-eval.md đo trợ lý hỏi văn bản, packages.md một gói gồm những gì
   guides/             kế hoạch: hướng dẫn
 ```
 

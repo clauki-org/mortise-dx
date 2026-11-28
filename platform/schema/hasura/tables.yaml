@@ -68,6 +68,16 @@
                   model_provider, model_host, duration_ms, item, query, row_count, attempts]
         filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
 
+# Nhật ký bản nháp cấu hình gói (ADR 0071): như nhật ký câu hỏi, chỉ quản trị của tenant đọc dòng của tenant mình;
+# không vai trò nào ghi qua GraphQL.
+- table: { schema: platform, name: assistant_package_drafts }
+  select_permissions:
+    - role: tenant_admin
+      permission:
+        columns: [id, tenant_id, asked_at, asked_by, need, outcome, reason, files, problem_count, model, model_provider,
+                  model_host, attempts, duration_ms]
+        filter: { tenant_id: { _eq: X-Hasura-Tenant-Id } }
+
 # Tenant gốc của mỗi tenant (view). Đăng ký chỉ để quyền của bảng khác đi qua quan hệ tới nó; không vai trò nào đọc
 # thẳng.
 - table: { schema: platform, name: tenant_roots }

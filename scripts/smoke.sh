@@ -300,6 +300,39 @@ else
     '[["xa-a","ask-data-example",true,null,false]]'
 fi
 
+# Bản nháp cấu hình gói (ADR 0071): chỉ quản trị đơn vị gọi được, đầu vào sai bị chặn trước mô hình và không vào
+# nhật ký; lần soạn lỗi vì chưa có mô hình có một dòng nhật ký, chỉ quản trị cùng đơn vị đọc được. Khi có mô hình,
+# smoke không gọi soạn bản nháp: với Ollama tại chỗ một bản nháp vượt hạn chờ (số đo ở ADR 0071); bước kiểm bản
+# nháp có `make test`. Token riêng vì giới hạn tần suất tính theo token.
+# draft_ask NHU_CẦU TOKEN: in thân phản hồi rồi mã HTTP ở dòng cuối.
+draft_ask() {
+  jq -nc --arg need "$1" '{need: $need}' |
+    curl -s -w '\n%{http_code}' -X POST "$base/v1/assistant/package-drafts" -H "Authorization: Bearer $2" \
+      -H 'Content-Type: application/json' -d @-
+}
+draft_need="Kiểm thử smoke bản nháp $(date +%s)-$RANDOM: cần một danh sách đối tượng có mã, tên, trạng thái."
+# draft_rows TOKEN: dòng nhật ký của nhu cầu trên mà token đó đọc được.
+draft_rows() {
+  jq -nc --arg need "$draft_need" '{query: "query($n: String!) { platform_assistant_package_drafts(
+    where: {need: {_eq: $n}}) { tenant_id outcome model attempts } }", variables: {n: $need}}' |
+    curl -fsS -X POST "$base/v1/graphql" -H "Authorization: Bearer $1" -H 'X-Hasura-Role: tenant_admin' \
+      -H 'Content-Type: application/json' -d @- |
+    jq -c '[.data.platform_assistant_package_drafts[] | [.tenant_id, .outcome, .model != null, .attempts]]'
+}
+draft_admin=$(token admin.a)
+check "Bản nháp cấu hình gói: người không phải quản trị đơn vị nhận 403" \
+  "$(draft_ask "$draft_need" "$(token user.a)" | tail -1)" 403
+check "Bản nháp cấu hình gói: quản trị đơn vị gửi nhu cầu trống là 400" "$(draft_ask "  " "$draft_admin" | tail -1)" 400
+check "Nhật ký bản nháp: yêu cầu bị chặn trước mô hình không có dòng nào" "$(draft_rows "$(token admin.a)")" '[]'
+if [[ $model_ready == no ]]; then
+  reply=$(draft_ask "$draft_need" "$draft_admin")
+  check "Bản nháp cấu hình gói: mô hình chưa bật thì 503 dạng JSON chỉ cách bật" \
+    "$(tail -1 <<<"$reply") $(sed '$d' <<<"$reply" | jq -r '.error | contains("make ai-up")')" "503 true"
+  check "Nhật ký bản nháp: lần soạn lỗi vì chưa có mô hình có một dòng kèm mô hình đã cấu hình" \
+    "$(draft_rows "$(token admin.a)")" '[["xa-a","failed",true,null]]'
+  check "Nhật ký bản nháp: quản trị xã B không đọc được dòng của xã A" "$(draft_rows "$(token admin.b)")" '[]'
+fi
+
 # Quyền Hasura đang chạy phải khớp tệp khai báo (core/hasura/, platform/schema/hasura/); ai sửa tay trên trang quản
 # trị thì báo ở đây. Quyền hay quan hệ sai thì `make seed` đưa về đúng; bảng đăng ký thừa thì thông báo chỉ cách gỡ.
 if uv run --quiet --no-project --with pyyaml==6.0.3 python scripts/hasura-metadata.py check; then

@@ -16,6 +16,10 @@ os.environ.setdefault("ASSISTANT_MAX_QUESTION_CHARS", "300")
 os.environ.setdefault("ASSISTANT_MIN_SCORE", "0.3")
 os.environ.setdefault("ASSISTANT_TOP_PASSAGES", "4")
 os.environ.setdefault("ASSISTANT_NUM_PREDICT", "400")
+os.environ.setdefault("ASSISTANT_DRAFT_NUM_PREDICT", "4000")
+os.environ.setdefault("ASSISTANT_DRAFT_NUM_CTX", "16384")
+os.environ.setdefault("ASSISTANT_CONTRACTS_DIR", str(Path(__file__).parents[4] / "contracts"))
+os.environ.setdefault("ASSISTANT_PACKAGE_GUIDE", str(Path(__file__).parents[4] / "docs/packages.md"))
 os.environ.setdefault("ASSISTANT_TIMEOUT_SECONDS", "5")
 for name in (
     "ASSISTANT_LLM_PROVIDER",

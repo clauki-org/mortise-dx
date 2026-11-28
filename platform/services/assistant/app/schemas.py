@@ -140,3 +140,66 @@ class DataAnswer(BaseModel):
         description="Bước đã từ chối câu hỏi gõ tự do: mô hình nói không trả lời được, guard chặn câu mô "
         "hình viết, hay Hasura từ chối câu đã qua guard; null khi có dữ liệu và với câu mẫu",
     )
+
+
+class DraftRequest(BaseModel):
+    """Nhu cầu cần soạn bản nháp cấu hình gói (ADR 0071)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    need: str = Field(
+        description="Nhu cầu người dựng hệ thống gõ: gói cần những màn hình nào, quản lý gì; độ dài tối đa: "
+        "ASSISTANT_MAX_QUESTION_CHARS"
+    )
+
+
+class DraftFile(BaseModel):
+    path: str = Field(description="Đường dẫn tương đối trong thư mục gói apps/<gói>/")
+    component: str | None = Field(
+        description="Thành phần mà mục menu trỏ tới tệp này khai trong app.yaml; null với app.yaml, tệp "
+        "không mục nào trỏ tới, và tệp của mục khai thành phần chưa có bản mô tả"
+    )
+    content: str = Field(description="Nội dung YAML do mô hình viết, đúng chữ, không sửa")
+
+
+class DraftProblem(BaseModel):
+    path: str = Field(description="Tệp có lỗi")
+    message: str = Field(description="Lỗi khi kiểm theo contracts/, như `make check-fast` báo")
+
+
+class DraftArgument(BaseModel):
+    need: str = Field(description="Đoạn của nhu cầu mà lập luận dựa vào; dịch vụ đã kiểm có trong nhu cầu")
+    capability: str = Field(
+        description="Câu nguyên văn trong contracts/<thành phần>.component.yaml mô tả công dụng đáp ứng đoạn "
+        "đó; dịch vụ chép theo mã mô hình chỉ ra"
+    )
+    why: str = Field(description="Câu mô hình viết nối đoạn nhu cầu với công dụng; không qua bước kiểm nào")
+
+
+class DraftChoice(BaseModel):
+    item: str = Field(description="id của mục menu hay khối trong app.yaml")
+    component: str = Field(description="Thành phần mục đó dùng, đọc từ app.yaml")
+    arguments: list[DraftArgument] = Field(
+        description="Tối đa ba lập luận vì sao thành phần hợp với nhu cầu; lập luận có đoạn nhu cầu không "
+        "có trong nhu cầu hay mã câu không có trong bản mô tả bị bỏ"
+    )
+
+
+class PackageDraft(BaseModel):
+    """Bản nháp app.yaml và cấu hình của các mục menu, khối. Không có migration, quyền Hasura, BPMN hay văn
+    bản, nên chưa cài được ngay; dịch vụ không ghi gì vào apps/, chỉ ghi một dòng nhật ký."""
+
+    outcome: Literal["drafted", "invalid", "refused"] = Field(
+        description="drafted: mọi tệp qua bước kiểm; invalid: còn lỗi, xem `problems` và `reason`; "
+        "refused: mô hình nói không soạn được bằng các thành phần hiện có"
+    )
+    reason: str | None = Field(description="Lý do khi invalid hay refused, hiển thị được; null khi drafted")
+    files: list[DraftFile] = Field(description="Các tệp của bản nháp; rỗng khi refused")
+    problems: list[DraftProblem] = Field(description="Lỗi còn lại khi kiểm; rỗng khi drafted")
+    to_write: list[DraftProblem] = Field(
+        description="Tệp app.yaml khai (quy trình, luật, văn bản, bảng thẩm quyền) mà bản nháp không có; "
+        "viết trước khi cài. Không làm bản nháp thành invalid"
+    )
+    choices: list[DraftChoice] = Field(description="Lý do chọn thành phần của từng mục menu hay khối")
+    model: ModelInfo | None = Field(description="Mô hình đã soạn bản nháp")
+    attempts: int = Field(description="Số lượt mô hình đã trả bản nháp: 1, hay 2 khi có lượt sửa trả về")
