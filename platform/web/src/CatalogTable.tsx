@@ -16,7 +16,9 @@ import { RowsCards, RowsTable, ViewControls } from "./CatalogRows";
 import { type CatalogNode, type Field, fieldOf, pageSize, type Row } from "./catalog";
 import { type ListState, listVariables, rowsQuery, sortOf, type View } from "./catalogQuery";
 import { type CalendarConfig, type KanbanConfig, viewOf } from "./catalogViews";
+import { withCustomColumn } from "./customFields";
 import { Empty, ErrorNotice, Loading } from "./States";
+import { useCustomFields } from "./useCustomFields";
 
 type Props = {
   config: CatalogNode;
@@ -46,13 +48,16 @@ export function CatalogTable(props: Props) {
   const sort = sortOf(config, state);
   const view = viewOf(views, state.view, defaultView);
   const own = view === "kanban" || view === "calendar";
+  // Trường tùy chỉnh (ADR 0059) chỉ ở bảng và thẻ; Kanban, Lịch đọc theo câu riêng, không có chúng.
+  const custom = useCustomFields(config.source);
   const [{ data, fetching, error }, reload] = useQuery<{ rows: Row[] }>({
-    query: rowsQuery(config, config.list.columns),
+    query: rowsQuery(config, withCustomColumn(config.list.columns, custom.fields)),
     variables: listVariables(config, state, fixed),
     // Hiện ngay kết quả đã tải rồi đọc lại từ máy chủ: quay về danh sách sau khi dữ liệu đổi không thấy bản cũ mãi.
     requestPolicy: "cache-and-network",
     // Kanban và lịch đọc theo câu riêng của chúng; đọc thêm trang danh sách là một yêu cầu thừa.
-    pause: own,
+    // Chờ định nghĩa để biết có đọc cột `custom` không; đọc trước rồi đọc lại là hai yêu cầu cho mỗi lần mở.
+    pause: own || !custom.settled,
   });
   const rows = data?.rows.slice(0, size) ?? [];
   const hasNext = (data?.rows.length ?? 0) > size;
@@ -151,10 +156,10 @@ export function CatalogTable(props: Props) {
       {!own &&
         !(error && !data) &&
         (cards && rows.length > 0 ? (
-          <RowsCards config={config} columns={columns} rows={rows} path={path} />
+          <RowsCards config={config} columns={columns} rows={rows} path={path} custom={custom.fields} />
         ) : (
           <Paper withBorder radius="md">
-            {!data && fetching ? (
+            {!data && (fetching || !custom.settled) ? (
               <Loading />
             ) : rows.length === 0 ? (
               filtering ? (
@@ -178,6 +183,7 @@ export function CatalogTable(props: Props) {
                 label={label}
                 sort={sort}
                 onSort={toggleSort}
+                custom={custom.fields}
               />
             )}
           </Paper>

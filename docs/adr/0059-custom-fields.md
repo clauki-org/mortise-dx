@@ -69,7 +69,17 @@ Chọn cách thứ ba.
   - Không có kiểu và ràng buộc của cột thật: không UNIQUE, không khóa ngoại, không chỉ mục theo trường.
   - Dòng cũ có thể còn giữ khóa của trường đã xóa. Giao diện bỏ qua khóa không có định nghĩa.
 - Định nghĩa gắn với bảng bằng `source`, tên GraphQL của bảng (`<lược đồ>_<bảng>`), là chuỗi mà cấu hình danh mục, biểu
-  mẫu đã có: giao diện đọc `platform_custom_fields` lọc theo `source` và thêm trường bằng chính chuỗi đó. Hiện trên danh mục, chi tiết, biểu mẫu, xuất tệp và định nghĩa trong
-  chế độ Chỉnh sửa là việc tiếp theo.
+  mẫu đã có: giao diện đọc `platform_custom_fields` lọc theo `source` và thêm trường bằng chính chuỗi đó.
+- **Giao diện** (`customFields.ts`, `CustomFieldsDialog.tsx`):
+  - Định nghĩa đọc như một kênh riêng, không trộn vào `fields` của cấu hình gói. Bảng có định nghĩa thì câu đọc thêm cột
+    `custom`; câu đọc dòng chờ định nghĩa về trước để không đọc hai lần.
+  - Danh mục (bảng, thẻ), chi tiết và tệp xuất có thêm cột, ô sau các trường của gói. Biểu mẫu sửa, thêm dòng có thêm
+    ô theo kiểu; lệnh sửa gộp giá trị lên `custom` vừa đọc lại và chỉ gửi khi một ô tùy chỉnh đổi.
+  - Lời từ chối của trigger hiện nguyên lý do, cả ở biểu mẫu của gói.
+  - Quản trị org định nghĩa trường ở phần "Trường tùy chỉnh" trong chế độ Chỉnh sửa của mục danh mục (ADR 0070); mỗi
+    lần thêm, sửa, xóa ghi ngay, không qua bản nháp và nút "Lưu" của chế độ Chỉnh sửa, vì định nghĩa là dữ liệu của
+    bảng riêng chứ không phải phần ghi đè cấu hình. Phần này liệt kê mọi bảng của danh mục vì trình duyệt không đọc được `platform.custom_field_tables`; bảng chưa bật bị khóa
+    ngoại từ chối, lời báo nói rõ.
+  - Kanban, Lịch và nạp từ tệp chưa có trường tùy chỉnh; trường bắt buộc làm mọi dòng của tệp nạp bị từ chối.
 - `make smoke` chạy `platform/schema/tests/custom_fields.sql` (trigger, ràng buộc, tenant gốc, trong giao dịch rồi
   ROLLBACK). Smoke của `facilities-commune` kiểm quyền qua cổng (`tests/custom-fields.sh`).

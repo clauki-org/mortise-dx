@@ -83,7 +83,13 @@ test("cán bộ xã A chuyển thẻ bằng bàn phím và kéo thả, lần chu
     await moveButton.focus();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("menuitem", { name: "Dôi dư" })).toBeVisible();
-    await page.keyboard.press("ArrowDown");
+    // Danh sách hiện trước lúc Mantine nhận phím mũi tên trong nó (đo trong trace: mũi tên bấm 6 ms sau khi danh sách
+    // hiện thì không mục nào nhận tiêu điểm, Enter không chọn gì). Bấm lại tới khi mục nhận tiêu điểm, vẫn chỉ bằng
+    // bàn phím.
+    await expect(async () => {
+      await page.keyboard.press("ArrowDown");
+      await expect(page.getByRole("menuitem", { name: "Dôi dư" })).toBeFocused({ timeout: 500 });
+    }).toPass({ timeout: 5000 });
     await page.keyboard.press("Enter");
     await expect(status).toHaveText(`Đã chuyển "${code}" sang "Dôi dư".`);
     // Thẻ hiện ở cột mới là lúc bảng đã tải lại xong, với cột version mới.

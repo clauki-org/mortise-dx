@@ -26,6 +26,11 @@ capabilities:
     lại dòng bằng vai trò của biểu mẫu để điền sẵn, gửi chỉ cột đã đổi (ô bị xóa trắng thành null), với điều kiện cột
     submit.version bằng giá trị đọc lúc mở. Lệnh không khớp dòng nào thì báo "Dòng này đã có người sửa hoặc bạn không
     còn quyền sửa", đọc lại dòng và điền lại giá trị mới, không ghi đè. Không đổi gì thì không gửi.
+  - Bảng đích của submit.insert, submit.update có trường tùy chỉnh do quản trị org định nghĩa (ADR 0059) thì biểu mẫu có
+    thêm ô của chúng ở cuối, theo kiểu (chữ tối đa 2000 ký tự, số, ngày, lựa chọn) và bắt buộc; giá trị gửi trong cột
+    custom. Lệnh sửa gộp giá trị đổi lên custom vừa đọc lại và chỉ gửi custom khi một ô tùy chỉnh đổi; lựa chọn đã lưu
+    mà vừa bị bỏ khỏi danh sách vẫn chọn được; khi sửa, trường bắt buộc mà dòng chưa có giá trị không bị đòi ở trình
+    duyệt (CSDL chỉ xét khi custom đổi). CSDL từ chối giá trị sai thì lời báo là lý do CSDL nêu.
   - Biểu mẫu thêm dòng con mở từ danh mục (add của đối tượng con) gửi thêm cột nối về cha với khóa của dòng cha; cột đó
     không là trường của biểu mẫu.
   - role (bỏ trống là user) gửi kèm header X-Hasura-Role với danh sách source, lệnh đọc lại dòng và lệnh thêm hay sửa dòng; token không có vai trò đó thì biểu mẫu không hiện mà báo lý do.
@@ -37,6 +42,7 @@ limits:
   - submit.update cần cột version do CSDL đặt ở mỗi lệnh UPDATE (trigger); bảng không có cột đó thì không sửa được bằng
     biểu mẫu. Lệnh không khớp dòng nào vì người khác đã sửa hay vì không còn quyền đều nhận cùng một lời báo.
   - Không tải tệp lên, không có trường chọn nhiều giá trị.
+  - Ô của trường tùy chỉnh không có giới hạn số, độ dài riêng hay dòng gợi ý; luật kiểu và bắt buộc do CSDL kiểm lại.
   - Giá trị của danh sách source luôn gửi dạng chữ; thêm dòng vào cột kiểu Int của Hasura thì bị từ chối.
   - submit.insert không có Idempotency-Key; nút bị khóa khi đang gửi, nhưng gửi lại sau khi mất phản hồi có thể báo trùng mã dù dòng đã được thêm.
   - Ràng buộc NOT NULL và CHECK của bảng không được make check-fast kiểm; cột bắt buộc mà biểu mẫu không khai chỉ lộ ra khi gửi, thành lời báo nêu tên cột cho người quản trị.

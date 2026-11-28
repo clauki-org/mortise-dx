@@ -22,7 +22,9 @@ import {
 } from "./catalogExport";
 import { pdfBlob, xlsxBlob } from "./catalogExportOffice";
 import { type ListState, rowsQuery } from "./catalogQuery";
+import { withCustomColumn } from "./customFields";
 import { useSession } from "./session";
+import { useCustomFields } from "./useCustomFields";
 
 type Format = { label: string; extension: string; write: (table: ExportTable) => Promise<Blob> };
 
@@ -39,6 +41,7 @@ const FORMATS: Format[] = [
 export function CatalogExport({ config, state }: { config: CatalogConfig; state: ListState }) {
   const client = useClient();
   const { user } = useSession();
+  const custom = useCustomFields(config.source);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -46,7 +49,7 @@ export function CatalogExport({ config, state }: { config: CatalogConfig; state:
     setBusy(true);
     setProblem(null);
     try {
-      const query = rowsQuery(config, config.list.columns);
+      const query = rowsQuery(config, withCustomColumn(config.list.columns, custom.fields));
       const rows = await readAll(async (limit) => {
         // network-only: tệp phải là dữ liệu lúc bấm, không phải bản đã lưu khi xem các trang trước.
         const result = await client
@@ -68,6 +71,7 @@ export function CatalogExport({ config, state }: { config: CatalogConfig; state:
           conditions: describeConditions(config, state),
         },
         rows,
+        custom.fields,
       );
       download(await format.write(table), fileName(config.title, exportedAt, format.extension));
     } catch (error) {
@@ -85,8 +89,9 @@ export function CatalogExport({ config, state }: { config: CatalogConfig; state:
   return (
     <>
       <Menu position="bottom-end">
+        {/* Chờ định nghĩa trường tùy chỉnh: xuất trước lúc đó thì tệp thiếu cột mà màn hình sắp hiện. */}
         <Menu.Target>
-          <Button variant="default" loading={busy}>
+          <Button variant="default" loading={busy || !custom.settled}>
             Xuất
           </Button>
         </Menu.Target>

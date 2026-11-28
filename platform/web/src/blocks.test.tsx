@@ -141,6 +141,10 @@ function fakeClient(menu: MenuItem[], state: DataState, sent: unknown[] = []): C
     if (roots.some((field) => field.name.value === "platform_config_overrides_by_tenant")) {
       return fromValue({ operation, data: { platform_config_overrides_by_tenant: [] }, stale: false, hasNext: false });
     }
+    // Định nghĩa trường tùy chỉnh (ADR 0059) cũng là kênh riêng: câu đọc dòng chờ nó, nên luôn trả rỗng như ghi đè.
+    if (roots.some((field) => field.name.value === "platform_custom_fields")) {
+      return fromValue({ operation, data: { platform_custom_fields: [] }, stale: false, hasNext: false });
+    }
     sent.push(operation.variables);
     const host = roots.some((field) => field.alias?.value === "s0");
     if (state === "loading" && !host) return never;

@@ -14,7 +14,14 @@ import { useOrgAdmin } from "./AppsPage";
 import { refusalText } from "./apps";
 import { checkedConfig } from "./configEffective";
 import type { ItemOverride } from "./configOverrides";
-import { BlocksSection, DashboardSection, FieldsSection, ItemSection, type SectionProps } from "./EditSections";
+import {
+  BlocksSection,
+  CustomFieldsSection,
+  DashboardSection,
+  FieldsSection,
+  ItemSection,
+  type SectionProps,
+} from "./EditSections";
 import { addChanges, type Change, changeKey, draftOverrides, EDIT_CONTEXT, mutationOf, saveOrder } from "./editDraft";
 import { ownOverrides } from "./editModel";
 import { findItem, type MenuItem } from "./menu";
@@ -33,6 +40,7 @@ function Sections(props: SectionProps) {
       {hasBlocks && <BlocksSection {...props} />}
       {(component === "catalog" || component === "form") && <FieldsSection {...props} />}
       {component === "dashboard" && <DashboardSection {...props} />}
+      {component === "catalog" && <CustomFieldsSection entry={props.entry} />}
     </>
   );
 }

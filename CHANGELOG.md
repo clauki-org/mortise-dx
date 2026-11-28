@@ -73,6 +73,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Chế độ "Chỉnh sửa" trên trang cho quản trị org: đổi nhãn, ẩn hiện, thứ tự, kiểu, thêm gỡ khối gói đã khai, ngưỡng
   của thẻ số; hoàn tác trước khi lưu, "Về mặc định" xóa phần đã chỉnh ([ADR
   0070](docs/adr/0070-in-page-edit-mode.md)).
+- Trường tùy chỉnh trên giao diện: quản trị org thêm, sửa, xóa trường ở phần "Trường tùy chỉnh" trong chế độ Chỉnh sửa
+  của danh mục; danh sách, chi tiết, biểu mẫu và tệp xuất đọc, ghi giá trị; CSDL từ chối giá trị sai kiểu kèm lý do
+  ([ADR 0059](docs/adr/0059-custom-fields.md)).
 
 ### Changed
 
