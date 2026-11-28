@@ -70,6 +70,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 - Gói cơ sở vật chất xã: hồ sơ rà soát sang bước công khai thì sinh tin công khai; xã cùng tỉnh xem "Tin công khai" và
   đăng ký nhận phần diện tích vượt trong hạn (sau hạn CSDL từ chối); ở bước trình, người trình chọn đơn vị nhận từ
   danh sách xếp theo thứ tự ưu tiên thay vì gõ tay ([ADR 0069](docs/adr/0069-public-notices-and-receive-requests.md)).
+- Chế độ "Chỉnh sửa" trên trang cho quản trị org: đổi nhãn, ẩn hiện, thứ tự, kiểu, thêm gỡ khối gói đã khai, ngưỡng
+  của thẻ số; hoàn tác trước khi lưu, "Về mặc định" xóa phần đã chỉnh ([ADR
+  0070](docs/adr/0070-in-page-edit-mode.md)).
 
 ### Changed
 
