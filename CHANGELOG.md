@@ -10,6 +10,25 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-28
+
+Bản 1.0: nền tảng ghép thành phần. Org tự bật tắt gói và chỉnh trang trên giao diện trong phạm vi gói đã khai; một
+máy chạy được hai org với hai bộ gói khác nhau.
+
+- **Tự cấu hình trên giao diện:** trang "Ứng dụng" bật, tắt gói cho cả org; chế độ "Chỉnh sửa" đổi nhãn, ẩn hiện,
+  thứ tự, kiểu trình bày, khối và ngưỡng thẻ số, lưu vào lớp ghi đè giữ được khi cài lại gói; trường tùy chỉnh do
+  quản trị org định nghĩa, CSDL kiểm kiểu và bắt buộc.
+- **Thành phần:** trang gồm khối có kiểu trình bày, khối trong chi tiết một dòng lọc theo dòng đó; danh mục có kiểu
+  Kanban và Lịch, sửa và thêm dòng tại chỗ, nạp dòng con từ Excel; biến giao diện theo bản cài; bản đồ có nền
+  OpenStreetMap tự lưu trữ.
+- **Gói:** gói Kho dùng chung (phiếu nhập, xuất, tồn kho tính trong CSDL); gói vận hành hiện trường `field-ops`; gói
+  cơ sở vật chất xã thêm tin công khai, đăng ký nhận diện tích vượt và niêm phong hồ sơ rà soát.
+- **Vận hành:** mẫu cài (`make install PRESET=chinh-quyen|dien-mat-troi`) và hai bản cài trên một máy; trình cài gói
+  dùng chung bộ kiểm với `make check-fast`; `make assistant-eval` đo trợ lý hỏi văn bản.
+
+Nâng cấp từ 0.1.0: mục menu `component: documents` trong `app.yaml` không còn dùng được, khai tài liệu đính kèm bằng
+`detail.documents` của danh mục; `.env` tạo trước bản này còn khóa S3 `change-me`, cần đổi tay (mục Fixed).
+
 ### Added
 
 - Khối trong chi tiết một dòng của danh mục: bản đồ, bảng điều hành, danh sách, hồ sơ chỉ hiện dữ liệu của dòng đang
@@ -304,5 +323,6 @@ Chạy từ mã nguồn: `make up && make seed && make smoke` (README). Máy ch�
 - API quy trình trả 422 khi thân request có khóa ngoài `variables`, thay vì bỏ qua khóa đó và rẽ sang nhánh mặc định.
 - Flowable không còn tự deploy các quy trình minh họa của image `flowable-rest`.
 
-[Unreleased]: https://github.com/clauki-org/mortise-dx/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/clauki-org/mortise-dx/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/clauki-org/mortise-dx/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/clauki-org/mortise-dx/releases/tag/v0.1.0
