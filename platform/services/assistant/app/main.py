@@ -1,11 +1,12 @@
 # SPDX-FileCopyrightText: 2026 Mortise DX contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Trợ lý (ADR 0021, ADR 0027, ADR 0034), đứng sau APISIX tại /v1/assistant. Ba đường: hỏi văn bản, nhận câu
-# trả lời kèm câu trích đã kiểm hoặc lời từ chối có lý do (pipeline.py); chạy câu mẫu của mục hỏi dữ liệu, một
-# câu GraphQL chỉ đọc đã qua guard, bằng token người hỏi, nhận bảng kèm câu đã chạy (data_run.py), không cần
-# mô hình; hỏi dữ liệu gõ tự do, mô hình viết câu rồi câu đi cùng đường đó (data_question.py). Mô hình là
-# Ollama ở profile `ai` hay một API tương thích OpenAI theo cấu hình (providers.py).
+# Trợ lý (ADR 0021, ADR 0027, ADR 0034, ADR 0071), đứng sau APISIX tại /v1/assistant. Các đường: hỏi văn bản,
+# nhận câu trả lời kèm câu trích đã kiểm hoặc lời từ chối có lý do (pipeline.py); chạy câu mẫu của mục hỏi dữ
+# liệu, một câu GraphQL chỉ đọc đã qua guard, bằng token người hỏi, nhận bảng kèm câu đã chạy (data_run.py),
+# không cần mô hình; hỏi dữ liệu gõ tự do, mô hình viết câu rồi câu đi cùng đường đó (data_question.py); soạn
+# bản nháp cấu hình gói cho quản trị đơn vị, kiểm theo contracts/ (drafts.py, ADR 0071). Mô hình là Ollama ở
+# profile `ai` hay một API tương thích OpenAI theo cấu hình (providers.py).
 
 import logging
 import time
@@ -16,7 +17,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
-from . import data_question, data_run, journal
+from . import data_question, data_run, drafts, journal
 from .auth import caller_from_token
 from .config import settings
 from .errors import Denied
@@ -24,7 +25,16 @@ from .model import Model
 from .pipeline import ask
 from .providers import configured
 from .retrieval import Caller
-from .schemas import Answer, DataAnswer, DataQuery, DataQuestion, ErrorBody, Question
+from .schemas import (
+    Answer,
+    DataAnswer,
+    DataQuery,
+    DataQuestion,
+    DraftRequest,
+    ErrorBody,
+    PackageDraft,
+    Question,
+)
 
 # Chỉ logger của dịch vụ ở mức cấu hình; gốc để WARNING, vì httpx ghi mỗi yêu cầu ở mức INFO. Không cấu hình
 # gì thì Python chỉ in WARNING trở lên và dòng INFO của mỗi lời gọi mô hình không tới log của container.
@@ -167,6 +177,38 @@ def data_questions(request: DataQuestion, caller: CallerDep, chosen: ModelDep) -
         )
         raise Denied(500, reason) from error
     journal.record_data_question(caller, request, _elapsed(started), answer)
+    return answer
+
+
+@app.post(
+    "/v1/assistant/package-drafts",
+    response_model=PackageDraft,
+    responses={code: {"model": ErrorBody} for code in (400, 401, 403, 500, 502, 503, 504)},
+)
+def package_drafts(request: DraftRequest, caller: CallerDep, chosen: ModelDep) -> PackageDraft:
+    """Soạn bản nháp app.yaml và cấu hình các mục menu cho một nhu cầu; chỉ quản trị đơn vị (tenant_admin).
+
+    Mô hình chỉ nhận nhu cầu, tài liệu nền tảng và bản mô tả, ví dụ của các thành phần trong contracts/,
+    không nhận dữ liệu nào của đơn vị. Bản nháp được kiểm theo luật của bộ kiểm gói áp được cho nó; có lỗi
+    thì mô hình sửa một lần. Không ghi gì vào apps/. Mô hình nói không soạn được thì `outcome` là `refused`,
+    vẫn còn lỗi thì `invalid` (mã 200). Mỗi lần soạn được ghi nhật ký kèm nhu cầu, đường dẫn tệp, số lỗi,
+    mô hình và số lượt, không kèm nội dung tệp.
+    """
+    started = time.monotonic()
+    need = request.need.strip()
+    progress = drafts.Progress()
+    try:
+        answer = drafts.draft(caller, request, chosen, progress)
+    except Denied as error:
+        if error.status >= 500:
+            journal.record_draft(caller, need, _elapsed(started), None, error.reason, progress.attempts)
+        raise
+    except Exception as error:
+        log.exception("Lỗi không lường trước khi soạn bản nháp cấu hình gói")
+        reason = "Trợ lý gặp lỗi không lường trước; báo người vận hành xem log của assistant."
+        journal.record_draft(caller, need, _elapsed(started), None, reason, progress.attempts)
+        raise Denied(500, reason) from error
+    journal.record_draft(caller, need, _elapsed(started), answer)
     return answer
 
 

@@ -274,14 +274,19 @@ người dùng; các cổng khác chỉ bind `127.0.0.1` để người vận h�
   (`app/guard.py`, phân tích bằng graphql-core) rồi chạy qua Hasura bằng token người hỏi, trả bảng kèm câu đã chạy
   ([ADR 0027](adr/0027-data-assistant-guarded-graphql.md)). Tại `/v1/assistant/data-questions`: mô hình viết câu
   GraphQL từ câu hỏi gõ tự do và mô tả bảng, cột của mục menu, rồi câu đi cùng đường đó, sửa tối đa một lần theo lý
-  do của guard ([ADR 0034](adr/0034-model-written-guarded-graphql.md)).
+  do của guard ([ADR 0034](adr/0034-model-written-guarded-graphql.md)). Tại `/v1/assistant/package-drafts`: chỉ quản
+  trị đơn vị; mô hình soạn bản nháp `app.yaml` và cấu hình thành phần từ `docs/packages.md` và `contracts/`, dịch vụ
+  kiểm theo luật của bộ kiểm gói (jsonschema, PyYAML) và cho sửa một lần; không ghi vào `apps/`, mỗi lần soạn một dòng
+  ở `platform.assistant_package_drafts` ([ADR 0071](adr/0071-package-config-drafts.md)).
 - **Trong dự án:** đọc đoạn qua cổng bằng token người hỏi, nên Hasura lọc theo tenant. Mỗi câu hỏi một dòng trong
   `platform.assistant_questions`, ghi bằng vai trò CSDL `assistant` chỉ được thêm dòng; không ghi được thì không trả
   lời. Mô hình chỉ chọn mã câu; số trong câu trả lời phải có trong câu được trích. Mỗi lúc chỉ một lượt sinh, chung cho
   hỏi văn bản và hỏi dữ liệu; mỗi lời gọi mô hình một dòng log INFO không kèm nội dung (`ASSISTANT_LOG_LEVEL`). Chạy
   cùng lõi; Ollama chưa bật thì câu hỏi cần mô hình nhận 503 kèm cách bật.
 - **Cấu hình:** dịch vụ `assistant` trong `compose.yaml`: ngưỡng điểm tìm, số đoạn, độ dài câu hỏi,
-  thời gian chờ. Mã ở `platform/services/assistant/`; route và giới hạn tần suất ở `core/apisix/apisix.yaml`. Nhà
+  thời gian chờ, trần token sinh và cỡ cửa sổ ngữ cảnh của Ollama cho bản nháp (`ASSISTANT_DRAFT_NUM_PREDICT`,
+  `ASSISTANT_DRAFT_NUM_CTX`); `contracts/` gắn chỉ đọc vào `/srv/contracts`, `docs/` vào `/srv/docs`
+  (`ASSISTANT_PACKAGE_GUIDE` trỏ tới `docs/packages.md`). Mã ở `platform/services/assistant/`; route và giới hạn tần suất ở `core/apisix/apisix.yaml`. Nhà
   cung cấp mô hình: mặc định Ollama; `ASSISTANT_LLM_PROVIDER=openai-compatible` cùng địa chỉ, tên mô hình và khóa
   (`ASSISTANT_LLM_*` trong `.env`) gọi `{địa chỉ}/chat/completions` với JSON Schema; khai thiếu thì 503 chỉ biến
   còn thiếu. Dữ liệu gửi ra ngoài khi đó: bổ sung của [ADR 0021](adr/0021-document-assistant.md).

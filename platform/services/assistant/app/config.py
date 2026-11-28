@@ -82,12 +82,20 @@ class Settings:
     min_score: float
     top_passages: int
     num_predict: int
+    # Trần token sinh cho bản nháp cấu hình gói (ADR 0071): bản nháp gồm nhiều tệp, dài hơn hẳn câu trả lời.
+    draft_num_predict: int
+    # Cửa sổ ngữ cảnh của Ollama cho bản nháp: prompt gồm tài liệu, bản mô tả và ví dụ của mọi thành phần.
+    draft_num_ctx: int
     timeout_seconds: float
     db_host: str
     db_name: str
     db_user: str
     db_password: str
     log_level: str
+    # Thư mục contracts/ gắn chỉ đọc (compose.yaml): bản mô tả, ví dụ và schema để soạn và kiểm bản nháp.
+    contracts_dir: str
+    # docs/packages.md gắn chỉ đọc: tài liệu nền tảng về cách các tệp của một gói nối với nhau, vào prompt.
+    package_guide: str
 
 
 settings = Settings(
@@ -108,10 +116,14 @@ settings = Settings(
     min_score=_number("ASSISTANT_MIN_SCORE"),
     top_passages=int(_number("ASSISTANT_TOP_PASSAGES")),
     num_predict=int(_number("ASSISTANT_NUM_PREDICT")),
+    draft_num_predict=int(_number("ASSISTANT_DRAFT_NUM_PREDICT")),
+    draft_num_ctx=int(_number("ASSISTANT_DRAFT_NUM_CTX")),
     timeout_seconds=_number("ASSISTANT_TIMEOUT_SECONDS"),
     db_host=_required("ASSISTANT_DB_HOST"),
     db_name=_required("ASSISTANT_DB_NAME"),
     db_user=_required("ASSISTANT_DB_USER"),
     db_password=_required("ASSISTANT_DB_PASSWORD"),
     log_level=_log_level("ASSISTANT_LOG_LEVEL"),
+    contracts_dir=_required("ASSISTANT_CONTRACTS_DIR"),
+    package_guide=_required("ASSISTANT_PACKAGE_GUIDE"),
 )

@@ -67,7 +67,15 @@ class Model(Protocol):
 
     def generate(self, question: str, sentences: list[Sentence]) -> dict: ...
 
-    def chat(self, messages: list[dict], schema: dict, name: str, timeout: float) -> str | None: ...
+    def chat(
+        self,
+        messages: list[dict],
+        schema: dict,
+        name: str,
+        timeout: float,
+        max_tokens: int | None = None,
+        context_tokens: int | None = None,
+    ) -> str | None: ...
 
 
 def prompt(question: str, sentences: list[Sentence]) -> str:
@@ -115,10 +123,21 @@ class Ollama:
         )
         return parse_reply(content, "Ollama")
 
-    def chat(self, messages: list[dict], schema: dict, name: str, timeout: float) -> str | None:
+    def chat(
+        self,
+        messages: list[dict],
+        schema: dict,
+        name: str,
+        timeout: float,
+        max_tokens: int | None = None,
+        context_tokens: int | None = None,
+    ) -> str | None:
         """Nội dung mô hình sinh theo `schema`, hay None khi phản hồi không có nội dung.
 
-        `name` chỉ có nghĩa với API tương thích OpenAI; Ollama nhận JSON Schema trần ở `format`."""
+        `name` chỉ có nghĩa với API tương thích OpenAI; Ollama nhận JSON Schema trần ở `format`.
+        `max_tokens` thay trần ASSISTANT_NUM_PREDICT cho lời gọi cần sinh dài hơn (bản nháp cấu hình gói).
+        `context_tokens` đặt num_ctx: thiếu nó, Ollama cắt prompt dài hơn cửa sổ mặc định mà không báo lỗi;
+        API tương thích OpenAI tự chọn cửa sổ nên bỏ qua số này."""
         body = {
             "model": settings.model,
             "messages": messages,
@@ -126,8 +145,10 @@ class Ollama:
             "stream": False,
             # Không cho mô hình viết phần suy nghĩ trước câu trả lời: tốn thời gian sinh mà không được dùng.
             "think": False,
-            "options": {"temperature": 0, "num_predict": settings.num_predict},
+            "options": {"temperature": 0, "num_predict": max_tokens or settings.num_predict},
         }
+        if context_tokens:
+            body["options"]["num_ctx"] = context_tokens
         started = time.monotonic()
         response = self._post(body, timeout)
         try:

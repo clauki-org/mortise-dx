@@ -96,6 +96,9 @@ phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
   khi đụng CSDL nếu cấu hình sai; `make app-check APP=<gói>` chỉ kiểm.
 - Gói kho vật tư xã thành gói Kho dùng chung: phiếu nhập, phiếu xuất, tồn kho tính trong CSDL, CSDL chặn xuất quá tồn;
   có dữ liệu demo cho doanh nghiệp ([ADR 0062](docs/adr/0062-shared-warehouse-package.md)).
+- Trợ lý soạn bản nháp cấu hình gói cho quản trị đơn vị (`POST /v1/assistant/package-drafts`): gõ nhu cầu, nhận
+  `app.yaml` và cấu hình thành phần đã kiểm theo luật của bộ kiểm gói, kèm lập luận nối đoạn nhu cầu với công dụng
+  trong `contracts/` và danh sách tệp còn phải viết; mỗi lần soạn có một dòng nhật ký; không tự cài (ADR 0071).
 
 ### Removed
 

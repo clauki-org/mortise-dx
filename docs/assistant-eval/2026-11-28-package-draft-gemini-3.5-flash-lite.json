@@ -1,0 +1,146 @@
+{
+  "measured_at": "2026-11-28T16:10:28+07:00",
+  "account": "admin.a",
+  "model": {
+    "name": "gemini-3.5-flash-lite",
+    "provider": "openai-compatible",
+    "location": "api",
+    "host": "generativelanguage.googleapis.com"
+  },
+  "runs": [
+    {
+      "need": "Đơn vị cần quản lý các kho và mặt hàng, số lượng tồn của từng mặt hàng trong từng kho; quản trị đơn vị lập phiếu nhập, phiếu xuất và thêm mặt hàng mới; cán bộ lập đề nghị cấp vật tư gửi người duyệt của đơn vị và theo dõi các đề nghị mình đã lập.",
+      "outcome": "drafted",
+      "reason": null,
+      "files": [
+        {
+          "path": "app.yaml",
+          "component": null,
+          "content": "id: inventory\nname: Quản lý kho\nversion: 0.1.0\ndescription: Quản lý các kho, mặt hàng, phiếu nhập xuất và đề nghị cấp vật tư.\ndatabase:\n  schema: app_inventory\n  migrations: schema/migrations\nhasura: hasura\nworkflows:\n  - bpmn/request.bpmn20.xml\nmenu:\n  - id: stores\n    label: Kho\n    component: catalog\n    config: catalog/stores.yaml\n    icon: home\n  - id: items\n    label: Mặt hàng\n    component: catalog\n    config: catalog/items.yaml\n    icon: list\n  - id: receipts\n    label: Phiếu nhập\n    component: catalog\n    config: catalog/receipts.yaml\n    icon: document\n  - id: issues\n    label: Phiếu xuất\n    component: catalog\n    config: catalog/issues.yaml\n    icon: document\n  - id: requests\n    label: Đề nghị cấp\n    component: catalog\n    config: catalog/requests.yaml\n    icon: document\n  - id: my-requests\n    label: Đề nghị đã lập\n    component: cases\n    config: cases/requests.yaml\n    icon: inbox\n"
+        },
+        {
+          "path": "catalog/stores.yaml",
+          "component": "catalog",
+          "content": "title: Kho\nsource: app_inventory_stores\nkey: id\nfields:\n  - name: code\n    label: Mã\n  - name: name\n    label: Tên\nlist:\n  columns: [code, name]\n  search: [code, name]\n  sort:\n    field: code\n    direction: asc\n  page_size: 20\ndetail:\n  title: name\n"
+        },
+        {
+          "path": "catalog/items.yaml",
+          "component": "catalog",
+          "content": "title: Mặt hàng\nsource: app_inventory_items\nkey: id\nfields:\n  - name: code\n    label: Mã\n  - name: name\n    label: Tên\n  - name: unit\n    label: Đơn vị tính\nlist:\n  columns: [code, name, unit]\n  search: [code, name]\n  sort:\n    field: code\n    direction: asc\n  page_size: 20\ndetail:\n  title: name\n  edit:\n    label: Sửa\n    form:\n      title: Sửa mặt hàng\n      role: manager\n      fields:\n        - { name: code, label: Mã, type: string, required: true, max_length: 50 }\n        - { name: name, label: Tên, type: string, required: true, max_length: 200 }\n        - { name: unit, label: Đơn vị tính, type: string, required: true, max_length: 50 }\n      submit: { label: Lưu, update: app_inventory_items, version: updated_at }\n      done: { message: Đã lưu. }\n"
+        },
+        {
+          "path": "catalog/receipts.yaml",
+          "component": "catalog",
+          "content": "title: Phiếu nhập\nsource: app_inventory_receipts\nkey: id\nfields:\n  - name: code\n    label: Số phiếu\n  - name: created_at\n    label: Ngày nhập\n    type: date\nlist:\n  columns: [code, created_at]\n  search: [code]\n  sort:\n    field: code\n    direction: desc\n  page_size: 20\ndetail:\n  title: code\n  children:\n    - id: lines\n      label: Chi tiết phiếu nhập\n      via: receipt_id\n      source: app_inventory_receipt_lines\n      fields:\n        - name: item_id\n          label: Mặt hàng\n        - name: quantity\n          label: Số lượng\n          type: number\n      list:\n        columns: [item_id, quantity]\n      add:\n        label: Thêm mặt hàng\n        form:\n          title: Thêm mặt hàng vào phiếu nhập\n          role: manager\n          fields:\n            - name: item_id\n              label: Mặt hàng\n              type: choice\n              required: true\n              source: { table: app_inventory_items, value: id, label: name }\n            - { name: quantity, label: Số lượng, type: number, required: true, min: 1 }\n          submit: { label: Thêm, insert: app_inventory_receipt_lines }\n          done: { message: Đã thêm mặt hàng. }\n"
+        },
+        {
+          "path": "catalog/issues.yaml",
+          "component": "catalog",
+          "content": "title: Phiếu xuất\nsource: app_inventory_issues\nkey: id\nfields:\n  - name: code\n    label: Số phiếu\n  - name: created_at\n    label: Ngày xuất\n    type: date\nlist:\n  columns: [code, created_at]\n  search: [code]\n  sort:\n    field: code\n    direction: desc\n  page_size: 20\ndetail:\n  title: code\n  children:\n    - id: lines\n      label: Chi tiết phiếu xuất\n      via: issue_id\n      source: app_inventory_issue_lines\n      fields:\n        - name: item_id\n          label: Mặt hàng\n        - name: quantity\n          label: Số lượng\n          type: number\n      list:\n        columns: [item_id, quantity]\n      add:\n        label: Thêm mặt hàng\n        form:\n          title: Thêm mặt hàng vào phiếu xuất\n          role: manager\n          fields:\n            - name: item_id\n              label: Mặt hàng\n              type: choice\n              required: true\n              source: { table: app_inventory_items, value: id, label: name }\n            - { name: quantity, label: Số lượng, type: number, required: true, min: 1 }\n          submit: { label: Thêm, insert: app_inventory_issue_lines }\n          done: { message: Đã thêm mặt hàng. }\n"
+        },
+        {
+          "path": "catalog/requests.yaml",
+          "component": "catalog",
+          "content": "title: Đề nghị cấp vật tư\nsource: app_inventory_requests\nkey: id\nfields:\n  - name: code\n    label: Số đề nghị\n  - name: reason\n    label: Lý do\nlist:\n  columns: [code, reason]\n  search: [code]\n  sort:\n    field: code\n    direction: desc\n  page_size: 20\ndetail:\n  title: code\n  actions:\n    - id: submit\n      label: Gửi đề nghị\n      process: inventory-request\n      variables:\n        requestId: id\n        reason: reason\n"
+        },
+        {
+          "path": "cases/requests.yaml",
+          "component": "cases",
+          "content": "title: Đề nghị đã lập\ndescription: Các đề nghị cấp vật tư bạn đã lập, đang ở bước nào và kết quả.\nprocesses: [inventory-request]\n"
+        }
+      ],
+      "problems": [],
+      "to_write": [
+        {
+          "path": "bpmn/request.bpmn20.xml",
+          "message": "app.yaml khai ở workflows[0]; viết tệp này trước khi cài."
+        }
+      ],
+      "choices": [
+        {
+          "item": "stores",
+          "component": "catalog",
+          "arguments": [
+            {
+              "need": "quản lý các kho",
+              "capability": "Kiểu trình bày của danh sách ngoài cùng chọn bằng variant (table, cards, kanban, calendar; ADR 0061, ADR 0066); người xem vẫn đổi được bằng nút chọn kiểu. Đặt trong một khối của trang (component page) thì chỉ có danh sách, giữ tìm, lọc, trang trong bộ nhớ, không có nút xuất.",
+              "why": "Thành phần catalog hiển thị danh sách và chi tiết các kho của đơn vị."
+            }
+          ]
+        },
+        {
+          "item": "items",
+          "component": "catalog",
+          "arguments": [
+            {
+              "need": "thêm mặt hàng mới",
+              "capability": "Nút sửa dòng đang xem (detail.edit, ở mọi cấp cha–con) mở biểu mẫu có submit.update trong hộp thoại, điền sẵn giá trị đọc lại từ máy chủ lúc mở bằng vai trò của biểu mẫu; nút thêm dòng con (add của đối tượng con) đứng cạnh tiêu đề bảng con, mở biểu mẫu có submit.insert với cột via mang khóa của dòng cha, hiện một ô chỉ đọc mang giá trị của dòng cha (add.parent, bỏ trống là tiêu đề). Biểu mẫu theo contracts/form.schema.json, khai ngay trong cấu hình danh mục. Nút chỉ hiện khi token có vai trò form.role (bỏ trống là user). Lưu được thì hộp đóng, hiện done.message và đọc lại dòng hay bảng con (ADR 0054).",
+              "why": "Thành phần catalog hỗ trợ nút thêm và sửa danh mục mặt hàng theo biểu mẫu."
+            }
+          ]
+        },
+        {
+          "item": "receipts",
+          "component": "catalog",
+          "arguments": [
+            {
+              "need": "lập phiếu nhập",
+              "capability": "Quan hệ cha–con nhiều cấp, khai lồng trong cùng tệp bằng detail.children. Màn hình chi tiết của cha có bảng của từng loại đối tượng con, tìm, lọc và phân trang được; màn hình chi tiết của con có đường về mọi cấp cha.",
+              "why": "Thành phần catalog quản lý phiếu nhập và danh sách mặt hàng con qua quan hệ cha con."
+            }
+          ]
+        },
+        {
+          "item": "issues",
+          "component": "catalog",
+          "arguments": []
+        },
+        {
+          "item": "requests",
+          "component": "catalog",
+          "arguments": [
+            {
+              "need": "cán bộ lập đề nghị cấp vật tư gửi người duyệt của đơn vị",
+              "capability": "Nút trên màn hình chi tiết (detail.actions, ở mọi cấp cha–con) khởi tạo một quy trình của gói cho dòng đang xem qua API quy trình, với biến lấy từ khóa hay trường của dòng (ADR 0026). Hộp xác nhận hiện các giá trị sẽ gửi; trường còn trống thì không cho gửi. Bấm đúp hay gửi lại sau lỗi trong cùng hộp chỉ tạo một quy trình (Idempotency-Key).",
+              "why": "Thành phần catalog có nút khởi tạo quy trình duyệt đề nghị cấp vật tư."
+            }
+          ]
+        },
+        {
+          "item": "my-requests",
+          "component": "cases",
+          "arguments": [
+            {
+              "need": "theo dõi các đề nghị mình đã lập",
+              "capability": "Danh sách hồ sơ do chính người đăng nhập lập trong đơn vị của mình, mới nhất trước, giao diện hiện 20 hồ sơ mỗi trang (API cho tối đa 100), lọc còn mở, đã kết thúc hay tất cả; mỗi dòng có tên hồ sơ, bước đang chờ hay kết quả, hạn và lúc lập.",
+              "why": "Thành phần cases hiển thị danh sách các hồ sơ đề nghị do chính người đăng nhập lập và tiến độ."
+            }
+          ]
+        }
+      ],
+      "model": {
+        "name": "gemini-3.5-flash-lite",
+        "provider": "openai-compatible",
+        "location": "api",
+        "host": "generativelanguage.googleapis.com"
+      },
+      "attempts": 2
+    },
+    {
+      "need": "Viết cho tôi một bài thơ về mùa thu.",
+      "outcome": "refused",
+      "reason": "Mô hình không soạn được bản nháp cho nhu cầu này bằng các thành phần hiện có; mô tả cụ thể hơn các màn hình cần có.",
+      "files": [],
+      "problems": [],
+      "to_write": [],
+      "choices": [],
+      "model": {
+        "name": "gemini-3.5-flash-lite",
+        "provider": "openai-compatible",
+        "location": "api",
+        "host": "generativelanguage.googleapis.com"
+      },
+      "attempts": 1
+    }
+  ]
+}

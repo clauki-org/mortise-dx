@@ -331,6 +331,130 @@
         "title": "DataTable",
         "type": "object"
       },
+      "DraftArgument": {
+        "properties": {
+          "capability": {
+            "description": "Câu nguyên văn trong contracts/<thành phần>.component.yaml mô tả công dụng đáp ứng đoạn đó; dịch vụ chép theo mã mô hình chỉ ra",
+            "title": "Capability",
+            "type": "string"
+          },
+          "need": {
+            "description": "Đoạn của nhu cầu mà lập luận dựa vào; dịch vụ đã kiểm có trong nhu cầu",
+            "title": "Need",
+            "type": "string"
+          },
+          "why": {
+            "description": "Câu mô hình viết nối đoạn nhu cầu với công dụng; không qua bước kiểm nào",
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "need",
+          "capability",
+          "why"
+        ],
+        "title": "DraftArgument",
+        "type": "object"
+      },
+      "DraftChoice": {
+        "properties": {
+          "arguments": {
+            "description": "Tối đa ba lập luận vì sao thành phần hợp với nhu cầu; lập luận có đoạn nhu cầu không có trong nhu cầu hay mã câu không có trong bản mô tả bị bỏ",
+            "items": {
+              "$ref": "#/components/schemas/DraftArgument"
+            },
+            "title": "Arguments",
+            "type": "array"
+          },
+          "component": {
+            "description": "Thành phần mục đó dùng, đọc từ app.yaml",
+            "title": "Component",
+            "type": "string"
+          },
+          "item": {
+            "description": "id của mục menu hay khối trong app.yaml",
+            "title": "Item",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item",
+          "component",
+          "arguments"
+        ],
+        "title": "DraftChoice",
+        "type": "object"
+      },
+      "DraftFile": {
+        "properties": {
+          "component": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Thành phần mà mục menu trỏ tới tệp này khai trong app.yaml; null với app.yaml, tệp không mục nào trỏ tới, và tệp của mục khai thành phần chưa có bản mô tả",
+            "title": "Component"
+          },
+          "content": {
+            "description": "Nội dung YAML do mô hình viết, đúng chữ, không sửa",
+            "title": "Content",
+            "type": "string"
+          },
+          "path": {
+            "description": "Đường dẫn tương đối trong thư mục gói apps/<gói>/",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "component",
+          "content"
+        ],
+        "title": "DraftFile",
+        "type": "object"
+      },
+      "DraftProblem": {
+        "properties": {
+          "message": {
+            "description": "Lỗi khi kiểm theo contracts/, như `make check-fast` báo",
+            "title": "Message",
+            "type": "string"
+          },
+          "path": {
+            "description": "Tệp có lỗi",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "message"
+        ],
+        "title": "DraftProblem",
+        "type": "object"
+      },
+      "DraftRequest": {
+        "additionalProperties": false,
+        "description": "Nhu cầu cần soạn bản nháp cấu hình gói (ADR 0071).",
+        "properties": {
+          "need": {
+            "description": "Nhu cầu người dựng hệ thống gõ: gói cần những màn hình nào, quản lý gì; độ dài tối đa: ASSISTANT_MAX_QUESTION_CHARS",
+            "title": "Need",
+            "type": "string"
+          }
+        },
+        "required": [
+          "need"
+        ],
+        "title": "DraftRequest",
+        "type": "object"
+      },
       "ErrorBody": {
         "properties": {
           "error": {
@@ -403,6 +527,93 @@
           "host"
         ],
         "title": "ModelInfo",
+        "type": "object"
+      },
+      "PackageDraft": {
+        "description": "Bản nháp app.yaml và cấu hình của các mục menu, khối. Không có migration, quyền Hasura, BPMN hay văn\nbản, nên chưa cài được ngay; dịch vụ không ghi gì vào apps/, chỉ ghi một dòng nhật ký.",
+        "properties": {
+          "attempts": {
+            "description": "Số lượt mô hình đã trả bản nháp: 1, hay 2 khi có lượt sửa trả về",
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "choices": {
+            "description": "Lý do chọn thành phần của từng mục menu hay khối",
+            "items": {
+              "$ref": "#/components/schemas/DraftChoice"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "files": {
+            "description": "Các tệp của bản nháp; rỗng khi refused",
+            "items": {
+              "$ref": "#/components/schemas/DraftFile"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mô hình đã soạn bản nháp"
+          },
+          "outcome": {
+            "description": "drafted: mọi tệp qua bước kiểm; invalid: còn lỗi, xem `problems` và `reason`; refused: mô hình nói không soạn được bằng các thành phần hiện có",
+            "enum": [
+              "drafted",
+              "invalid",
+              "refused"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "problems": {
+            "description": "Lỗi còn lại khi kiểm; rỗng khi drafted",
+            "items": {
+              "$ref": "#/components/schemas/DraftProblem"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lý do khi invalid hay refused, hiển thị được; null khi drafted",
+            "title": "Reason"
+          },
+          "to_write": {
+            "description": "Tệp app.yaml khai (quy trình, luật, văn bản, bảng thẩm quyền) mà bản nháp không có; viết trước khi cài. Không làm bản nháp thành invalid",
+            "items": {
+              "$ref": "#/components/schemas/DraftProblem"
+            },
+            "title": "To Write",
+            "type": "array"
+          }
+        },
+        "required": [
+          "outcome",
+          "reason",
+          "files",
+          "problems",
+          "to_write",
+          "choices",
+          "model",
+          "attempts"
+        ],
+        "title": "PackageDraft",
         "type": "object"
       },
       "Question": {
@@ -751,6 +962,133 @@
           }
         },
         "summary": "Data Questions"
+      }
+    },
+    "/v1/assistant/package-drafts": {
+      "post": {
+        "description": "Soạn bản nháp app.yaml và cấu hình các mục menu cho một nhu cầu; chỉ quản trị đơn vị (tenant_admin).\n\nMô hình chỉ nhận nhu cầu, tài liệu nền tảng và bản mô tả, ví dụ của các thành phần trong contracts/,\nkhông nhận dữ liệu nào của đơn vị. Bản nháp được kiểm theo luật của bộ kiểm gói áp được cho nó; có lỗi\nthì mô hình sửa một lần. Không ghi gì vào apps/. Mô hình nói không soạn được thì `outcome` là `refused`,\nvẫn còn lỗi thì `invalid` (mã 200). Mỗi lần soạn được ghi nhật ký kèm nhu cầu, đường dẫn tệp, số lỗi,\nmô hình và số lượt, không kèm nội dung tệp.",
+        "operationId": "package_drafts_v1_assistant_package_drafts_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageDraft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        },
+        "summary": "Package Drafts"
       }
     },
     "/v1/assistant/questions": {

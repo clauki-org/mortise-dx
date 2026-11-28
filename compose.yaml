@@ -614,6 +614,14 @@ services:
       # Số đoạn tối đa đưa cho mô hình.
       ASSISTANT_TOP_PASSAGES: "4"
       ASSISTANT_NUM_PREDICT: "400"
+      # Trần token sinh của bản nháp cấu hình gói (ADR 0071): app.yaml và sáu tệp cấu hình cần 2.351 token (đo
+      # 2026-11-28 với gemini-3.5-flash-lite, docs/assistant-eval/); trần dư để bản nháp nhiều mục hơn không bị cắt.
+      ASSISTANT_DRAFT_NUM_PREDICT: "4000"
+      # Cửa sổ ngữ cảnh của Ollama (num_ctx) cho bản nháp: không đặt thì Ollama cắt prompt dài hơn cửa sổ mặc định mà
+      # không báo lỗi (đo 2026-11-26: mô hình chỉ đọc 2.050 trong 7.712 token). Prompt lượt đầu là 13.039 token với
+      # qwen3.5:4b (đo 2026-11-28); lượt sửa thêm bản nháp và lỗi (2.682 token với Gemini cùng ngày), cộng trần
+      # token sinh ở trên còn dưới số này. API tương thích OpenAI bỏ qua số này.
+      ASSISTANT_DRAFT_NUM_CTX: "24576"
       # Thời gian chờ mô hình, giây; nhỏ hơn thời gian chờ đọc của upstream assistant trong core/apisix/apisix.yaml
       # (200 giây). Câu hỏi dữ liệu gõ tự do (ADR 0034) dùng số này làm hạn chung cho cả lượt viết câu và lượt sửa;
       # cộng thời gian chờ đã cấu hình của việc đọc mục menu và chạy câu qua Hasura (10 giây mỗi lời gọi, data_run.py)
@@ -623,8 +631,17 @@ services:
       # Mức log của dịch vụ: INFO ghi một dòng mỗi lời gọi mô hình (nhà cung cấp, số token, lý do dừng, thời gian),
       # không kèm nội dung; DEBUG thêm lý do mô hình tự ghi khi viết câu truy vấn, chỉ để gỡ lỗi.
       ASSISTANT_LOG_LEVEL: ${ASSISTANT_LOG_LEVEL:-INFO}
+      # Bản mô tả, ví dụ và schema của thành phần để soạn và kiểm bản nháp cấu hình gói (ADR 0071); gắn chỉ đọc để
+      # dịch vụ đọc đúng hợp đồng của bản đang chạy, không giữ bản chép riêng trong image.
+      ASSISTANT_CONTRACTS_DIR: /srv/contracts
+      # Tài liệu nền tảng về cách các tệp của một gói nối với nhau, đưa nguyên văn vào prompt của bản nháp. Gắn cả
+      # thư mục docs/ như contracts/, không gắn riêng tệp: trình soạn thảo lưu tệp mới thay tệp cũ, tệp gắn riêng
+      # trong container vẫn là bản cũ.
+      ASSISTANT_PACKAGE_GUIDE: /srv/docs/packages.md
     volumes:
       - ./core/ollama/models.txt:/srv/models.txt:ro
+      - ./contracts:/srv/contracts:ro
+      - ./docs:/srv/docs:ro
     # Không chờ Ollama: lõi phải khởi động được khi không bật profile `ai`. Không phụ thuộc apisix: cổng chỉ cần lúc có
     # câu hỏi, và apisix đã chờ dịch vụ này.
     depends_on:
