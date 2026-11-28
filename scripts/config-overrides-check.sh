@@ -22,7 +22,9 @@ for manifest in sorted(glob.glob("apps/*/app.yaml")):
     folder = os.path.dirname(manifest)
     with open(manifest, encoding="utf-8") as file:
         app = yaml.safe_load(file)
-    for item in app.get("menu", []):
+    # Cả khối của `blocks`, như `contracts.sh package`: bộ kiểm gói đọc tệp của khối từ thư mục --configs, thiếu thì
+    # báo không thấy tệp.
+    for item in app.get("menu", []) + app.get("blocks", []):
         with open(os.path.join(folder, item["config"]), encoding="utf-8") as file:
             config = yaml.safe_load(file)
         entries.append({"app": os.path.basename(folder), "item": item["id"], "component": item["component"],
